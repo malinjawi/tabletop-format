@@ -28,8 +28,9 @@ function git(repoDir, args, opts = {}) {
 }
 function repoOf(gameDir) { return git(gameDir, ["rev-parse", "--show-toplevel"]); }
 function cardsRel(gameDir, repo) { return relative(repo, resolve(gameDir, "components/cards.json")); }
+const QUIET = { stdio: ["pipe", "pipe", "ignore"] }; // expected-miss lookups: no stderr noise
 function cardsAt(repo, ref, rel) {
-  try { return JSON.parse(git(repo, ["show", `${ref}:${rel}`])); } catch { return null; }
+  try { return JSON.parse(git(repo, ["show", `${ref}:${rel}`], QUIET)); } catch { return null; }
 }
 
 if (cmd === "save") {
@@ -115,7 +116,7 @@ else if (cmd === "release") {
   const repo = repoOf(gameDir);
   const rel = cardsRel(gameDir, repo);
   let prevTag = null;
-  try { prevTag = git(repo, ["describe", "--tags", "--abbrev=0"]); } catch {}
+  try { prevTag = git(repo, ["describe", "--tags", "--abbrev=0"], QUIET); } catch {}
   const range = prevTag ? `${prevTag}..HEAD` : "HEAD";
   const now = cardsAt(repo, "HEAD", rel) ?? [];
   const base = prevTag ? (cardsAt(repo, prevTag, rel) ?? []) : [];
