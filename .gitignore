@@ -1,0 +1,10 @@
+# dependencies
+node_modules/
+
+# generated exports — derived, regenerable, never versioned (design rule)
+examples/*/exports/
+
+# local scratch
+*.log
+.DS_Store
+package-lock.json

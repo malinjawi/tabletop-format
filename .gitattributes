@@ -1,0 +1,3 @@
+# Semantic diffs for card data: `git diff` reports card changes, not JSON noise.
+# Enable once per clone:  git config diff.cards.command "node tools/git-diff-cards.mjs"
+examples/*/components/cards.json diff=cards
