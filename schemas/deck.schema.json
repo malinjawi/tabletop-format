@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/deck.schema.json",
+  "title": "Deck",
+  "description": "A player's deck: card counts + the format it targets. Decks are data like everything else — shareable, diffable, forkable. Files: decks/*.json.",
+  "type": "object",
+  "required": ["id", "name", "cards"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1 },
+    "format_id": {
+      "type": "string",
+      "description": "Format this deck targets. Legality is checked against it (card pool + active restriction + deck_rules)."
+    },
+    "author": { "type": "string" },
+    "cards": {
+      "type": "object",
+      "description": "card_id (rules identity) -> copy count.",
+      "minProperties": 1,
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "notes": { "type": "string", "description": "Strategy notes, changelog thinking — diffs like everything else." }
+  }
+}

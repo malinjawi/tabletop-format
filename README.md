@@ -53,7 +53,13 @@ node tools/diff.mjs old-cards.json new-cards.json    # semantic card diff, zero 
 python3 tools/render_cards.py examples/ember         # card faces @300dpi (reference renderer; Pillow)
 python3 tools/export_pnp.py examples/ember           # print-and-play PDF, 3x3 US Letter, crop marks
 python3 tools/export_tts.py examples/ember           # TTS sprite sheet + save JSON (CardID math, quantities)
+node tools/fmt.mjs import decklist examples/ember list.txt --name "Burn Rush" --format standard   # "3 Kindling" lines -> deck.json
+node tools/fmt.mjs check-deck examples/ember examples/ember/decks/burn-rush.json                  # legality: pool, size, deck limits, BANLIST
 ```
+
+The deck checker closes the stewardship loop: publish a dated restriction
+document and every deck in the community can re-verify itself —
+`'Wildfire' is RESTRICTED to 1 copy; deck has 2 → ILLEGAL`.
 
 `demo.sh` runs: import a designer's CSV → validate → render → PnP PDF + TTS mod →
 apply a balance patch → semantic diff. Spreadsheet to playable-and-printable in

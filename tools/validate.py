@@ -67,6 +67,8 @@ restrictions = load_dir("restrictions")
 for i, r in enumerate(restrictions): check("restriction", r, f"restrictions[{i}] ({r.get('id','?')})")
 rulings = load("rulings/rulings.json") or []
 for i, r in enumerate(rulings): check("ruling", r, f"rulings[{i}]")
+decks = load_dir("decks")
+for i, d in enumerate(decks): check("deck", d, f"decks[{i}] ({d.get('id','?')})")
 
 # Pass 2
 def dupes(arr, label):
@@ -94,6 +96,12 @@ for r in restrictions:
         if c not in card_ids: err(f"restriction '{r['id']}': card '{c}' not found")
 for i, r in enumerate(rulings):
     if r["card_id"] not in card_ids: err(f"ruling[{i}]: card '{r['card_id']}' not found")
+format_ids = {f["id"] for f in formats}
+for d in decks:
+    for cid in d.get("cards", {}):
+        if cid not in card_ids: err(f"deck '{d['id']}': card '{cid}' not found")
+    if d.get("format_id") and d["format_id"] not in format_ids:
+        err(f"deck '{d['id']}': format '{d['format_id']}' not found")
 
 defs = {d["key"]: d for d in game.get("attribute_definitions") or []}
 TYPES = {"integer": int, "number": (int, float), "string": str, "boolean": bool}

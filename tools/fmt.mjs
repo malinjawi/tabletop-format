@@ -38,6 +38,8 @@ else if (cmd === "render") status = runPy("render_cards.py", argv.slice(1));
 else if (cmd === "export" && sub === "pnp") status = runPy("export_pnp.py", argv.slice(2));
 else if (cmd === "export" && sub === "tts") status = runPy("export_tts.py", argv.slice(2));
 else if (cmd === "check-licenses") status = runPy("check_licenses.py", argv.slice(1));
+else if (cmd === "import" && sub === "decklist") status = runNode("import-decklist.mjs", argv.slice(2));
+else if (cmd === "check-deck") status = runPy("check_deck.py", argv.slice(1));
 else {
   console.log(`fmt — open game format CLI (v0.1)
 
@@ -48,7 +50,9 @@ else {
   fmt render <game-dir>
   fmt export pnp <game-dir>
   fmt export tts <game-dir>
-  fmt check-licenses <game-dir>`);
+  fmt check-licenses <game-dir>
+  fmt import decklist <game-dir> <list.txt> [--name N] [--format F]
+  fmt check-deck <game-dir> <deck.json> [--format F]`);
   status = cmd ? 2 : 0;
 }
 process.exit(status);

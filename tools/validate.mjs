@@ -75,6 +75,9 @@ restrictions.forEach((r, i) => checkSchema("restriction", r, `restrictions[${i}]
 const rulings = load("rulings/rulings.json") ?? [];
 rulings.forEach((r, i) => checkSchema("ruling", r, `rulings[${i}]`));
 
+const decks = loadDirOrFile("decks");
+decks.forEach((d, i) => checkSchema("deck", d, `decks[${i}] (${d?.id ?? "?"})`));
+
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {
   const seen = new Set();
@@ -105,6 +108,12 @@ for (const r of restrictions) {
 }
 for (const [i, r] of rulings.entries()) {
   if (!cardIds.has(r.card_id)) err(`ruling[${i}]: card '${r.card_id}' not found`);
+}
+const formatIds = new Set(formats.map(f => f.id));
+for (const d of decks) {
+  for (const cid of Object.keys(d.cards ?? {}))
+    if (!cardIds.has(cid)) err(`deck '${d.id}': card '${cid}' not found`);
+  if (d.format_id && !formatIds.has(d.format_id)) err(`deck '${d.id}': format '${d.format_id}' not found`);
 }
 
 // Typed attributes vs game.yaml attribute_definitions
