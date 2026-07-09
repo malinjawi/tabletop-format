@@ -40,6 +40,8 @@ else if (cmd === "export" && sub === "tts") status = runPy("export_tts.py", argv
 else if (cmd === "check-licenses") status = runPy("check_licenses.py", argv.slice(1));
 else if (cmd === "import" && sub === "decklist") status = runNode("import-decklist.mjs", argv.slice(2));
 else if (cmd === "check-deck") status = runPy("check_deck.py", argv.slice(1));
+else if (["save", "history", "changelog", "fork", "release", "setup"].includes(cmd))
+  status = runNode("fmt-git.mjs", argv);
 else {
   console.log(`fmt — open game format CLI (v0.1)
 
@@ -52,7 +54,15 @@ else {
   fmt export tts <game-dir>
   fmt check-licenses <game-dir>
   fmt import decklist <game-dir> <list.txt> [--name N] [--format F]
-  fmt check-deck <game-dir> <deck.json> [--format F]`);
+  fmt check-deck <game-dir> <deck.json> [--format F]
+
+  git porcelain (your game is a repo):
+  fmt save <game-dir> [-m msg]    commit — message auto-written from card changes
+  fmt history <game-dir> [-n N]   log rendered as card changes
+  fmt changelog <game-dir>        CHANGELOG.md from git history
+  fmt fork <src.git> <dst.git>    server-side fork (Remix primitive)
+  fmt release <game-dir> <x.y.z>  tag with card changes since last release
+  fmt setup [dir]                 enable semantic git diff in this clone`);
   status = cmd ? 2 : 0;
 }
 process.exit(status);
