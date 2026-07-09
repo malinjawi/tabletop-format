@@ -1,0 +1,71 @@
+[
+  {
+    "id": "p_mystic_maemi_urbp",
+    "card_id": "mystic_maemi",
+    "set_id": "urbp",
+    "collector_number": "001",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Izzy Pruett",
+    "flavor_text": "Friends lift your spirits."
+  },
+  {
+    "id": "p_swift_urbp",
+    "card_id": "swift",
+    "set_id": "urbp",
+    "collector_number": "002",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Kira L. Nguyen",
+    "flavor_text": "\"Red ones go faster.\" - Ken \"Express\" Tenma"
+  },
+  {
+    "id": "p_cybertrooper_talut_urbp",
+    "card_id": "cybertrooper_talut",
+    "set_id": "urbp",
+    "collector_number": "003",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Owen Sinodov",
+    "flavor_text": "He's nice enough, but not when there are 5,187 of him."
+  },
+  {
+    "id": "p_megaprix_qualifier_urbp",
+    "card_id": "megaprix_qualifier",
+    "set_id": "urbp",
+    "collector_number": "004",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Krembler",
+    "flavor_text": "\"Win Hard or Lose Hard. All that matters is they're talking about you and not the competition.\"\n- Tan \"Nitro\" Nyugen, Toretto-Extreme Team Manager"
+  },
+  {
+    "id": "p_la_costa_grid_urbp",
+    "card_id": "la_costa_grid",
+    "set_id": "urbp",
+    "collector_number": "005",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Eirik H. Kiil",
+    "flavor_text": "Some slums of New Angeles are so worn down, City Hall calls the acres of windowless clone barracks \"gentrification\" with a straight face."
+  },
+  {
+    "id": "p_digital_rights_management_urbp",
+    "card_id": "digital_rights_management",
+    "set_id": "urbp",
+    "collector_number": "006",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Krembler"
+  },
+  {
+    "id": "p_cayambe_grid_urbp",
+    "card_id": "cayambe_grid",
+    "set_id": "urbp",
+    "collector_number": "007",
+    "quantity": 3,
+    "template_id": "standard_face",
+    "artist": "Kira L. Nguyen",
+    "flavor_text": "The Apu spirits of the great mountains bridge this world and the realm above."
+  }
+]

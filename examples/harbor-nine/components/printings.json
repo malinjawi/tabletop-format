@@ -1,0 +1,58 @@
+[
+  {
+    "id": "p_fishing_skiff_core",
+    "card_id": "fishing_skiff",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "001",
+    "quantity": 3
+  },
+  {
+    "id": "p_merchant_cog_core",
+    "card_id": "merchant_cog",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "002",
+    "quantity": 2
+  },
+  {
+    "id": "p_lighthouse_core",
+    "card_id": "lighthouse",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "003",
+    "quantity": 1
+  },
+  {
+    "id": "p_harbormaster_core",
+    "card_id": "harbormaster",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "004",
+    "quantity": 2
+  },
+  {
+    "id": "p_storm_front_core",
+    "card_id": "storm_front",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "005",
+    "quantity": 2
+  },
+  {
+    "id": "p_smuggler_s_sloop_core",
+    "card_id": "smuggler_s_sloop",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "006",
+    "quantity": 2
+  },
+  {
+    "id": "p_customs_house_core",
+    "card_id": "customs_house",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "007",
+    "quantity": 1
+  }
+]

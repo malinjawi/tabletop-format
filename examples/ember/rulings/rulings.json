@@ -1,0 +1,14 @@
+[
+  {
+    "card_id": "twin_flame",
+    "date": "2026-07-03",
+    "text": "If both players play Twin Flame, both cards have power 0 — mirrors reflecting mirrors show nothing.",
+    "source": "lead designer"
+  },
+  {
+    "card_id": "last_light",
+    "date": "2026-07-03",
+    "text": "Last Light triggers before Ash Cloak's damage prevention is applied; if both would apply, the defender chooses the order.",
+    "source": "lead designer"
+  }
+]

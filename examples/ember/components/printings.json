@@ -1,0 +1,12 @@
+[
+  { "id": "p_kindling_core", "card_id": "kindling", "set_id": "core", "collector_number": "001", "quantity": 3, "template_id": "standard_face" },
+  { "id": "p_twin_flame_core", "card_id": "twin_flame", "set_id": "core", "collector_number": "002", "quantity": 2, "template_id": "standard_face" },
+  { "id": "p_ash_cloak_core", "card_id": "ash_cloak", "set_id": "core", "collector_number": "003", "quantity": 2, "template_id": "standard_face" },
+  { "id": "p_bellows_core", "card_id": "bellows", "set_id": "core", "collector_number": "004", "quantity": 1, "template_id": "standard_face" },
+  { "id": "p_wildfire_core", "card_id": "wildfire", "set_id": "core", "collector_number": "005", "quantity": 1, "template_id": "standard_face" },
+  { "id": "p_ember_thief_core", "card_id": "ember_thief", "set_id": "core", "collector_number": "006", "quantity": 2, "template_id": "standard_face" },
+  { "id": "p_last_light_core", "card_id": "last_light", "set_id": "core", "collector_number": "007", "quantity": 1, "template_id": "standard_face" },
+  { "id": "p_cinder_rat_core", "card_id": "cinder_rat", "set_id": "core", "collector_number": "008", "quantity": 2, "template_id": "standard_face" },
+  { "id": "p_kindling_promo", "card_id": "kindling", "set_id": "embers_rising", "collector_number": "001a", "quantity": 1, "variant": "alt-art", "artist": "TBD", "template_id": "standard_face", "provenance": { "source": "human", "creator": "Community artist TBD" } },
+  { "id": "p_wildfire_er", "card_id": "wildfire", "set_id": "embers_rising", "collector_number": "002", "quantity": 1, "variant": "full-art", "template_id": "standard_face" }
+]

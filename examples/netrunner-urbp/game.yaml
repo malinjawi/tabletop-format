@@ -1,0 +1,33 @@
+format_version: "0.1.0"
+id: netrunner-uprising-booster
+title: "Netrunner (Uprising Booster)"
+version: "0.1.0"
+license: imported-see-source  # imported content: choose/confirm license before publishing
+default_provenance:
+  source: human
+attribute_definitions:
+  - key: side
+    type: string
+  - key: faction
+    type: string
+  - key: cost
+    type: integer
+  - key: influence
+    type: integer
+  - key: unique
+    type: boolean
+  - key: advancement_cost
+    type: integer
+  - key: agenda_points
+    type: integer
+  - key: trash_cost
+    type: integer
+symbols:
+  - key: credit
+    name: "credit"
+  - key: mu
+    name: "mu"
+  - key: click
+    name: "click"
+  - key: link
+    name: "link"

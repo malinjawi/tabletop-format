@@ -1,0 +1,10 @@
+id: standard-2026-07
+name: Standard Banlist, July 2026
+date_start: "2026-07-01"
+banned: []
+restricted:
+  - wildfire
+notes: >
+  Wildfire limited to 1 copy after playtesting showed double-Wildfire
+  openings ended 40% of games by round two. Kept at restricted rather
+  than banned because the burn archetype is beloved.

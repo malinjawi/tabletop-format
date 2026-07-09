@@ -1,0 +1,82 @@
+[
+  {
+    "id": "kindling",
+    "name": "Kindling",
+    "type": "ember",
+    "subtypes": ["basic"],
+    "text": "Gain 1 [spark].",
+    "keywords": [],
+    "attributes": { "cost": 0, "power": 1 },
+    "deck_limit": 3
+  },
+  {
+    "id": "twin_flame",
+    "name": "Twin Flame",
+    "type": "ember",
+    "subtypes": ["trick"],
+    "text": "Copy the power of your rival's clashing card.",
+    "keywords": ["mirror"],
+    "attributes": { "cost": 2, "power": 0 },
+    "deck_limit": 2
+  },
+  {
+    "id": "ash_cloak",
+    "name": "Ash Cloak",
+    "type": "ward",
+    "subtypes": [],
+    "text": "Prevent all clash damage this round. Gain 1 [ash].",
+    "keywords": ["guard"],
+    "attributes": { "cost": 1, "power": 0 },
+    "deck_limit": 2
+  },
+  {
+    "id": "bellows",
+    "name": "Bellows",
+    "type": "tool",
+    "subtypes": [],
+    "text": "Double your [spark] this round, then discard Bellows.",
+    "keywords": [],
+    "attributes": { "cost": 1, "power": 0 },
+    "deck_limit": 1
+  },
+  {
+    "id": "wildfire",
+    "name": "Wildfire",
+    "type": "ember",
+    "subtypes": ["fury"],
+    "text": "Costs 1 less for each [ash] you hold. Burn: discard your hand.",
+    "keywords": ["burn"],
+    "attributes": { "cost": 4, "power": 5 },
+    "deck_limit": 1
+  },
+  {
+    "id": "ember_thief",
+    "name": "Ember Thief",
+    "type": "figure",
+    "subtypes": ["rogue"],
+    "text": "On play: steal 1 [spark] from your rival.",
+    "keywords": [],
+    "attributes": { "cost": 2, "power": 2 },
+    "deck_limit": 2
+  },
+  {
+    "id": "last_light",
+    "name": "Last Light",
+    "type": "ember",
+    "subtypes": ["dawn"],
+    "text": "If you would be extinguished this round, survive at 1 flame instead.",
+    "keywords": ["guard"],
+    "attributes": { "cost": 3, "power": 1 },
+    "deck_limit": 1
+  },
+  {
+    "id": "cinder_rat",
+    "name": "Cinder Rat",
+    "type": "figure",
+    "subtypes": ["beast"],
+    "text": "On play: look at your rival's hand and discard one [ash] card from it.",
+    "keywords": ["scurry"],
+    "attributes": { "cost": 1, "power": 1 },
+    "deck_limit": 2
+  }
+]

@@ -1,0 +1,17 @@
+format_version: "0.1.0"
+id: harbor-nine
+title: "Harbor Nine"
+version: "0.1.0"
+license: CC-BY-4.0  # <-- imported default; CHOOSE your license deliberately
+default_provenance:
+  source: human
+attribute_definitions:
+  - key: cost
+    name: "Cost"
+    type: integer
+  - key: cargo
+    name: "Cargo"
+    type: integer
+  - key: points
+    name: "Points"
+    type: integer

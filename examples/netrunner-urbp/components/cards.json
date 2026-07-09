@@ -1,0 +1,121 @@
+[
+  {
+    "id": "mystic_maemi",
+    "name": "Mystic Maemi",
+    "type": "resource",
+    "subtypes": [
+      "Companion",
+      "Virtual"
+    ],
+    "text": "When your turn begins and whenever you steal an agenda, place 1[credit] on this resource.\nYou can spend hosted credits to play events.\nWhen your turn ends, if there are 3 or more hosted credits, you must trash 1 card from your grip at random or trash this resource.",
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "cost": 1,
+      "influence": 2,
+      "unique": true
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "swift",
+    "name": "Swift",
+    "type": "hardware",
+    "subtypes": [
+      "Console",
+      "Vehicle"
+    ],
+    "text": "+1[mu]\nThe first time each turn you play a run event, gain [click].\nLimit 1 console per player.",
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "cost": 2,
+      "influence": 2,
+      "unique": true
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cybertrooper_talut",
+    "name": "Cybertrooper Talut",
+    "type": "resource",
+    "subtypes": [
+      "Connection",
+      "Virtual"
+    ],
+    "text": "+1[link]\nWhenever you install a non-AI icebreaker, that icebreaker gets +2 strength for the remainder of the turn.",
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "cost": 2,
+      "influence": 2,
+      "unique": true
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "megaprix_qualifier",
+    "name": "Megaprix Qualifier",
+    "type": "agenda",
+    "text": "When you score this agenda, if there is another copy of Megaprix Qualifier in either playerʼs score area, place 1 agenda counter on this agenda.\nWhile this agenda has a hosted agenda counter, it is worth 1 more agenda point.",
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "advancement_cost": 3,
+      "agenda_points": 1,
+      "unique": false
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "la_costa_grid",
+    "name": "La Costa Grid",
+    "type": "upgrade",
+    "subtypes": [
+      "Region",
+      "Seedy"
+    ],
+    "text": "Remote server only.\nWhen your turn begins, place 1 advancement counter on a card in the root of this server.\nLimit 1 region per server.",
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "cost": 3,
+      "influence": 3,
+      "trash_cost": 4,
+      "unique": false
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "digital_rights_management",
+    "name": "Digital Rights Management",
+    "type": "operation",
+    "text": "Play only if the Runner did not make a successful run on HQ during their last turn.\nSearch R&D for 1 agenda and reveal it. (Shuffle R&D after searching it.) Add that agenda to HQ. You may install 1 card from HQ in the root of a remote server.\nYou cannot score agendas for the remainder of the turn.",
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "cost": 1,
+      "influence": 1,
+      "unique": false
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cayambe_grid",
+    "name": "Cayambe Grid",
+    "type": "upgrade",
+    "subtypes": [
+      "Region"
+    ],
+    "text": "When your turn begins, place 1 advancement counter on a piece of ice protecting this server.\nWhenever the Runner approaches this server, end the run unless they pay 2[credit] for each advanced piece of ice protecting this server.\nLimit 1 region per server.",
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "cost": 3,
+      "influence": 3,
+      "trash_cost": 3,
+      "unique": false
+    },
+    "deck_limit": 3
+  }
+]

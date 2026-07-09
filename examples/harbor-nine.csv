@@ -1,0 +1,8 @@
+name,type,subtypes,text,keywords,cost,cargo,points,deck_limit,set,quantity
+Fishing Skiff,ship,small,"Dawn: gain 1 cargo.",swift,1,1,1,3,core,3
+Merchant Cog,ship,trade,"When docked: trade 2 cargo for 3 points.",,2,2,2,2,core,2
+Lighthouse,building,,"Your ships may dock at night. Night actions cost 1 less.",beacon,3,0,3,1,core,1
+Harbormaster,crew,official,"Once per round: rearrange two docked ships.",,2,0,2,2,core,2
+Storm Front,event,weather,"All undocked ships lose their cargo. Swift ships may dock first.",,0,0,0,2,core,2
+Smuggler's Sloop,ship,small;shadow,"Night: dock unseen. Worth 2 extra points if never inspected.",swift,2,1,2,2,core,2
+Customs House,building,,"Inspect a docked ship: steal 1 cargo from it.",,3,0,3,1,core,1

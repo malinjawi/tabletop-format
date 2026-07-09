@@ -1,0 +1,111 @@
+[
+  {
+    "id": "fishing_skiff",
+    "name": "Fishing Skiff",
+    "type": "ship",
+    "subtypes": [
+      "small"
+    ],
+    "text": "Dawn: gain 1 cargo.",
+    "keywords": [
+      "swift"
+    ],
+    "attributes": {
+      "cost": 1,
+      "cargo": 1,
+      "points": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "merchant_cog",
+    "name": "Merchant Cog",
+    "type": "ship",
+    "subtypes": [
+      "trade"
+    ],
+    "text": "When docked: trade 2 cargo for 3 points.",
+    "attributes": {
+      "cost": 2,
+      "cargo": 2,
+      "points": 2
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "lighthouse",
+    "name": "Lighthouse",
+    "type": "building",
+    "text": "Your ships may dock at night. Night actions cost 1 less.",
+    "keywords": [
+      "beacon"
+    ],
+    "attributes": {
+      "cost": 3,
+      "cargo": 0,
+      "points": 3
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "harbormaster",
+    "name": "Harbormaster",
+    "type": "crew",
+    "subtypes": [
+      "official"
+    ],
+    "text": "Once per round: rearrange two docked ships.",
+    "attributes": {
+      "cost": 2,
+      "cargo": 0,
+      "points": 2
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "storm_front",
+    "name": "Storm Front",
+    "type": "event",
+    "subtypes": [
+      "weather"
+    ],
+    "text": "All undocked ships lose their cargo. Swift ships may dock first.",
+    "attributes": {
+      "cost": 0,
+      "cargo": 0,
+      "points": 0
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "smuggler_s_sloop",
+    "name": "Smuggler's Sloop",
+    "type": "ship",
+    "subtypes": [
+      "small",
+      "shadow"
+    ],
+    "text": "Night: dock unseen. Worth 2 extra points if never inspected.",
+    "keywords": [
+      "swift"
+    ],
+    "attributes": {
+      "cost": 2,
+      "cargo": 1,
+      "points": 2
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "customs_house",
+    "name": "Customs House",
+    "type": "building",
+    "text": "Inspect a docked ship: steal 1 cargo from it.",
+    "attributes": {
+      "cost": 3,
+      "cargo": 0,
+      "points": 3
+    },
+    "deck_limit": 1
+  }
+]
