@@ -61,6 +61,26 @@ The deck checker closes the stewardship loop: publish a dated restriction
 document and every deck in the community can re-verify itself —
 `'Wildfire' is RESTRICTED to 1 copy; deck has 2 → ILLEGAL`.
 
+## Git for board games (the point of all this)
+
+Your game is a repo, and the tools speak designer, not git:
+
+```
+fmt save examples/ember          # commit — THE MESSAGE WRITES ITSELF:
+#   Saved: cards: changed 2 cards (Ash Cloak, Bellows)
+#     * Ash Cloak: cost 1 -> 2
+#     * Bellows: text "...then discard Bellows." -> "..."
+fmt history examples/ember       # git log rendered as card changes
+fmt changelog examples/ember     # CHANGELOG.md generated from history
+fmt release examples/ember 0.3.0 # tag with card changes since last release
+fmt fork src.git dst.git         # server-side fork — the Remix primitive
+fmt setup                        # plain `git diff` becomes a semantic card diff
+./fork-demo.sh                   # full loop: publish → fork → PR review → merge
+```
+
+Real git underneath — clone, branch, push anywhere. The porcelain just makes
+the history read like a designer's changelog instead of a hash pile.
+
 `demo.sh` runs: import a designer's CSV → validate → render → PnP PDF + TTS mod →
 apply a balance patch → semantic diff. Spreadsheet to playable-and-printable in
 under a minute, with version control semantics at the end.
