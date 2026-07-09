@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/provenance.schema.json",
+  "title": "Provenance",
+  "description": "Origin and licensing metadata for a creative asset or text. Required on every printing's art; defaultable at game level. Built in from day one (locked decision D8).",
+  "type": "object",
+  "required": ["source"],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": ["human", "ai", "mixed", "unknown"],
+      "description": "How this asset was created. 'unknown' is valid only for imported legacy content and should be resolved before publishing."
+    },
+    "creator": { "type": "string", "description": "Name of the human creator or commissioning party." },
+    "license": {
+      "type": "string",
+      "description": "License of this specific asset if it differs from the game license (SPDX/CC code)."
+    },
+    "source_url": { "type": "string", "format": "uri" },
+    "ai_tool": { "type": "string", "description": "If source is ai/mixed: the generator used." },
+    "notes": { "type": "string" }
+  }
+}

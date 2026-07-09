@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/ruling.schema.json",
+  "title": "Ruling",
+  "description": "A dated clarification about a card, with a source (MTGJSON/NRDB v2 pattern). Rulings clarify; they do not change card text — text changes are commits (errata) visible in git history. Files: rulings/rulings.json array.",
+  "type": "object",
+  "required": ["card_id", "date", "text"],
+  "additionalProperties": false,
+  "properties": {
+    "card_id": { "type": "string", "description": "Rules identity this ruling addresses." },
+    "date": { "type": "string", "format": "date" },
+    "text": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "string",
+      "description": "Who ruled: 'lead designer', an org name, a forum URL."
+    },
+    "supersedes": {
+      "type": "string",
+      "description": "Optional: a previous ruling this replaces (by array position is fragile — prefer quoting date+card)."
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/set.schema.json",
+  "title": "Set",
+  "description": "A released group of printings (core set, expansion, pack). Files: sets/*.yaml, one per set, or sets.json array.",
+  "type": "object",
+  "required": ["id", "name"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1 },
+    "cycle_id": {
+      "type": "string",
+      "description": "Optional grouping (cycle/block/wave) for games that release in arcs."
+    },
+    "position": { "type": "integer", "minimum": 1, "description": "Order within cycle." },
+    "release_date": { "type": "string", "format": "date" },
+    "size": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Expected number of printings; validator warns on mismatch."
+    },
+    "description": { "type": "string" }
+  }
+}

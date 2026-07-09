@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/restriction.schema.json",
+  "title": "Restriction (banlist)",
+  "description": "A DATED, immutable banlist/restriction document. New ban wave = new document; formats point at the active one. Never edit a published restriction — issue the next one (stewardship communities' errata/banlist history is first-class, not a flag on cards). Files: restrictions/*.yaml.",
+  "type": "object",
+  "required": ["id", "date_start"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+    "name": { "type": "string" },
+    "date_start": { "type": "string", "format": "date" },
+    "banned": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Card IDs (rules identity — a ban hits every printing)."
+    },
+    "restricted": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Card IDs limited to 1 copy (or game-defined meaning)."
+    },
+    "points": {
+      "type": "object",
+      "description": "Optional points-list systems (card_id -> point cost).",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "notes": { "type": "string", "description": "Designer reasoning — communities deserve the why." }
+  }
+}

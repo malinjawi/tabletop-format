@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/card.schema.json",
+  "title": "Card (rules identity)",
+  "description": "The RULES identity of a card — stable across reprints, alternate art, and printings. Two-tier model (Scryfall oracle_id / NRDB v2 consensus): what a card DOES lives here; how a specific physical copy LOOKS lives in Printing. Files: components/cards.json is an array of these.",
+  "type": "object",
+  "required": ["id", "name", "type"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable opaque ID. NEVER reused, NEVER positional, survives renames. This is what diffs, printings, rulings, and banlists reference.",
+      "pattern": "^[a-z0-9][a-z0-9_]{1,63}$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "description": "Primary card type (game-defined vocabulary).",
+      "minLength": 1
+    },
+    "subtypes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Structured list — never a ' - '-joined string (NRDB v1 lesson)."
+    },
+    "text": {
+      "type": "string",
+      "description": "Current canonical rules text (post-errata). Inline symbols as [key] tags per game.yaml symbols. History of changes lives in git; dated clarifications live in rulings/."
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Game-specific fields (cost, power, faction...). Keys should be declared in game.yaml attribute_definitions for typed validation.",
+      "additionalProperties": {
+        "type": ["integer", "number", "string", "boolean"]
+      }
+    },
+    "deck_limit": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Max copies per deck, if the game has decks. Omit if not applicable."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Machine-readable hooks for deckbuilding/validation rules (ArkhamDB pattern)."
+    },
+    "notes": { "type": "string", "description": "Designer notes; not rules text." }
+  }
+}
