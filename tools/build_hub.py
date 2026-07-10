@@ -59,6 +59,40 @@ def cards_at(ref, rel):
     out = sh(["git", "show", f"{ref}:{rel}"], ok_fail=True)
     return json.loads(out) if out else None
 
+def md_to_html(md):
+    """Tiny markdown renderer: headings, bold/italic, lists, paragraphs, symbols stay as [x]."""
+    out, in_list, in_ol = [], False, False
+    for raw in md.split("\n"):
+        line = raw.rstrip()
+        def inline(s):
+            s = html.escape(s)
+            import re as _re
+            s = _re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+            s = _re.sub(r"\*(.+?)\*", r"<em>\1</em>", s)
+            s = _re.sub(r"`(.+?)`", r"<code>\1</code>", s)
+            return s
+        if line.startswith("#"):
+            if in_list: out.append("</ul>"); in_list = False
+            if in_ol: out.append("</ol>"); in_ol = False
+            n = len(line) - len(line.lstrip("#"))
+            out.append(f"<h{min(n,4)}>{inline(line.lstrip('# '))}</h{min(n,4)}>")
+        elif line.startswith("- "):
+            if in_ol: out.append("</ol>"); in_ol = False
+            if not in_list: out.append("<ul>"); in_list = True
+            out.append(f"<li>{inline(line[2:])}</li>")
+        elif line[:3].rstrip(". ").isdigit() and ". " in line[:4]:
+            if in_list: out.append("</ul>"); in_list = False
+            if not in_ol: out.append("<ol>"); in_ol = True
+            out.append(f"<li>{inline(line.split('. ', 1)[1])}</li>")
+        elif line == "":
+            if in_list: out.append("</ul>"); in_list = False
+            if in_ol: out.append("</ol>"); in_ol = False
+        else:
+            out.append(f"<p>{inline(line)}</p>")
+    if in_list: out.append("</ul>")
+    if in_ol: out.append("</ol>")
+    return "\n".join(out)
+
 def git_history(rel, limit=15):
     log = sh(["git", "log", f"-{limit}", "--format=%H|%h|%an|%as|%s", "--", rel], ok_fail=True)
     if not log: return []
@@ -113,6 +147,16 @@ def build_game(slug):
     rel = f"examples/{slug}/components/cards.json"
     history = git_history(rel)
 
+    # rules: rendered markdown + its own git history (errata trail)
+    rules_md = (gd / "rules" / "rules.md").read_text() if (gd / "rules" / "rules.md").exists() else ""
+    rules_rel = f"examples/{slug}/rules/rules.md"
+    rules_log = sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", rules_rel], ok_fail=True) or ""
+    rules_history = [dict(zip(["sha", "author", "date", "subject"], l.split("|", 3)))
+                     for l in rules_log.split("\n") if l]
+    tokens = []
+    tk = gd / "components" / "tokens.json"
+    if tk.exists(): tokens = json.loads(tk.read_text())
+
     # deck legality via checker
     deck_data = []
     ddir = gd / "decks"
@@ -159,6 +203,7 @@ def build_game(slug):
         "cards": cards, "images": images,
         "sets": sets_, "formats": formats, "restrictions": restrictions,
         "decks": deck_data, "history": history, "prs": prs, "releases": releases,
+        "rules_html": md_to_html(rules_md), "rules_history": rules_history, "tokens": tokens,
         "updated": last_commit["date"] if last_commit else "",
         "ncards": len(cards), "nprintings": len(printings),
     }

@@ -155,7 +155,8 @@ function searchAll(v){
 /* ---------- repo page ---------- */
 function repoPage(g, tab){
   const tabs = [
-    ["overview","Overview",null],["cards","Cards",g.ncards],["history","History",g.history.length],
+    ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
+    ["history","History",g.history.length],
     ["suggestions","Suggestions",g.prs.length],["releases","Releases",g.releases.length],
     ["banlist","Banlist",null],["decks","Decks",g.decks.length]];
   $("#view").innerHTML = `
@@ -175,7 +176,7 @@ function repoPage(g, tab){
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,history,suggestions,releases,banlist,decks})[tab](g);
+  ({overview,cards,rules,history,suggestions,releases,banlist,decks})[tab](g);
 }
 
 /* ---------- tabs ---------- */
@@ -241,6 +242,28 @@ function cardModal(slug,cid){
       ${hist.map(h=>`<div class="chg"><span class="mono" style="color:var(--mut)">${esc(h.sha)} ${esc(h.date)}</span> · ${esc(h.field.replace("attributes.",""))}: <span class="old">${esc(h.from)}</span> <span class="new">${esc(h.to)}</span></div>`).join("")||"<div style='color:var(--mut);font-size:13px'>Unchanged since first printing.</div>"}
     </div>`;
   $("#modal").classList.add("on");
+}
+
+function rules(g){
+  const syms = {spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"};
+  let body = g.rules_html || "<div class='emptystate'>No rulebook yet — <code>rules/rules.md</code> diffs like everything else.</div>";
+  body = body.replace(/\[([a-z0-9_]+)\]/g,(m,k)=>syms[k]?`<b>${syms[k]}</b>`:m);
+  $("#pane").innerHTML = `<div class="two"><div>
+    <div class="box"><div class="bh">📖 rules/rules.md <span style="color:var(--mut);font-weight:400">· prose that diffs — every errata is a commit</span></div>
+    <div class="bb" style="max-width:720px">${body}</div></div>
+  </div><div class="side">
+    <div class="box"><div class="bh">Components</div><div class="bb">
+      ${g.tokens.length?g.tokens.map(t=>`<div class="kv" style="margin:8px 0"><b>${esc(t.name)}</b>
+        ${t.quantity??1}×${t.per_player?" per player":""} <span style="color:var(--mut)">(${esc(t.kind)})</span>
+        ${t.description?`<div style="color:var(--mut);font-size:12px">${esc(t.description)}</div>`:""}</div>`).join("")
+      :"<span style='color:var(--mut)'>Cards only.</span>"}
+      <div style="color:var(--mut);font-size:12px;margin-top:10px">🃏 ${g.ncards} cards (${g.nprintings} printings)</div>
+    </div></div>
+    <div class="box"><div class="bh">Rules history</div><div class="bb">
+      ${g.rules_history.length?g.rules_history.map(h=>`<div class="activity"><span>📝</span><div><b>${esc(h.author)}</b> ${esc(h.subject)}<br><span class="mono" style="color:var(--mut)">${esc(h.sha)} · ${esc(h.date)}</span></div></div>`).join("")
+      :"<span style='color:var(--mut)'>No rules changes yet.</span>"}
+    </div></div>
+  </div></div>`;
 }
 
 function history(g){

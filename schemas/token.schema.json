@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/token.schema.json",
+  "title": "Token / non-card component",
+  "description": "Physical components that aren't cards: tokens, dials, boards, standees, dice. Same stable-ID discipline; same diffability. Files: components/tokens.json array. (Genre door-opener: a wargame unit tray or a worker meeple is a row here too.)",
+  "type": "object",
+  "required": ["id", "name", "kind"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]{1,63}$" },
+    "name": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "description": "Component category (game-defined vocabulary).",
+      "examples": ["token", "dial", "board", "standee", "die", "tile", "meeple"]
+    },
+    "quantity": { "type": "integer", "minimum": 1, "description": "Copies included in the game." },
+    "per_player": { "type": "boolean", "default": false, "description": "Quantity is per player rather than total." },
+    "description": { "type": "string" },
+    "symbol": {
+      "type": "string",
+      "description": "If this token backs an inline text symbol, the symbol key from game.yaml (e.g. 'spark')."
+    },
+    "art": { "type": "string", "description": "Relative asset path (LFS-tracked)." },
+    "size_mm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "description": "Physical print size for PnP/print-on-demand."
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Game-specific fields, same convention as cards.",
+      "additionalProperties": { "type": ["integer", "number", "string", "boolean"] }
+    },
+    "notes": { "type": "string" }
+  }
+}

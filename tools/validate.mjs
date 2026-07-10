@@ -78,6 +78,9 @@ rulings.forEach((r, i) => checkSchema("ruling", r, `rulings[${i}]`));
 const decks = loadDirOrFile("decks");
 decks.forEach((d, i) => checkSchema("deck", d, `decks[${i}] (${d?.id ?? "?"})`));
 
+const tokens = load("components/tokens.json") ?? [];
+tokens.forEach((t, i) => checkSchema("token", t, `tokens[${i}] (${t?.id ?? "?"})`));
+
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {
   const seen = new Set();
@@ -135,6 +138,9 @@ for (const c of cards) {
   for (const m of (c.text ?? "").matchAll(/\[([a-z0-9_]+)\]/g))
     if (!declaredSymbols.has(m[1])) warn(`card '${c.id}': text uses undeclared symbol [${m[1]}]`);
 }
+dupes(tokens, "token");
+for (const t of tokens)
+  if (t.symbol && !declaredSymbols.has(t.symbol)) err(`token '${t.id}': symbol '${t.symbol}' not declared in game.yaml`);
 
 // Set size vs actual printings
 for (const s of sets) {

@@ -69,6 +69,8 @@ rulings = load("rulings/rulings.json") or []
 for i, r in enumerate(rulings): check("ruling", r, f"rulings[{i}]")
 decks = load_dir("decks")
 for i, d in enumerate(decks): check("deck", d, f"decks[{i}] ({d.get('id','?')})")
+tokens = load("components/tokens.json") or []
+for i, t in enumerate(tokens): check("token", t, f"tokens[{i}] ({t.get('id','?')})")
 
 # Pass 2
 def dupes(arr, label):
@@ -121,6 +123,10 @@ for c in cards:
     for m in re.finditer(r"\[([a-z0-9_]+)\]", c.get("text") or ""):
         if m.group(1) not in declared_symbols:
             warn(f"card '{c['id']}': text uses undeclared symbol [{m.group(1)}]")
+dupes(tokens, "token")
+for t in tokens:
+    if t.get("symbol") and t["symbol"] not in declared_symbols:
+        err(f"token '{t['id']}': symbol '{t['symbol']}' not declared in game.yaml")
 
 for s in sets_:
     if s.get("size") is not None:

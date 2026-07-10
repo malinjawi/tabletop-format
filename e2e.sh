@@ -89,6 +89,24 @@ check "original game publishable" python3 tools/check_licenses.py examples/ember
 check_fails "imported content blocked" python3 tools/check_licenses.py examples/netrunner-urbp
 
 say ""
+say "== rules & tokens =="
+grep -q "## Turn structure" examples/ember/rules/rules.md && ok "rulebook has real content" || bad "rulebook content"
+python3 -c "
+import json; t=json.load(open('examples/ember/components/tokens.json')); assert len(t)>=3" && ok "tokens present" || bad "tokens present"
+python3 -c "
+import json
+t=json.load(open('examples/ember/components/tokens.json'))
+t[0]['symbol']='nonexistent_symbol'
+json.dump(t,open('examples/ember/components/tokens.json','w'))"
+check_fails "undeclared token symbol caught" python3 tools/validate.py examples/ember
+git checkout -q -- examples/ember/components/tokens.json 2>/dev/null || python3 -c "
+import json
+t=json.load(open('examples/ember/components/tokens.json'))
+t[0]['symbol']='spark'
+json.dump(t,open('examples/ember/components/tokens.json','w'),indent=2)"
+check "validate ember (restored)" python3 tools/validate.py examples/ember
+
+say ""
 say "== UI generators =="
 check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCRATCH/patched.json" -o "$SCRATCH/site.html"
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"
