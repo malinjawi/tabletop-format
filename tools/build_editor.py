@@ -22,8 +22,11 @@ def main():
 
     payload = {
         "title": game.get("title", "Untitled"),
+        "slug": game.get("id", ""),
         "attribute_definitions": game.get("attribute_definitions") or [],
         "symbols": {s["key"]: s.get("name", s["key"]) for s in (game.get("symbols") or [])},
+        "glyphs": {s["key"]: s["glyph"] for s in (game.get("symbols") or []) if s.get("glyph")},
+        "type_colors": game.get("type_colors") or {},
         "cards": cards,
     }
     data_js = json.dumps(payload).replace("</", "<\\/")
@@ -72,11 +75,13 @@ const DATA = __DATA__;
 const ORIGINAL = JSON.parse(JSON.stringify(DATA.cards));
 let cards = DATA.cards, cur = 0;
 const PALETTE = [["#8c2f1b","#f6e3d3"],["#1b4f8c","#dbe9f6"],["#3a6b28","#e2f0d9"],["#6b285a","#f0d9ea"],["#7a5a1b","#f4ead2"],["#37474f","#e0e7ea"]];
-const GLYPHS = {spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"};
+const GLYPHS = Object.assign({spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"}, DATA.glyphs||{});
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
 document.getElementById("gtitle").textContent = DATA.title + " — card editor";
 
-function colors(type){ const types=[...new Set(cards.map(c=>c.type))].sort(); return PALETTE[Math.max(0,types.indexOf(type))%PALETTE.length]; }
+function colors(type){
+  const tc=(DATA.type_colors||{})[type]; if(tc) return [tc.fg,tc.bg];
+  const types=[...new Set(cards.map(c=>c.type))].sort(); return PALETTE[Math.max(0,types.indexOf(type))%PALETTE.length]; }
 function sym(t){ return (t??"").replace(/\[([a-z0-9_]+)\]/g,(m,k)=>GLYPHS[k]??k.toUpperCase()); }
 
 function renderList(){

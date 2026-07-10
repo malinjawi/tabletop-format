@@ -171,6 +171,32 @@ EOF
 git -C "$SCRATCH" diff -- examples/ember/components/cards.json | grep -q "power: 0 → 7" && ok "git diff speaks cards (driver)" || bad "git diff driver"
 
 say ""
+say "== platform server (Block G v0) =="
+PORT=$(( (RANDOM % 2000) + 18000 ))
+node server.mjs --port $PORT > "$SCRATCH/srv.log" 2>&1 &
+SRVPID=$!
+sleep 1.5
+NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;print(len(json.load(sys.stdin)))" 2>/dev/null)
+[ "$NGAMES" = "3" ] && ok "server discovers 3 games" || bad "server discovery" "got '$NGAMES'"
+curl -s "localhost:$PORT/api/games/ember/cards" | python3 -c "
+import json,sys
+cards=json.load(sys.stdin)
+for c in cards:
+    if c['id']=='kindling': c['attributes']['power']=3
+json.dump(cards,open('$SCRATCH/put.json','w'))" 2>/dev/null
+PUTMSG=$(curl -s -X PUT -H 'content-type: application/json' --data @"$SCRATCH/put.json" "localhost:$PORT/api/games/ember/cards" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message',''))" 2>/dev/null)
+echo "$PUTMSG" | grep -q "True cards: changed 1 card" && ok "HTTP PUT → git commit w/ auto message" || bad "HTTP PUT commit" "$PUTMSG"
+git log -1 --format=%s | grep -q "Kindling" && ok "commit subject names the card" || git log -1 --format=%B | grep -q "Kindling" && ok "commit body names the card" || bad "commit content"
+python3 -c "
+import json
+c=json.load(open('$SCRATCH/put.json')); c[0]['attributes']['power']='bad'
+json.dump(c,open('$SCRATCH/badput.json','w'))"
+BADCODE=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' --data @"$SCRATCH/badput.json" "localhost:$PORT/api/games/ember/cards")
+[ "$BADCODE" = "422" ] && ok "invalid PUT rejected (422) with rollback" || bad "invalid PUT" "got $BADCODE"
+curl -s "localhost:$PORT/api/games/ember/validate" | grep -q '"ok": true' && ok "post-rollback state validates" || bad "rollback state"
+kill $SRVPID 2>/dev/null
+
+say ""
 say "== fork demo (full publish→fork→PR→merge loop) =="
 git -C "$SCRATCH" checkout -q -- .
 bash fork-demo.sh "$SCRATCH/forkdemo" > "$SCRATCH/fork.out" 2>&1 \

@@ -14,7 +14,11 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-GAMES = ["ember", "harbor-nine", "netrunner-urbp"]
+
+def discover_games(base=None):
+    """Any directory with a game.yaml is a game — no hard-coded list."""
+    base = Path(base) if base else ROOT / "examples"
+    return sorted(p.parent for p in base.glob("*/game.yaml"))
 
 def sh(args, cwd=ROOT, ok_fail=False):
     r = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
@@ -126,8 +130,10 @@ def render_ref_faces(game_rel, ref, want_ids):
             if f.exists(): out[cid] = b64(f)
         return out
 
-def build_game(slug):
-    gd = ROOT / "examples" / slug
+def build_game(gd):
+    gd = Path(gd)
+    slug = gd.name
+    game_rel = str(gd.relative_to(ROOT))
     game = yaml.safe_load((gd / "game.yaml").read_text())
     cards = json.loads((gd / "components/cards.json").read_text())
     printings = json.loads((gd / "components/printings.json").read_text())
@@ -144,12 +150,12 @@ def build_game(slug):
         f = faces / f"{pid}.png"
         if pid and f.exists(): images[c["id"]] = b64(f)
 
-    rel = f"examples/{slug}/components/cards.json"
+    rel = f"{game_rel}/components/cards.json"
     history = git_history(rel)
 
     # rules: rendered markdown + its own git history (errata trail)
     rules_md = (gd / "rules" / "rules.md").read_text() if (gd / "rules" / "rules.md").exists() else ""
-    rules_rel = f"examples/{slug}/rules/rules.md"
+    rules_rel = f"{game_rel}/rules/rules.md"
     rules_log = sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", rules_rel], ok_fail=True) or ""
     rules_history = [dict(zip(["sha", "author", "date", "subject"], l.split("|", 3)))
                      for l in rules_log.split("\n") if l]
@@ -168,7 +174,7 @@ def build_game(slug):
     people = {}
     for c in community.get("contributors") or []:
         people[c["name"]] = {"roles": set(c["roles"]), "commits": 0, "sessions": 0}
-    authors = (sh(["git", "log", "--format=%an", "--", f"examples/{slug}"], ok_fail=True) or "").splitlines()
+    authors = (sh(["git", "log", "--format=%an", "--", game_rel], ok_fail=True) or "").splitlines()
     for a in authors:
         a = a.strip()
         if not a: continue
@@ -207,7 +213,7 @@ def build_game(slug):
         author = sh(["git", "log", "-1", "--format=%an", br], ok_fail=True) or "?"
         subject = sh(["git", "log", "-1", "--format=%s", br], ok_fail=True) or br
         changed_ids = sorted({c["card"] for c in changes})
-        after = render_ref_faces(f"examples/{slug}", br, changed_ids)
+        after = render_ref_faces(game_rel, br, changed_ids)
         prs.append({"branch": br, "author": author, "title": subject, "changes": changes,
                     "after": after})
 
@@ -239,7 +245,8 @@ def build_game(slug):
 def main():
     args = sys.argv[1:]
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else ROOT / "hub.html"
-    data = {"games": [build_game(s) for s in GAMES]}
+    base = args[args.index("--games") + 1] if "--games" in args else None
+    data = {"games": [build_game(g) for g in discover_games(base)]}
     data_js = json.dumps(data).replace("</", "<\\/")
     tpl = (ROOT / "tools" / "hub_template.html").read_text()
     out_path.write_text(tpl.replace("__DATA__", data_js))

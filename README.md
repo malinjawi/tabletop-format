@@ -82,6 +82,21 @@ fmt setup                        # plain `git diff` becomes a semantic card diff
 Real git underneath — clone, branch, push anywhere. The porcelain just makes
 the history read like a designer's changelog instead of a hash pile.
 
+## The platform server (v0)
+
+```
+node server.mjs            # http://localhost:8420 — zero dependencies
+```
+
+A live HTTP server over the game repos: the hub UI at `/`, a REST API at
+`/api/games/...` (cards, history, stats, validation, credits, exports), and
+the part that makes it a platform — **`PUT /api/games/:slug/cards` validates,
+then commits, with the message auto-written from the semantic diff.** Invalid
+writes get a 422 and a rollback; history is served as card changes. Games are
+discovered by scanning for `game.yaml` — drop a new game dir in, it's live.
+These are the exact verbs the production backend (headless Forgejo) will
+speak; the contracts are proven here against plain git first.
+
 `demo.sh` runs: import a designer's CSV → validate → render → PnP PDF + TTS mod →
 apply a balance patch → semantic diff. Spreadsheet to playable-and-printable in
 under a minute, with version control semantics at the end.

@@ -107,8 +107,14 @@ def main():
     game = yaml.safe_load((game_dir / "game.yaml").read_text())
     cards = {c["id"]: c for c in json.loads((game_dir / "components/cards.json").read_text())}
     printings = json.loads((game_dir / "components/printings.json").read_text())
+    # Colors & glyphs are DESIGN DATA (game.yaml), not tool code; palette is only a fallback.
     types = sorted({c["type"] for c in cards.values()})
     colors = {t: PALETTE[i % len(PALETTE)] for i, t in enumerate(types)}
+    for t, cc in (game.get("type_colors") or {}).items():
+        colors[t] = (cc["fg"], cc["bg"])
+    for s in game.get("symbols") or []:
+        if s.get("glyph"):
+            SYMBOLS[s["key"]] = s["glyph"]
 
     for p in printings:
         c = cards[p["card_id"]]
