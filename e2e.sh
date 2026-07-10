@@ -107,6 +107,23 @@ json.dump(t,open('examples/ember/components/tokens.json','w'),indent=2)"
 check "validate ember (restored)" python3 tools/validate.py examples/ember
 
 say ""
+say "== playtests & stats =="
+NPT=$(ls examples/ember/playtests/*.json 2>/dev/null | wc -l | tr -d ' ')
+[ "$NPT" -ge 3 ] && ok "playtest sessions present ($NPT)" || bad "playtest sessions"
+check "stats runs" python3 tools/stats.py examples/ember
+python3 tools/stats.py examples/ember | grep -q "DECISION TRAIL" && ok "stats shows decision trail" || bad "stats decision trail"
+python3 tools/stats.py examples/ember --json | python3 -c "import json,sys;d=json.load(sys.stdin);assert d['sessions']>=3" && ok "stats --json parses" || bad "stats --json"
+python3 -c "
+import json
+s=json.load(open('examples/ember/playtests/2026-06-20-first-blood.json'))
+s['card_notes'][0]['card_id']='ghost_card'
+json.dump(s,open('$SCRATCH/badpt.json','w'))
+import shutil; shutil.copy('$SCRATCH/badpt.json','examples/ember/playtests/2026-06-20-first-blood.json')"
+check_fails "playtest bad card ref caught" python3 tools/validate.py examples/ember
+git checkout -q -- examples/ember/playtests/ 2>/dev/null || true
+check "validate ember (playtests restored)" python3 tools/validate.py examples/ember
+
+say ""
 say "== UI generators =="
 check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCRATCH/patched.json" -o "$SCRATCH/site.html"
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"

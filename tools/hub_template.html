@@ -156,7 +156,7 @@ function searchAll(v){
 function repoPage(g, tab){
   const tabs = [
     ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
-    ["history","History",g.history.length],
+    ["playtests","Playtests",g.playtests.length],["history","History",g.history.length],
     ["suggestions","Suggestions",g.prs.length],["releases","Releases",g.releases.length],
     ["banlist","Banlist",null],["decks","Decks",g.decks.length]];
   $("#view").innerHTML = `
@@ -176,7 +176,7 @@ function repoPage(g, tab){
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,rules,history,suggestions,releases,banlist,decks})[tab](g);
+  ({overview,cards,rules,playtests,history,suggestions,releases,banlist,decks})[tab](g);
 }
 
 /* ---------- tabs ---------- */
@@ -262,6 +262,48 @@ function rules(g){
     <div class="box"><div class="bh">Rules history</div><div class="bb">
       ${g.rules_history.length?g.rules_history.map(h=>`<div class="activity"><span>📝</span><div><b>${esc(h.author)}</b> ${esc(h.subject)}<br><span class="mono" style="color:var(--mut)">${esc(h.sha)} · ${esc(h.date)}</span></div></div>`).join("")
       :"<span style='color:var(--mut)'>No rules changes yet.</span>"}
+    </div></div>
+  </div></div>`;
+}
+
+function playtests(g){
+  if(!g.playtests.length){$("#pane").innerHTML="<div class='emptystate'>No sessions logged.<br><span style='font-size:13px'>playtests/*.json — feedback pinned to the exact version tested.</span></div>";return;}
+  // insights: cost curve + most-flagged
+  const curve={};
+  for(const c of g.cards){const k=(c.attributes||{}).cost;if(k!=null)curve[k]=(curve[k]||0)+1;}
+  const mx=Math.max(...Object.values(curve),1);
+  const flags={};
+  for(const s of g.playtests)for(const n of s.card_notes||[]){(flags[n.card_id]=flags[n.card_id]||[]).push(n.tag);}
+  const names=Object.fromEntries(g.cards.map(c=>[c.id,c.name]));
+  const rank=Object.entries(flags).sort((a,b)=>b[1].length-a[1].length).slice(0,5);
+  const mins=g.playtests.reduce((a,s)=>a+(s.duration_minutes||0),0);
+  const tagColor={balance:"var(--org)",confusing:"var(--red)",fun:"var(--grn)",bug:"var(--red)",timing:"var(--blu)",art:"var(--acc)"};
+  $("#pane").innerHTML=`<div class="two"><div>
+    ${g.playtests.map(s=>`<div class="box"><div class="bh">🎲 ${esc(s.id)}
+      <span style="color:var(--mut);font-weight:400">· ${esc(s.date)} · ${esc(s.location||"")} · tested <code>${esc(s.version_ref)}</code>${s.duration_minutes?` · ${s.duration_minutes} min`:""}</span></div>
+      <div class="bb">
+        <div style="font-size:13px;margin-bottom:8px">${(s.players||[]).map(p=>`<span class="badge" style="margin-right:6px">${esc(p.name)}${p.deck_id?` · ${esc(p.deck_id)}`:""}${p.result?` — ${p.result==="win"?"🏆 win":esc(p.result)}`:""}${p.first_game?" · first game":""}</span>`).join("")}</div>
+        ${s.notes?`<p style="font-size:13px;color:#444">${esc(s.notes)}</p>`:""}
+        ${(s.card_notes||[]).map(n=>`<div class="chg"><b>${esc(names[n.card_id]||n.card_id)}</b>
+          <span class="badge" style="color:${tagColor[n.tag]||"var(--mut)"};border-color:currentColor">${esc(n.tag)}</span>
+          ${esc(n.note)}${n.suggestion?`<div style="color:var(--mut)">↳ ${esc(n.suggestion)}</div>`:""}</div>`).join("")}
+        ${(s.decisions||[]).length?`<div style="margin-top:10px;border-top:1px solid #eaeef2;padding-top:8px">
+          ${s.decisions.map(d=>`<div class="chg" style="border-color:var(--grn)"><b>Decision:</b> ${esc(d.action)}${d.rationale?` <span style="color:var(--mut)">— ${esc(d.rationale)}</span>`:""}</div>`).join("")}</div>`:""}
+      </div></div>`).join("")}
+  </div><div class="side">
+    <div class="box"><div class="bh">At the table</div><div class="bb">
+      <div class="kv"><b>Sessions</b>${g.playtests.length}</div>
+      <div class="kv"><b>Minutes</b>${mins}</div>
+    </div></div>
+    <div class="box"><div class="bh">Most-flagged cards</div><div class="bb">
+      ${rank.map(([cid,tags])=>`<div class="kv" style="margin:7px 0"><b>${esc(names[cid]||cid)}</b>${tags.length}× <span style="color:var(--mut);font-size:12px">(${[...new Set(tags)].join(", ")})</span></div>`).join("")||"<span style='color:var(--mut)'>Nothing flagged.</span>"}
+    </div></div>
+    <div class="box"><div class="bh">Cost curve</div><div class="bb">
+      ${Object.keys(curve).sort((a,b)=>a-b).map(k=>`<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px">
+        <span style="width:14px;text-align:right">${k}</span>
+        <div style="height:14px;border-radius:3px;background:var(--blu);width:${Math.round(curve[k]/mx*160)}px"></div>
+        <span style="color:var(--mut)">${curve[k]}</span></div>`).join("")}
+      <div style="color:var(--mut);font-size:11px;margin-top:6px">fmt stats — full analytics in the CLI</div>
     </div></div>
   </div></div>`;
 }

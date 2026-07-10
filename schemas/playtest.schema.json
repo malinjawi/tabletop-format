@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/playtest.schema.json",
+  "title": "Playtest session",
+  "description": "A playtest session as versioned data. The killer field is version_ref: feedback is pinned to the EXACT game version tested (git sha or tag), so 'Wildfire felt broken' can never be confused with a version where it wasn't. Decisions link sessions to changes — the paper trail from table to banlist. Files: playtests/*.json.",
+  "type": "object",
+  "required": ["id", "date", "version_ref", "players"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+    "date": { "type": "string", "format": "date" },
+    "version_ref": {
+      "type": "string",
+      "description": "Git sha (short ok) or tag of the version on the table. The platform links this to the exact card texts tested."
+    },
+    "format_id": { "type": "string" },
+    "location": {
+      "type": "string",
+      "description": "Where it happened.",
+      "examples": ["in-person", "tts", "screentop", "protospiel-online", "break-my-game"]
+    },
+    "duration_minutes": { "type": "integer", "minimum": 1 },
+    "players": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "description": "Name or handle; playtesters deserve credit too." },
+          "deck_id": { "type": "string" },
+          "result": { "type": "string", "enum": ["win", "loss", "draw"] },
+          "score": { "type": "number" },
+          "first_game": { "type": "boolean", "description": "New player? Their confusion data is gold." }
+        }
+      }
+    },
+    "notes": { "type": "string", "description": "Session-level observations." },
+    "card_notes": {
+      "type": "array",
+      "description": "Per-card observations — the raw material of balance work.",
+      "items": {
+        "type": "object",
+        "required": ["card_id", "tag", "note"],
+        "additionalProperties": false,
+        "properties": {
+          "card_id": { "type": "string" },
+          "tag": { "type": "string", "enum": ["balance", "confusing", "fun", "bug", "art", "timing"] },
+          "note": { "type": "string" },
+          "suggestion": { "type": "string" }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "description": "What the designer decided because of this session. This is the traceability link: session → decision → commit/restriction.",
+      "items": {
+        "type": "object",
+        "required": ["action"],
+        "additionalProperties": false,
+        "properties": {
+          "action": { "type": "string" },
+          "card_id": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    }
+  }
+}

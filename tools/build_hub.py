@@ -156,6 +156,8 @@ def build_game(slug):
     tokens = []
     tk = gd / "components" / "tokens.json"
     if tk.exists(): tokens = json.loads(tk.read_text())
+    playtests = load_dir(gd, "playtests")
+    playtests.sort(key=lambda s: s.get("date", ""), reverse=True)
 
     # deck legality via checker
     deck_data = []
@@ -204,6 +206,7 @@ def build_game(slug):
         "sets": sets_, "formats": formats, "restrictions": restrictions,
         "decks": deck_data, "history": history, "prs": prs, "releases": releases,
         "rules_html": md_to_html(rules_md), "rules_history": rules_history, "tokens": tokens,
+        "playtests": playtests,
         "updated": last_commit["date"] if last_commit else "",
         "ncards": len(cards), "nprintings": len(printings),
     }

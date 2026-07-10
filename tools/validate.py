@@ -71,6 +71,8 @@ decks = load_dir("decks")
 for i, d in enumerate(decks): check("deck", d, f"decks[{i}] ({d.get('id','?')})")
 tokens = load("components/tokens.json") or []
 for i, t in enumerate(tokens): check("token", t, f"tokens[{i}] ({t.get('id','?')})")
+playtests = load_dir("playtests")
+for i, s in enumerate(playtests): check("playtest", s, f"playtests[{i}] ({s.get('id','?')})")
 
 # Pass 2
 def dupes(arr, label):
@@ -127,6 +129,17 @@ dupes(tokens, "token")
 for t in tokens:
     if t.get("symbol") and t["symbol"] not in declared_symbols:
         err(f"token '{t['id']}': symbol '{t['symbol']}' not declared in game.yaml")
+deck_ids = {d["id"] for d in decks}
+for s in playtests:
+    for n in s.get("card_notes") or []:
+        if n["card_id"] not in card_ids:
+            err(f"playtest '{s['id']}': card_note references unknown card '{n['card_id']}'")
+    for d in s.get("decisions") or []:
+        if d.get("card_id") and d["card_id"] not in card_ids:
+            err(f"playtest '{s['id']}': decision references unknown card '{d['card_id']}'")
+    for p in s.get("players") or []:
+        if p.get("deck_id") and p["deck_id"] not in deck_ids:
+            warn(f"playtest '{s['id']}': player deck '{p['deck_id']}' not found in decks/")
 
 for s in sets_:
     if s.get("size") is not None:

@@ -81,6 +81,9 @@ decks.forEach((d, i) => checkSchema("deck", d, `decks[${i}] (${d?.id ?? "?"})`))
 const tokens = load("components/tokens.json") ?? [];
 tokens.forEach((t, i) => checkSchema("token", t, `tokens[${i}] (${t?.id ?? "?"})`));
 
+const playtests = loadDirOrFile("playtests");
+playtests.forEach((s, i) => checkSchema("playtest", s, `playtests[${i}] (${s?.id ?? "?"})`));
+
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {
   const seen = new Set();
@@ -141,6 +144,15 @@ for (const c of cards) {
 dupes(tokens, "token");
 for (const t of tokens)
   if (t.symbol && !declaredSymbols.has(t.symbol)) err(`token '${t.id}': symbol '${t.symbol}' not declared in game.yaml`);
+const deckIds = new Set(decks.map(d => d.id));
+for (const s of playtests) {
+  for (const n of s.card_notes ?? [])
+    if (!cardIds.has(n.card_id)) err(`playtest '${s.id}': card_note references unknown card '${n.card_id}'`);
+  for (const d of s.decisions ?? [])
+    if (d.card_id && !cardIds.has(d.card_id)) err(`playtest '${s.id}': decision references unknown card '${d.card_id}'`);
+  for (const p of s.players ?? [])
+    if (p.deck_id && !deckIds.has(p.deck_id)) warn(`playtest '${s.id}': player deck '${p.deck_id}' not found in decks/`);
+}
 
 // Set size vs actual printings
 for (const s of sets) {
