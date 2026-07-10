@@ -1,0 +1,324 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>Forge — where games live</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><style>
+:root{--h:#1c2128;--bd:#d0d7de;--bg:#f6f8fa;--fg:#1f2328;--mut:#656d76;--acc:#8250df;--grn:#1a7f37;--red:#cf222e;--blu:#0969da;--org:#bc4c00}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--fg);background:#fff;font-size:14px;line-height:1.5}
+a{color:var(--blu);text-decoration:none;cursor:pointer}a:hover{text-decoration:underline}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+/* top bar */
+#top{background:var(--h);color:#fff;display:flex;align-items:center;gap:16px;padding:12px 24px}
+#top .logo{font-weight:700;font-size:16px;color:#fff;display:flex;gap:8px;align-items:center}
+#top input{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;padding:5px 12px;width:280px;font-size:13px}
+#top input::placeholder{color:#aab}
+#top .nl{color:#d6dae0;font-size:14px}#top .nl:hover{color:#fff;text-decoration:none}
+#top .spacer{flex:1}
+#top .av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#8c2f1b,#e0a458);border:1.5px solid rgba(255,255,255,.4)}
+/* buttons & badges */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);background:var(--bg);border-radius:6px;padding:5px 14px;font-size:13px;font-weight:600;color:var(--fg);cursor:pointer}
+.btn:hover{background:#eef1f4}
+.btn.primary{background:var(--grn);border-color:var(--grn);color:#fff}.btn.primary:hover{background:#166f2f}
+.count{background:rgba(175,184,193,.3);border-radius:20px;padding:0 7px;font-size:11px;font-weight:600;margin-left:5px}
+.badge{display:inline-block;border:1px solid var(--bd);border-radius:20px;padding:1px 10px;font-size:12px;color:var(--mut)}
+.badge.lic{color:var(--acc);border-color:var(--acc)}
+.badge.legal{color:var(--grn);border-color:var(--grn)}.badge.illegal{color:var(--red);border-color:var(--red)}
+.badge.prov{color:var(--org);border-color:var(--org)}
+/* layout */
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+/* explore */
+.hero{background:var(--bg);border-bottom:1px solid var(--bd);padding:38px 0 30px}
+.hero h1{margin:0 0 6px;font-size:26px}.hero p{margin:0;color:var(--mut);max-width:640px}
+.gamegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;padding:24px 0}
+.gcard{border:1px solid var(--bd);border-radius:10px;padding:16px 18px;transition:box-shadow .15s}
+.gcard:hover{box-shadow:0 3px 14px rgba(0,0,0,.1)}
+.gcard h3{margin:0 0 4px;font-size:16px}.gcard .desc{color:var(--mut);font-size:13px;min-height:38px}
+.gcard .thumbs{display:flex;gap:6px;margin:10px 0}.gcard .thumbs img{width:52px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.gcard .meta{display:flex;gap:14px;color:var(--mut);font-size:12px;margin-top:8px;align-items:center}
+/* repo header */
+.repohead{padding:18px 0 0;border-bottom:1px solid var(--bd)}
+.repohead .titleline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.repohead h1{font-size:20px;font-weight:400;margin:0}
+.repohead h1 b{font-weight:700}
+.repohead .actions{margin-left:auto;display:flex;gap:8px}
+.tabs{display:flex;gap:6px;margin-top:14px;overflow-x:auto}
+.tabs a{padding:9px 14px;border-bottom:2px solid transparent;color:var(--fg);font-size:14px;white-space:nowrap}
+.tabs a:hover{text-decoration:none;border-bottom-color:#d0d7de}
+.tabs a.on{border-bottom-color:#fd8c73;font-weight:600}
+/* content */
+.pane{padding:22px 0 60px}
+.two{display:grid;grid-template-columns:1fr 296px;gap:28px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.box{border:1px solid var(--bd);border-radius:8px;margin-bottom:16px}
+.box .bh{background:var(--bg);border-bottom:1px solid var(--bd);padding:9px 16px;font-weight:600;font-size:13px;border-radius:8px 8px 0 0}
+.box .bb{padding:14px 16px}
+.sideh{font-size:13px;font-weight:600;margin:0 0 8px}
+.side .box .bb{font-size:13px}
+/* cards tab */
+.filterbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.filterbar input,.filterbar select{border:1px solid var(--bd);border-radius:6px;padding:6px 12px;font-size:13px;background:var(--bg)}
+.filterbar input{flex:1;min-width:200px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
+.ctile{cursor:pointer;transition:transform .12s}.ctile:hover{transform:translateY(-3px)}
+.ctile img{width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.ctile .cn{font-size:12px;color:var(--mut);text-align:center;margin-top:4px}
+/* history */
+.commit{display:flex;gap:14px;padding:14px 16px;border:1px solid var(--bd);border-radius:8px;margin-bottom:10px;cursor:pointer}
+.commit:hover{background:var(--bg)}
+.commit .dot{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#8c2f1b,#e0a458);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
+.commit .sub{font-weight:600}.commit .who{color:var(--mut);font-size:12px}
+.chg{font-size:13px;padding:4px 0 4px 12px;border-left:2px solid var(--bd);margin:6px 0 0 6px}
+.chg b{font-weight:600}
+.old{background:#ffebe9;text-decoration:line-through;padding:0 5px;border-radius:3px}
+.new{background:#dafbe1;padding:0 5px;border-radius:3px}
+.exp{display:none;padding:0 16px 12px 60px}
+.commit.open + .exp{display:block}
+/* PR */
+.pr{border:1px solid var(--bd);border-radius:8px;margin-bottom:16px}
+.prh{padding:14px 18px;border-bottom:1px solid var(--bd)}
+.prh h3{margin:0 0 3px;font-size:16px}
+.prstate{background:var(--grn);color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600}
+.prbody{padding:16px 18px}
+.prcard{display:flex;gap:20px;align-items:flex-start;border-top:1px solid #eaeef2;padding:16px 0;flex-wrap:wrap}
+.prcard img{width:180px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.arrow{align-self:center;font-size:22px;color:var(--mut)}
+.mergebar{background:var(--bg);border-top:1px solid var(--bd);padding:14px 18px;display:flex;gap:12px;align-items:center}
+/* releases / banlist / decks */
+.rel{border-left:3px solid var(--acc);padding:4px 0 4px 16px;margin-bottom:20px}
+.rel h3{margin:0}.rel pre{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;white-space:pre-wrap}
+blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;color:#57606a}
+/* modal */
+#modal{position:fixed;inset:0;background:rgba(28,33,40,.55);display:none;align-items:center;justify-content:center;z-index:50}
+#modal.on{display:flex}
+#modal .mbox{background:#fff;border-radius:12px;max-width:760px;width:92%;max-height:88vh;overflow-y:auto;display:flex;gap:22px;padding:24px}
+#modal img{width:260px;border-radius:10px;align-self:flex-start;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+#modal h2{margin:0 0 4px}
+.kv{font-size:13px;margin:3px 0}.kv b{display:inline-block;min-width:90px;color:var(--mut);font-weight:500}
+.emptystate{color:var(--mut);text-align:center;padding:40px 0}
+.activity{font-size:13px;padding:7px 0;border-bottom:1px solid #eaeef2;display:flex;gap:8px}
+.activity:last-child{border:none}
+</style></head><body>
+<div id="top">
+  <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
+  <input id="q" placeholder="Search games and cards…" oninput="searchAll(this.value)">
+  <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="alert('Platform feature: your games, forks, and suggestions in one place.')">Your games</a>
+  <div class="spacer"></div>
+  <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="alert('Platform: creates a repo + format scaffold. CLI today: fmt import csv your.csv my-game')">+ New game</button>
+  <div class="av" title="you"></div>
+</div>
+<div id="view"></div>
+<div id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
+<script>
+const DATA = __DATA__;
+const $ = s => document.querySelector(s);
+const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const G = slug => DATA.games.find(g=>g.slug===slug);
+
+/* ---------- router ---------- */
+function go(hash){ location.hash = hash; }
+window.onhashchange = render;
+function render(){
+  const h = location.hash.replace(/^#\/?/,"");
+  const [_, slug, tab] = h.match(/^g\/([^/]+)\/?(\w*)/) || [];
+  if (slug && G(slug)) repoPage(G(slug), tab||"overview");
+  else explorePage();
+  window.scrollTo(0,0);
+}
+
+/* ---------- explore ---------- */
+function explorePage(filter){
+  const games = DATA.games.filter(g=>!filter||g.title.toLowerCase().includes(filter));
+  $("#view").innerHTML = `
+  <div class="hero"><div class="wrap">
+    <h1>Games are repositories here.</h1>
+    <p>Every game is versioned, forkable, and exportable. Card changes diff like code — but read like a designer wrote them. Print it, play it in TTS, remix it with credit.</p>
+  </div></div>
+  <div class="wrap"><div class="gamegrid">${games.map(g=>`
+    <div class="gcard">
+      <h3><a onclick="go('g/${g.slug}')">${esc(g.title)}</a> <span class="badge lic">${esc(g.license)}</span></h3>
+      <div class="desc">${esc(g.description).slice(0,120)}</div>
+      <div class="thumbs">${g.cards.slice(0,5).map(c=>g.images[c.id]?`<img src="${g.images[c.id]}">`:"").join("")}</div>
+      <div class="meta">
+        <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} suggestion${g.prs.length===1?"":"s"}</span>
+        <span>🏷 ${g.releases.length} release${g.releases.length===1?"":"s"}</span>
+        <span>updated ${esc(g.updated)}</span>
+      </div>
+    </div>`).join("")}
+  </div></div>`;
+}
+function searchAll(v){
+  v=v.trim().toLowerCase();
+  if(!location.hash || location.hash==="#"){ explorePage(v); return; }
+  const m = location.hash.match(/^#\/?g\/([^/]+)/);
+  if(m && G(m[1])){ go(`g/${m[1]}/cards`); setTimeout(()=>{ const i=$("#cardq"); if(i){i.value=v; filterCards(m[1]);} },30); }
+}
+
+/* ---------- repo page ---------- */
+function repoPage(g, tab){
+  const tabs = [
+    ["overview","Overview",null],["cards","Cards",g.ncards],["history","History",g.history.length],
+    ["suggestions","Suggestions",g.prs.length],["releases","Releases",g.releases.length],
+    ["banlist","Banlist",null],["decks","Decks",g.decks.length]];
+  $("#view").innerHTML = `
+  <div class="repohead"><div class="wrap">
+    <div class="titleline">
+      <h1>📦 <a onclick="go('')">community</a> / <b>${esc(g.slug)}</b></h1>
+      <span class="badge lic">${esc(g.license)}</span>
+      <span class="badge prov">provenance: ${esc(g.provenance)}</span>
+      ${g.attribution?`<span class="badge">⑂ remix of ${esc(g.attribution.source_title)}</span>`:""}
+      <div class="actions">
+        <button class="btn" onclick="alert('Platform: server-side fork with attribution chain.\\nCLI today: fmt fork src.git dst.git')">⑂ Remix <span class="count">3</span></button>
+        <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
+        <button class="btn primary" onclick="alert('Platform: opens the live card editor.\\nToday: exports/ember-editor.html')">✎ Edit cards</button>
+      </div>
+    </div>
+    <div class="tabs">${tabs.map(([id,label,n])=>
+      `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
+  </div></div>
+  <div class="wrap"><div class="pane" id="pane"></div></div>`;
+  ({overview,cards,history,suggestions,releases,banlist,decks})[tab](g);
+}
+
+/* ---------- tabs ---------- */
+function overview(g){
+  $("#pane").innerHTML = `<div class="two"><div>
+    <div class="box"><div class="bh">README</div><div class="bb">
+      <h2 style="margin-top:0">${esc(g.title)} <span style="color:var(--mut);font-weight:400">v${esc(g.version)}</span></h2>
+      <p>${esc(g.description)}</p>
+      <p class="mono" style="color:var(--mut)">fmt validate · fmt save · fmt export pnp · fmt export tts</p>
+    </div></div>
+    <div class="box"><div class="bh">Recent activity</div><div class="bb">
+      ${g.history.slice(0,5).map(h=>`<div class="activity"><span>●</span><div><b>${esc(h.author)}</b> ${esc(h.subject)} <span style="color:var(--mut)">· ${esc(h.date)}</span></div></div>`).join("")||"<div class='emptystate'>No history</div>"}
+    </div></div>
+  </div><div class="side">
+    <div class="box"><div class="bh">About</div><div class="bb">
+      <div class="kv"><b>Cards</b>${g.ncards} (${g.nprintings} printings)</div>
+      <div class="kv"><b>Sets</b>${g.sets.map(s=>esc(s.name)).join(", ")||"—"}</div>
+      <div class="kv"><b>Authors</b>${g.authors.map(esc).join(", ")||"—"}</div>
+      <div class="kv"><b>License</b>${esc(g.license)}</div>
+      <div class="kv"><b>Updated</b>${esc(g.updated)}</div>
+    </div></div>
+    <div class="box"><div class="bh">Latest release</div><div class="bb">
+      ${g.releases.length?`<b>🏷 ${esc(g.releases[g.releases.length-1].tag)}</b> <span style="color:var(--mut)">${esc(g.releases[g.releases.length-1].date)}</span><br><a onclick="go('g/${g.slug}/releases')">release notes →</a>`:"<span style='color:var(--mut)'>None yet — <code>fmt release</code></span>"}
+    </div></div>
+    <div class="box"><div class="bh">Get this game</div><div class="bb mono" style="font-size:11.5px">
+      git clone forge.example/${esc(g.slug)}.git<br>fmt export pnp ${esc(g.slug)}<br>fmt export tts ${esc(g.slug)}
+    </div></div>
+  </div></div>`;
+}
+
+function cards(g){
+  const types=[...new Set(g.cards.map(c=>c.type))].sort();
+  $("#pane").innerHTML = `
+    <div class="filterbar">
+      <input id="cardq" placeholder="Filter cards… (name, text, keyword)" oninput="filterCards('${g.slug}')">
+      <select id="cardt" onchange="filterCards('${g.slug}')"><option value="">All types</option>${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select>
+    </div><div class="cgrid" id="cgrid"></div>`;
+  filterCards(g.slug);
+}
+function filterCards(slug){
+  const g=G(slug), q=($("#cardq")?.value||"").toLowerCase(), t=$("#cardt")?.value||"";
+  const list=g.cards.filter(c=>(!t||c.type===t)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
+  $("#cgrid").innerHTML=list.map(c=>`
+    <div class="ctile" onclick="cardModal('${slug}','${c.id}')">
+      ${g.images[c.id]?`<img src="${g.images[c.id]}">`:`<div style="border:1px solid var(--bd);border-radius:8px;padding:30px 8px;text-align:center;color:var(--mut)">${esc(c.name)}</div>`}
+      <div class="cn">${esc(c.name)}</div>
+    </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
+}
+function cardModal(slug,cid){
+  const g=G(slug), c=g.cards.find(x=>x.id===cid);
+  const hist=[];
+  for(const h of g.history) for(const ch of h.changes)
+    if(ch.card===cid&&ch.kind==="changed") hist.push({...ch,date:h.date,author:h.author,sha:h.sha});
+  $("#mbody").innerHTML=`
+    ${g.images[cid]?`<img src="${g.images[cid]}">`:""}
+    <div style="flex:1">
+      <h2>${esc(c.name)}</h2>
+      <div class="kv"><b>Type</b>${esc(c.type)}${c.subtypes&&c.subtypes.length?" · "+esc(c.subtypes.join(", ")):""}</div>
+      ${Object.entries(c.attributes||{}).map(([k,v])=>`<div class="kv"><b>${esc(k)}</b>${esc(v)}</div>`).join("")}
+      ${c.deck_limit!=null?`<div class="kv"><b>Deck limit</b>${c.deck_limit}</div>`:""}
+      <p style="white-space:pre-wrap">${esc(c.text)}</p>
+      <h4 style="margin-bottom:6px">Card history <span class="count">${hist.length}</span></h4>
+      ${hist.map(h=>`<div class="chg"><span class="mono" style="color:var(--mut)">${esc(h.sha)} ${esc(h.date)}</span> · ${esc(h.field.replace("attributes.",""))}: <span class="old">${esc(h.from)}</span> <span class="new">${esc(h.to)}</span></div>`).join("")||"<div style='color:var(--mut);font-size:13px'>Unchanged since first printing.</div>"}
+    </div>`;
+  $("#modal").classList.add("on");
+}
+
+function history(g){
+  $("#pane").innerHTML = g.history.map((h,i)=>`
+    <div class="commit" onclick="this.classList.toggle('open')">
+      <div class="dot">${esc(h.author[0]||"?").toUpperCase()}</div>
+      <div style="flex:1"><div class="sub">${esc(h.subject)}</div>
+      <div class="who">${esc(h.author)} committed on ${esc(h.date)} · <span class="mono">${esc(h.sha)}</span>
+      · ${h.introduced?`${h.introduced} cards introduced`:`${h.changes.length} card change${h.changes.length===1?"":"s"}`}</div></div>
+      <div style="color:var(--mut)">▾</div>
+    </div>
+    <div class="exp">${h.changes.map(ch=>ch.kind==="changed"
+      ?`<div class="chg"><b>${esc(ch.name)}</b> · ${esc(ch.field.replace("attributes.",""))}: <span class="old">${esc(ch.from)}</span> → <span class="new">${esc(ch.to)}</span></div>`
+      :`<div class="chg"><b>${esc(ch.name)}</b> ${ch.kind}</div>`).join("")||"<div class='chg' style='color:var(--mut)'>Initial import of all cards.</div>"}</div>
+  `).join("")||"<div class='emptystate'>No history yet.</div>";
+}
+
+function suggestions(g){
+  if(!g.prs.length){$("#pane").innerHTML="<div class='emptystate'>No open suggestions.<br><span style='font-size:13px'>Remix this game, make changes, and suggest them back — the diff will be cards, not code.</span></div>";return;}
+  $("#pane").innerHTML=g.prs.map(pr=>{
+    const byCard={};
+    for(const ch of pr.changes){(byCard[ch.card]=byCard[ch.card]||{name:ch.name,fields:[]}).fields.push(ch);}
+    return `<div class="pr">
+    <div class="prh"><span class="prstate">Open</span> &nbsp;<h3 style="display:inline">${esc(pr.title)}</h3>
+      <div style="color:var(--mut);font-size:13px;margin-top:6px"><b>${esc(pr.author)}</b> wants to merge <code>${esc(pr.branch)}</code> into <code>main</code> · ${Object.keys(byCard).length} card${Object.keys(byCard).length===1?"":"s"} changed</div></div>
+    <div class="prbody">
+      ${Object.entries(byCard).map(([cid,e])=>`
+        <div class="prcard">
+          <div><div style="font-size:11px;color:var(--mut);text-transform:uppercase;margin-bottom:4px">current</div>${G(g.slug).images[cid]?`<img src="${G(g.slug).images[cid]}">`:""}</div>
+          <div class="arrow">→</div>
+          <div><div style="font-size:11px;color:var(--mut);text-transform:uppercase;margin-bottom:4px">proposed</div>${pr.after[cid]?`<img src="${pr.after[cid]}">`:""}</div>
+          <div style="flex:1;min-width:220px"><b>${esc(e.name)}</b>
+            ${e.fields.map(f=>f.kind==="changed"?`<div class="chg">${esc(f.field.replace("attributes.",""))}: <span class="old">${esc(f.from)}</span> → <span class="new">${esc(f.to)}</span></div>`:`<div class="chg">${f.kind}</div>`).join("")}
+          </div>
+        </div>`).join("")}
+    </div>
+    <div class="mergebar">
+      <button class="btn primary" onclick="alert('Platform: 3-way merge on card JSON; conflicts resolve per-card, pick-one.\\nToday: git merge ${esc(pr.branch)}')">Accept changes</button>
+      <button class="btn" onclick="alert('Comments thread — playtest results belong here.')">💬 Discuss</button>
+      <span style="color:var(--mut);font-size:13px">Every accepted change keeps ${esc(pr.author)}'s name in the game's history.</span>
+    </div></div>`;}).join("");
+}
+
+function releases(g){
+  $("#pane").innerHTML=g.releases.length?g.releases.slice().reverse().map(r=>`
+    <div class="rel"><h3>🏷 ${esc(r.tag)} <span style="color:var(--mut);font-weight:400;font-size:13px">${esc(r.date)}</span></h3>
+    <pre>${esc(r.notes)||"(no notes)"}</pre>
+    <button class="btn" onclick="alert('Platform: frozen PnP PDF + TTS mod attached to every release.')">⤓ PnP PDF</button>
+    <button class="btn" onclick="alert('Platform: frozen TTS mod for this exact version.')">⤓ TTS mod</button></div>`).join("")
+  :"<div class='emptystate'>No releases yet — <code>fmt release &lt;game&gt; 1.0.0</code></div>";
+}
+
+function banlist(g){
+  const cardsById=Object.fromEntries(g.cards.map(c=>[c.id,c]));
+  $("#pane").innerHTML=(g.formats.map(f=>{
+    const r=g.restrictions.find(x=>x.id===f.active_restriction_id);
+    return `<div class="box"><div class="bh">${esc(f.name)}</div><div class="bb">
+      <div class="kv"><b>Card pool</b>${f.card_pool.map(s=>{const set=g.sets.find(x=>x.id===s);return esc(set?set.name:s)}).join(", ")}</div>
+      ${f.deck_rules?`<div class="kv"><b>Deck size</b>${f.deck_rules.min_size??"?"}–${f.deck_rules.max_size??"?"}</div>`:""}
+      ${r?`<h4 style="margin:14px 0 6px">${esc(r.name||r.id)} <span style="color:var(--mut);font-weight:400;font-size:12px">effective ${esc(r.date_start)}</span></h4>
+        <div class="kv"><b>Banned</b>${(r.banned||[]).map(c=>esc(cardsById[c]?.name||c)).join(", ")||"none"}</div>
+        <div class="kv"><b>Restricted</b>${(r.restricted||[]).map(c=>esc(cardsById[c]?.name||c)).join(", ")||"none"}</div>
+        ${r.notes?`<blockquote>${esc(r.notes)}</blockquote>`:""}
+        <div style="color:var(--mut);font-size:12px;margin-top:10px">Restrictions are dated, immutable documents — new wave, new document. History never rewrites.</div>`
+      :"<div style='color:var(--mut)'>No active restriction list.</div>"}
+    </div></div>`;}).join(""))||"<div class='emptystate'>No formats defined.</div>";
+}
+
+function decks(g){
+  const cardsById=Object.fromEntries(g.cards.map(c=>[c.id,c]));
+  $("#pane").innerHTML=g.decks.length?g.decks.map(d=>`
+    <div class="box"><div class="bh">${esc(d.name)} ${d._legal?'<span class="badge legal">LEGAL</span>':'<span class="badge illegal">ILLEGAL</span>'}
+      <span style="color:var(--mut);font-weight:400"> · ${Object.values(d.cards).reduce((a,b)=>a+b,0)} cards${d.format_id?` · ${esc(d.format_id)}`:""}</span></div>
+    <div class="bb"><div style="font-size:13px">${Object.entries(d.cards).map(([cid,n])=>`${n}× ${esc(cardsById[cid]?.name||cid)}`).join(" · ")}</div>
+      ${d._violations.map(v=>`<div class="chg" style="border-color:var(--red)">${esc(v)}</div>`).join("")}
+    </div></div>`).join("")
+  :"<div class='emptystate'>No decks yet — <code>fmt import decklist</code></div>";
+}
+
+render();
+</script></body></html>
