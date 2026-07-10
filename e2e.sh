@@ -120,7 +120,7 @@ s['card_notes'][0]['card_id']='ghost_card'
 json.dump(s,open('$SCRATCH/badpt.json','w'))
 import shutil; shutil.copy('$SCRATCH/badpt.json','examples/ember/playtests/2026-06-20-first-blood.json')"
 check_fails "playtest bad card ref caught" python3 tools/validate.py examples/ember
-git checkout -q -- examples/ember/playtests/ 2>/dev/null || true
+cp "$REPO"/examples/ember/playtests/*.json examples/ember/playtests/
 check "validate ember (playtests restored)" python3 tools/validate.py examples/ember
 
 say ""
