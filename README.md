@@ -44,7 +44,8 @@ assets/                    # art & icons (large files via LFS)
 ## Tools (reference implementation, v0.1)
 
 ```
-./demo.sh                                            # the whole loop, one command
+./e2e.sh                                             # 35-check integration test — ALL GREEN or it doesn't ship
+./demo.sh                                            # the whole loop, one command, narrated
 node tools/import-csv.mjs cards.csv my-game --title "My Game"   # spreadsheet -> valid game dir, zero deps
 node tools/import-nrdb.mjs nrdb-data my-game --title "My Game"  # NRDB/Alsciende-family JSON -> valid game dir, zero deps
 node tools/validate.mjs examples/ember               # schema + referential integrity (needs: npm i ajv ajv-formats js-yaml)

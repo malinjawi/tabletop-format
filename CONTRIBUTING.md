@@ -11,8 +11,11 @@ decklists, Screentop, …) are the most welcome PRs and shouldn't touch core.
 Match the pattern in `tools/import-nrdb.mjs`: zero/minimal deps, round-trip
 tested against a fixture in `examples/`.
 
-**Every PR that touches schemas or tools must keep `./demo.sh` green** —
-it's the living integration test.
+**Every PR that touches schemas or tools must keep `./e2e.sh` green** —
+35 checks covering every pipeline (imports, validation, render, exports,
+decks, licensing, semantic diffs, git porcelain, the fork loop). It runs
+in a scratch copy and never mutates the repo. `./demo.sh` is the narrated
+version for humans; `e2e.sh` is the law.
 
 **Content vs code.** Code and schemas are Apache-2.0; the spec text and the
 Ember example game are CC0. Don't contribute game content you don't have the

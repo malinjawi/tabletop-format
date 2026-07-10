@@ -10,7 +10,8 @@
   "scripts": {
     "demo": "./demo.sh",
     "validate:ember": "node tools/fmt.mjs validate examples/ember",
-    "test": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp"
+    "test": "./e2e.sh",
+    "test:quick": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp"
   },
   "dependencies": {
     "ajv": "^8.17.0",
