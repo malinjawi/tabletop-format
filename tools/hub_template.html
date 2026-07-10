@@ -158,7 +158,8 @@ function repoPage(g, tab){
     ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
     ["playtests","Playtests",g.playtests.length],["history","History",g.history.length],
     ["suggestions","Suggestions",g.prs.length],["releases","Releases",g.releases.length],
-    ["banlist","Banlist",null],["decks","Decks",g.decks.length]];
+    ["banlist","Banlist",null],["decks","Decks",g.decks.length],
+    ["community","Community",g.credit_roll.length]];
   $("#view").innerHTML = `
   <div class="repohead"><div class="wrap">
     <div class="titleline">
@@ -176,7 +177,7 @@ function repoPage(g, tab){
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,rules,playtests,history,suggestions,releases,banlist,decks})[tab](g);
+  ({overview,cards,rules,playtests,history,suggestions,releases,banlist,decks,community})[tab](g);
 }
 
 /* ---------- tabs ---------- */
@@ -383,6 +384,42 @@ function decks(g){
       ${d._violations.map(v=>`<div class="chg" style="border-color:var(--red)">${esc(v)}</div>`).join("")}
     </div></div>`).join("")
   :"<div class='emptystate'>No decks yet — <code>fmt import decklist</code></div>";
+}
+
+function community(g){
+  const c = g.community || {};
+  const gov = c.governance || {};
+  const govLabel = {lead:"👑 Lead designer decides",council:"🏛 Council of maintainers",open:"🌊 Open — playtest bar decides"}[gov.model] || "Not declared";
+  const statusStyle = {idea:"var(--mut)",in_design:"var(--blu)",playtesting:"var(--org)",released:"var(--grn)",parked:"var(--mut)"};
+  const statusLabel = {idea:"idea",in_design:"in design",playtesting:"playtesting",released:"released",parked:"parked"};
+  $("#pane").innerHTML = `<div class="two"><div>
+    <div class="box"><div class="bh">Governance — how this game is led</div><div class="bb">
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">${govLabel}</div>
+      ${gov.maintainers?`<div class="kv"><b>Maintainers</b>${gov.maintainers.map(esc).join(", ")}</div>`:""}
+      ${gov.decision_process?`<p style="font-size:13px;color:#444">${esc(gov.decision_process)}</p>`:""}
+      <div style="color:var(--mut);font-size:12px">Disagree with the direction? <b>Fork it.</b> That's the appeal process — and great forks get linked back.</div>
+    </div></div>
+    ${(c.open_calls||[]).length?`<div class="box"><div class="bh">🙋 Help wanted</div><div class="bb">
+      ${c.open_calls.map(o=>`<div style="margin:10px 0"><span class="badge" style="color:var(--org);border-color:var(--org);font-weight:600">${esc(o.role)}</span>
+        <span style="font-size:13px"> ${esc(o.note)}</span></div>`).join("")}
+    </div></div>`:""}
+    ${(c.roadmap||[]).length?`<div class="box"><div class="bh">🗺 Roadmap</div><div class="bb">
+      ${c.roadmap.map(r=>`<div style="display:flex;gap:12px;align-items:baseline;margin:9px 0">
+        <span class="badge" style="color:${statusStyle[r.status]};border-color:currentColor;min-width:86px;text-align:center">${statusLabel[r.status]}</span>
+        <div><b>${esc(r.title)}</b>${r.target?` <span style="color:var(--mut);font-size:12px">· ${esc(r.target)}</span>`:""}
+        ${r.notes?`<div style="color:var(--mut);font-size:12.5px">${esc(r.notes)}</div>`:""}</div></div>`).join("")}
+    </div></div>`:""}
+    ${g.design_html?`<div class="box"><div class="bh">📓 Design notes — the why behind the what</div><div class="bb" style="max-width:700px">${g.design_html}</div></div>`:""}
+  </div><div class="side">
+    <div class="box"><div class="bh">Credits <span style="font-weight:400;color:var(--mut)">· auto-generated</span></div><div class="bb">
+      ${g.credit_roll.slice().sort((a,b)=>(b.commits+b.sessions)-(a.commits+a.sessions)).map(p=>`
+        <div style="display:flex;gap:10px;align-items:center;margin:9px 0">
+          <div class="dot" style="width:26px;height:26px;font-size:12px;border-radius:50%;background:linear-gradient(135deg,#8c2f1b,#e0a458);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">${esc(p.name[0].toUpperCase())}</div>
+          <div><b style="font-size:13px">${esc(p.name)}</b><br><span style="font-size:11.5px;color:var(--mut)">${p.roles.map(esc).join(", ")}${p.commits?` · ${p.commits} commit${p.commits!==1?"s":""}`:""}${p.sessions?` · ${p.sessions} session${p.sessions!==1?"s":""}`:""}</span></div>
+        </div>`).join("")}
+      <div style="color:var(--mut);font-size:11.5px;margin-top:10px">Playtesters are credited automatically — showing up to break the game is a contribution. <code>fmt credits</code></div>
+    </div></div>
+  </div></div>`;
 }
 
 render();

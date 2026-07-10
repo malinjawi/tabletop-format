@@ -84,6 +84,9 @@ tokens.forEach((t, i) => checkSchema("token", t, `tokens[${i}] (${t?.id ?? "?"})
 const playtests = loadDirOrFile("playtests");
 playtests.forEach((s, i) => checkSchema("playtest", s, `playtests[${i}] (${s?.id ?? "?"})`));
 
+const community = load("community.yaml");
+if (community != null) checkSchema("community", community, "community.yaml");
+
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {
   const seen = new Set();

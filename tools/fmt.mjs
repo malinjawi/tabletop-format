@@ -39,6 +39,7 @@ else if (cmd === "export" && sub === "pnp") status = runPy("export_pnp.py", argv
 else if (cmd === "export" && sub === "tts") status = runPy("export_tts.py", argv.slice(2));
 else if (cmd === "check-licenses") status = runPy("check_licenses.py", argv.slice(1));
 else if (cmd === "stats") status = runPy("stats.py", argv.slice(1));
+else if (cmd === "credits") status = runPy("credits.py", argv.slice(1));
 else if (cmd === "import" && sub === "decklist") status = runNode("import-decklist.mjs", argv.slice(2));
 else if (cmd === "check-deck") status = runPy("check_deck.py", argv.slice(1));
 else if (["save", "history", "changelog", "fork", "release", "setup"].includes(cmd))
@@ -57,6 +58,7 @@ else {
   fmt import decklist <game-dir> <list.txt> [--name N] [--format F]
   fmt check-deck <game-dir> <deck.json> [--format F]
   fmt stats <game-dir> [--json]   cost curve, flagged cards, decision trail
+  fmt credits <game-dir>          CREDITS.md from community.yaml + git + playtests
 
   git porcelain (your game is a repo):
   fmt save <game-dir> [-m msg]    commit — message auto-written from card changes

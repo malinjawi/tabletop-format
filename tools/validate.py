@@ -73,6 +73,8 @@ tokens = load("components/tokens.json") or []
 for i, t in enumerate(tokens): check("token", t, f"tokens[{i}] ({t.get('id','?')})")
 playtests = load_dir("playtests")
 for i, s in enumerate(playtests): check("playtest", s, f"playtests[{i}] ({s.get('id','?')})")
+community = load("community.yaml")
+if community is not None: check("community", community, "community.yaml")
 
 # Pass 2
 def dupes(arr, label):

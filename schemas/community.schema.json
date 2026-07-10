@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/community.schema.json",
+  "title": "Community & governance",
+  "description": "How this game is led, who builds it, what help it wants, and where it's going. Encodes the fork-and-lead model: every project declares its decision structure so contributors know the rules before they invest. File: community.yaml.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "governance": {
+      "type": "object",
+      "required": ["model"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": ["lead", "council", "open"],
+          "description": "lead = one designer decides (auteur + periphery); council = named maintainers decide together (Wesnoth model); open = maintainers merge anything passing playtest bar. Forking is always the appeal process."
+        },
+        "maintainers": {
+          "type": "array", "items": { "type": "string" }, "minItems": 1,
+          "description": "Who can accept suggestions into main."
+        },
+        "decision_process": {
+          "type": "string",
+          "description": "Plain words: how do changes get in? What evidence moves a banlist?"
+        },
+        "contribution_guide": { "type": "string", "description": "Relative path or URL to contributing docs." }
+      }
+    },
+    "contributors": {
+      "type": "array",
+      "description": "Everyone who shaped the game — including people who never touch git. Playtesters in playtests/*.json are auto-credited by fmt credits; list here for roles beyond that.",
+      "items": {
+        "type": "object",
+        "required": ["name", "roles"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "roles": {
+            "type": "array", "minItems": 1,
+            "items": { "type": "string",
+              "examples": ["lead designer", "developer", "artist", "editor", "playtester", "translator", "rules editor", "community"] }
+          },
+          "url": { "type": "string", "format": "uri" },
+          "since": { "type": "string", "format": "date" }
+        }
+      }
+    },
+    "open_calls": {
+      "type": "array",
+      "description": "Help wanted — surfaced as badges on the game page.",
+      "items": {
+        "type": "object",
+        "required": ["role", "note"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "type": "string", "examples": ["artist", "playtesters", "translator", "developer"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "roadmap": {
+      "type": "array",
+      "description": "Where the game is going — communities rally around visible direction.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+          "title": { "type": "string" },
+          "status": { "type": "string", "enum": ["idea", "in_design", "playtesting", "released", "parked"] },
+          "target": { "type": "string", "description": "Rough timeframe ('2026-Q4') — promises are commits, this is direction." },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

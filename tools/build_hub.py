@@ -158,6 +158,30 @@ def build_game(slug):
     if tk.exists(): tokens = json.loads(tk.read_text())
     playtests = load_dir(gd, "playtests")
     playtests.sort(key=lambda s: s.get("date", ""), reverse=True)
+    community = {}
+    cy = gd / "community.yaml"
+    if cy.exists(): community = yaml.safe_load(cy.read_text()) or {}
+    design_md = ""
+    dn = gd / "design" / "notes.md"
+    if dn.exists(): design_md = md_to_html(dn.read_text())
+    # merged credit roll (same logic as fmt credits, inline)
+    people = {}
+    for c in community.get("contributors") or []:
+        people[c["name"]] = {"roles": set(c["roles"]), "commits": 0, "sessions": 0}
+    authors = (sh(["git", "log", "--format=%an", "--", f"examples/{slug}"], ok_fail=True) or "").splitlines()
+    for a in authors:
+        a = a.strip()
+        if not a: continue
+        people.setdefault(a, {"roles": set(), "commits": 0, "sessions": 0})
+        people[a]["commits"] += 1
+        people[a]["roles"].add("developer")
+    for s in playtests:
+        for pl in s.get("players") or []:
+            people.setdefault(pl["name"], {"roles": set(), "commits": 0, "sessions": 0})
+            people[pl["name"]]["sessions"] += 1
+            people[pl["name"]]["roles"].add("playtester")
+    credit_roll = [{"name": n, "roles": sorted(p["roles"]), "commits": p["commits"], "sessions": p["sessions"]}
+                   for n, p in people.items()]
 
     # deck legality via checker
     deck_data = []
@@ -207,6 +231,7 @@ def build_game(slug):
         "decks": deck_data, "history": history, "prs": prs, "releases": releases,
         "rules_html": md_to_html(rules_md), "rules_history": rules_history, "tokens": tokens,
         "playtests": playtests,
+        "community": community, "design_html": design_md, "credit_roll": credit_roll,
         "updated": last_commit["date"] if last_commit else "",
         "ncards": len(cards), "nprintings": len(printings),
     }

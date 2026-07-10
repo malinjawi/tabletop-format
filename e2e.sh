@@ -124,6 +124,21 @@ cp "$REPO"/examples/ember/playtests/*.json examples/ember/playtests/
 check "validate ember (playtests restored)" python3 tools/validate.py examples/ember
 
 say ""
+say "== community layer =="
+check "community.yaml validates" python3 tools/validate.py examples/ember
+check "credits runs" python3 tools/credits.py examples/ember
+grep -q "playtester" examples/ember/CREDITS.md && ok "playtesters auto-credited" || bad "playtester credit"
+grep -q "lead designer" examples/ember/CREDITS.md && ok "declared roles in credits" || bad "declared roles"
+python3 -c "
+import yaml
+c=yaml.safe_load(open('examples/ember/community.yaml'))
+c['governance']['model']='dictatorship'
+yaml.safe_dump(c,open('examples/ember/community.yaml','w'))"
+check_fails "invalid governance model caught" python3 tools/validate.py examples/ember
+cp "$REPO/examples/ember/community.yaml" examples/ember/community.yaml
+check "validate ember (community restored)" python3 tools/validate.py examples/ember
+
+say ""
 say "== UI generators =="
 check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCRATCH/patched.json" -o "$SCRATCH/site.html"
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"
