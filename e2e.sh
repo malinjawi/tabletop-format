@@ -197,6 +197,18 @@ curl -s "localhost:$PORT/api/games/ember/validate" | grep -q '"ok": true' && ok 
 kill $SRVPID 2>/dev/null
 
 say ""
+say "== beta hardening =="
+PORT2=$(( (RANDOM % 2000) + 21000 ))
+node server.mjs --port $PORT2 --readonly > "$SCRATCH/ro.log" 2>&1 &
+ROPID=$!
+sleep 1.5
+ROCODE=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -d '[]' "localhost:$PORT2/api/games/ember/cards")
+[ "$ROCODE" = "403" ] && ok "readonly mode blocks writes (403)" || bad "readonly mode" "got $ROCODE"
+GETCODE=$(curl -s -o /dev/null -w '%{http_code}' "localhost:$PORT2/api/games")
+[ "$GETCODE" = "200" ] && ok "readonly mode still serves reads" || bad "readonly reads" "got $GETCODE"
+kill $ROPID 2>/dev/null
+
+say ""
 say "== fork demo (full publish→fork→PR→merge loop) =="
 git -C "$SCRATCH" checkout -q -- .
 bash fork-demo.sh "$SCRATCH/forkdemo" > "$SCRATCH/fork.out" 2>&1 \

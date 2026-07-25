@@ -1,0 +1,118 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>Forge — git for board games (beta)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="An open format and platform where card games are repositories: versioned, forkable, printable, playable. Public beta.">
+<style>
+:root{--h:#1c2128;--bd:#d0d7de;--bg:#f6f8fa;--fg:#1f2328;--mut:#656d76;--acc:#8c2f1b;--grn:#1a7f37;--blu:#0969da}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--fg);line-height:1.55}
+a{color:var(--blu);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+header{background:var(--h);color:#fff;padding:14px 0}
+header .wrap{display:flex;align-items:center;gap:14px}
+.logo{font-weight:700;font-size:17px}
+.beta{background:#bc4c00;border-radius:20px;padding:1px 10px;font-size:11px;font-weight:700;letter-spacing:.5px}
+header nav{margin-left:auto;display:flex;gap:18px}
+header nav a{color:#d6dae0;font-size:14px}
+.hero{background:linear-gradient(180deg,var(--h) 0%,#2a2118 100%);color:#fff;padding:64px 0 72px;text-align:center}
+.hero h1{font-size:40px;margin:0 0 14px;letter-spacing:-.5px}
+.hero p{font-size:19px;color:#c9cdd3;max-width:640px;margin:0 auto 30px}
+.cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-block;border-radius:8px;padding:12px 26px;font-weight:700;font-size:15px}
+.btn.primary{background:#e0632f;color:#fff}.btn.primary:hover{background:#c9531f;text-decoration:none}
+.btn.ghost{border:1.5px solid rgba(255,255,255,.45);color:#fff}.btn.ghost:hover{text-decoration:none;border-color:#fff}
+.diffdemo{background:#0d1117;border-radius:12px;max-width:560px;margin:44px auto 0;padding:18px 24px;text-align:left;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.diffdemo .c{color:#8b949e}
+.diffdemo .old{color:#ffa198;text-decoration:line-through}
+.diffdemo .new{color:#7ee787}
+section{padding:56px 0}
+section.alt{background:var(--bg);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+h2{font-size:26px;margin:0 0 8px}
+.sub{color:var(--mut);margin:0 0 28px;font-size:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.feat{border:1px solid var(--bd);border-radius:12px;padding:20px 22px;background:#fff}
+.feat h3{margin:0 0 6px;font-size:16px}
+.feat p{margin:0;color:var(--mut);font-size:14px}
+.feat .emoji{font-size:26px;margin-bottom:8px}
+pre{background:#0d1117;color:#e6edf3;border-radius:10px;padding:16px 20px;overflow-x:auto;font-size:13px}
+pre .c{color:#8b949e}
+.trybar{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+footer{padding:36px 0;color:var(--mut);font-size:13px;text-align:center;border-top:1px solid var(--bd)}
+.pill{display:inline-block;border:1px solid var(--bd);border-radius:20px;padding:2px 12px;font-size:12px;color:var(--mut);margin:0 4px}
+</style></head><body>
+<header><div class="wrap">
+  <span class="logo">⬡ Forge</span><span class="beta">PUBLIC BETA</span>
+  <nav><a href="hub.html">Browse games</a><a href="editor-ember.html">Card editor</a><a href="#cli">CLI</a><a href="#open">Open source</a></nav>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <h1>Git for board games.</h1>
+  <p>Your game is a repository: versioned, forkable, printable, playable.
+  Card changes diff like code — but read like a designer wrote them.</p>
+  <div class="cta">
+    <a class="btn primary" href="hub.html">▶ Try the live hub</a>
+    <a class="btn ghost" href="editor-ember.html">✎ Open the card editor</a>
+  </div>
+  <div class="diffdemo">
+    <div class="c">$ git diff main..balance-2026-07</div>
+    <div>Wildfire  (wildfire)</div>
+    <div>&nbsp;&nbsp;~ cost:&nbsp;&nbsp;<span class="old">4</span> → <span class="new">3</span></div>
+    <div>&nbsp;&nbsp;~ power: <span class="old">5</span> → <span class="new">4</span></div>
+    <div class="c">— version control that speaks designer</div>
+  </div>
+</div></div>
+
+<section><div class="wrap">
+  <h2>Everything a living game needs, from one folder of files</h2>
+  <p class="sub">No lock-in: plain JSON + markdown + git. Clone it, and it's yours forever.</p>
+  <div class="grid3">
+    <div class="feat"><div class="emoji">🗂</div><h3>Import in 30 seconds</h3><p>Your spreadsheet (CSV/Sheets) or an NRDB-style JSON repo becomes a validated game project — tested on real Null Signal Games data.</p></div>
+    <div class="feat"><div class="emoji">🖨</div><h3>Print &amp; play, instantly</h3><p>300dpi PnP PDFs with crop marks, and working Tabletop Simulator mods — generated from the same source files.</p></div>
+    <div class="feat"><div class="emoji">⑂</div><h3>Fork with credit</h3><p>Remix any open game. Suggestions come back as pull requests made of cards — before/after art, not JSON noise — and every merge preserves your name in history.</p></div>
+    <div class="feat"><div class="emoji">🎲</div><h3>Own your playtests</h3><p>Sessions are data, pinned to the exact version tested. The paper trail from table → decision → banlist is first-class.</p></div>
+    <div class="feat"><div class="emoji">⚖️</div><h3>Banlists that explain themselves</h3><p>Restrictions are dated, immutable documents with designer reasoning. Deck legality is one command.</p></div>
+    <div class="feat"><div class="emoji">🏛</div><h3>Governance, declared</h3><p>Lead, council, or open — every project states who decides and how. Playtesters get auto-credited. Forking is the appeal process.</p></div>
+  </div>
+</div></section>
+
+<section class="alt" id="cli"><div class="wrap">
+  <h2>The CLI</h2>
+  <p class="sub">Everything the site does, offline, on your machine. Apache-2.0.</p>
+  <pre><span class="c"># get it</span>
+git clone https://github.com/YOUR-ORG/YOUR-REPO && cd YOUR-REPO && npm install
+
+<span class="c"># your spreadsheet → a validated, versioned game</span>
+npx fmt import csv mycards.csv my-game --title "My Game"
+npx fmt validate my-game
+
+<span class="c"># print it, play it, ship it</span>
+npx fmt export pnp my-game        <span class="c"># print-and-play PDF</span>
+npx fmt export tts my-game        <span class="c"># Tabletop Simulator mod</span>
+npx fmt save my-game              <span class="c"># commit — the message writes itself</span>
+npx fmt stats my-game             <span class="c"># cost curve, flagged cards, decision trail</span></pre>
+  <div class="trybar">
+    <span class="pill">zero-dep importers</span><span class="pill">semantic git diffs</span>
+    <span class="pill">deck legality checker</span><span class="pill">license &amp; AI-provenance gate</span>
+    <span class="pill">auto CREDITS.md</span><span class="pill">57-check test suite</span>
+  </div>
+</div></section>
+
+<section id="open"><div class="wrap">
+  <h2>Open by design</h2>
+  <p class="sub">The format is the product — and it's yours.</p>
+  <p>Schemas and tools are <b>Apache-2.0</b>; the spec and example game are <b>CC0</b>.
+  Card data round-trips to CSV and InDesign, so leaving is always easy — which is
+  exactly why you can trust staying. Communities like Null Signal Games and the
+  ArkhamDB family already maintain their games as version-controlled data;
+  this is the standard and tooling that workflow deserved.</p>
+  <p><b>Beta status:</b> the format is v0.1 (breaking changes possible until v1.0,
+  with migrations). The hosted playground resets nightly. Found something broken
+  or missing? That's the point of a beta — <a href="https://github.com/YOUR-ORG/YOUR-REPO/issues">tell us</a>.</p>
+</div></section>
+
+<footer><div class="wrap">
+  ⬡ Forge (working title) · public beta · <a href="hub.html">games</a> ·
+  <a href="editor-ember.html">editor</a> · <a href="https://github.com/YOUR-ORG/YOUR-REPO">source</a>
+  <br>Games made here belong to their creators, under licenses they choose.
+</div></footer>
+</body></html>

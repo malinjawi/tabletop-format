@@ -8,3 +8,4 @@ examples/*/exports/
 *.log
 .DS_Store
 package-lock.json
+beta-site/

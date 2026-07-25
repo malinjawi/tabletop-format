@@ -33,6 +33,18 @@ const args = process.argv.slice(2);
 const opt = (f, d) => { const i = args.indexOf(f); return i > -1 ? args[i + 1] : d; };
 const PORT = parseInt(opt("--port", "8420"), 10);
 const GAMES_DIR = resolve(opt("--games", join(ROOT, "examples")));
+const READONLY = args.includes("--readonly");          // beta showcase: no writes
+const MAX_BODY = 1024 * 1024;                          // 1MB write cap
+const RATE = { windowMs: 60_000, max: 120 };           // 120 req/min/ip
+const hits = new Map();
+function rateLimited(ip) {
+  const now = Date.now();
+  const h = hits.get(ip) ?? { t: now, n: 0 };
+  if (now - h.t > RATE.windowMs) { h.t = now; h.n = 0; }
+  h.n++; hits.set(ip, h);
+  if (hits.size > 10_000) hits.clear();                // crude memory guard
+  return h.n > RATE.max;
+}
 
 const py = (script, a) => spawnSync("python3", [join(ROOT, "tools", script), ...a], { encoding: "utf8" });
 const git = (a, opts = {}) => execFileSync("git", ["-C", ROOT, ...a], { encoding: "utf8", ...opts }).trimEnd();
@@ -51,8 +63,10 @@ const send = (res, code, body, type = "application/json") => {
                         "access-control-allow-headers": "content-type" });
   res.end(data);
 };
-const readBody = (req) => new Promise((ok) => {
-  let b = ""; req.on("data", c => b += c); req.on("end", () => ok(b));
+const readBody = (req) => new Promise((ok, no) => {
+  let b = "";
+  req.on("data", c => { b += c; if (b.length > MAX_BODY) { no(new Error("body too large")); req.destroy(); } });
+  req.on("end", () => ok(b));
 });
 
 // hub cache: rebuild when any game.yaml/cards.json is newer than the cached page
@@ -77,6 +91,10 @@ const server = createServer(async (req, res) => {
   const parts = url.pathname.split("/").filter(Boolean);
   try {
     if (req.method === "OPTIONS") return send(res, 204, "");
+    const ip = req.socket.remoteAddress ?? "?";
+    if (rateLimited(ip)) return send(res, 429, { error: "rate limited — beta playground, be gentle" });
+    if (READONLY && req.method !== "GET")
+      return send(res, 403, { error: "read-only beta — clone the repo to make it yours: git clone <repo>" });
 
     if (req.method === "GET" && parts.length === 0)
       return send(res, 200, hubHtml(), "text/html; charset=utf-8");

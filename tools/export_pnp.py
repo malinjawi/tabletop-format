@@ -11,9 +11,12 @@ from pathlib import Path
 import yaml
 from PIL import Image, ImageDraw
 
-DPI = 300
-PAGE_W, PAGE_H = int(8.5 * DPI), int(11 * DPI)   # 2550x3300
-CARD_W, CARD_H = 750, 1050
+# --dpi N for smaller web/proof copies (default 300 = print quality)
+_args = sys.argv[1:]
+DPI = int(_args[_args.index("--dpi") + 1]) if "--dpi" in _args else 300
+S = DPI / 300
+PAGE_W, PAGE_H = int(8.5 * DPI), int(11 * DPI)
+CARD_W, CARD_H = int(750 * S), int(1050 * S)
 COLS, ROWS = 3, 3
 GRID_W, GRID_H = COLS * CARD_W, ROWS * CARD_H
 OX, OY = (PAGE_W - GRID_W) // 2, (PAGE_H - GRID_H) // 2
@@ -47,11 +50,14 @@ def main():
         crop_marks(d)
         for k, face in enumerate(slots[start:start + COLS * ROWS]):
             r, c = divmod(k, COLS)
-            page.paste(Image.open(face), (OX + c * CARD_W, OY + r * CARD_H))
+            img = Image.open(face)
+            if img.size != (CARD_W, CARD_H): img = img.resize((CARD_W, CARD_H), Image.LANCZOS)
+            page.paste(img, (OX + c * CARD_W, OY + r * CARD_H))
         pages.append(page)
 
     # back page (print duplex or separately)
     back = Image.open(faces / "_back.png")
+    if back.size != (CARD_W, CARD_H): back = back.resize((CARD_W, CARD_H), Image.LANCZOS)
     page = Image.new("RGB", (PAGE_W, PAGE_H), "white")
     d = ImageDraw.Draw(page); crop_marks(d)
     for k in range(COLS * ROWS):
