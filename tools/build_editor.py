@@ -66,6 +66,8 @@ header h1{font-size:17px;margin:0;flex:1}
 .card .foot{position:absolute;left:14px;bottom:14px;color:#888;font-size:9.5px}
 </style></head><body>
 <header><h1 id="gtitle"></h1>
+<button class="btn ghost" onclick="document.getElementById('csvfile').click()">⇪ Import YOUR spreadsheet</button>
+<input type="file" id="csvfile" accept=".csv,.tsv,text/csv" style="display:none" onchange="importCSVFile(this.files[0])">
 <button class="btn ghost" onclick="addCard()">+ New card</button>
 <button class="btn" onclick="download()">⤓ Download cards.json</button></header>
 <div id="wrap"><div id="list"></div><div id="form"></div>
@@ -147,6 +149,72 @@ function renderDiff(){
   }
   box.innerHTML="<h4>Changes vs loaded version"+(out?"":" — none yet")+"</h4>"+(out||"<span style='color:#999'>Edit a field and watch this become your commit message.</span>");
 }
+/* ---- in-browser CSV import: the happy path, no CLI required ---- */
+const CORE_COLS = new Set(["id","name","type","subtypes","keywords","text","deck_limit","set","collector_number","quantity","artist","flavor_text"]);
+function parseCSV(text){
+  const rows=[]; let row=[],field="",inQ=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(inQ){ if(ch==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; } else field+=ch; }
+    else if(ch==='"') inQ=true;
+    else if(ch===','||ch==='\t'){ row.push(field); field=""; }
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n')i++;
+      row.push(field); field=""; if(row.some(c=>c!=="")) rows.push(row); row=[]; }
+    else field+=ch; }
+  if(field!==""||row.length){ row.push(field); if(row.some(c=>c!=="")) rows.push(row); }
+  return rows;
+}
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"card";
+function importCSVFile(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>importCSVText(r.result, file.name.replace(/\.[^.]+$/,""));
+  r.readAsText(file);
+}
+function importCSVText(text, name){
+  const rows=parseCSV(text);
+  if(rows.length<2){ alert("Need a header row plus at least one card row."); return; }
+  const headers=rows[0].map(h=>h.trim().toLowerCase());
+  if(!headers.includes("name")){ alert("No 'name' column found — the importer needs at least a name column. Got: "+headers.join(", ")); return; }
+  const recs=rows.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]??"").trim()])));
+  const attrCols=headers.filter(h=>!CORE_COLS.has(h));
+  const infer=col=>{ const v=recs.map(r=>r[col]??"").filter(x=>x!=="");
+    if(v.length&&v.every(x=>/^-?\d+$/.test(x))) return "integer";
+    if(v.length&&v.every(x=>/^-?\d+(\.\d+)?$/.test(x))) return "number";
+    if(v.length&&v.every(x=>/^(true|false)$/i.test(x))) return "boolean";
+    return "string"; };
+  const types=Object.fromEntries(attrCols.map(c=>[c,infer(c)]));
+  const cast=(v,t)=>t==="integer"?parseInt(v,10):t==="number"?parseFloat(v):t==="boolean"?/^true$/i.test(v):v;
+  const seen=new Set(); const imported=[];
+  for(const r of recs){
+    if(!r.name) continue;
+    let id=slug(r.id||r.name); let n=2;
+    while(seen.has(id)) id=slug(r.id||r.name)+"_"+n++;
+    seen.add(id);
+    const c={id,name:r.name,type:r.type||"card"};
+    if(r.subtypes) c.subtypes=r.subtypes.split(";").map(s=>s.trim()).filter(Boolean);
+    if(r.text) c.text=r.text;
+    if(r.keywords) c.keywords=r.keywords.split(";").map(s=>s.trim()).filter(Boolean);
+    const attrs={};
+    for(const col of attrCols) if(r[col]!==""&&r[col]!=null) attrs[col]=cast(r[col],types[col]);
+    if(Object.keys(attrs).length) c.attributes=attrs;
+    if(r.deck_limit) c.deck_limit=parseInt(r.deck_limit,10);
+    imported.push(c);
+  }
+  if(!imported.length){ alert("No card rows found."); return; }
+  DATA.title=(name||"Your game").replace(/[-_]/g," ");
+  DATA.attribute_definitions=attrCols.map(k=>({key:k,name:k[0].toUpperCase()+k.slice(1),type:types[k]}));
+  DATA.type_colors={};
+  cards=imported; DATA.cards=cards;
+  ORIGINAL.length=0; for(const c of imported) ORIGINAL.push(JSON.parse(JSON.stringify(c)));
+  cur=0;
+  document.getElementById("gtitle").textContent=DATA.title+" — card editor";
+  renderAll();
+}
+document.addEventListener("dragover",e=>e.preventDefault());
+document.addEventListener("drop",e=>{ e.preventDefault();
+  const f=e.dataTransfer?.files?.[0];
+  if(f&&/\.(csv|tsv)$/i.test(f.name)) importCSVFile(f); });
+
 function addCard(){
   const id="card_"+Math.random().toString(36).slice(2,8);
   cards.push({id,name:"New Card",type:cards[0]?.type||"card",text:"",attributes:{}});

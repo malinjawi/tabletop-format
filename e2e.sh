@@ -144,6 +144,13 @@ check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCR
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"
 check "editor builds" python3 tools/build_editor.py examples/ember -o "$SCRATCH/editor.html"
 grep -q "cards: DATA.cards\|const DATA" "$SCRATCH/editor.html" && ok "editor embeds game data" || bad "editor embeds game data"
+grep -q "importCSVText" "$SCRATCH/editor.html" && ok "editor has in-browser CSV import (happy path)" || bad "editor CSV import"
+python3 -c "
+import re
+src=open('$SCRATCH/editor.html').read()
+js=re.findall(r'<script>(.*?)</script>',src,re.S)[-1]
+open('$SCRATCH/edjs.js','w').write(js)"
+node --check "$SCRATCH/edjs.js" && ok "editor JS (with importer) parses" || bad "editor JS syntax"
 
 say ""
 say "== git porcelain (scratch repo) =="
