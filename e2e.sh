@@ -124,6 +124,20 @@ cp "$REPO"/examples/ember/playtests/*.json examples/ember/playtests/
 check "validate ember (playtests restored)" python3 tools/validate.py examples/ember
 
 say ""
+say "== plugin system & setup UI =="
+node tools/fmt.mjs plugins | grep -q "csv" && node tools/fmt.mjs plugins | grep -q "pnp" && ok "plugin registry drives fmt" || bad "plugin registry"
+node tools/fmt.mjs import nosuch 2>&1 | grep -q "Available" && ok "unknown plugin lists alternatives" || bad "unknown plugin msg"
+python3 -c "
+import json
+p=json.load(open('tools/plugins.json'))
+p['exporters']['e2etest']={'runner':'node','script':'diff.mjs','usage':'<a> <b>','desc':'e2e dummy'}
+json.dump(p,open('tools/plugins.json','w'))"
+node tools/fmt.mjs export e2etest examples/ember/components/cards.json examples/ember/components/cards.json >/dev/null 2>&1 && ok "drop-in plugin dispatches (manifest only)" || bad "drop-in plugin"
+cp "$REPO/tools/plugins.json" tools/plugins.json
+python3 tools/build_editor.py examples/ember -o "$SCRATCH/editor2.html" >/dev/null
+grep -q "renderSetup" "$SCRATCH/editor2.html" && grep -q "downloadGameYaml" "$SCRATCH/editor2.html" && ok "editor has Game Setup (schema editing) UI" || bad "editor setup UI"
+
+say ""
 say "== community layer =="
 check "community.yaml validates" python3 tools/validate.py examples/ember
 check "credits runs" python3 tools/credits.py examples/ember

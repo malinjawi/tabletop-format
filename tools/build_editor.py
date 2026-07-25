@@ -39,6 +39,8 @@ header{background:var(--acc);color:#fff;padding:14px 24px;display:flex;align-ite
 header h1{font-size:17px;margin:0;flex:1}
 .btn{background:#fff;color:var(--acc);border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer}
 .btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.6)}
+#setupBtn.on{background:#fff;color:var(--acc)}
+#form select,#form input[type=color]{border:1px solid #d8d2c4;border-radius:8px;padding:8px;background:#fff;font-size:14px}
 #wrap{display:grid;grid-template-columns:220px 1fr 340px;gap:0;height:calc(100vh - 58px)}
 #list{background:#fff;border-right:1px solid #e2ddd2;overflow-y:auto}
 #list button{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #f0ece3;padding:12px 16px;cursor:pointer;font-size:14px}
@@ -68,8 +70,9 @@ header h1{font-size:17px;margin:0;flex:1}
 <header><h1 id="gtitle"></h1>
 <button class="btn ghost" onclick="document.getElementById('csvfile').click()">⇪ Import YOUR spreadsheet</button>
 <input type="file" id="csvfile" accept=".csv,.tsv,text/csv" style="display:none" onchange="importCSVFile(this.files[0])">
+<button class="btn ghost" id="setupBtn" onclick="toggleSetup()">⚙ Game setup</button>
 <button class="btn ghost" onclick="addCard()">+ New card</button>
-<button class="btn" onclick="download()">⤓ Download cards.json</button></header>
+<button class="btn" onclick="download()">⤓ Download</button></header>
 <div id="wrap"><div id="list"></div><div id="form"></div>
 <div id="preview"><div class="card" id="cardEl"></div><div id="diffbox"></div></div></div>
 <script>
@@ -149,6 +152,98 @@ function renderDiff(){
   }
   box.innerHTML="<h4>Changes vs loaded version"+(out?"":" — none yet")+"</h4>"+(out||"<span style='color:#999'>Edit a field and watch this become your commit message.</span>");
 }
+/* ---- Game Setup: the designer shapes their OWN schema, no YAML required ---- */
+let setupMode=false;
+function toggleSetup(){ setupMode=!setupMode;
+  document.getElementById("setupBtn").classList.toggle("on",setupMode);
+  renderAll(); }
+function renderSetup(){
+  const f=document.getElementById("form");
+  const types=[...new Set(cards.map(c=>c.type))];
+  const defs=DATA.attribute_definitions;
+  const syms=Object.entries(DATA.glyphs||{});
+  f.innerHTML=`
+  <h2 style="margin:4px 0 2px">⚙ Game setup</h2>
+  <p style="color:var(--mut);font-size:13px;margin:0 0 14px">This IS the schema — what a card has or hasn't. Changes apply to the form and preview instantly; Download gives you the matching game.yaml.</p>
+  <h3 style="margin:12px 0 4px;font-size:14px">Card attributes</h3>
+  <div id="defRows"></div>
+  <button class="btn ghost" style="color:var(--acc);border-color:var(--acc)" onclick="addDef()">+ Add attribute</button>
+  <h3 style="margin:20px 0 4px;font-size:14px">Card types &amp; colors</h3>
+  <div id="typeRows"></div>
+  <h3 style="margin:20px 0 4px;font-size:14px">Text symbols <span style="color:var(--mut);font-weight:400">(usable as [key] in card text)</span></h3>
+  <div id="symRows"></div>
+  <button class="btn ghost" style="color:var(--acc);border-color:var(--acc)" onclick="addSym()">+ Add symbol</button>
+  <div style="margin-top:22px">
+    <button class="btn" style="background:var(--acc);color:#fff" onclick="downloadGameYaml()">⤓ Download game.yaml</button>
+    <button class="btn ghost" onclick="toggleSetup()">Done — back to cards</button>
+  </div>`;
+  const dr=document.getElementById("defRows");
+  defs.forEach((d,i)=>{
+    const row=document.createElement("div");
+    row.style.cssText="display:grid;grid-template-columns:1fr 1fr 110px 70px 34px;gap:8px;margin:6px 0;align-items:center";
+    row.innerHTML=`<input value="${esc(d.key)}" placeholder="key" onchange="renameDef(${i},this.value)">
+      <input value="${esc(d.name||d.key)}" placeholder="Display name" onchange="DATA.attribute_definitions[${i}].name=this.value">
+      <select onchange="DATA.attribute_definitions[${i}].type=this.value;renderCard()">
+        ${["integer","number","string","boolean"].map(t=>`<option ${d.type===t?"selected":""}>${t}</option>`).join("")}</select>
+      <label style="font-size:11px;color:var(--mut)"><input type="checkbox" ${d.required?"checked":""} onchange="DATA.attribute_definitions[${i}].required=this.checked"> req</label>
+      <button class="btn ghost" style="padding:4px 8px;color:#b3261e" title="remove (values stay on cards until cleared)" onclick="removeDef(${i})">✕</button>`;
+    dr.appendChild(row);
+  });
+  const tr=document.getElementById("typeRows");
+  types.forEach(t=>{
+    const [fg,bg]=colors(t);
+    const row=document.createElement("div");
+    row.style.cssText="display:grid;grid-template-columns:1fr 60px 60px 1fr;gap:8px;margin:6px 0;align-items:center";
+    row.innerHTML=`<b style="font-size:13px">${esc(t)}</b>
+      <input type="color" value="${fg}" title="frame color" onchange="setTypeColor('${esc(t)}','fg',this.value)">
+      <input type="color" value="${bg}" title="background" onchange="setTypeColor('${esc(t)}','bg',this.value)">
+      <span style="color:var(--mut);font-size:11.5px">${cards.filter(c=>c.type===t).length} card(s)</span>`;
+    tr.appendChild(row);
+  });
+  const sr=document.getElementById("symRows");
+  syms.forEach(([k,g],i)=>{
+    const row=document.createElement("div");
+    row.style.cssText="display:grid;grid-template-columns:1fr 80px 34px;gap:8px;margin:6px 0;align-items:center";
+    row.innerHTML=`<input value="${esc(k)}" onchange="renameSym('${esc(k)}',this.value)">
+      <input value="${esc(g)}" style="text-align:center;font-size:17px" onchange="DATA.glyphs['${esc(k)}']=this.value;renderCard()">
+      <button class="btn ghost" style="padding:4px 8px;color:#b3261e" onclick="delete DATA.glyphs['${esc(k)}'];renderAll()">✕</button>`;
+    sr.appendChild(row);
+  });
+}
+function addDef(){ DATA.attribute_definitions.push({key:"new_attr",name:"New attr",type:"integer"}); renderAll(); }
+function removeDef(i){ DATA.attribute_definitions.splice(i,1); renderAll(); }
+function renameDef(i,nk){
+  const ok=nk.toLowerCase().replace(/[^a-z0-9_]/g,"_");
+  const old=DATA.attribute_definitions[i].key;
+  DATA.attribute_definitions[i].key=ok;
+  for(const c of cards) if(c.attributes&&old in c.attributes){ c.attributes[ok]=c.attributes[old]; if(ok!==old) delete c.attributes[old]; }
+  renderAll();
+}
+function setTypeColor(t,side,v){ DATA.type_colors[t]=DATA.type_colors[t]||{fg:colors(t)[0],bg:colors(t)[1]}; DATA.type_colors[t][side]=v; renderCard(); renderList(); }
+function addSym(){ DATA.glyphs=DATA.glyphs||{}; DATA.glyphs["new_symbol"]="✦"; renderAll(); }
+function renameSym(oldK,newK){ const k=newK.toLowerCase().replace(/[^a-z0-9_]/g,"_"); if(k===oldK)return;
+  DATA.glyphs[k]=DATA.glyphs[oldK]; delete DATA.glyphs[oldK]; renderAll(); }
+function downloadGameYaml(){
+  const y=[];
+  y.push('format_version: "0.1.0"');
+  y.push(`id: ${(DATA.slug||DATA.title||"my-game").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}`);
+  y.push(`title: ${JSON.stringify(DATA.title)}`);
+  y.push('license: CC-BY-4.0  # choose deliberately');
+  y.push('default_provenance:'); y.push('  source: human');
+  if(DATA.attribute_definitions.length){ y.push('attribute_definitions:');
+    for(const d of DATA.attribute_definitions){
+      y.push(`  - key: ${d.key}`); y.push(`    name: ${JSON.stringify(d.name||d.key)}`);
+      y.push(`    type: ${d.type}`); if(d.required) y.push('    required: true'); } }
+  const g=Object.entries(DATA.glyphs||{});
+  if(g.length){ y.push('symbols:');
+    for(const [k,gl] of g){ y.push(`  - key: ${k}`); y.push(`    glyph: ${JSON.stringify(gl)}`); } }
+  const tc=Object.entries(DATA.type_colors||{});
+  if(tc.length){ y.push('type_colors:');
+    for(const [t,c] of tc) y.push(`  ${t}: { fg: "${c.fg}", bg: "${c.bg}" }`); }
+  const blob=new Blob([y.join("\n")+"\n"],{type:"text/yaml"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="game.yaml"; a.click();
+}
+
 /* ---- in-browser CSV import: the happy path, no CLI required ---- */
 const CORE_COLS = new Set(["id","name","type","subtypes","keywords","text","deck_limit","set","collector_number","quantity","artist","flavor_text"]);
 function parseCSV(text){
@@ -224,7 +319,7 @@ function download(){
   const blob=new Blob([JSON.stringify(cards,null,2)+"\n"],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="cards.json"; a.click();
 }
-function renderAll(){renderList();renderForm();renderCard();renderDiff();}
+function renderAll(){renderList(); if(setupMode) renderSetup(); else renderForm(); renderCard();renderDiff();}
 renderAll();
 </script></body></html>"""
     page = page.replace("__TITLE__", html.escape(payload["title"])).replace("__DATA__", data_js)
