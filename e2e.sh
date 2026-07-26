@@ -347,6 +347,9 @@ assert px[0]>90 and px[0]>px[2], px" && ok "wildfire face shows real flame art (
 kill $LPID 2>/dev/null
 
 say ""
+say "(perf: run ./perf.sh separately)"
+
+say ""
 say "=================================================="
 say "e2e: $PASS passed, $FAIL failed"
 if [ $FAIL -gt 0 ]; then
