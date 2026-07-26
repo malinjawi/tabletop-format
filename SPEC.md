@@ -138,3 +138,18 @@ The e2e suite (69 checks) is the reference test of the model end-to-end: schemas
 integrity, imports, exports, porcelain, fork loop, server write path.
 
 *Locked July 2026. Amendments append here with date + rationale + migration note.*
+
+## Amendments
+
+**2026-07 (v1.0 implementation-status audit).** Recorded honestly after fact-check:
+§2 (Forgejo repo model, per-user accounts, slug redirects), §7's LFS/R2 storage +
+size caps, and §8's file-SHA optimistic concurrency are **specified and researched
+but NOT yet executed** — all are gated on the Phase-1 spike (`phase1-spike/`), whose
+checklist exists precisely to verify them before platform code depends on them.
+Everything else in this spec is enforced today by `fmt validate` + the e2e suite,
+against plain git. Two reconciliations shipped with this amendment: (a) the
+reference repo keeps its tiny placeholder assets (<100 KB total) as plain git blobs —
+zero-dependency `git clone` (NF1) outranks LFS purity at this size; LFS activates at
+platform hosting per §7; (b) `fmt fork` now auto-commits the §9 attribution block
+when `game.yaml` is at repo root (the one-game-one-repo model), and validators warn
+on dangling asset references.

@@ -127,6 +127,14 @@ for c in cards:
     for m in re.finditer(r"\[([a-z0-9_]+)\]", c.get("text") or ""):
         if m.group(1) not in declared_symbols:
             warn(f"card '{c['id']}': text uses undeclared symbol [{m.group(1)}]")
+# asset paths must resolve (SPEC §7: no dangling references)
+for s in game.get("symbols") or []:
+    if s.get("asset") and not (game_dir / s["asset"]).exists():
+        warn(f"symbol '{s['key']}': asset '{s['asset']}' not found")
+for p in printings:
+    for key in ("art", "back"):
+        if p.get(key) and not (game_dir / p[key]).exists():
+            warn(f"printing '{p['id']}': {key} asset '{p[key]}' not found")
 dupes(tokens, "token")
 for t in tokens:
     if t.get("symbol") and t["symbol"] not in declared_symbols:

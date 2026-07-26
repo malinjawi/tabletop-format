@@ -15,7 +15,8 @@
  * thin veneer over plain git — which is the point: your game IS a repo.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { diffCards, summarize, formatChanges } from "./lib/carddiff.mjs";
@@ -106,7 +107,30 @@ else if (cmd === "fork") {
   const [src, dst] = rest.map(p => resolve(p));
   execFileSync("git", ["clone", "--bare", src, dst], { stdio: "inherit" });
   try { execFileSync("git", ["-C", dst, "symbolic-ref", "HEAD", "refs/heads/main"]); } catch {}
-  console.log(`Forked ${src} → ${dst}\nAttribution lives in history; add an 'attribution:' block to game.yaml for the storefront chain.`);
+  // SPEC §9: commit the attribution block into the fork automatically
+  // (works when game.yaml is at repo root — the one-game-one-repo model).
+  let attributed = false;
+  try {
+    const origYaml = execFileSync("git", ["-C", src, "show", "HEAD:game.yaml"], QUIET).toString();
+    const id = (origYaml.match(/^id:\s*(\S+)/m) ?? [])[1];
+    const title = (origYaml.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1];
+    const lic = (origYaml.match(/^license:\s*(\S+)/m) ?? [])[1];
+    if (id && !/^attribution:/m.test(origYaml)) {
+      const wt = mkdtempSync(join(tmpdir(), "fork-"));
+      execFileSync("git", ["clone", "-q", dst, wt]);
+      const block = `attribution:\n  source_id: ${id}\n  source_title: ${JSON.stringify(title ?? id)}\n  source_license: ${lic ?? "unknown"}\n`;
+      writeFileSync(join(wt, "game.yaml"),
+        readFileSync(join(wt, "game.yaml"), "utf8").trimEnd() + "\n" + block);
+      execFileSync("git", ["-C", wt, "-c", "user.name=platform", "-c", "user.email=noreply@platform",
+        "commit", "-am", `attribution: forked from ${title ?? id}`], QUIET);
+      execFileSync("git", ["-C", wt, "push", "-q", "origin", "HEAD"]);
+      rmSync(wt, { recursive: true, force: true });
+      attributed = true;
+    }
+  } catch { /* monorepo or no game.yaml at root — fall through */ }
+  console.log(`Forked ${src} → ${dst}` + (attributed
+    ? `\nattribution: block committed (SPEC §9).`
+    : `\nNo root game.yaml found — add an 'attribution:' block manually (SPEC §9).`));
 }
 
 else if (cmd === "release") {

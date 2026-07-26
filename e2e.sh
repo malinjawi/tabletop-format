@@ -266,6 +266,29 @@ bash fork-demo.sh "$SCRATCH/forkdemo" > "$SCRATCH/fork.out" 2>&1 \
   && ok "fork demo end-to-end" || bad "fork demo" "$(tail -2 "$SCRATCH/fork.out" | head -1)"
 
 say ""
+say "== SPEC conformance (audit fixes) =="
+python3 tools/validate.py examples/ember 2>&1 | grep -q "not found" \
+  && bad "ember asset refs resolve" || ok "ember asset refs resolve (icons exist)"
+python3 -c "
+import yaml
+g=yaml.safe_load(open('examples/ember/game.yaml'))
+g['symbols'][0]['asset']='assets/icons/bogus.png'
+yaml.safe_dump(g,open('examples/ember/game.yaml','w'))"
+python3 tools/validate.py examples/ember 2>&1 | grep -q "bogus.png' not found" \
+  && ok "dangling asset reference warned" || bad "dangling asset warning"
+cp "$REPO/examples/ember/game.yaml" examples/ember/game.yaml
+# fork attribution auto-commit (SPEC §9) on a one-game-one-repo layout
+export GIT_AUTHOR_NAME=origin GIT_COMMITTER_NAME=origin GIT_AUTHOR_EMAIL=o@x GIT_COMMITTER_EMAIL=o@x
+mkdir -p "$SCRATCH/solo" && cp -r examples/ember/* "$SCRATCH/solo/" 2>/dev/null
+git init -qb main "$SCRATCH/solo" >/dev/null 2>&1 && git -C "$SCRATCH/solo" add -A && git -C "$SCRATCH/solo" commit -qm init
+git clone -q --bare "$SCRATCH/solo" "$SCRATCH/solo-origin.git" && git -C "$SCRATCH/solo-origin.git" symbolic-ref HEAD refs/heads/main
+node tools/fmt-git.mjs fork "$SCRATCH/solo-origin.git" "$SCRATCH/solo-fork.git" >/dev/null 2>&1
+git clone -q "$SCRATCH/solo-fork.git" "$SCRATCH/solo-fork-wc" 2>/dev/null
+grep -q "attribution:" "$SCRATCH/solo-fork-wc/game.yaml" 2>/dev/null \
+  && grep -q "source_id: ember" "$SCRATCH/solo-fork-wc/game.yaml" \
+  && ok "fmt fork auto-commits attribution block (SPEC §9)" || bad "fork attribution"
+
+say ""
 say "=================================================="
 say "e2e: $PASS passed, $FAIL failed"
 if [ $FAIL -gt 0 ]; then

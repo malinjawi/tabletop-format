@@ -147,6 +147,12 @@ for (const c of cards) {
 dupes(tokens, "token");
 for (const t of tokens)
   if (t.symbol && !declaredSymbols.has(t.symbol)) err(`token '${t.id}': symbol '${t.symbol}' not declared in game.yaml`);
+// asset paths must resolve (SPEC §7: no dangling references)
+for (const s of game.symbols ?? [])
+  if (s.asset && !existsSync(join(gameDir, s.asset))) warn(`symbol '${s.key}': asset '${s.asset}' not found`);
+for (const p of printings)
+  for (const key of ["art", "back"])
+    if (p[key] && !existsSync(join(gameDir, p[key]))) warn(`printing '${p.id}': ${key} asset '${p[key]}' not found`);
 const deckIds = new Set(decks.map(d => d.id));
 for (const s of playtests) {
   for (const n of s.card_notes ?? [])
