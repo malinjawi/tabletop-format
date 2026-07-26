@@ -315,6 +315,35 @@ import('./tools/lib/lfs.mjs').then(async lfs => {
 })" && ok "round-trip download sha-verified, bytes identical" || bad "LFS round-trip"
 head -c 200 /dev/urandom > "$SCRATCH/evil.exe" 2>/dev/null || python3 -c "open('$SCRATCH/evil.exe','wb').write(b'x'*200)"
 node tools/add-asset.mjs "$SCRATCH/solo" "$SCRATCH/evil.exe" --lfs-url "http://localhost:$LPORT" >/dev/null 2>&1 && bad "type allowlist" "exe accepted" || ok "disallowed type rejected (limits.mjs)"
+say ""
+say "== asset pipeline over HTTP (server → LFS/portable → commit → render) =="
+APORT=$(( (RANDOM % 2000) + 26000 ))
+LFS_URL="http://localhost:$LPORT" node server.mjs --port $APORT > "$SCRATCH/asrv.log" 2>&1 &
+APID=$!
+sleep 1.5
+python3 -c "
+from PIL import Image
+Image.new('RGB',(200,120),(30,120,200)).save('$SCRATCH/blue.png')"
+RSP=$(curl -s -X POST --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/art/e2e_blue.png")
+echo "$RSP" | grep -q '"mode": "lfs"' && ok "server upload → LFS mode (pointer committed)" || bad "server LFS upload" "$RSP"
+head -1 examples/ember/assets/art/e2e_blue.png | grep -q "git-lfs" && ok "repo holds pointer, not binary" || bad "server pointer on disk"
+git log -1 --format=%s | grep -q "assets: add assets/art/e2e_blue.png" && ok "asset auto-committed" || bad "asset commit"
+curl -s "localhost:$APORT/api/games/ember/assets/art/e2e_blue.png" -o "$SCRATCH/blue_back.png"
+python3 -c "
+import hashlib
+a=hashlib.sha256(open('$SCRATCH/blue.png','rb').read()).hexdigest()
+b=hashlib.sha256(open('$SCRATCH/blue_back.png','rb').read()).hexdigest()
+assert a==b, (a,b)" && ok "GET materializes pointer from LFS, bytes identical" || bad "asset GET round-trip"
+BADRSP=$(curl -s -o /dev/null -w '%{http_code}' -X POST --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/x.exe")
+[ "$BADRSP" = "422" ] && ok "server rejects disallowed type (422)" || bad "server type gate" "got $BADRSP"
+kill $APID 2>/dev/null
+say ""
+say "== renderer uses real art =="
+python3 tools/render_cards.py examples/ember >/dev/null 2>&1
+python3 -c "
+from PIL import Image
+px=Image.open('examples/ember/exports/faces/p_wildfire_core.png').getpixel((375,400))
+assert px[0]>90 and px[0]>px[2], px" && ok "wildfire face shows real flame art (pixel-verified)" || bad "art rendering"
 kill $LPID 2>/dev/null
 
 say ""

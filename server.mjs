@@ -27,6 +27,9 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from "
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { diffCards, summarize } from "./tools/lib/carddiff.mjs";
+import { uploadAsset, downloadAsset, parsePointer } from "./tools/lib/lfs.mjs";
+import { assertAssetAllowed } from "./tools/lib/limits.mjs";
+const LFS_URL = process.env.LFS_URL ?? null;  // set -> platform mode (pointers); unset -> portable (plain blobs)
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -64,10 +67,12 @@ const send = (res, code, body, type = "application/json") => {
   res.end(data);
 };
 const readBody = (req) => new Promise((ok, no) => {
-  let b = "";
-  req.on("data", c => { b += c; if (b.length > MAX_BODY) { no(new Error("body too large")); req.destroy(); } });
-  req.on("end", () => ok(b));
+  const chunks = []; let n = 0;
+  req.on("data", c => { n += c.length; if (n > MAX_BODY) { no(new Error("body too large")); req.destroy(); return; } chunks.push(c); });
+  req.on("end", () => ok(Buffer.concat(chunks)));
 });
+const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
+               svg: "image/svg+xml", ogg: "audio/ogg", mp3: "audio/mpeg", woff2: "font/woff2" };
 
 // hub cache: rebuild when any game.yaml/cards.json is newer than the cached page
 let hubBuilt = 0;
@@ -141,6 +146,48 @@ const server = createServer(async (req, res) => {
            "--author", "web editor <editor@platform>"]);
       const sha = git(["rev-parse", "--short", "HEAD"]);
       return send(res, 200, { saved: true, commit: sha, message: auto.title, changes });
+    }
+
+    // ---- assets: the Store-1 write path over HTTP (SPEC §7) ----
+    if (req.method === "POST" && sub === "assets") {
+      const rel = url.searchParams.get("path");
+      if (!rel || !rel.startsWith("assets/") || rel.includes(".."))
+        return send(res, 400, { error: "path must be under assets/ (SPEC §7)" });
+      const buf = await readBody(req);
+      try { assertAssetAllowed(rel, buf.length); }
+      catch (e) { return send(res, 422, { error: e.message }); }
+      const dest = join(gd, rel);
+      const { mkdirSync } = await import("node:fs");
+      mkdirSync(join(dest, ".."), { recursive: true });
+      let mode = "portable", oid = null;
+      if (LFS_URL) {
+        const up = await uploadAsset(LFS_URL, rel, buf);
+        writeFileSync(dest, up.pointer);              // git gets the POINTER
+        mode = "lfs"; oid = up.oid;
+      } else {
+        writeFileSync(dest, buf);                     // portable: plain blob
+      }
+      git(["add", "--", dest]);
+      git(["commit", "-m", `assets: add ${rel}${mode === "lfs" ? " (LFS)" : ""}`,
+           "--author", "web editor <editor@platform>"]);
+      const sha = git(["rev-parse", "--short", "HEAD"]);
+      return send(res, 200, { saved: true, path: rel, mode, oid, commit: sha });
+    }
+    if (req.method === "GET" && sub === "assets") {
+      const rel = parts.slice(4).map(decodeURIComponent).join("/");
+      const p = join(gd, "assets", rel);
+      if (rel.includes("..") || !existsSync(p)) return send(res, 404, { error: "no such asset" });
+      let buf = readFileSync(p);
+      const head = buf.slice(0, 60).toString();
+      if (head.startsWith("version https://git-lfs")) {   // pointer -> materialize from LFS
+        if (!LFS_URL) return send(res, 502, { error: "pointer file but no LFS_URL configured" });
+        buf = await downloadAsset(LFS_URL, buf.toString());
+      }
+      const ext = rel.toLowerCase().split(".").pop();
+      res.writeHead(200, { "content-type": MIME[ext] ?? "application/octet-stream",
+                           "cache-control": "public, max-age=31536000, immutable",
+                           "access-control-allow-origin": "*" });
+      return res.end(buf);
     }
 
     if (req.method === "GET" && sub === "history") {

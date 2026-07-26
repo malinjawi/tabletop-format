@@ -60,11 +60,27 @@ def render_card(card, printing, game, colors):
     # type line
     tline = card["type"].capitalize() + ("  •  " + ", ".join(card.get("subtypes", [])) if card.get("subtypes") else "")
     d.text((M, M + 120), tline, font=F["type"], fill=fg)
-    # art box (placeholder gradient hatch)
+    # art box: real art when the printing declares it and the file is a real image
+    # (LFS pointer files fall back to placeholder — production materializes assets first)
     art_top, art_bot = M + 170, M + 470
-    d.rectangle([M, art_top, W - M, art_bot], outline=fg, width=4)
-    for x in range(M, W - M, 28):
-        d.line([x, art_bot, min(x + (art_bot - art_top), W - M), art_top], fill=fg, width=1)
+    art_img = None
+    art_rel = printing.get("art")
+    if art_rel:
+        p = GAME_DIR / art_rel
+        if p.exists() and p.stat().st_size > 200:  # pointers are ~130 bytes
+            try:
+                from PIL import ImageOps
+                art_img = ImageOps.fit(Image.open(p).convert("RGB"),
+                                       (W - 2 * M, art_bot - art_top), Image.LANCZOS)
+            except Exception:
+                art_img = None
+    if art_img is not None:
+        img.paste(art_img, (M, art_top))
+        d.rectangle([M, art_top, W - M, art_bot], outline=fg, width=4)
+    else:
+        d.rectangle([M, art_top, W - M, art_bot], outline=fg, width=4)
+        for x in range(M, W - M, 28):
+            d.line([x, art_bot, min(x + (art_bot - art_top), W - M), art_top], fill=fg, width=1)
     # rules text
     text = card.get("text", "")
     for key, glyph in SYMBOLS.items():
@@ -100,8 +116,12 @@ def render_back(game, colors):
     d.text((W / 2, H / 2), game.get("title", "?"), font=F["back"], fill=bg, anchor="mm")
     return img
 
+GAME_DIR = None  # set by main(); used by render_card for art resolution
+
 def main():
+    global GAME_DIR
     game_dir = Path(sys.argv[1])
+    GAME_DIR = game_dir
     out_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else game_dir / "exports" / "faces"
     out_dir.mkdir(parents=True, exist_ok=True)
     game = yaml.safe_load((game_dir / "game.yaml").read_text())
