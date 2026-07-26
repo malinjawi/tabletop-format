@@ -1,0 +1,61 @@
+# Phase 1 integration spike — Forgejo headless backend
+# Run on your machine (Docker required):  docker compose up -d
+# Validates the R2/R3/R4 landmines BEFORE any platform code is written.
+# See spike-checklist.md for the pass/fail items.
+
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:11 # pin latest stable at spike time; check forgejo.org/releases
+    container_name: spike-forgejo
+    restart: unless-stopped
+    ports:
+      - "3000:3000"   # HTTP UI/API
+      - "2222:22"     # SSH git (optional for spike)
+    volumes:
+      - forgejo-data:/data
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      # --- headless-ish bootstrap ---
+      - FORGEJO__security__INSTALL_LOCK=true
+      - FORGEJO__server__ROOT_URL=http://localhost:3000/
+      - FORGEJO__service__DISABLE_REGISTRATION=true   # platform API creates users; no self-signup
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=db:5432
+      - FORGEJO__database__NAME=forgejo
+      - FORGEJO__database__USER=forgejo
+      - FORGEJO__database__PASSWD=spikepass
+      # --- LFS on S3-compatible storage (R2) — decision D5 ---
+      # For the spike you can start with local LFS (comment the block below),
+      # then flip to R2 and re-run the checklist. R2 quirks: md5 checksum,
+      # SERVE_DIRECT off first (gitea issue #32407).
+      - FORGEJO__lfs__STORAGE_TYPE=minio
+      - FORGEJO__lfs__MINIO_ENDPOINT=${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+      - FORGEJO__lfs__MINIO_ACCESS_KEY_ID=${R2_ACCESS_KEY}
+      - FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY=${R2_SECRET_KEY}
+      - FORGEJO__lfs__MINIO_BUCKET=spike-lfs
+      - FORGEJO__lfs__MINIO_USE_SSL=true
+      - FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM=md5
+      - FORGEJO__lfs__SERVE_DIRECT=false
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    container_name: spike-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=forgejo
+      - POSTGRES_USER=forgejo
+      - POSTGRES_PASSWORD=spikepass
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+volumes:
+  forgejo-data:
+  pg-data:
+
+# .env file next to this compose (never commit):
+#   R2_ACCOUNT_ID=...
+#   R2_ACCESS_KEY=...
+#   R2_SECRET_KEY=...

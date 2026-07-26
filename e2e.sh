@@ -289,6 +289,35 @@ grep -q "attribution:" "$SCRATCH/solo-fork-wc/game.yaml" 2>/dev/null \
   && ok "fmt fork auto-commits attribution block (SPEC §9)" || bad "fork attribution"
 
 say ""
+say "== LFS write path (SPEC §7 landmine workaround, against protocol mock w/ R2 layout) =="
+LPORT=$(( (RANDOM % 2000) + 24000 ))
+LSTORE="$SCRATCH/lfs-store"
+node tools/lfs-mock-server.mjs --port $LPORT --store "$LSTORE" > "$SCRATCH/lfs.log" 2>&1 &
+LPID=$!
+sleep 1
+python3 -c "
+from PIL import Image
+Image.new('RGB',(300,420),(140,47,27)).save('$SCRATCH/art.png')"
+export GIT_AUTHOR_NAME=lfs GIT_COMMITTER_NAME=lfs GIT_AUTHOR_EMAIL=l@x GIT_COMMITTER_EMAIL=l@x
+node tools/add-asset.mjs "$SCRATCH/solo" "$SCRATCH/art.png" --as assets/art/test_card.png --lfs-url "http://localhost:$LPORT" --commit > "$SCRATCH/add.out" 2>&1
+grep -q "LFS: uploaded" "$SCRATCH/add.out" && ok "asset uploaded via LFS batch protocol" || bad "LFS upload" "$(cat "$SCRATCH/add.out" | head -2)"
+head -1 "$SCRATCH/solo/assets/art/test_card.png" | grep -q "git-lfs.github.com/spec/v1" && ok "git holds 3-line POINTER, not binary" || bad "pointer file"
+OID=$(grep -o 'sha256:[0-9a-f]*' "$SCRATCH/solo/assets/art/test_card.png" | cut -d: -f2)
+[ -f "$LSTORE/lfs/${OID:0:2}/${OID:2:2}/$OID" ] && ok "blob stored at R2 key layout lfs/xx/yy/oid" || bad "R2 key layout"
+git -C "$SCRATCH/solo" log -1 --format=%s | grep -q "assets: add" && ok "pointer committed atomically via porcelain" || bad "pointer commit"
+node -e "
+import('./tools/lib/lfs.mjs').then(async lfs => {
+  const fs = await import('node:fs');
+  const ptr = fs.readFileSync('$SCRATCH/solo/assets/art/test_card.png','utf8');
+  const buf = await lfs.downloadAsset('http://localhost:$LPORT', ptr);
+  const orig = fs.readFileSync('$SCRATCH/art.png');
+  process.exit(buf.equals(orig) ? 0 : 1);
+})" && ok "round-trip download sha-verified, bytes identical" || bad "LFS round-trip"
+head -c 200 /dev/urandom > "$SCRATCH/evil.exe" 2>/dev/null || python3 -c "open('$SCRATCH/evil.exe','wb').write(b'x'*200)"
+node tools/add-asset.mjs "$SCRATCH/solo" "$SCRATCH/evil.exe" --lfs-url "http://localhost:$LPORT" >/dev/null 2>&1 && bad "type allowlist" "exe accepted" || ok "disallowed type rejected (limits.mjs)"
+kill $LPID 2>/dev/null
+
+say ""
 say "=================================================="
 say "e2e: $PASS passed, $FAIL failed"
 if [ $FAIL -gt 0 ]; then

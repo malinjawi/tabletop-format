@@ -28,6 +28,7 @@ function git(repoDir, args, opts = {}) {
   return execFileSync("git", ["-C", repoDir, ...args], { encoding: "utf8", ...opts }).trimEnd();
 }
 function repoOf(gameDir) { return git(gameDir, ["rev-parse", "--show-toplevel"]); }
+function relOrDot(repo, gameDir) { return relative(repo, gameDir) || "."; } // repo-root games (one-game-one-repo)
 function cardsRel(gameDir, repo) { return relative(repo, resolve(gameDir, "components/cards.json")); }
 const QUIET = { stdio: ["pipe", "pipe", "ignore"] }; // expected-miss lookups: no stderr noise
 function cardsAt(repo, ref, rel) {
@@ -45,11 +46,11 @@ if (cmd === "save") {
     ? JSON.parse(readFileSync(join(gameDir, "components/cards.json"), "utf8")) : [];
   const changes = diffCards(before, after);
   const auto = summarize(changes);
-  const otherChanges = git(repo, ["status", "--porcelain", "--", relative(repo, gameDir)]);
+  const otherChanges = git(repo, ["status", "--porcelain", "--", relOrDot(repo, gameDir)]);
   if (!otherChanges) { console.log("Nothing to save."); process.exit(0); }
   const title = userMsg ?? auto?.title ?? "update game files";
   const msg = auto ? `${title}\n\n${auto.body}` : title;
-  git(repo, ["add", "--", relative(repo, gameDir)]);
+  git(repo, ["add", "--", relOrDot(repo, gameDir)]);
   git(repo, ["commit", "-m", msg]);
   console.log(`Saved: ${title}`);
   if (auto) console.log(auto.body.split("\n").map(l => "  " + l).join("\n"));
