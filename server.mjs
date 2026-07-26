@@ -32,6 +32,7 @@ import { assertAssetAllowed } from "./tools/lib/limits.mjs";
 const LFS_URL = process.env.LFS_URL ?? null;  // set -> platform mode (pointers); unset -> portable (plain blobs)
 // ---- Store 2 (identity & conversation; DA-9: losing this never loses a game) ----
 import { openDb, q, newId } from "./platform/db.mjs";
+import * as cache from "./platform/cache.mjs";
 import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -125,6 +126,32 @@ const server = createServer(async (req, res) => {
 
     if (req.method === "GET" && parts.length === 0)
       return send(res, 200, hubHtml(), "text/html; charset=utf-8");
+
+    // ---- Store 3: immutable derived-cache URLs (DA-5; TTS links never rot) ----
+    // GET /cache/renders/:game/:sha/:printing.png · GET /cache/exports/:game/:ref/:file
+    if (req.method === "GET" && parts[0] === "cache" && parts.length >= 4) {
+      const [, tier, gameSlug, ref, ...rest] = parts.map(decodeURIComponent);
+      const gd2 = gameDir(gameSlug);
+      if (!gd2 || !/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || rest.some(x => x.includes("..")))
+        return send(res, 404, { error: "bad cache path" });
+      const gameRel = `${GAMES_DIR.replace(ROOT + "/", "")}/${gameSlug}`;
+      let filePath;
+      if (tier === "renders") {
+        const { keyDir } = cache.ensureRenders(gameRel, gameSlug, ref);
+        filePath = join(keyDir, rest.join("/"));
+      } else if (tier === "exports") {
+        const file = rest.join("/");
+        const kind = file.startsWith("pnp") ? "pnp" : "tts";
+        const { dir } = cache.ensureExport(gameRel, gameSlug, ref, kind);
+        filePath = join(dir, file);
+      } else return send(res, 404, { error: "renders|exports" });
+      if (!existsSync(filePath)) return send(res, 404, { error: "not in cache and not producible" });
+      const ext = filePath.toLowerCase().split(".").pop();
+      res.writeHead(200, { "content-type": MIME[ext] ?? (ext === "pdf" ? "application/pdf" : "application/octet-stream"),
+                           "cache-control": "public, max-age=31536000, immutable",
+                           "access-control-allow-origin": "*" });
+      return res.end(readFileSync(filePath));
+    }
 
     // ---- Store-2 routes: identity & social (Slice 1) ----
     if (parts[0] === "api" && parts[1] === "auth") {
@@ -288,10 +315,14 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && sub === "export") {
       const fmt = parts[4];
       if (!["pnp", "tts"].includes(fmt)) return send(res, 400, { error: "pnp or tts" });
-      const r1 = py("render_cards.py", [gd]);
-      const r2 = py(fmt === "pnp" ? "export_pnp.py" : "export_tts.py", [gd]);
-      return send(res, r1.status || r2.status ? 500 : 200,
-                  { ok: !(r1.status || r2.status), output: (r2.stdout || "").trim().split("\n") });
+      // Store-3 path: export at the CURRENT sha into the immutable cache, return permanent URLs
+      const sha = git(["rev-parse", "--short", "HEAD"]);
+      const gameRel = `${GAMES_DIR.replace(ROOT + "/", "")}/${slug}`;
+      const { hit } = cache.ensureExport(gameRel, slug, sha, fmt);
+      const base = `/cache/exports/${slug}/${sha}`;
+      return send(res, 200, { ok: true, ref: sha, cached: hit,
+        urls: fmt === "pnp" ? [`${base}/pnp.pdf`]
+                            : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`] });
     }
     send(res, 404, { error: "not found" });
   } catch (e) {

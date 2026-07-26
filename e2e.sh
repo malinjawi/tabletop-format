@@ -377,6 +377,44 @@ UNSTAR=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "localhost:$SPORT/a
 echo "$UNSTAR" | grep -q '"stars": 0' && ok "unstar → count 0" || bad "unstar" "$UNSTAR"
 kill $SPID2 2>/dev/null
 
+say "== Store 3: derived cache — immutable sha-addressed URLs (DA-5) =="
+CPORT3=$(( (RANDOM % 2000) + 32000 ))
+export CACHE_DIR="$SCRATCH/cache"
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $CPORT3 > "$SCRATCH/s3.log" 2>&1 &
+SPID3=$!
+sleep 1.5
+SHA0=$(git rev-parse --short HEAD)
+EXP=$(curl -s -X POST "localhost:$CPORT3/api/games/ember/export/tts")
+echo "$EXP" | grep -q "\"ref\": \"$SHA0\"" && ok "export keyed by current sha ($SHA0)" || bad "export sha key" "$EXP"
+TTSURL=$(echo "$EXP" | python3 -c "import json,sys;print(json.load(sys.stdin)['urls'][0])")
+HDR=$(curl -s -D - -o "$SCRATCH/tts_cached.json" "localhost:$CPORT3$TTSURL" | tr -d '\r')
+echo "$HDR" | grep -q "max-age=31536000, immutable" && ok "immutable cache headers on cache URL" || bad "immutable headers"
+python3 -c "import json; json.load(open('$SCRATCH/tts_cached.json'))" && ok "cached TTS save parses" || bad "cached tts"
+EXP2=$(curl -s -X POST "localhost:$CPORT3/api/games/ember/export/tts")
+echo "$EXP2" | grep -q '"cached": true' && ok "second export = cache hit (idempotent per key)" || bad "cache hit" "$EXP2"
+# history immutability: change a card, new sha exports separately; OLD url still serves
+python3 -c "
+import json
+p='examples/ember/components/cards.json'; c=json.load(open(p))
+c[0]['attributes']['power']=4; json.dump(c,open(p,'w'),indent=2)"
+git commit -qam "e2e: bump kindling power"
+SHA1=$(git rev-parse --short HEAD)
+EXP3=$(curl -s -X POST "localhost:$CPORT3/api/games/ember/export/tts")
+echo "$EXP3" | grep -q "\"ref\": \"$SHA1\"" && ok "new commit → new cache ref ($SHA1)" || bad "new ref" "$EXP3"
+curl -s -o /dev/null -w '%{http_code}' "localhost:$CPORT3$TTSURL" | grep -q 200 && ok "OLD sha URL still serves (immutability across edits)" || bad "old url"
+[ -d "$SCRATCH/cache/exports/ember/$SHA0" ] && [ -d "$SCRATCH/cache/exports/ember/$SHA1" ] && ok "both refs coexist under R2-layout keys" || bad "key layout"
+# GC: age SHA0, keep SHA1 → SHA0 removed, SHA1 kept (tags-forever policy = keep set)
+node -e "
+import('./platform/cache.mjs').then(c => {
+  c._ageForTest('exports/ember/$SHA0', 40*24*3600*1000);
+  const removed = c.gc({ keep: new Set(['$SHA1']) });
+  if (!removed.includes('exports/ember/$SHA0')) process.exit(1);
+})" && [ ! -d "$SCRATCH/cache/exports/ember/$SHA0" ] && [ -d "$SCRATCH/cache/exports/ember/$SHA1" ] \
+  && ok "GC removes aged refs, keeps protected refs (DA-5 policy)" || bad "gc policy"
+kill $SPID3 2>/dev/null
+git reset -q --hard HEAD~1 2>/dev/null || true
+unset CACHE_DIR
+
 say ""
 say "(perf: run ./perf.sh separately)"
 
