@@ -141,7 +141,7 @@ function explorePage(filter){
       <div class="desc">${esc(g.description).slice(0,120)}</div>
       <div class="thumbs">${g.cards.slice(0,5).map(c=>g.images[c.id]?`<img src="${g.images[c.id]}">`:"").join("")}</div>
       <div class="meta">
-        <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} suggestion${g.prs.length===1?"":"s"}</span>
+        <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} PR${g.prs.length===1?"":"s"}</span>
         <span>🏷 ${g.releases.length} release${g.releases.length===1?"":"s"}</span>
         <span>updated ${esc(g.updated)}</span>
       </div>
@@ -159,8 +159,8 @@ function searchAll(v){
 function repoPage(g, tab){
   const tabs = [
     ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
-    ["playtests","Playtests",g.playtests.length],["history","History",g.history.length],
-    ["suggestions","Suggestions",g.prs.length],["releases","Releases",g.releases.length],
+    ["playtests","Playtests",g.playtests.length],["history","Commits",g.history.length],
+    ["suggestions","Pull requests",g.prs.length],["releases","Releases",g.releases.length],
     ["banlist","Banlist",null],["decks","Decks",g.decks.length],
     ["community","Community",g.credit_roll.length]];
   $("#view").innerHTML = `
@@ -171,7 +171,7 @@ function repoPage(g, tab){
       <span class="badge prov">provenance: ${esc(g.provenance)}</span>
       ${g.attribution?`<span class="badge">⑂ remix of ${esc(g.attribution.source_title)}</span>`:""}
       <div class="actions">
-        <button class="btn" onclick="alert('Platform: server-side fork with attribution chain.\\nCLI today: fmt fork src.git dst.git')">⑂ Remix <span class="count">3</span></button>
+        <button class="btn" onclick="alert('Platform: server-side fork with attribution chain.\\nCLI today: fmt fork src.git dst.git')">⑂ Fork <span class="count">3</span></button>
         <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
         <button class="btn primary" onclick="alert('Platform: opens the live card editor.\\nToday: exports/ember-editor.html')">✎ Edit cards</button>
       </div>
@@ -328,7 +328,7 @@ function history(g){
 }
 
 function suggestions(g){
-  if(!g.prs.length){$("#pane").innerHTML="<div class='emptystate'>No open suggestions.<br><span style='font-size:13px'>Remix this game, make changes, and suggest them back — the diff will be cards, not code.</span></div>";return;}
+  if(!g.prs.length){$("#pane").innerHTML="<div class='emptystate'>No open pull requests.<br><span style='font-size:13px'>Fork this game, make changes, and open a PR — the diff will be cards, not code.</span></div>";return;}
   $("#pane").innerHTML=g.prs.map(pr=>{
     const byCard={};
     for(const ch of pr.changes){(byCard[ch.card]=byCard[ch.card]||{name:ch.name,fields:[]}).fields.push(ch);}

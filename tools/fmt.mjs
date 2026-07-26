@@ -56,6 +56,7 @@ else if (cmd === "stats") status = runPy("stats.py", argv.slice(1));
 else if (cmd === "credits") status = runPy("credits.py", argv.slice(1));
 else if (cmd === "check-deck") status = runPy("check_deck.py", argv.slice(1));
 else if (cmd === "jam-check") status = runPy("check_jam.py", argv.slice(1));
+else if (cmd === "commit") status = runNode("fmt-git.mjs", ["save", ...argv.slice(1)]); // git-term alias
 else if (["save", "history", "changelog", "fork", "release", "setup"].includes(cmd))
   status = runNode("fmt-git.mjs", argv);
 else {
@@ -78,7 +79,7 @@ exporters:
 ${pluginList("exporters")}
 
   git porcelain (your game is a repo):
-  fmt save <game-dir> [-m msg]    commit — message auto-written from card changes
+  fmt commit <game-dir> [-m msg]  commit — message auto-written from card changes (alias: save)
   fmt history <game-dir> [-n N]   log rendered as card changes
   fmt changelog <game-dir>        CHANGELOG.md from git history
   fmt fork <src.git> <dst.git>    server-side fork (Remix primitive)
