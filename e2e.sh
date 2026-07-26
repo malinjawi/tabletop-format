@@ -170,6 +170,18 @@ check_fails "theme-word check enforced" python3 tools/check_jam.py examples/embe
 
 say ""
 say "== UI generators =="
+python3 tools/build_hub.py -o "$SCRATCH/hub.html" >/dev/null 2>&1 \
+  && grep -q "profilePage" "$SCRATCH/hub.html" \
+  && python3 -c "
+import re,json
+src=open('$SCRATCH/hub.html').read()
+js=re.findall(r'<script>(.*?)</script>',src,re.S)[-1]
+d=json.loads(re.search(r'const DATA = (\{.*?\});\n',js,re.S).group(1))
+names=[p['name'] for p in d['people']]
+assert 'Sam' in names and 'Priya' in names, names
+sam=[p for p in d['people'] if p['name']=='Sam'][0]
+assert sam['sessions']>=2 and sam['entries']==[]
+" && ok "hub computes user profiles from git+playtests" || bad "hub profiles"
 check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCRATCH/patched.json" -o "$SCRATCH/site.html"
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"
 check "editor builds" python3 tools/build_editor.py examples/ember -o "$SCRATCH/editor.html"

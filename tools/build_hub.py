@@ -250,11 +250,37 @@ def load_jams():
             jams.append(yaml.safe_load(f.read_text()))
     return jams
 
+def build_people(games, jams):
+    """User profiles are COMPUTED from git + playtests + credits — no accounts needed for read."""
+    people = {}
+    def P(name):
+        return people.setdefault(name, {"name": name, "roles": set(), "games": {},
+                                        "commits": 0, "sessions": 0, "entries": []})
+    for g in games:
+        for p in g["credit_roll"]:
+            e = P(p["name"])
+            e["roles"] |= set(p["roles"])
+            e["commits"] += p["commits"]; e["sessions"] += p["sessions"]
+            e["games"][g["slug"]] = {"slug": g["slug"], "title": g["title"],
+                                     "roles": p["roles"], "commits": p["commits"], "sessions": p["sessions"]}
+        for h in g["history"]:
+            if h["author"] not in people and h["author"]:
+                e = P(h["author"]); e["roles"].add("developer")
+    for j in jams:
+        for entry in j.get("entries") or []:
+            e = P(entry["author"])
+            e["entries"].append({"jam": j["title"], "jam_id": j["id"], "game": entry["title"],
+                                 "award": entry.get("award")})
+    return [{**p, "roles": sorted(p["roles"]), "games": list(p["games"].values())}
+            for p in people.values()]
+
 def main():
     args = sys.argv[1:]
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else ROOT / "hub.html"
     base = args[args.index("--games") + 1] if "--games" in args else None
-    data = {"games": [build_game(g) for g in discover_games(base)], "jams": load_jams()}
+    games = [build_game(g) for g in discover_games(base)]
+    jams = load_jams()
+    data = {"games": games, "jams": jams, "people": build_people(games, jams)}
     data_js = json.dumps(data).replace("</", "<\\/")
     tpl = (ROOT / "tools" / "hub_template.html").read_text()
     out_path.write_text(tpl.replace("__DATA__", data_js))
