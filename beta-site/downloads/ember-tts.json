@@ -1,0 +1,324 @@
+{
+  "SaveName": "Ember",
+  "GameMode": "Ember",
+  "VersionNumber": "v0.2.0",
+  "ObjectStates": [
+    {
+      "Name": "DeckCustom",
+      "Nickname": "Ember deck",
+      "Transform": {
+        "posX": 0,
+        "posY": 1,
+        "posZ": 0,
+        "rotX": 0,
+        "rotY": 180,
+        "rotZ": 180,
+        "scaleX": 1,
+        "scaleY": 1,
+        "scaleZ": 1
+      },
+      "DeckIDs": [
+        100,
+        100,
+        100,
+        101,
+        101,
+        102,
+        102,
+        103,
+        104,
+        105,
+        105,
+        106,
+        107,
+        107,
+        108,
+        109
+      ],
+      "CustomDeck": {
+        "1": {
+          "FaceURL": "file:///sessions/admiring-vigilant-planck/tabletop-format/examples/ember/exports/tts/sheet.png",
+          "BackURL": "file:///sessions/admiring-vigilant-planck/tabletop-format/examples/ember/exports/tts/back.png",
+          "NumWidth": 10,
+          "NumHeight": 1,
+          "BackIsHidden": true,
+          "UniqueBack": false
+        }
+      },
+      "ContainedObjects": [
+        {
+          "Name": "Card",
+          "CardID": 100,
+          "Nickname": "Kindling",
+          "Description": "Gain 1 [spark].",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 100,
+          "Nickname": "Kindling",
+          "Description": "Gain 1 [spark].",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 100,
+          "Nickname": "Kindling",
+          "Description": "Gain 1 [spark].",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 101,
+          "Nickname": "Twin Flame",
+          "Description": "Copy the power of your rival's clashing card.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 101,
+          "Nickname": "Twin Flame",
+          "Description": "Copy the power of your rival's clashing card.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 102,
+          "Nickname": "Ash Cloak",
+          "Description": "Prevent all clash damage this round. Gain 1 [ash].",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 102,
+          "Nickname": "Ash Cloak",
+          "Description": "Prevent all clash damage this round. Gain 1 [ash].",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 103,
+          "Nickname": "Bellows",
+          "Description": "Double your [spark] this round.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 104,
+          "Nickname": "Wildfire",
+          "Description": "Costs 1 less for each [ash] you hold. Burn: discard your hand.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 105,
+          "Nickname": "Ember Thief",
+          "Description": "On play: steal 1 [spark] from your rival.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 105,
+          "Nickname": "Ember Thief",
+          "Description": "On play: steal 1 [spark] from your rival.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 106,
+          "Nickname": "Last Light",
+          "Description": "If you would be extinguished this round, survive at 1 flame instead.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 107,
+          "Nickname": "Cinder Rat",
+          "Description": "On play: look at your rival's hand and discard one [ash] card from it.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 107,
+          "Nickname": "Cinder Rat",
+          "Description": "On play: look at your rival's hand and discard one [ash] card from it.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 108,
+          "Nickname": "Kindling",
+          "Description": "Gain 1 [spark].",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        },
+        {
+          "Name": "Card",
+          "CardID": 109,
+          "Nickname": "Wildfire",
+          "Description": "Costs 1 less for each [ash] you hold. Burn: discard your hand.",
+          "Transform": {
+            "posX": 0,
+            "posY": 1,
+            "posZ": 0,
+            "rotX": 0,
+            "rotY": 180,
+            "rotZ": 180,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -30,6 +30,9 @@ import { diffCards, summarize } from "./tools/lib/carddiff.mjs";
 import { uploadAsset, downloadAsset, parsePointer } from "./tools/lib/lfs.mjs";
 import { assertAssetAllowed } from "./tools/lib/limits.mjs";
 const LFS_URL = process.env.LFS_URL ?? null;  // set -> platform mode (pointers); unset -> portable (plain blobs)
+// ---- Store 2 (identity & conversation; DA-9: losing this never loses a game) ----
+import { openDb, q, newId } from "./platform/db.mjs";
+import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -55,6 +58,25 @@ const git = (a, opts = {}) => execFileSync("git", ["-C", ROOT, ...a], { encoding
 function games() {
   return readdirSync(GAMES_DIR).filter(d => existsSync(join(GAMES_DIR, d, "game.yaml")));
 }
+const db = openDb();
+function reindexGames() { // DA-3: games table is DERIVED from git, rebuildable any time
+  for (const slug of games()) {
+    const gy = readFileSync(join(GAMES_DIR, slug, "game.yaml"), "utf8");
+    let cardCount = null;
+    try { cardCount = JSON.parse(readFileSync(join(GAMES_DIR, slug, "components/cards.json"), "utf8")).length; } catch {}
+    q.upsertGame(db, {
+      slug,
+      title: (gy.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? slug,
+      license: (gy.match(/^license:\s*(\S+)/m) ?? [])[1] ?? null,
+      card_count: cardCount,
+    });
+  }
+}
+reindexGames();
+const authedUser = (req) => {
+  const m = (req.headers.authorization ?? "").match(/^Bearer (\w{64})$/);
+  return m ? q.sessionUser(db, m[1]) : null;
+};
 function gameDir(slug) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(slug) || !games().includes(slug)) return null;
   return join(GAMES_DIR, slug);
@@ -104,15 +126,65 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && parts.length === 0)
       return send(res, 200, hubHtml(), "text/html; charset=utf-8");
 
+    // ---- Store-2 routes: identity & social (Slice 1) ----
+    if (parts[0] === "api" && parts[1] === "auth") {
+      if (req.method === "POST" && parts[2] === "register") {
+        const { handle, email, password } = JSON.parse((await readBody(req)).toString());
+        if (!validHandle(handle)) return send(res, 422, { error: "handle: 2-32 chars, kebab-case" });
+        if (!validEmail(email)) return send(res, 422, { error: "invalid email" });
+        if ((password ?? "").length < 8) return send(res, 422, { error: "password: 8+ chars" });
+        if (q.userByHandle(db, handle) || q.userByEmail(db, email))
+          return send(res, 409, { error: "handle or email already registered" });
+        const id = newId("u");
+        q.createUser(db, { id, handle, email, pass_hash: hashPassword(password) });
+        const token = newToken();
+        q.createSession(db, token, id, SESSION_TTL_MS);
+        return send(res, 201, { token, user: { id, handle } });
+      }
+      if (req.method === "POST" && parts[2] === "login") {
+        const { handle, password } = JSON.parse((await readBody(req)).toString());
+        const u = q.userByHandle(db, handle) ?? q.userByEmail(db, handle);
+        if (!u || !verifyPassword(password ?? "", u.pass_hash))
+          return send(res, 401, { error: "bad credentials" });
+        const token = newToken();
+        q.createSession(db, token, u.id, SESSION_TTL_MS);
+        return send(res, 200, { token, user: { id: u.id, handle: u.handle } });
+      }
+      return send(res, 404, { error: "not found" });
+    }
+    if (parts[0] === "api" && parts[1] === "me") {
+      const u = authedUser(req);
+      if (!u) return send(res, 401, { error: "auth required" });
+      return send(res, 200, { id: u.id, handle: u.handle, email: u.email,
+        claims: q.claimsOf(db, u.id), starred: q.starredBy(db, u.id).map(r => r.game_slug) });
+    }
+    if (parts[0] === "api" && parts[1] === "claims" && req.method === "POST") {
+      const u = authedUser(req);
+      if (!u) return send(res, 401, { error: "auth required" });
+      const { author } = JSON.parse((await readBody(req)).toString());
+      if (!author?.trim()) return send(res, 422, { error: "author string required" });
+      if (q.claimOwner(db, author.trim())) return send(res, 409, { error: "already claimed" });
+      q.claim(db, u.id, author.trim());
+      return send(res, 201, { claimed: author.trim() });
+    }
+    if (parts[0] === "api" && parts[1] === "stars" && parts[2]) {
+      const u = authedUser(req);
+      if (!u) return send(res, 401, { error: "auth required" });
+      const slug = parts[2];
+      if (!games().includes(slug)) return send(res, 404, { error: "no such game" });
+      if (req.method === "PUT") { q.star(db, u.id, slug); return send(res, 200, { starred: true, stars: q.starCount(db, slug) }); }
+      if (req.method === "DELETE") { q.unstar(db, u.id, slug); return send(res, 200, { starred: false, stars: q.starCount(db, slug) }); }
+      return send(res, 405, { error: "PUT or DELETE" });
+    }
     if (parts[0] !== "api" || parts[1] !== "games") return send(res, 404, { error: "not found" });
 
-    if (parts.length === 2)  // GET /api/games
-      return send(res, 200, games().map(s => {
-        const g = readFileSync(join(GAMES_DIR, s, "game.yaml"), "utf8");
-        const title = (g.match(/^title:\s*"?([^"\n]+)"?/m) || [])[1] ?? s;
-        const license = (g.match(/^license:\s*(\S+)/m) || [])[1] ?? "?";
-        return { slug: s, title, license };
-      }));
+    if (parts.length === 2) {  // GET /api/games — served from the Store-2 index (DA-3) w/ star counts
+      reindexGames();
+      return send(res, 200, q.listGames(db).map(g => ({
+        slug: g.slug, title: g.title, license: g.license,
+        cards: g.card_count, stars: g.stars,
+      })));
+    }
 
     const slug = parts[2];
     const gd = gameDir(slug);

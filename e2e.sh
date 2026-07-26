@@ -347,6 +347,37 @@ assert px[0]>90 and px[0]>px[2], px" && ok "wildfire face shows real flame art (
 kill $LPID 2>/dev/null
 
 say ""
+say "== Store 2 slice 1: auth, stars, claims, games index (real SQL via node:sqlite) =="
+SPORT=$(( (RANDOM % 2000) + 30000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $SPORT > "$SCRATCH/s2.log" 2>&1 &
+SPID2=$!
+sleep 1.5
+REG=$(curl -s -X POST -H 'content-type: application/json' -d '{"handle":"linja","email":"l@example.com","password":"hunter2hunter2"}' "localhost:$SPORT/api/auth/register")
+TOKEN=$(echo "$REG" | python3 -c "import json,sys;print(json.load(sys.stdin).get('token',''))")
+[ ${#TOKEN} = 64 ] && ok "register → session token" || bad "register" "$REG"
+DUP=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -d '{"handle":"linja","email":"x@example.com","password":"hunter2hunter2"}' "localhost:$SPORT/api/auth/register")
+[ "$DUP" = "409" ] && ok "duplicate handle rejected (409)" || bad "dup register" "$DUP"
+BADPW=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -d '{"handle":"linja","password":"wrong-password"}' "localhost:$SPORT/api/auth/login")
+[ "$BADPW" = "401" ] && ok "wrong password rejected (401)" || bad "bad login" "$BADPW"
+NOAUTH=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "localhost:$SPORT/api/stars/ember")
+[ "$NOAUTH" = "401" ] && ok "unauthenticated star rejected (401)" || bad "unauth star" "$NOAUTH"
+STAR=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" "localhost:$SPORT/api/stars/ember")
+echo "$STAR" | grep -q '"stars": 1' && ok "star ember → count 1" || bad "star" "$STAR"
+curl -s "localhost:$SPORT/api/games" | python3 -c "
+import json,sys
+g={x['slug']:x for x in json.load(sys.stdin)}
+assert g['ember']['stars']==1 and g['harbor-nine']['stars']==0, g" && ok "games index serves star counts (DA-3)" || bad "games index stars"
+CLAIM=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d '{"author":"Sam"}' "localhost:$SPORT/api/claims")
+[ "$CLAIM" = "201" ] && ok "claim author string 'Sam' (DA-7)" || bad "claim" "$CLAIM"
+curl -s -H "Authorization: Bearer $TOKEN" "localhost:$SPORT/api/me" | python3 -c "
+import json,sys
+me=json.load(sys.stdin)
+assert 'Sam' in me['claims'] and 'ember' in me['starred'], me" && ok "/api/me: claims + starred coherent" || bad "/api/me"
+UNSTAR=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "localhost:$SPORT/api/stars/ember")
+echo "$UNSTAR" | grep -q '"stars": 0' && ok "unstar → count 0" || bad "unstar" "$UNSTAR"
+kill $SPID2 2>/dev/null
+
+say ""
 say "(perf: run ./perf.sh separately)"
 
 say ""
