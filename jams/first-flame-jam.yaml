@@ -1,0 +1,36 @@
+id: first-flame-jam
+title: First Flame Jam
+theme: fire
+tagline: Design a complete card game in 18 cards or fewer. One week. The theme is fire.
+host: Forge
+status: judging
+starts: "2026-07-01"
+ends: "2026-07-08"
+constraints:
+  max_cards: 18
+  min_cards: 6
+  max_deck_size: 40
+  required_license: [CC0-1.0, CC-BY-4.0, CC-BY-SA-4.0]
+  theme_word_required: true
+  notes: >
+    Placeholder art is fine — this jam judges design, not illustration.
+    Rules must fit on one page. Solo entries and teams both welcome.
+judging:
+  - fun in the first game
+  - theme use
+  - elegance (rules-to-depth ratio)
+  - originality
+prizes:
+  - "Winner: featured on the platform front page + printed copies of your game"
+  - "Best theme use: featured card frame for your game page"
+entries:
+  - game_id: ember
+    title: Ember
+    author: Linja
+    submitted: "2026-07-07"
+    award: host entry (not judged)
+  - game_id: harbor-nine
+    title: Harbor Nine
+    author: Linja
+    submitted: "2026-07-07"
+    award: host entry (not judged)

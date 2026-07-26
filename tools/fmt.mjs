@@ -55,6 +55,7 @@ else if (cmd === "check-licenses") status = runPy("check_licenses.py", argv.slic
 else if (cmd === "stats") status = runPy("stats.py", argv.slice(1));
 else if (cmd === "credits") status = runPy("credits.py", argv.slice(1));
 else if (cmd === "check-deck") status = runPy("check_deck.py", argv.slice(1));
+else if (cmd === "jam-check") status = runPy("check_jam.py", argv.slice(1));
 else if (["save", "history", "changelog", "fork", "release", "setup"].includes(cmd))
   status = runNode("fmt-git.mjs", argv);
 else {
@@ -64,6 +65,7 @@ else {
   fmt diff <old-cards.json> <new-cards.json>
   fmt render <game-dir>
   fmt check-deck <game-dir> <deck.json> [--format F]
+  fmt jam-check <game-dir> <jam.yaml>   does this entry qualify?
   fmt check-licenses <game-dir>
   fmt stats <game-dir> [--json]   cost curve, flagged cards, decision trail
   fmt credits <game-dir>          CREDITS.md from community.yaml + git + playtests

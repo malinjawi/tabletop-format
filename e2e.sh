@@ -153,6 +153,22 @@ cp "$REPO/examples/ember/community.yaml" examples/ember/community.yaml
 check "validate ember (community restored)" python3 tools/validate.py examples/ember
 
 say ""
+say "== jams =="
+check "jam entry qualifies (ember vs first-flame)" python3 tools/check_jam.py examples/ember jams/first-flame-jam.yaml
+python3 -c "
+import yaml
+j=yaml.safe_load(open('jams/first-flame-jam.yaml'))
+j['constraints']['max_cards']=3
+yaml.safe_dump(j,open('$SCRATCH/tightjam.yaml','w'))"
+check_fails "over-limit entry rejected" python3 tools/check_jam.py examples/ember "$SCRATCH/tightjam.yaml"
+python3 -c "
+import yaml
+j=yaml.safe_load(open('jams/first-flame-jam.yaml'))
+j['theme']='submarines'
+yaml.safe_dump(j,open('$SCRATCH/offtheme.yaml','w'))"
+check_fails "theme-word check enforced" python3 tools/check_jam.py examples/ember "$SCRATCH/offtheme.yaml"
+
+say ""
 say "== UI generators =="
 check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCRATCH/patched.json" -o "$SCRATCH/site.html"
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"

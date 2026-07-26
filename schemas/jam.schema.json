@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/jam.schema.json",
+  "title": "Game jam",
+  "description": "A time-boxed community design event. Jams are the platform's front door: the event is the reason to show up, entries are the content, and constraints are DATA — machine-checkable with `fmt jam-check`, so 'does my entry qualify' is a command, not a mod ruling. Files: jams/*.yaml at repo root.",
+  "type": "object",
+  "required": ["id", "title", "theme", "starts", "ends", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "theme": { "type": "string", "description": "The creative prompt. Revealed at start for blind jams." },
+    "tagline": { "type": "string" },
+    "host": { "type": "string" },
+    "status": { "type": "string", "enum": ["upcoming", "running", "judging", "complete"] },
+    "starts": { "type": "string", "format": "date" },
+    "ends": { "type": "string", "format": "date" },
+    "constraints": {
+      "type": "object",
+      "description": "Machine-checkable entry rules. Anything here is enforced by fmt jam-check.",
+      "additionalProperties": false,
+      "properties": {
+        "max_cards": { "type": "integer", "minimum": 1, "description": "Max unique cards." },
+        "min_cards": { "type": "integer", "minimum": 1 },
+        "max_deck_size": { "type": "integer", "minimum": 1, "description": "Max physical cards (sum of printing quantities)." },
+        "required_license": {
+          "type": "array", "items": { "type": "string" },
+          "description": "Entry must use one of these licenses (jams are usually open — that's the point)."
+        },
+        "theme_word_required": { "type": "boolean", "description": "Theme word must appear in title, a card name, or rules text." },
+        "notes": { "type": "string", "description": "Human rules that aren't machine-checkable (judged by hosts)." }
+      }
+    },
+    "judging": {
+      "type": "array", "items": { "type": "string" },
+      "description": "Criteria, in order of weight.",
+      "examples": [["fun", "theme use", "elegance", "originality"]]
+    },
+    "prizes": { "type": "array", "items": { "type": "string" } },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "author"],
+        "additionalProperties": false,
+        "properties": {
+          "game_id": { "type": "string", "description": "Slug of a game hosted here (links the jam page to the game page)." },
+          "title": { "type": "string" },
+          "author": { "type": "string" },
+          "url": { "type": "string", "format": "uri", "description": "External entry (repo/itch page) — jams welcome outsiders." },
+          "submitted": { "type": "string", "format": "date" },
+          "award": { "type": "string", "description": "Set during judging ('winner', 'best theme use', ...)." }
+        }
+      }
+    }
+  }
+}

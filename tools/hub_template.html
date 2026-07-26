@@ -100,7 +100,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
   <input id="q" placeholder="Search games and cards…" oninput="searchAll(this.value)">
-  <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="alert('Platform feature: your games, forks, and suggestions in one place.')">Your games</a>
+  <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="go('jams')">Jams</a><a class="nl" onclick="alert('Platform feature: your games, forks, and suggestions in one place.')">Your games</a>
   <div class="spacer"></div>
   <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="alert('Platform: creates a repo + format scaffold. CLI today: fmt import csv your.csv my-game')">+ New game</button>
   <div class="av" title="you"></div>
@@ -119,7 +119,10 @@ window.onhashchange = render;
 function render(){
   const h = location.hash.replace(/^#\/?/,"");
   const [_, slug, tab] = h.match(/^g\/([^/]+)\/?(\w*)/) || [];
+  const [__, jamId] = h.match(/^jam\/([^/]+)/) || [];
   if (slug && G(slug)) repoPage(G(slug), tab||"overview");
+  else if (jamId) jamPage(jamId);
+  else if (h === "jams") jamsPage();
   else explorePage();
   window.scrollTo(0,0);
 }
@@ -384,6 +387,74 @@ function decks(g){
       ${d._violations.map(v=>`<div class="chg" style="border-color:var(--red)">${esc(v)}</div>`).join("")}
     </div></div>`).join("")
   :"<div class='emptystate'>No decks yet — <code>fmt import decklist</code></div>";
+}
+
+/* ---------- jams ---------- */
+const JSTATUS = {upcoming:["#0969da","Starts soon"],running:["#1a7f37","● Running"],judging:["#bc4c00","Judging"],complete:["#656d76","Complete"]};
+function jamCountdown(j){
+  const now=new Date(); const end=new Date(j.ends+"T23:59:59"); const start=new Date(j.starts);
+  if(j.status==="running"){ const d=Math.max(0,Math.ceil((end-now)/864e5)); return `${d} day${d===1?"":"s"} left`; }
+  if(j.status==="upcoming"){ const d=Math.max(0,Math.ceil((start-now)/864e5)); return `starts in ${d} day${d===1?"":"s"}`; }
+  return j.status==="judging" ? "entries closed — judging underway" : "finished";
+}
+function jamsPage(){
+  $("#view").innerHTML=`
+  <div class="hero"><div class="wrap">
+    <h1>Game jams</h1>
+    <p>Time-boxed design sprints. A theme, a constraint, a deadline — and every entry is a real versioned game with print-and-play and TTS exports the moment it's submitted.</p>
+  </div></div>
+  <div class="wrap"><div class="gamegrid">${(DATA.jams||[]).map(j=>{
+    const [color,label]=JSTATUS[j.status]||["#656d76",j.status];
+    return `<div class="gcard">
+      <h3><a onclick="go('jam/${j.id}')">${esc(j.title)}</a>
+        <span class="badge" style="color:${color};border-color:${color}">${label}</span></h3>
+      <div class="desc">${esc(j.tagline||"")}</div>
+      <div class="meta"><span>🎨 theme: <b>${esc(j.theme)}</b></span>
+        <span>📅 ${esc(j.starts)} → ${esc(j.ends)}</span>
+        <span>🃏 ${(j.entries||[]).length} entries</span>
+        <span>${jamCountdown(j)}</span></div>
+    </div>`;}).join("")||"<div class='emptystate'>No jams yet.</div>"}
+  </div></div>`;
+}
+function jamPage(id){
+  const j=(DATA.jams||[]).find(x=>x.id===id);
+  if(!j){ jamsPage(); return; }
+  const [color,label]=JSTATUS[j.status]||["#656d76",j.status];
+  const c=j.constraints||{};
+  const rules=[];
+  if(c.min_cards||c.max_cards) rules.push(`🃏 ${c.min_cards??1}–${c.max_cards??"∞"} unique cards`);
+  if(c.max_deck_size) rules.push(`📦 ≤${c.max_deck_size} physical cards`);
+  if(c.required_license) rules.push(`⚖️ license: ${c.required_license.join(" / ")}`);
+  if(c.theme_word_required) rules.push(`🎨 theme word must appear in the game`);
+  $("#view").innerHTML=`
+  <div class="hero"><div class="wrap">
+    <h1>${esc(j.title)} <span class="badge" style="color:#fff;border-color:rgba(255,255,255,.5)">${label}</span></h1>
+    <p><b>Theme: ${esc(j.theme)}</b> · ${esc(j.starts)} → ${esc(j.ends)} · ${jamCountdown(j)}</p>
+    <p>${esc(j.tagline||"")}</p>
+    <div class="cta"><button class="btn primary" style="background:#e0632f;color:#fff;border:none"
+      onclick="alert('Enter in 3 steps:\\n1. Make your game (import a spreadsheet or start in the editor)\\n2. Run: fmt jam-check your-game jams/${j.id}.yaml\\n3. Submit your game link before ${j.ends}\\n\\nOn the platform this is one button.')">🎪 Enter this jam</button></div>
+  </div></div>
+  <div class="wrap"><div class="pane"><div class="two"><div>
+    <div class="box"><div class="bh">Entries <span class="count">${(j.entries||[]).length}</span></div><div class="bb">
+      ${(j.entries||[]).map(e=>{
+        const g=e.game_id?G(e.game_id):null;
+        const thumb=g?Object.values(g.images)[0]:null;
+        return `<div style="display:flex;gap:14px;align-items:center;margin:12px 0">
+          ${thumb?`<img src="${thumb}" style="width:56px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.2)">`:"<div style='width:56px;height:78px;border:1px solid var(--bd);border-radius:6px'></div>"}
+          <div><b>${g?`<a onclick="go('g/${g.slug}')">${esc(e.title)}</a>`:esc(e.title)}</b>
+            ${e.award?`<span class="badge" style="color:var(--org);border-color:var(--org)">${esc(e.award)}</span>`:""}
+            <div style="color:var(--mut);font-size:12.5px">by ${esc(e.author)}${e.submitted?` · ${esc(e.submitted)}`:""}</div></div>
+        </div>`;}).join("")||"<div class='emptystate'>No entries yet — be first.</div>"}
+    </div></div>
+  </div><div class="side">
+    <div class="box"><div class="bh">Rules (machine-checked)</div><div class="bb">
+      ${rules.map(r=>`<div class="kv" style="margin:7px 0">${r}</div>`).join("")}
+      ${c.notes?`<blockquote>${esc(c.notes)}</blockquote>`:""}
+      <div class="mono" style="color:var(--mut);font-size:11px;margin-top:10px">fmt jam-check my-game jams/${j.id}.yaml</div>
+    </div></div>
+    ${(j.judging||[]).length?`<div class="box"><div class="bh">Judging</div><div class="bb">${j.judging.map((x,i)=>`<div class="kv">${i+1}. ${esc(x)}</div>`).join("")}</div></div>`:""}
+    ${(j.prizes||[]).length?`<div class="box"><div class="bh">🏆 Prizes</div><div class="bb">${j.prizes.map(p=>`<div class="kv" style="margin:6px 0">${esc(p)}</div>`).join("")}</div></div>`:""}
+  </div></div></div></div>`;
 }
 
 function community(g){

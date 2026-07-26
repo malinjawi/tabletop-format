@@ -242,11 +242,19 @@ def build_game(gd):
         "ncards": len(cards), "nprintings": len(printings),
     }
 
+def load_jams():
+    jams = []
+    jd = ROOT / "jams"
+    if jd.is_dir():
+        for f in sorted(jd.glob("*.yaml")):
+            jams.append(yaml.safe_load(f.read_text()))
+    return jams
+
 def main():
     args = sys.argv[1:]
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else ROOT / "hub.html"
     base = args[args.index("--games") + 1] if "--games" in args else None
-    data = {"games": [build_game(g) for g in discover_games(base)]}
+    data = {"games": [build_game(g) for g in discover_games(base)], "jams": load_jams()}
     data_js = json.dumps(data).replace("</", "<\\/")
     tpl = (ROOT / "tools" / "hub_template.html").read_text()
     out_path.write_text(tpl.replace("__DATA__", data_js))
