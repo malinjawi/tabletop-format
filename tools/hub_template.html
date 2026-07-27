@@ -181,6 +181,17 @@ async function toggleStar(slug, ev){
 const starBtn = (slug) => LIVE
   ? `<button class="btn" onclick="toggleStar('${slug}',event)" title="${ME?"":"sign in to star"}">${MYSTARS.has(slug)?"★":"☆"} <span class="count">${STARS[slug]??0}</span></button>`
   : "";
+let FORKED_FROM={};
+async function forkGame(slug){
+  if(!ME){ authOpen(); return; }
+  const r=await fetch(`/api/games/${slug}/fork`,{method:"POST",headers:authH()});
+  const d=await r.json();
+  if(r.status===201){
+    alert(`⑂ Forked! '${d.slug}' is yours — attribution to '${slug}' is committed (${d.commit}).\nTaking you to your copy…`);
+    location.href=`/?t=${Date.now()}#/g/${d.slug}`; // reload → hub rebakes with the new game
+  } else if(r.status===401){ authOpen(); }
+  else alert(`✗ ${d.error??r.status}`);
+}
 refreshLive();
 const $ = s => document.querySelector(s);
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
@@ -250,7 +261,7 @@ function repoPage(g, tab){
       ${g.attribution?`<span class="badge">⑂ remix of ${esc(g.attribution.source_title)}</span>`:""}
       <div class="actions">
         ${starBtn(g.slug)}
-        <button class="btn" onclick="alert('Platform: server-side fork with attribution chain.\\nCLI today: fmt fork src.git dst.git')">⑂ Fork <span class="count">3</span></button>
+        <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
         <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
         <button class="btn primary" onclick="LIVE?location.href='/edit/${g.slug}':alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>
       </div>

@@ -480,6 +480,38 @@ node -e "
 })().catch(()=>process.exit(1))" && ok "star UI sequence end-to-end vs live API" || bad "star UI sequence"
 kill $HPID 2>/dev/null
 
+say "== FEATURE: one-click fork with attribution =="
+FPORT=$(( (RANDOM % 2000) + 38000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $FPORT > "$SCRATCH/fork2.log" 2>&1 &
+FPID=$!
+sleep 1.5
+node -e "
+(async () => {
+  const base='http://localhost:$FPORT';
+  const reg=await (await fetch(base+'/api/auth/register',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({handle:'forker',email:'f@x.co',password:'longenough1'})})).json();
+  const H={Authorization:'Bearer '+reg.token};
+  const noauth=await fetch(base+'/api/games/ember/fork',{method:'POST'});
+  if(noauth.status!==401) process.exit(1);
+  const f=await (await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H})).json();
+  if(!(f.slug==='ember-forker' && f.forked_from==='ember' && f.commit)) process.exit(2);
+  const again=await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H});
+  if(again.status!==409) process.exit(3);
+  const games=await (await fetch(base+'/api/games')).json();
+  const fk=games.find(g=>g.slug==='ember-forker');
+  if(!(fk && fk.forked_from==='ember')) process.exit(4);
+  console.log('fork:', f.slug, f.commit);
+})().catch(e=>{console.error(e);process.exit(9)})" && ok "fork flow: 401→auth→201→409 dup→indexed w/ forked_from" || bad "fork flow"
+grep -q "attribution:" "$SCRATCH/examples/ember-forker/game.yaml" \
+  && grep -q "source_id: ember" "$SCRATCH/examples/ember-forker/game.yaml" \
+  && grep -q "id: ember-forker" "$SCRATCH/examples/ember-forker/game.yaml" \
+  && ok "fork's game.yaml: new id + SPEC §9 attribution block" || bad "fork attribution yaml"
+git log -1 --format='%an %s' | grep -q "forker fork: ember → ember-forker" && ok "fork commit authored by the forker" || bad "fork commit author"
+python3 tools/validate.py "$SCRATCH/examples/ember-forker" >/dev/null 2>&1 && ok "fork validates as a complete game" || bad "fork validates"
+curl -s "localhost:$FPORT/" | grep -q "ember-forker" && ok "hub rebake includes the fork" || bad "hub shows fork"
+kill $FPID 2>/dev/null
+
 say ""
 say "(perf: run ./perf.sh separately)"
 

@@ -190,8 +190,35 @@ gw.route("DELETE", "/api/stars/:slug", (ctx) => {
 gw.route("GET", "/api/games", (ctx) => {
   reindexGames();
   ctx.send(200, q.listGames(db).map(g => ({ slug: g.slug, title: g.title, license: g.license,
-    cards: g.card_count, stars: g.stars })));
+    cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null })));
 }, "catalog from the rebuildable index (DA-3), star counts included");
+gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
+  const u = requireAuth(ctx); if (!u) return;
+  const gd = requireGame(ctx); if (!gd) return;
+  const src = ctx.params.slug;
+  const newSlug = `${src}-${u.handle}`.slice(0, 60);
+  if (games().includes(newSlug)) return ctx.send(409, { error: `you already forked this ('${newSlug}')` });
+  const dest = join(GAMES_DIR, newSlug);
+  const { cpSync } = await import("node:fs");
+  cpSync(gd, dest, { recursive: true,
+    filter: (p) => !p.includes("/exports") && !p.split("/").pop().startsWith(".") });
+  // rewrite id + append the SPEC §9 attribution block
+  const srcYaml = readFileSync(join(gd, "game.yaml"), "utf8");
+  const title = (srcYaml.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? src;
+  const lic = (srcYaml.match(/^license:\s*(\S+)/m) ?? [])[1] ?? "unknown";
+  let forkYaml = srcYaml.replace(/^id:\s*\S+/m, `id: ${newSlug}`);
+  if (!/^attribution:/m.test(forkYaml)) {
+    forkYaml = forkYaml.trimEnd() + `\nattribution:\n  source_id: ${src}\n  source_title: ${JSON.stringify(title)}\n  source_license: ${lic}\n`;
+  }
+  writeFileSync(join(dest, "game.yaml"), forkYaml);
+  git(["add", "--", dest]);
+  git(["commit", "-m", `fork: ${src} → ${newSlug} by ${u.handle}\n\nattribution committed per SPEC §9`,
+       "--author", `${u.handle} <${u.email}>`]);
+  reindexGames();
+  q.setForkMeta(db, newSlug, src, u.id);
+  ctx.send(201, { slug: newSlug, forked_from: src,
+    commit: git(["rev-parse", "--short", "HEAD"]), url: `/#/g/${newSlug}` });
+}, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
 gw.route("GET", "/api/games/:slug", (ctx) => {
   const gd = requireGame(ctx); if (!gd) return;
   const r = py("stats.py", [gd, "--json"]);

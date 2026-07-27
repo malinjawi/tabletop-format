@@ -62,6 +62,8 @@ export const q = {
   listGames: (db) => db.prepare(
     `SELECT g.*, (SELECT COUNT(*) FROM stars s WHERE s.game_slug = g.slug) AS stars
      FROM games g ORDER BY stars DESC, g.updated_at DESC`).all(),
+  setForkMeta: (db, slug, forkedFrom, ownerId) => db.prepare(
+    "UPDATE games SET forked_from = ?, owner_id = ? WHERE slug = ?").run(forkedFrom, ownerId, slug),
 
   star:   (db, userId, slug) => db.prepare(
     `INSERT INTO stars (user_id, game_slug, created_at) VALUES (?, ?, ?)
