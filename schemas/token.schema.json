@@ -36,6 +36,24 @@
       "description": "Game-specific fields, same convention as cards.",
       "additionalProperties": { "type": ["integer", "number", "string", "boolean"] }
     },
+    "parent": {
+      "type": "string",
+      "description": "Optional hierarchy (FUTURE-GENRES bucket 1): OOB formations, nested components. References another token id."
+    },
+    "faces": {
+      "type": "array",
+      "description": "For kind 'die': custom face definitions (TTS RotationValues / TTPG custom dice precedent).",
+      "items": {
+        "type": "object",
+        "required": ["value"],
+        "additionalProperties": false,
+        "properties": {
+          "value": { "type": ["integer", "string"] },
+          "glyph": { "type": "string" },
+          "art": { "type": "string", "description": "Relative asset path." }
+        }
+      }
+    },
     "notes": { "type": "string" }
   }
 }

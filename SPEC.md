@@ -50,6 +50,9 @@ CHANGELOG.md · CREDITS.md    optional  committed conveniences (regenerable by f
 assets/**                    optional  SOURCE art only — LFS-tracked (§6)
 templates/*.json             optional  layout templates
 translations/<locale>/**     RESERVED  (v0.2 target; NRDB sidecar pattern)
+boards/*.json                RESERVED  (v0.2+: grids/zones/slots/tracks — FUTURE-GENRES.md)
+scenarios/*.yaml             RESERVED  (v0.2+: setups as data — placements/options)
+tables/*.json                RESERVED  (v0.3: CRTs/reference charts — no open standard exists; ours would be first)
 exports/                     FORBIDDEN in git — derived output, gitignored
 ```
 
