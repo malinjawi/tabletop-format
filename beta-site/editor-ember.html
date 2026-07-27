@@ -39,11 +39,13 @@ header h1{font-size:17px;margin:0;flex:1}
 <input type="file" id="csvfile" accept=".csv,.tsv,text/csv" style="display:none" onchange="importCSVFile(this.files[0])">
 <button class="btn ghost" id="setupBtn" onclick="toggleSetup()">⚙ Game setup</button>
 <button class="btn ghost" onclick="addCard()">+ New card</button>
+<button class="btn" id="saveBtn" style="display:none;background:#1a7f37;color:#fff" onclick="saveToServer()">✓ Save (commit)</button>
 <button class="btn" onclick="download()">⤓ Download</button></header>
+<div id="toast" style="display:none;position:fixed;top:64px;right:20px;z-index:60;max-width:420px;background:#1c2128;color:#fff;border-radius:10px;padding:14px 18px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.4)"></div>
 <div id="wrap"><div id="list"></div><div id="form"></div>
 <div id="preview"><div class="card" id="cardEl"></div><div id="diffbox"></div></div></div>
 <script>
-const DATA = {"title": "Ember", "slug": "ember", "attribute_definitions": [{"key": "cost", "name": "Cost", "type": "integer", "required": true, "description": "Sparks paid to play this card."}, {"key": "power", "name": "Power", "type": "integer", "description": "Flame strength in a clash."}], "symbols": {"spark": "Spark", "ash": "Ash"}, "glyphs": {"spark": "\u2726", "ash": "\u25b2"}, "type_colors": {"ember": {"fg": "#8c2f1b", "bg": "#f6e3d3"}, "ward": {"fg": "#1b4f8c", "bg": "#dbe9f6"}, "tool": {"fg": "#7a5a1b", "bg": "#f4ead2"}, "figure": {"fg": "#3a6b28", "bg": "#e2f0d9"}}, "cards": [{"id": "kindling", "name": "Kindling", "type": "ember", "subtypes": ["basic"], "text": "Gain 1 [spark].", "keywords": [], "attributes": {"cost": 0, "power": 1}, "deck_limit": 3}, {"id": "twin_flame", "name": "Twin Flame", "type": "ember", "subtypes": ["trick"], "text": "Copy the power of your rival's clashing card.", "keywords": ["mirror"], "attributes": {"cost": 2, "power": 0}, "deck_limit": 2}, {"id": "ash_cloak", "name": "Ash Cloak", "type": "ward", "subtypes": [], "text": "Prevent all clash damage this round. Gain 1 [ash].", "keywords": ["guard"], "attributes": {"cost": 2, "power": 0}, "deck_limit": 2}, {"id": "bellows", "name": "Bellows", "type": "tool", "subtypes": [], "text": "Double your [spark] this round.", "keywords": [], "attributes": {"cost": 1, "power": 0}, "deck_limit": 1}, {"id": "wildfire", "name": "Wildfire", "type": "ember", "subtypes": ["fury"], "text": "Costs 1 less for each [ash] you hold. Burn: discard your hand.", "keywords": ["burn"], "attributes": {"cost": 4, "power": 5}, "deck_limit": 1}, {"id": "ember_thief", "name": "Ember Thief", "type": "figure", "subtypes": ["rogue"], "text": "On play: steal 1 [spark] from your rival.", "keywords": [], "attributes": {"cost": 2, "power": 2}, "deck_limit": 2}, {"id": "last_light", "name": "Last Light", "type": "ember", "subtypes": ["dawn"], "text": "If you would be extinguished this round, survive at 1 flame instead.", "keywords": ["guard"], "attributes": {"cost": 3, "power": 1}, "deck_limit": 1}, {"id": "cinder_rat", "name": "Cinder Rat", "type": "figure", "subtypes": ["beast"], "text": "On play: look at your rival's hand and discard one [ash] card from it.", "keywords": ["scurry"], "attributes": {"cost": 2, "power": 1}, "deck_limit": 2}]};
+const DATA = {"title": "Ember", "slug": "ember", "live_slug": null, "attribute_definitions": [{"key": "cost", "name": "Cost", "type": "integer", "required": true, "description": "Sparks paid to play this card."}, {"key": "power", "name": "Power", "type": "integer", "description": "Flame strength in a clash."}], "symbols": {"spark": "Spark", "ash": "Ash"}, "glyphs": {"spark": "\u2726", "ash": "\u25b2"}, "type_colors": {"ember": {"fg": "#8c2f1b", "bg": "#f6e3d3"}, "ward": {"fg": "#1b4f8c", "bg": "#dbe9f6"}, "tool": {"fg": "#7a5a1b", "bg": "#f4ead2"}, "figure": {"fg": "#3a6b28", "bg": "#e2f0d9"}}, "cards": [{"id": "kindling", "name": "Kindling", "type": "ember", "subtypes": ["basic"], "text": "Gain 1 [spark].", "keywords": [], "attributes": {"cost": 0, "power": 1}, "deck_limit": 3}, {"id": "twin_flame", "name": "Twin Flame", "type": "ember", "subtypes": ["trick"], "text": "Copy the power of your rival's clashing card.", "keywords": ["mirror"], "attributes": {"cost": 2, "power": 0}, "deck_limit": 2}, {"id": "ash_cloak", "name": "Ash Cloak", "type": "ward", "subtypes": [], "text": "Prevent all clash damage this round. Gain 1 [ash].", "keywords": ["guard"], "attributes": {"cost": 2, "power": 0}, "deck_limit": 2}, {"id": "bellows", "name": "Bellows", "type": "tool", "subtypes": [], "text": "Double your [spark] this round.", "keywords": [], "attributes": {"cost": 1, "power": 0}, "deck_limit": 1}, {"id": "wildfire", "name": "Wildfire", "type": "ember", "subtypes": ["fury"], "text": "Costs 1 less for each [ash] you hold. Burn: discard your hand.", "keywords": ["burn"], "attributes": {"cost": 4, "power": 5}, "deck_limit": 1}, {"id": "ember_thief", "name": "Ember Thief", "type": "figure", "subtypes": ["rogue"], "text": "On play: steal 1 [spark] from your rival.", "keywords": [], "attributes": {"cost": 2, "power": 2}, "deck_limit": 2}, {"id": "last_light", "name": "Last Light", "type": "ember", "subtypes": ["dawn"], "text": "If you would be extinguished this round, survive at 1 flame instead.", "keywords": ["guard"], "attributes": {"cost": 3, "power": 1}, "deck_limit": 1}, {"id": "cinder_rat", "name": "Cinder Rat", "type": "figure", "subtypes": ["beast"], "text": "On play: look at your rival's hand and discard one [ash] card from it.", "keywords": ["scurry"], "attributes": {"cost": 2, "power": 1}, "deck_limit": 2}]};
 const ORIGINAL = JSON.parse(JSON.stringify(DATA.cards));
 let cards = DATA.cards, cur = 0;
 const PALETTE = [["#8c2f1b","#f6e3d3"],["#1b4f8c","#dbe9f6"],["#3a6b28","#e2f0d9"],["#6b285a","#f0d9ea"],["#7a5a1b","#f4ead2"],["#37474f","#e0e7ea"]];
@@ -286,6 +288,36 @@ function download(){
   const blob=new Blob([JSON.stringify(cards,null,2)+"\n"],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="cards.json"; a.click();
 }
+/* ---- LIVE MODE: Save → PUT → real git commit (the product's heart) ---- */
+function toast(html, ms){ const t=document.getElementById("toast");
+  t.innerHTML=html; t.style.display="block";
+  clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms||6000); }
+async function saveToServer(){
+  const btn=document.getElementById("saveBtn");
+  btn.disabled=true; btn.textContent="Saving…";
+  try {
+    const rsp=await fetch(`/api/games/${DATA.live_slug}/cards`,{
+      method:"PUT", headers:{"content-type":"application/json"},
+      body:JSON.stringify(cards)});
+    const d=await rsp.json();
+    if(rsp.status===200 && d.saved){
+      toast(`<b>✓ Committed ${esc(d.commit)}</b><br>${esc(d.message)}<br><span style="opacity:.7">Your change is now in the game's history.</span>`);
+      ORIGINAL.length=0; for(const c of cards) ORIGINAL.push(JSON.parse(JSON.stringify(c)));
+      renderAll();
+    } else if(rsp.status===200){
+      toast("No changes to save.");
+    } else if(rsp.status===422){
+      toast(`<b style="color:#ffa198">✗ Not saved — validation failed</b><br>`+
+        (d.report||[]).filter(l=>l.trim().startsWith("ERROR")).slice(0,4).map(esc).join("<br>")+
+        `<br><span style="opacity:.7">Nothing was committed; fix and save again.</span>`, 10000);
+    } else {
+      toast(`<b style="color:#ffa198">✗ ${esc(d.error||rsp.status)}</b>`, 8000);
+    }
+  } catch(e){ toast(`<b style="color:#ffa198">✗ ${esc(e.message)}</b>`,8000); }
+  btn.disabled=false; btn.textContent="✓ Save (commit)";
+}
+if(DATA.live_slug){ document.getElementById("saveBtn").style.display=""; }
+
 function renderAll(){renderList(); if(setupMode) renderSetup(); else renderForm(); renderCard();renderDiff();}
 renderAll();
 </script></body></html>

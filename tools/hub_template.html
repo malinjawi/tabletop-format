@@ -103,13 +103,85 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
   <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="go('jams')">Jams</a><a class="nl" onclick="alert('Platform feature: your games, forks, and suggestions in one place.')">Your games</a>
   <div class="spacer"></div>
   <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="alert('Platform: creates a repo + format scaffold. CLI today: fmt import csv your.csv my-game')">+ New game</button>
-  <div class="av" title="you"></div>
+  <span id="authArea"><div class="av" title="you"></div></span>
+</div>
+<div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(28,33,40,.6);z-index:70;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:26px 30px;width:340px">
+    <h2 style="margin:0 0 4px" id="amTitle">Sign in</h2>
+    <p style="color:var(--mut);font-size:13px;margin:0 0 14px">Stars, forks, and claims need an account. Your games never do.</p>
+    <div id="amErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:8px"></div>
+    <input id="amHandle" placeholder="handle" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
+    <input id="amEmail" placeholder="email" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
+    <input id="amPass" type="password" placeholder="password (8+ chars)" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="authSubmit()">Continue</button>
+    <div style="font-size:13px;color:var(--mut);margin-top:12px;text-align:center">
+      <a id="amSwitch" onclick="authMode(amMode==='login'?'register':'login')">Create an account instead</a>
+      · <a onclick="document.getElementById('authModal').style.display='none'">cancel</a>
+    </div>
+  </div>
 </div>
 <div id="view"></div>
 <div id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
 <script>
 const DATA = __DATA__;
-let LIVE=false; fetch("/healthz").then(r=>r.json()).then(d=>{LIVE=!!d.ok;}).catch(()=>{});
+/* ---- live mode + auth + stars (feature: accounts & stars end-to-end) ---- */
+let LIVE=false, ME=null, STARS={}, MYSTARS=new Set(), amMode="login";
+const tok = () => localStorage.getItem("forge_token");
+const authH = () => tok() ? {Authorization:"Bearer "+tok()} : {};
+async function refreshLive(){
+  try {
+    const h = await (await fetch("/healthz")).json(); LIVE = !!h.ok;
+    if(!LIVE) return;
+    const gs = await (await fetch("/api/games")).json();
+    for(const g of gs) STARS[g.slug]=g.stars??0;
+    if(tok()){
+      const r = await fetch("/api/me",{headers:authH()});
+      if(r.ok){ ME=await r.json(); MYSTARS=new Set(ME.starred); }
+      else localStorage.removeItem("forge_token");
+    }
+    renderAuthArea(); render();
+  } catch{}
+}
+function renderAuthArea(){
+  const el=document.getElementById("authArea");
+  if(!LIVE){ el.innerHTML='<div class="av" title="you"></div>'; return; }
+  el.innerHTML = ME
+    ? `<span style="font-size:13px;color:#d6dae0">@${esc(ME.handle)}</span>
+       <a class="nl" style="font-size:12px" onclick="localStorage.removeItem('forge_token');ME=null;MYSTARS=new Set();renderAuthArea();render()">sign out</a>`
+    : `<button class="btn" style="background:#e0632f;color:#fff;border:none" onclick="authOpen()">Sign in</button>`;
+}
+function authOpen(mode){ authMode(mode||"login"); document.getElementById("authModal").style.display="flex"; }
+function authMode(m){ amMode=m;
+  document.getElementById("amTitle").textContent = m==="login"?"Sign in":"Create account";
+  document.getElementById("amEmail").style.display = m==="register"?"":"none";
+  document.getElementById("amSwitch").textContent = m==="login"?"Create an account instead":"I have an account";
+  document.getElementById("amErr").style.display="none";
+}
+async function authSubmit(){
+  const body={handle:document.getElementById("amHandle").value.trim(),
+              password:document.getElementById("amPass").value};
+  if(amMode==="register") body.email=document.getElementById("amEmail").value.trim();
+  const r=await fetch(`/api/auth/${amMode}`,{method:"POST",
+    headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(r.ok){ localStorage.setItem("forge_token",d.token);
+    document.getElementById("authModal").style.display="none"; refreshLive(); }
+  else { const e=document.getElementById("amErr"); e.textContent=d.error??r.status; e.style.display=""; }
+}
+async function toggleStar(slug, ev){
+  ev?.stopPropagation?.();
+  if(!ME){ authOpen(); return; }
+  const method = MYSTARS.has(slug) ? "DELETE" : "PUT";
+  const r = await fetch(`/api/stars/${slug}`,{method,headers:authH()});
+  if(r.status===401){ authOpen(); return; }
+  const d = await r.json();
+  STARS[slug]=d.stars; d.starred?MYSTARS.add(slug):MYSTARS.delete(slug);
+  render();
+}
+const starBtn = (slug) => LIVE
+  ? `<button class="btn" onclick="toggleStar('${slug}',event)" title="${ME?"":"sign in to star"}">${MYSTARS.has(slug)?"★":"☆"} <span class="count">${STARS[slug]??0}</span></button>`
+  : "";
+refreshLive();
 const $ = s => document.querySelector(s);
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
 const G = slug => DATA.games.find(g=>g.slug===slug);
@@ -146,6 +218,7 @@ function explorePage(filter){
       <div class="desc">${esc(g.description).slice(0,120)}</div>
       <div class="thumbs">${g.cards.slice(0,5).map(c=>g.images[c.id]?`<img src="${g.images[c.id]}">`:"").join("")}</div>
       <div class="meta">
+        ${starBtn(g.slug)}
         <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} PR${g.prs.length===1?"":"s"}</span>
         <span>🏷 ${g.releases.length} release${g.releases.length===1?"":"s"}</span>
         <span>updated ${esc(g.updated)}</span>
@@ -176,6 +249,7 @@ function repoPage(g, tab){
       <span class="badge prov">provenance: ${esc(g.provenance)}</span>
       ${g.attribution?`<span class="badge">⑂ remix of ${esc(g.attribution.source_title)}</span>`:""}
       <div class="actions">
+        ${starBtn(g.slug)}
         <button class="btn" onclick="alert('Platform: server-side fork with attribution chain.\\nCLI today: fmt fork src.git dst.git')">⑂ Fork <span class="count">3</span></button>
         <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
         <button class="btn primary" onclick="LIVE?location.href='/edit/${g.slug}':alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>

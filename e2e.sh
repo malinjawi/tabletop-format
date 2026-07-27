@@ -451,6 +451,35 @@ fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
 kill $EPID 2>/dev/null
 git reset -q --hard $BEFORE_SHA 2>/dev/null || true
 
+say "== FEATURE: hub auth UI + live stars =="
+HPORT=$(( (RANDOM % 2000) + 36000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $HPORT > "$SCRATCH/hub2.log" 2>&1 &
+HPID=$!
+sleep 2
+curl -s "localhost:$HPORT/" > "$SCRATCH/live-hub.html"
+grep -q "authModal" "$SCRATCH/live-hub.html" && grep -q "toggleStar" "$SCRATCH/live-hub.html" \
+  && grep -q "refreshLive" "$SCRATCH/live-hub.html" && ok "live hub ships auth modal + star wiring" || bad "hub auth UI markers"
+# the exact sequence the UI runs: register → star → counts reflect → unstar
+node -e "
+(async () => {
+  const base='http://localhost:$HPORT';
+  const reg=await (await fetch(base+'/api/auth/register',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({handle:'hubuser',email:'h@x.co',password:'longenough1'})})).json();
+  const H={Authorization:'Bearer '+reg.token};
+  const s1=await (await fetch(base+'/api/stars/ember',{method:'PUT',headers:H})).json();
+  if(!(s1.starred&&s1.stars>=1)) process.exit(1);
+  const me=await (await fetch(base+'/api/me',{headers:H})).json();
+  if(!me.starred.includes('ember')) process.exit(1);
+  const games=await (await fetch(base+'/api/games')).json();
+  const ember=games.find(g=>g.slug==='ember');
+  if(ember.stars<1) process.exit(1);
+  const s0=await (await fetch(base+'/api/stars/ember',{method:'DELETE',headers:H})).json();
+  if(s0.starred!==false) process.exit(1);
+  console.log('UI sequence: register→star→me→counts→unstar all coherent');
+})().catch(()=>process.exit(1))" && ok "star UI sequence end-to-end vs live API" || bad "star UI sequence"
+kill $HPID 2>/dev/null
+
 say ""
 say "(perf: run ./perf.sh separately)"
 
