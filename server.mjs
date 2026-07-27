@@ -93,6 +93,8 @@ const authedUser = (ctx) => {
   return m ? q.sessionUser(db, m[1]) : null;
 };
 const requireAuth = (ctx) => { const u = authedUser(ctx); if (!u) ctx.send(401, { error: "auth required" }); return u; };
+// per-user data lineage: authed requests commit AS the user; anonymous falls back
+const authorOf = (ctx) => { const u = authedUser(ctx); return u ? `${u.handle} <${u.email}>` : "web editor <editor@platform>"; };
 const requireGame = (ctx) => { const gd = gameDir(ctx.params.slug); if (!gd) ctx.send(404, { error: `no game '${ctx.params.slug}'` }); return gd; };
 const json = async (ctx) => JSON.parse((await readBody(ctx.req)).toString());
 
@@ -163,8 +165,38 @@ gw.route("POST", "/api/auth/login", async (ctx) => {
 gw.route("GET", "/api/me", (ctx) => {
   const u = requireAuth(ctx); if (!u) return;
   ctx.send(200, { id: u.id, handle: u.handle, email: u.email,
-    claims: q.claimsOf(db, u.id), starred: q.starredBy(db, u.id).map(r => r.game_slug) });
-}, "who am I + claims + stars");
+    claims: q.claimsOf(db, u.id), starred: q.starredBy(db, u.id).map(r => r.game_slug),
+    games: q.gamesOwnedBy(db, u.id) });
+}, "who am I + claims + stars + owned games");
+gw.route("POST", "/api/games", async (ctx) => {
+  // THE HOSTING VERB: a designer brings a CSV, leaves with a hosted, owned, versioned game
+  const u = requireAuth(ctx); if (!u) return;
+  const { title, csv } = await json(ctx);
+  if (!title?.trim()) return ctx.send(422, { error: "title required" });
+  const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
+  if (!slug || games().includes(slug)) return ctx.send(409, { error: `slug '${slug}' unavailable` });
+  const { writeFileSync: wf, mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const tmp = mkdtempSync(join(tmpdir(), "csv-"));
+  wf(join(tmp, "in.csv"), csv ?? "name,type,text\nFirst Card,card,Hello world.");
+  const imp = spawnSync(process.execPath,
+    [join(ROOT, "tools/import-csv.mjs"), join(tmp, "in.csv"), join(GAMES_DIR, slug), "--title", title.trim()],
+    { encoding: "utf8" });
+  rmSync(tmp, { recursive: true, force: true });
+  if (imp.status !== 0) return ctx.send(422, { error: "import failed", detail: imp.stderr });
+  const v = py("validate.py", [join(GAMES_DIR, slug)]);
+  if (v.status !== 0) {
+    rmSync(join(GAMES_DIR, slug), { recursive: true, force: true });
+    return ctx.send(422, { error: "imported game failed validation", report: v.stdout.split("\n") });
+  }
+  git(["add", "--", join(GAMES_DIR, slug)]);
+  git(["commit", "-m", `new game: ${title.trim()} (${slug})\n\nimported from CSV via platform`, "--author", authorOf(ctx)]);
+  reindexGames();
+  q.setForkMeta(db, slug, null, u.id);  // ownership
+  ctx.send(201, { slug, owner: u.handle, commit: git(["rev-parse", "--short", "HEAD"]),
+    cards: JSON.parse(readFileSync(join(GAMES_DIR, slug, "components/cards.json"), "utf8")).length,
+    url: `/#/g/${slug}`, edit: `/edit/${slug}` });
+}, "host a NEW game from a CSV — owned, committed, validated, live");
 gw.route("POST", "/api/claims", async (ctx) => {
   const u = requireAuth(ctx); if (!u) return;
   const { author } = await json(ctx);
@@ -190,7 +222,8 @@ gw.route("DELETE", "/api/stars/:slug", (ctx) => {
 gw.route("GET", "/api/games", (ctx) => {
   reindexGames();
   ctx.send(200, q.listGames(db).map(g => ({ slug: g.slug, title: g.title, license: g.license,
-    cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null })));
+    cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null,
+    owner_handle: g.owner_handle ?? null })));
 }, "catalog from the rebuildable index (DA-3), star counts included");
 gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const u = requireAuth(ctx); if (!u) return;
@@ -243,7 +276,7 @@ gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   }
   const auto = summarize(changes);
   git(["add", "--", cardsPath]);
-  git(["commit", "-m", `${auto.title}\n\n${auto.body}`, "--author", "web editor <editor@platform>"]);
+  git(["commit", "-m", `${auto.title}\n\n${auto.body}`, "--author", authorOf(ctx)]);
   ctx.send(200, { saved: true, commit: git(["rev-parse", "--short", "HEAD"]), message: auto.title, changes });
 }, "edit cards: validate → rollback-or-commit w/ auto message");
 gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
@@ -258,7 +291,7 @@ gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
   if (LFS_URL) { const up = await uploadAsset(LFS_URL, rel, buf); writeFileSync(dest, up.pointer); mode = "lfs"; oid = up.oid; }
   else writeFileSync(dest, buf);
   git(["add", "--", dest]);
-  git(["commit", "-m", `assets: add ${rel}${mode === "lfs" ? " (LFS)" : ""}`, "--author", "web editor <editor@platform>"]);
+  git(["commit", "-m", `assets: add ${rel}${mode === "lfs" ? " (LFS)" : ""}`, "--author", authorOf(ctx)]);
   ctx.send(200, { saved: true, path: rel, mode, oid, commit: git(["rev-parse", "--short", "HEAD"]) });
 }, "upload asset: LFS batch → pointer committed (the SPEC §7 write path)");
 gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {

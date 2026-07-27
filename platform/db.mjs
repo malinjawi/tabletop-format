@@ -60,8 +60,12 @@ export const q = {
        card_count=excluded.card_count, updated_at=excluded.updated_at, indexed_at=excluded.indexed_at`)
     .run(g.slug, g.title, g.license ?? null, g.card_count ?? null, Date.now(), Date.now()),
   listGames: (db) => db.prepare(
-    `SELECT g.*, (SELECT COUNT(*) FROM stars s WHERE s.game_slug = g.slug) AS stars
-     FROM games g ORDER BY stars DESC, g.updated_at DESC`).all(),
+    `SELECT g.*, u.handle AS owner_handle,
+            (SELECT COUNT(*) FROM stars s WHERE s.game_slug = g.slug) AS stars
+     FROM games g LEFT JOIN users u ON u.id = g.owner_id
+     ORDER BY stars DESC, g.updated_at DESC`).all(),
+  gamesOwnedBy: (db, userId) => db.prepare(
+    "SELECT slug FROM games WHERE owner_id = ? ORDER BY updated_at DESC").all(userId).map(r => r.slug),
   setForkMeta: (db, slug, forkedFrom, ownerId) => db.prepare(
     "UPDATE games SET forked_from = ?, owner_id = ? WHERE slug = ?").run(forkedFrom, ownerId, slug),
 
