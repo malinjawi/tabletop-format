@@ -1,0 +1,14 @@
+{
+  "$comment": "Phase-B typechecking (LANGUAGES.md): npm i -D typescript && npm run typecheck. No build step — JS stays JS; types come from JSDoc until Phase-C renames.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "skipLibCheck": true
+  },
+  "include": ["platform/**/*.mjs", "tools/lib/**/*.mjs", "server.mjs"]
+}

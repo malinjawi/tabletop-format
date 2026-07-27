@@ -1,5 +1,11 @@
+// @ts-check
 /**
  * carddiff.mjs — shared semantic diff engine (Block C). ZERO dependencies.
+ * @typedef {{id:string,name:string,type:string,subtypes?:string[],text?:string,
+ *            keywords?:string[],attributes?:Record<string,number|string|boolean>,
+ *            deck_limit?:number}} Card
+ * @typedef {{kind:"changed",card:string,name:string,field:string,from:unknown,to:unknown}
+ *          |{kind:"added"|"removed",card:string,name:string}} Change
  * Cards matched by STABLE ID, never position. Consumers: diff.mjs (CLI),
  * git-diff-cards.mjs (git driver), fmt-git.mjs (auto commit messages,
  * history, changelog), and eventually the platform's PR view.

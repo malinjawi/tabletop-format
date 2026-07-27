@@ -1,5 +1,7 @@
+// @ts-check
 /**
  * lfs.mjs — Git LFS batch-protocol client, ZERO dependencies (node fetch + crypto).
+ * @typedef {{oid:string,size:number,pointer:string}} Pointer
  *
  * THE LANDMINE WORKAROUND AS CODE (SPEC §7): Forgejo's contents API bypasses
  * .gitattributes, so platform writes must (1) upload the blob via this LFS batch

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * limits.mjs — Store-1 caps and allowlists, LOCKED as code (SPEC §7).
  * One source of truth: LFS client, add-asset, server, and editor all import this.

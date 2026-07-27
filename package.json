@@ -9,6 +9,7 @@
   },
   "scripts": {
     "demo": "./demo.sh",
+    "typecheck": "tsc -p tsconfig.json",
     "validate:ember": "node tools/fmt.mjs validate examples/ember",
     "test": "./e2e.sh",
     "test:quick": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp"
