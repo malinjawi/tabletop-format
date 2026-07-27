@@ -96,8 +96,24 @@ const requireAuth = (ctx) => { const u = authedUser(ctx); if (!u) ctx.send(401, 
 const requireGame = (ctx) => { const gd = gameDir(ctx.params.slug); if (!gd) ctx.send(404, { error: `no game '${ctx.params.slug}'` }); return gd; };
 const json = async (ctx) => JSON.parse((await readBody(ctx.req)).toString());
 
-/* ---------- routes: hub ---------- */
+/* ---------- routes: hub + live editor ---------- */
 gw.route("GET", "/", (ctx) => ctx.send(200, hubHtml(), "text/html; charset=utf-8"), "hub UI");
+const editorBuilt = new Map(); // slug -> {mtime, path}
+gw.route("GET", "/edit/:slug", (ctx) => {
+  const gd = requireGame(ctx); if (!gd) return;
+  const slug = ctx.params.slug;
+  const srcMtime = Math.max(statSync(join(gd, "game.yaml")).mtimeMs,
+                            statSync(join(gd, "components/cards.json")).mtimeMs);
+  const out = join(ROOT, "data", `editor-${slug}.html`);
+  const cached = editorBuilt.get(slug);
+  if (!cached || cached.mtime < srcMtime || !existsSync(out)) {
+    mkdirSync(join(ROOT, "data"), { recursive: true });
+    const r = py("build_editor.py", [gd, "-o", out, "--live", slug]);
+    if (r.status !== 0) return ctx.send(500, { error: r.stderr });
+    editorBuilt.set(slug, { mtime: srcMtime });
+  }
+  ctx.send(200, readFileSync(out, "utf8"), "text/html; charset=utf-8");
+}, "LIVE editor: edit cards in browser, Save = real git commit");
 
 /* ---------- routes: Store 3 — immutable cache (DA-5) ---------- */
 gw.route("GET", "/cache/renders/:slug/:ref/*", (ctx) => {

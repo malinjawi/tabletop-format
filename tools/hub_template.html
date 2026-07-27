@@ -109,6 +109,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
 <script>
 const DATA = __DATA__;
+let LIVE=false; fetch("/healthz").then(r=>r.json()).then(d=>{LIVE=!!d.ok;}).catch(()=>{});
 const $ = s => document.querySelector(s);
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
 const G = slug => DATA.games.find(g=>g.slug===slug);
@@ -177,7 +178,7 @@ function repoPage(g, tab){
       <div class="actions">
         <button class="btn" onclick="alert('Platform: server-side fork with attribution chain.\\nCLI today: fmt fork src.git dst.git')">⑂ Fork <span class="count">3</span></button>
         <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
-        <button class="btn primary" onclick="alert('Platform: opens the live card editor.\\nToday: exports/ember-editor.html')">✎ Edit cards</button>
+        <button class="btn primary" onclick="LIVE?location.href='/edit/${g.slug}':alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>
       </div>
     </div>
     <div class="tabs">${tabs.map(([id,label,n])=>

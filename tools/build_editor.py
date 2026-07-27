@@ -16,6 +16,7 @@ def main():
     args = sys.argv[1:]
     game_dir = Path(args[0])
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else game_dir / "exports" / "editor.html"
+    live_slug = args[args.index("--live") + 1] if "--live" in args else None
 
     game = yaml.safe_load((game_dir / "game.yaml").read_text())
     cards = json.loads((game_dir / "components/cards.json").read_text())
@@ -23,6 +24,7 @@ def main():
     payload = {
         "title": game.get("title", "Untitled"),
         "slug": game.get("id", ""),
+        "live_slug": live_slug,
         "attribute_definitions": game.get("attribute_definitions") or [],
         "symbols": {s["key"]: s.get("name", s["key"]) for s in (game.get("symbols") or [])},
         "glyphs": {s["key"]: s["glyph"] for s in (game.get("symbols") or []) if s.get("glyph")},
@@ -72,7 +74,9 @@ header h1{font-size:17px;margin:0;flex:1}
 <input type="file" id="csvfile" accept=".csv,.tsv,text/csv" style="display:none" onchange="importCSVFile(this.files[0])">
 <button class="btn ghost" id="setupBtn" onclick="toggleSetup()">⚙ Game setup</button>
 <button class="btn ghost" onclick="addCard()">+ New card</button>
+<button class="btn" id="saveBtn" style="display:none;background:#1a7f37;color:#fff" onclick="saveToServer()">✓ Save (commit)</button>
 <button class="btn" onclick="download()">⤓ Download</button></header>
+<div id="toast" style="display:none;position:fixed;top:64px;right:20px;z-index:60;max-width:420px;background:#1c2128;color:#fff;border-radius:10px;padding:14px 18px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.4)"></div>
 <div id="wrap"><div id="list"></div><div id="form"></div>
 <div id="preview"><div class="card" id="cardEl"></div><div id="diffbox"></div></div></div>
 <script>
@@ -319,6 +323,36 @@ function download(){
   const blob=new Blob([JSON.stringify(cards,null,2)+"\n"],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="cards.json"; a.click();
 }
+/* ---- LIVE MODE: Save → PUT → real git commit (the product's heart) ---- */
+function toast(html, ms){ const t=document.getElementById("toast");
+  t.innerHTML=html; t.style.display="block";
+  clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms||6000); }
+async function saveToServer(){
+  const btn=document.getElementById("saveBtn");
+  btn.disabled=true; btn.textContent="Saving…";
+  try {
+    const rsp=await fetch(`/api/games/${DATA.live_slug}/cards`,{
+      method:"PUT", headers:{"content-type":"application/json"},
+      body:JSON.stringify(cards)});
+    const d=await rsp.json();
+    if(rsp.status===200 && d.saved){
+      toast(`<b>✓ Committed ${esc(d.commit)}</b><br>${esc(d.message)}<br><span style="opacity:.7">Your change is now in the game's history.</span>`);
+      ORIGINAL.length=0; for(const c of cards) ORIGINAL.push(JSON.parse(JSON.stringify(c)));
+      renderAll();
+    } else if(rsp.status===200){
+      toast("No changes to save.");
+    } else if(rsp.status===422){
+      toast(`<b style="color:#ffa198">✗ Not saved — validation failed</b><br>`+
+        (d.report||[]).filter(l=>l.trim().startsWith("ERROR")).slice(0,4).map(esc).join("<br>")+
+        `<br><span style="opacity:.7">Nothing was committed; fix and save again.</span>`, 10000);
+    } else {
+      toast(`<b style="color:#ffa198">✗ ${esc(d.error||rsp.status)}</b>`, 8000);
+    }
+  } catch(e){ toast(`<b style="color:#ffa198">✗ ${esc(e.message)}</b>`,8000); }
+  btn.disabled=false; btn.textContent="✓ Save (commit)";
+}
+if(DATA.live_slug){ document.getElementById("saveBtn").style.display=""; }
+
 function renderAll(){renderList(); if(setupMode) renderSetup(); else renderForm(); renderCard();renderDiff();}
 renderAll();
 </script></body></html>"""

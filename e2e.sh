@@ -415,6 +415,42 @@ kill $SPID3 2>/dev/null
 git reset -q --hard HEAD~1 2>/dev/null || true
 unset CACHE_DIR
 
+say "== FEATURE: live editor → Save → git commit (complete loop) =="
+EPORT=$(( (RANDOM % 2000) + 34000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $EPORT > "$SCRATCH/ed.log" 2>&1 &
+EPID=$!
+sleep 1.5
+curl -s "localhost:$EPORT/edit/ember" > "$SCRATCH/live-editor.html"
+grep -q "saveToServer" "$SCRATCH/live-editor.html" && grep -q '"live_slug": "ember"' "$SCRATCH/live-editor.html" \
+  && ok "GET /edit/ember serves live editor with Save wired" || bad "live editor page"
+# simulate exactly what the Save button does
+BEFORE_SHA=$(git rev-parse --short HEAD)
+node -e "
+const cards = JSON.parse(require('fs').readFileSync('examples/ember/components/cards.json','utf8'));
+cards.find(c=>c.id==='twin_flame').attributes.cost = 3;
+fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
+  headers:{'content-type':'application/json'}, body:JSON.stringify(cards)})
+  .then(r=>r.json()).then(d=>{
+    if(!(d.saved && d.commit && /Twin Flame/.test(d.message))) process.exit(1);
+    console.log('commit:', d.commit, '—', d.message);
+  }).catch(()=>process.exit(1))" && ok "Save button flow → commit w/ auto message" || bad "save flow"
+AFTER_SHA=$(git rev-parse --short HEAD)
+[ "$BEFORE_SHA" != "$AFTER_SHA" ] && git log -1 --format=%b | grep -q "Twin Flame" \
+  && ok "commit landed in history, body names the card" || bad "commit in history"
+# editor page rebuilds with fresh data after the commit (cache invalidation)
+curl -s "localhost:$EPORT/edit/ember" | grep -q '"cost": 3' && ok "editor page reflects committed change (cache invalidated)" || bad "editor cache invalidation"
+# invalid save via the same path → 422, nothing committed
+node -e "
+const cards = JSON.parse(require('fs').readFileSync('examples/ember/components/cards.json','utf8'));
+cards[0].attributes.cost = 'NaN-ish';
+fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
+  headers:{'content-type':'application/json'}, body:JSON.stringify(cards)})
+  .then(r=>process.exit(r.status===422?0:1)).catch(()=>process.exit(1))" \
+  && [ "$(git rev-parse --short HEAD)" = "$AFTER_SHA" ] \
+  && ok "invalid save → 422 toast path, history untouched" || bad "invalid save"
+kill $EPID 2>/dev/null
+git reset -q --hard $BEFORE_SHA 2>/dev/null || true
+
 say ""
 say "(perf: run ./perf.sh separately)"
 
