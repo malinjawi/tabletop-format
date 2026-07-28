@@ -35,6 +35,17 @@ else
   sleep 0.8
 fi
 
+# the journey OWNS whatever platform DB it is pointed at: reset for a clean run
+# (persistent Postgres keeps alice/bob between runs; sqlite scratch never did)
+if [ -n "${PG_URL:-}" ]; then
+  PG_URL="$PG_URL" node --input-type=module -e "
+const {default:pg}=await import('pg');
+const p=new pg.Pool({connectionString:process.env.PG_URL});
+await p.query('DROP TABLE IF EXISTS prs, stars, claims, sessions, jam_entries, games, users, schema_migrations CASCADE');
+await p.end(); console.log('journey: platform postgres reset (migrations will recreate)');
+"
+fi
+
 SPORT=$(( (RANDOM % 2000) + 46000 ))
 STORE1=forgejo FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_BASIC="$FORGE_BASIC" \
   DB="${DB:-}" PG_URL="${PG_URL:-}" \
