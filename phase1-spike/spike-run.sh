@@ -130,12 +130,14 @@ class H(http.server.BaseHTTPRequestHandler):
 http.server.HTTPServer(("",9977),H).serve_forever()
 ' >/dev/null 2>&1; then
   api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://spike-hooksink:9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null
-  api PUT /repos/alice/ember/contents/ping.txt '{"branch":"main","message":"hook ping","content":"'"$(printf 'ping' | base64)"'"}' -H "Sudo: alice" >/dev/null
+  # POST /contents = create (PUT is update-with-sha and 4xxs on a new file — the silent killer of every prior F1)
+  PINGR=$(api POST /repos/alice/ember/contents '{"branch":"main","message":"hook ping","files":[{"operation":"create","path":"ping.txt","content":"'"$(printf 'ping' | base64)"'"}]}' -H "Sudo: alice")
+  case "$PINGR" in *ping.txt*) : ;; *) say "  (warn) ping push failed: $(printf '%s' "$PINGR" | head -c 160)";; esac
   HOOKOK=""
   for i in $(seq 1 30); do docker logs spike-hooksink 2>/dev/null | grep -q "EVENT push" && HOOKOK=1 && break; sleep 0.5; done
   docker rm -f spike-hooksink >/dev/null 2>&1 || true
   if [ -n "$HOOKOK" ]; then ok "F1: push webhook delivered (container sink on compose network)"
-  else bad "F1 webhook" "(sink empty — forgejo hook log follows)"; docker logs spike-forgejo 2>&1 | grep -i "hook\|deliver" | tail -4; fi
+  else bad "F1 webhook" "(sink empty — forgejo hook log follows)"; docker logs spike-forgejo 2>&1 | grep -i "hook\|deliver" | tail -6; fi
 else
   # fallback (no image pull possible): host-side listener + candidate routes
   node -e "
@@ -146,7 +148,9 @@ require('http').createServer((q,r)=>{let b='';q.on('data',d=>b+=d);q.on('end',()
   for HH in host.docker.internal 192.168.5.2 172.17.0.1; do
     api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://'"$HH"':9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null 2>&1 || true
   done
-  api PUT /repos/alice/ember/contents/ping.txt '{"branch":"main","message":"hook ping","content":"'"$(printf 'ping' | base64)"'"}' -H "Sudo: alice" >/dev/null
+  # POST /contents = create (PUT is update-with-sha and 4xxs on a new file — the silent killer of every prior F1)
+  PINGR=$(api POST /repos/alice/ember/contents '{"branch":"main","message":"hook ping","files":[{"operation":"create","path":"ping.txt","content":"'"$(printf 'ping' | base64)"'"}]}' -H "Sudo: alice")
+  case "$PINGR" in *ping.txt*) : ;; *) say "  (warn) ping push failed: $(printf '%s' "$PINGR" | head -c 160)";; esac
   for i in $(seq 1 16); do grep -q "push" /tmp/spike-hooks.log 2>/dev/null && break; sleep 0.5; done
   kill $HOOKPID 2>/dev/null
   grep -q "push" /tmp/spike-hooks.log 2>/dev/null && ok "F1: push webhook delivered (host fallback)" || bad "F1 webhook" "(no route from containers to host)"
