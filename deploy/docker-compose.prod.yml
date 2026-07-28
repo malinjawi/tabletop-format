@@ -1,0 +1,83 @@
+# docker-compose.prod.yml — the whole platform, production-shaped.
+#   cp ../.env.example .env   (fill it in)   →   docker compose up -d
+#
+# Every non-obvious line here was LEARNED, not guessed — from the Phase-1
+# spike against real Forgejo and the production journeys:
+#   · LFS_START_SERVER + JWT secret: without them /info/lfs 404s (spike C2)
+#   · webhook ALLOWED_HOST_LIST: Forgejo's SSRF guard silently refuses
+#     private-address hooks — allowlist the gateway BY NAME, not * (spike F1)
+#   · LFS on R2: md5 checksum + SERVE_DIRECT off first (gitea #32407)
+#   · platform DB is Postgres via db-pg.mjs; BIGINT epoch-ms columns
+
+services:
+  gateway:
+    image: node:22-alpine
+    container_name: platform-gateway
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "apk add --no-cache git python3 py3-pillow py3-yaml py3-jsonschema tar gzip bash >/dev/null && npm i pg --no-save --silent && node server.mjs --port 8420"
+    ports:
+      - "8420:8420"          # put a CDN/reverse proxy (TLS) in front; cache /cache/* forever
+    volumes:
+      - ../:/app:ro          # the platform code (read-only; state lives in the stores)
+      - gateway-data:/app/data
+    environment:
+      - STORE1=forgejo
+      - FORGE_URL=http://forgejo:3000
+      - FORGE_TOKEN=${FORGE_TOKEN}          # mint once: DEPLOY.md step 3
+      - FORGE_BASIC=${FORGE_ADMIN_USER}:${FORGE_ADMIN_PASS}
+      - DB=postgres
+      - PG_URL=postgres://platform:${PLATFORM_DB_PASS}@db:5432/platform
+      - CACHE_DIR=/app/data/cache           # Store 3 keys; same layout as the R2 bucket
+      - FARM_DIR=/app/data/forge-farm
+    depends_on: [forgejo, db]
+
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:11
+    container_name: platform-forgejo
+    restart: unless-stopped
+    volumes:
+      - forgejo-data:/data
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__security__INSTALL_LOCK=true
+      - FORGEJO__server__ROOT_URL=${FORGE_PUBLIC_URL:-http://localhost:3000/}
+      - FORGEJO__service__DISABLE_REGISTRATION=true   # the platform provisions users
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=db:5432
+      - FORGEJO__database__NAME=forgejo
+      - FORGEJO__database__USER=forgejo
+      - FORGEJO__database__PASSWD=${FORGE_DB_PASS}
+      # --- LFS server (spike C2: absent = /info/lfs 404) ---
+      - FORGEJO__server__LFS_START_SERVER=true
+      - FORGEJO__server__LFS_JWT_SECRET=${LFS_JWT_SECRET}
+      # --- LFS blobs on R2 (decision D5; quirks are load-bearing) ---
+      - FORGEJO__lfs__STORAGE_TYPE=minio
+      - FORGEJO__lfs__MINIO_ENDPOINT=${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+      - FORGEJO__lfs__MINIO_ACCESS_KEY_ID=${R2_ACCESS_KEY}
+      - FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY=${R2_SECRET_KEY}
+      - FORGEJO__lfs__MINIO_BUCKET=${R2_LFS_BUCKET:-forge-lfs}
+      - FORGEJO__lfs__MINIO_USE_SSL=true
+      - FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM=md5
+      - FORGEJO__lfs__SERVE_DIRECT=false
+      # --- SSRF guard: allow exactly our gateway, nothing else (spike F1) ---
+      - FORGEJO__webhook__ALLOWED_HOST_LIST=gateway
+    depends_on: [db]
+
+  db:
+    image: postgres:16-alpine
+    container_name: platform-db
+    restart: unless-stopped
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro   # creates forgejo + platform DBs
+    environment:
+      - POSTGRES_PASSWORD=${PG_SUPER_PASS}
+      - FORGE_DB_PASS=${FORGE_DB_PASS}
+      - PLATFORM_DB_PASS=${PLATFORM_DB_PASS}
+
+volumes:
+  gateway-data:
+  forgejo-data:
+  pg-data:

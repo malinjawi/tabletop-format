@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 import { createGateway, readBody } from "./platform/gateway.mjs";
 import { diffCards, summarize } from "./tools/lib/carddiff.mjs";
 import { assertAssetAllowed } from "./tools/lib/limits.mjs";
-import { openDb, q, newId } from "./platform/db.mjs";
+import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
 import * as cache from "./platform/cache.mjs";
 import { createLocalStore } from "./platform/store1-local.mjs";
@@ -40,7 +40,10 @@ const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "i
                pdf: "application/pdf", json: "application/json" };
 
 /* ---------- stores ---------- */
-const db = openDb();
+// Store 2 — driver behind the same q surface: node:sqlite (dev) or Postgres (prod)
+const { openDb, q } = process.env.DB === "postgres"
+  ? await import("./platform/db-pg.mjs") : await import("./platform/db.mjs");
+const db = await openDb();
 const py = (script, a) => spawnSync("python3", [join(ROOT, "tools", script), ...a], { encoding: "utf8" });
 
 // Store 1 — THE seam. Routes below talk to `store` only; no git, no game paths.
@@ -55,7 +58,7 @@ const mat = (slug) => (ref) => store.materialize(slug, ref); // Store-3 feed
 async function reindexGames() { // DA-3: derived, rebuildable
   for (const slug of await store.list()) {
     const m = await store.readMeta(slug);
-    q.upsertGame(db, { slug, title: m.title, license: m.license, card_count: m.cardCount });
+    await q.upsertGame(db, { slug, title: m.title, license: m.license, card_count: m.cardCount });
   }
 }
 await reindexGames();
@@ -89,13 +92,13 @@ gw.use((ctx) => { // readonly gate (showcase mode)
   if (READONLY && ctx.req.method !== "GET")
     ctx.send(403, { error: "read-only beta — clone the repo to make it yours" });
 });
-const authedUser = (ctx) => {
+const authedUser = async (ctx) => {
   const m = (ctx.req.headers.authorization ?? "").match(/^Bearer (\w{64})$/);
   return m ? q.sessionUser(db, m[1]) : null;
 };
-const requireAuth = (ctx) => { const u = authedUser(ctx); if (!u) ctx.send(401, { error: "auth required" }); return u; };
+const requireAuth = async (ctx) => { const u = await authedUser(ctx); if (!u) ctx.send(401, { error: "auth required" }); return u; };
 // per-user data lineage: authed requests commit AS the user; anonymous falls back
-const authorOf = (ctx) => { const u = authedUser(ctx); return u ? `${u.handle} <${u.email}>` : "web editor <editor@platform>"; };
+const authorOf = async (ctx) => { const u = await authedUser(ctx); return u ? `${u.handle} <${u.email}>` : "web editor <editor@platform>"; };
 const requireGame = (ctx) => {
   if (!store.has(ctx.params.slug)) { ctx.send(404, { error: `no game '${ctx.params.slug}'` }); return null; }
   return ctx.params.slug;
@@ -160,30 +163,30 @@ gw.route("POST", "/api/auth/register", async (ctx) => {
   if (!validHandle(handle)) return ctx.send(422, { error: "handle: 2-32 chars, kebab-case" });
   if (!validEmail(email)) return ctx.send(422, { error: "invalid email" });
   if ((password ?? "").length < 8) return ctx.send(422, { error: "password: 8+ chars" });
-  if (q.userByHandle(db, handle) || q.userByEmail(db, email)) return ctx.send(409, { error: "handle or email already registered" });
+  if (await q.userByHandle(db, handle) || await q.userByEmail(db, email)) return ctx.send(409, { error: "handle or email already registered" });
   const id = newId("u");
-  q.createUser(db, { id, handle, email, pass_hash: hashPassword(password) });
+  await q.createUser(db, { id, handle, email, pass_hash: hashPassword(password) });
   const token = newToken();
-  q.createSession(db, token, id, SESSION_TTL_MS);
+  await q.createSession(db, token, id, SESSION_TTL_MS);
   ctx.send(201, { token, user: { id, handle } });
 }, "create account");
 gw.route("POST", "/api/auth/login", async (ctx) => {
   const { handle, password } = await json(ctx);
-  const u = q.userByHandle(db, handle) ?? q.userByEmail(db, handle);
+  const u = await q.userByHandle(db, handle) ?? await q.userByEmail(db, handle);
   if (!u || !verifyPassword(password ?? "", u.pass_hash)) return ctx.send(401, { error: "bad credentials" });
   const token = newToken();
-  q.createSession(db, token, u.id, SESSION_TTL_MS);
+  await q.createSession(db, token, u.id, SESSION_TTL_MS);
   ctx.send(200, { token, user: { id: u.id, handle: u.handle } });
 }, "get session token");
-gw.route("GET", "/api/me", (ctx) => {
-  const u = requireAuth(ctx); if (!u) return;
+gw.route("GET", "/api/me", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
   ctx.send(200, { id: u.id, handle: u.handle, email: u.email,
-    claims: q.claimsOf(db, u.id), starred: q.starredBy(db, u.id).map(r => r.game_slug),
-    games: q.gamesOwnedBy(db, u.id) });
+    claims: await q.claimsOf(db, u.id), starred: (await q.starredBy(db, u.id)).map(r => r.game_slug),
+    games: await q.gamesOwnedBy(db, u.id) });
 }, "who am I + claims + stars + owned games");
 gw.route("POST", "/api/games", async (ctx) => {
   // THE HOSTING VERB: a designer brings a CSV, leaves with a hosted, owned, versioned game
-  const u = requireAuth(ctx); if (!u) return;
+  const u = await requireAuth(ctx); if (!u) return;
   const { title, csv } = await json(ctx);
   if (!title?.trim()) return ctx.send(422, { error: "title required" });
   const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
@@ -200,44 +203,44 @@ gw.route("POST", "/api/games", async (ctx) => {
     const v = py("validate.py", [join(tmp, "game")]);
     if (v.status !== 0) return ctx.send(422, { error: "imported game failed validation", report: v.stdout.split("\n") });
     const { sha } = await store.createGame(slug, join(tmp, "game"),
-      `new game: ${title.trim()} (${slug})\n\nimported from CSV via platform`, authorOf(ctx));
+      `new game: ${title.trim()} (${slug})\n\nimported from CSV via platform`, await authorOf(ctx));
     await reindexGames();
-    q.setForkMeta(db, slug, null, u.id);  // ownership
+    await q.setForkMeta(db, slug, null, u.id);  // ownership
     ctx.send(201, { slug, owner: u.handle, commit: sha,
       cards: JSON.parse((await store.readFile(slug, "components/cards.json")).toString()).length,
       url: `/#/g/${slug}`, edit: `/edit/${slug}` });
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }, "host a NEW game from a CSV — owned, committed, validated, live");
 gw.route("POST", "/api/claims", async (ctx) => {
-  const u = requireAuth(ctx); if (!u) return;
+  const u = await requireAuth(ctx); if (!u) return;
   const { author } = await json(ctx);
   if (!author?.trim()) return ctx.send(422, { error: "author string required" });
-  if (q.claimOwner(db, author.trim())) return ctx.send(409, { error: "already claimed" });
-  q.claim(db, u.id, author.trim());
+  if (await q.claimOwner(db, author.trim())) return ctx.send(409, { error: "already claimed" });
+  await q.claim(db, u.id, author.trim());
   ctx.send(201, { claimed: author.trim() });
 }, "claim a git/playtest author string (DA-7)");
-gw.route("PUT", "/api/stars/:slug", (ctx) => {
-  const u = requireAuth(ctx); if (!u) return;
+gw.route("PUT", "/api/stars/:slug", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
   if (!requireGame(ctx)) return;
-  q.star(db, u.id, ctx.params.slug);
-  ctx.send(200, { starred: true, stars: q.starCount(db, ctx.params.slug) });
+  await q.star(db, u.id, ctx.params.slug);
+  ctx.send(200, { starred: true, stars: await q.starCount(db, ctx.params.slug) });
 }, "star");
-gw.route("DELETE", "/api/stars/:slug", (ctx) => {
-  const u = requireAuth(ctx); if (!u) return;
+gw.route("DELETE", "/api/stars/:slug", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
   if (!requireGame(ctx)) return;
-  q.unstar(db, u.id, ctx.params.slug);
-  ctx.send(200, { starred: false, stars: q.starCount(db, ctx.params.slug) });
+  await q.unstar(db, u.id, ctx.params.slug);
+  ctx.send(200, { starred: false, stars: await q.starCount(db, ctx.params.slug) });
 }, "unstar");
 
 /* ---------- routes: Store 1 — games (behind the store interface) ---------- */
 gw.route("GET", "/api/games", async (ctx) => {
   await reindexGames();
-  ctx.send(200, q.listGames(db).map(g => ({ slug: g.slug, title: g.title, license: g.license,
+  ctx.send(200, (await q.listGames(db)).map(g => ({ slug: g.slug, title: g.title, license: g.license,
     cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null,
     owner_handle: g.owner_handle ?? null })));
 }, "catalog from the rebuildable index (DA-3), star counts included");
 gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
-  const u = requireAuth(ctx); if (!u) return;
+  const u = await requireAuth(ctx); if (!u) return;
   const src = requireGame(ctx); if (!src) return;
   const newSlug = `${src}-${u.handle}`.slice(0, 60);
   if (store.has(newSlug)) return ctx.send(409, { error: `you already forked this ('${newSlug}')` });
@@ -255,7 +258,7 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
     `fork: ${src} → ${newSlug} by ${u.handle}\n\nattribution committed per SPEC §9`,
     `${u.handle} <${u.email}>`);
   await reindexGames();
-  q.setForkMeta(db, newSlug, src, u.id);
+  await q.setForkMeta(db, newSlug, src, u.id);
   ctx.send(201, { slug: newSlug, forked_from: src, commit: sha, url: `/#/g/${newSlug}` });
 }, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
 gw.route("GET", "/api/games/:slug", async (ctx) => {
@@ -278,7 +281,7 @@ gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(slug, [{ path: "components/cards.json", content }],
-    `${auto.title}\n\n${auto.body}`, authorOf(ctx));
+    `${auto.title}\n\n${auto.body}`, await authorOf(ctx));
   ctx.send(200, { saved: true, commit: sha, message: auto.title, changes });
 }, "edit cards: validate candidate → commit w/ auto message (live tree never dirty)");
 gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
@@ -287,7 +290,7 @@ gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
   if (!rel || !rel.startsWith("assets/") || rel.includes("..")) return ctx.send(400, { error: "path must be under assets/ (SPEC §7)" });
   const buf = await readBody(ctx.req);
   try { assertAssetAllowed(rel, buf.length); } catch (e) { return ctx.send(422, { error: e.message }); }
-  const { mode, oid, sha } = await store.putAsset(slug, rel, buf, authorOf(ctx));
+  const { mode, oid, sha } = await store.putAsset(slug, rel, buf, await authorOf(ctx));
   ctx.send(200, { saved: true, path: rel, mode, oid, commit: sha });
 }, "upload asset: LFS batch → pointer committed (the SPEC §7 write path)");
 gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
