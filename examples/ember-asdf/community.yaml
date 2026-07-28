@@ -1,0 +1,49 @@
+governance:
+  model: lead
+  maintainers:
+    - Linja
+  decision_process: >
+    Linja decides what merges to main. Balance changes need evidence from at
+    least two logged playtest sessions (see playtests/). Banlist waves are
+    published as dated restriction documents, never edited after the fact.
+    Disagree with a direction? Fork it — that's not betrayal, that's the
+    system working. Great forks get linked from this page.
+  contribution_guide: CONTRIBUTING.md
+
+contributors:
+  - name: Linja
+    roles: [lead designer]
+    since: "2026-06-01"
+  - name: Sam
+    roles: [playtester]
+    since: "2026-06-20"
+  - name: Priya
+    roles: [playtester]
+    since: "2026-06-27"
+
+open_calls:
+  - role: artist
+    note: All card art is placeholder hatching. Looking for an illustrator for
+      the 8 core cards — CC0 project, full credit, human-made art only (see
+      provenance policy).
+  - role: playtesters
+    note: Post-patch build needs 3+ more logged sessions, especially with
+      new players. Template in playtests/.
+
+roadmap:
+  - id: core-v1
+    title: Core set to v1.0 (stable rules + final card text)
+    status: playtesting
+    target: 2026-Q3
+    notes: Exit criteria — three consecutive sessions with no balance flags.
+  - id: embers-rising
+    title: Embers Rising promo mini-set
+    status: released
+  - id: second-flame
+    title: Second Flame — first real expansion (8 new cards, ash archetype)
+    status: in_design
+    target: 2026-Q4
+  - id: coop-variant
+    title: Two-player co-op variant vs an automated Blaze
+    status: idea
+    notes: Communities keep asking; needs a designer who loves bots. Open to a lead.

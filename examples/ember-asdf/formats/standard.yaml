@@ -1,0 +1,11 @@
+id: standard
+name: Standard
+description: Core + current cycle. The default way to play Ember.
+card_pool:
+  - core
+  - embers_rising
+active_restriction_id: standard-2026-07
+deck_rules:
+  min_size: 14
+  max_size: 14
+  notes: Duel decks are fixed-size in Ember.
