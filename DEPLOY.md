@@ -10,7 +10,7 @@ interactive except server-side saves.
 
 ```bash
 ./build_beta.sh                      # assembles beta-site/
-# replace YOUR-ORG/YOUR-REPO in beta-site/index.html with your real repo URL
+# replace malinjawi/tabletop-format in beta-site/index.html with your real repo URL
 
 git checkout --orphan gh-pages
 git rm -rf . && cp -r beta-site/* . && rm -rf beta-site
@@ -54,7 +54,7 @@ for showcase mode, all writes validated with rollback on failure.
 
 ## Launch checklist
 
-1. Name chosen, `YOUR-ORG/YOUR-REPO` links replaced (grep for it)
+1. Name chosen, `malinjawi/tabletop-format` links replaced (grep for it)
 2. Repo pushed public (bundle → `git clone tabletop-format.bundle`)
 3. `./e2e.sh` green on your machine
 4. Tier 1 live → smoke-test on phone + desktop

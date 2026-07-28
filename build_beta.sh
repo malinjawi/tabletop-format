@@ -32,4 +32,4 @@ cp beta/index.html "$OUT/index.html"
 echo "== done =="
 du -sh "$OUT" | awk '{print "beta-site: " $1}'
 echo "Deploy: push this folder to a gh-pages branch, or point Cloudflare Pages at it."
-echo "Remember: replace YOUR-ORG/YOUR-REPO links in index.html after you push."
+echo "Remember: replace malinjawi/tabletop-format links in index.html after you push."
