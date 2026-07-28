@@ -47,7 +47,8 @@ const py = (script, a) => spawnSync("python3", [join(ROOT, "tools", script), ...
 const STORE1 = process.env.STORE1 ?? "local";
 const store = STORE1 === "forgejo"
   ? (await import("./platform/store1-forgejo.mjs")).createForgejoStore({
-      root: ROOT, forgeUrl: process.env.FORGE_URL, token: process.env.FORGE_TOKEN, db, q })
+      root: ROOT, forgeUrl: process.env.FORGE_URL, token: process.env.FORGE_TOKEN,
+      basicAuth: process.env.FORGE_BASIC ?? null, farmDir: process.env.FARM_DIR })
   : createLocalStore({ root: ROOT, gamesDir: GAMES_DIR, lfsUrl: process.env.LFS_URL ?? null });
 const mat = (slug) => (ref) => store.materialize(slug, ref); // Store-3 feed
 

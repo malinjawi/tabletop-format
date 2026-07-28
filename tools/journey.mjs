@@ -21,6 +21,26 @@ const ok = (msg) => console.log(`  ✓ ${String(++step).padStart(2)}  ${msg}`);
 const die = (msg, detail) => { console.error(`  ✗ FAIL @${step + 1}: ${msg}`, detail ?? ""); process.exit(1); };
 const assert = (cond, msg, detail) => cond ? ok(msg) : die(msg, detail);
 const git = (...a) => execFileSync("git", a, { encoding: "utf8" }).trim();
+
+/* ---- the LEDGER: where commits actually live. Local mode reads the scratch
+ * repo with git; forge mode (FORGE_URL set) asks the forge's API — the SAME
+ * assertions then confirm the PRODUCTION Store-1 backend. ---- */
+const FORGE = process.env.FORGE_URL
+  ? { url: process.env.FORGE_URL.replace(/\/$/, ""), token: process.env.FORGE_TOKEN } : null;
+const OWNERS = { "tidepool": "alice", "tidepool-bob": "bob" };
+const fapi = async (p) => fetch(`${FORGE.url}/api/v1${p}`, { headers: { Authorization: `token ${FORGE.token}` } });
+const lastCommit = async (slug) => {
+  if (!FORGE) { const [an, ae, ...s] = git("log", "-1", "--format=%an|%ae|%s").split("|");
+                return { an, ae, s: s.join("|") }; }
+  const r = await fapi(`/repos/${OWNERS[slug]}/${slug}/commits?limit=1&stat=false&verification=false&files=false`);
+  const c = (await r.json())[0];
+  return { an: c.commit.author.name, ae: c.commit.author.email, s: c.commit.message.split("\n")[0] };
+};
+const repoRead = async (slug, rel) => {
+  if (!FORGE) return readFileSync(`examples/${slug}/${rel}`, "utf8");
+  const r = await fapi(`/repos/${OWNERS[slug]}/${slug}/raw/${rel}?ref=main`);
+  return r.ok ? await r.text() : null;
+};
 const api = async (method, path, { token, body, raw } = {}) => {
   const r = await fetch(BASE + path, { method,
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -54,8 +74,8 @@ const created = await api("POST", "/api/games", { token: A, body: { title: "Tide
 assert(created.status === 201 && created.data.slug === "tidepool" && created.data.cards === 6,
   "POST /api/games → 'tidepool' hosted: 6 cards from her CSV", created.data);
 assert(created.data.owner === "alice", "ownership recorded at creation");
-assert(/alice <alice@tidepool\.games>/.test(git("log", "-1", "--format=%an <%ae>")),
-  "creation commit AUTHORED AS ALICE (git ledger)");
+{ const c = await lastCommit("tidepool");
+  assert(c.an === "alice" && c.ae === "alice@tidepool.games", "creation commit AUTHORED AS ALICE (git ledger)"); }
 
 const noAuth = await api("POST", "/api/games", { body: { title: "Sneaky" } });
 assert(noAuth.status === 401, "anonymous cannot host games (401)");
@@ -68,9 +88,9 @@ const art = await api("POST", "/api/games/tidepool/assets?path=assets/art/riptid
   { token: A, raw: PNG });
 assert(art.status === 200 && art.data.mode === "lfs" && art.data.oid,
   "art uploaded via LFS batch → pointer committed", art.data);
-assert(readFileSync("examples/tidepool/assets/art/riptide.png", "utf8").startsWith("version https://git-lfs"),
+assert((await repoRead("tidepool", "assets/art/riptide.png")).startsWith("version https://git-lfs"),
   "git holds the 3-line pointer, not the binary (Store 1)");
-assert(/alice/.test(git("log", "-1", "--format=%an")), "asset commit authored as alice");
+assert(/alice/.test((await lastCommit("tidepool")).an), "asset commit authored as alice");
 
 const artBack = await api("GET", "/api/games/tidepool/assets/art/riptide.png");
 assert(artBack.status === 200 && Buffer.compare(artBack.data, PNG) === 0,
@@ -81,7 +101,7 @@ cards.find(c => c.id === "riptide").attributes.cost = 4;
 const edit = await api("PUT", "/api/games/tidepool/cards", { token: A, body: cards });
 assert(edit.status === 200 && edit.data.saved && /Riptide/.test(edit.data.message),
   `edit committed: "${edit.data.message}"`);
-assert(/alice/.test(git("log", "-1", "--format=%an")), "edit commit authored as alice (not 'web editor')");
+assert(/alice/.test((await lastCommit("tidepool")).an), "edit commit authored as alice (not 'web editor')");
 
 const hist = (await api("GET", "/api/games/tidepool/history")).data;
 assert(hist[0].author === "alice" && hist[0].changes.some(c => c.card === "riptide"),
@@ -114,20 +134,20 @@ assert(star.status === 200 && star.data.stars === 1, "bob stars it → count 1")
 const fork = await api("POST", "/api/games/tidepool/fork", { token: B });
 assert(fork.status === 201 && fork.data.slug === "tidepool-bob" && fork.data.forked_from === "tidepool",
   "bob forks → tidepool-bob");
-assert(/^bob /.test(git("log", "-1", "--format=%an %s")) && /fork: tidepool/.test(git("log", "-1", "--format=%s")),
-  "fork commit authored by bob");
-const forkYaml = readFileSync("examples/tidepool-bob/game.yaml", "utf8");
+{ const c = await lastCommit("tidepool-bob");
+  assert(c.an === "bob" && /fork: tidepool/.test(c.s), "fork commit authored by bob"); }
+const forkYaml = await repoRead("tidepool-bob", "game.yaml");
 assert(/attribution:/.test(forkYaml) && /source_id: tidepool/.test(forkYaml),
   "SPEC §9 attribution block committed into the fork");
 
 console.log("== ACT 4: parallel work, no bleed ==");
-const before = readFileSync("examples/tidepool/components/cards.json", "utf8");
+const before = await repoRead("tidepool", "components/cards.json");
 const bobCards = (await api("GET", "/api/games/tidepool-bob/cards")).data;
 bobCards.find(c => c.id === "moon_jelly").text = "Drifts: copy any current in play.";
 const bobEdit = await api("PUT", "/api/games/tidepool-bob/cards", { token: B, body: bobCards });
 assert(bobEdit.status === 200 && /Moon Jelly/.test(bobEdit.data.message), "bob edits HIS fork");
-assert(/bob/.test(git("log", "-1", "--format=%an")), "bob's edit authored as bob");
-assert(readFileSync("examples/tidepool/components/cards.json", "utf8") === before,
+assert(/bob/.test((await lastCommit("tidepool-bob")).an), "bob's edit authored as bob");
+assert(await repoRead("tidepool", "components/cards.json") === before,
   "alice's ORIGINAL byte-for-byte untouched by bob's work");
 const aliceHist = (await api("GET", "/api/games/tidepool/history")).data;
 assert(aliceHist.every(h => h.author !== "bob"), "no bob commits in alice's history");
