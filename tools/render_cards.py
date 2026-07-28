@@ -13,7 +13,18 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 750, 1050  # 2.5x3.5in @ 300dpi
 M = 45            # inner margin
-FONT_DIR = "/usr/share/fonts/truetype/dejavu"
+def _font_dir():
+    """Env override -> fonts shipped in-repo (tools/fonts/) -> Linux system dir.
+    Bundling DejaVu makes renders byte-stable on macOS/Linux/CI (tools/fonts/LICENSE)."""
+    import os
+    for c in (os.environ.get("FMT_FONT_DIR"),
+              str(Path(__file__).resolve().parent / "fonts"),
+              "/usr/share/fonts/truetype/dejavu"):
+        if c and Path(c, "DejaVuSans.ttf").exists():
+            return c
+    sys.exit("render_cards: DejaVu fonts not found; set FMT_FONT_DIR")
+
+FONT_DIR = _font_dir()
 F = {
     "name": ImageFont.truetype(f"{FONT_DIR}/DejaVuSans-Bold.ttf", 52),
     "type": ImageFont.truetype(f"{FONT_DIR}/DejaVuSans.ttf", 34),

@@ -15,7 +15,7 @@
  * thin veneer over plain git — which is the point: your game IS a repo.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,7 +27,12 @@ const [cmd, ...rest] = process.argv.slice(2);
 function git(repoDir, args, opts = {}) {
   return execFileSync("git", ["-C", repoDir, ...args], { encoding: "utf8", ...opts }).trimEnd();
 }
-function repoOf(gameDir) { return git(gameDir, ["rev-parse", "--show-toplevel"]); }
+// macOS aliases /var -> /private/var: a user-supplied path and git's own
+// rev-parse output can name the same dir differently, and relative() between
+// the two fabricates a path that escapes the repo. Normalize both sides.
+const real = (
+  p) => { try { return realpathSync(p); } catch { return p; } };
+function repoOf(gameDir) { return real(git(gameDir, ["rev-parse", "--show-toplevel"])); }
 function relOrDot(repo, gameDir) { return relative(repo, gameDir) || "."; } // repo-root games (one-game-one-repo)
 function cardsRel(gameDir, repo) { return relative(repo, resolve(gameDir, "components/cards.json")); }
 const QUIET = { stdio: ["pipe", "pipe", "ignore"] }; // expected-miss lookups: no stderr noise
@@ -36,7 +41,7 @@ function cardsAt(repo, ref, rel) {
 }
 
 if (cmd === "save") {
-  const gameDir = resolve(rest[0]);
+  const gameDir = real(resolve(rest[0]));
   const mIdx = rest.indexOf("-m");
   const userMsg = mIdx > -1 ? rest[mIdx + 1] : null;
   const repo = repoOf(gameDir);
@@ -57,7 +62,7 @@ if (cmd === "save") {
 }
 
 else if (cmd === "history") {
-  const gameDir = resolve(rest[0]);
+  const gameDir = real(resolve(rest[0]));
   const nIdx = rest.indexOf("-n");
   const limit = nIdx > -1 ? parseInt(rest[nIdx + 1], 10) : 20;
   const repo = repoOf(gameDir);
@@ -76,7 +81,7 @@ else if (cmd === "history") {
 }
 
 else if (cmd === "changelog") {
-  const gameDir = resolve(rest[0]);
+  const gameDir = real(resolve(rest[0]));
   const repo = repoOf(gameDir);
   const rel = cardsRel(gameDir, repo);
   const log = git(repo, ["log", "--format=%H|%h|%an|%as|%s", "--", rel]);
@@ -105,7 +110,7 @@ else if (cmd === "changelog") {
 }
 
 else if (cmd === "fork") {
-  const [src, dst] = rest.map(p => resolve(p));
+  const [src, dst] = rest.map(p => real(resolve(p)));
   execFileSync("git", ["clone", "--bare", src, dst], { stdio: "inherit" });
   try { execFileSync("git", ["-C", dst, "symbolic-ref", "HEAD", "refs/heads/main"]); } catch {}
   // SPEC §9: commit the attribution block into the fork automatically
@@ -135,7 +140,7 @@ else if (cmd === "fork") {
 }
 
 else if (cmd === "release") {
-  const gameDir = resolve(rest[0]);
+  const gameDir = real(resolve(rest[0]));
   const version = rest[1];
   if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) { console.error("Usage: release <game-dir> <x.y.z>"); process.exit(2); }
   const repo = repoOf(gameDir);
@@ -153,7 +158,7 @@ else if (cmd === "release") {
 }
 
 else if (cmd === "setup") {
-  const repo = repoOf(resolve(rest[0] ?? "."));
+  const repo = repoOf(real(resolve(rest[0] ?? ".")));
   git(repo, ["config", "diff.cards.command", `node ${join(TOOLS, "git-diff-cards.mjs")}`]);
   console.log("Semantic `git diff` driver enabled for this clone.");
 }
