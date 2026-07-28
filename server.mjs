@@ -99,6 +99,22 @@ const authedUser = async (ctx) => {
 const requireAuth = async (ctx) => { const u = await authedUser(ctx); if (!u) ctx.send(401, { error: "auth required" }); return u; };
 // per-user data lineage: authed requests commit AS the user; anonymous falls back
 const authorOf = async (ctx) => { const u = await authedUser(ctx); return u ? `${u.handle} <${u.email}>` : "web editor <editor@platform>"; };
+/** COMMIT ACCESS (the rule the anonymous-edit hole violated):
+ *  anonymous → never. Owned game → owner or invited collaborator only.
+ *  Unowned demo game → any signed-in user (explicit transitional rule).
+ *  Everyone else still has a path: fork + PR (see /cards/propose). */
+async function canWrite(u, slug) {
+  if (!u) return false;
+  const g = await q.gameBySlug(db, slug);
+  if (!g || !g.owner_id) return true;
+  if (g.owner_id === u.id) return true;
+  return !!(await q.isCollaborator(db, slug, u.id));
+}
+const denyWrite = (ctx, u) => u
+  ? ctx.send(403, { error: "no commit access to this game", propose: true,
+      hint: "fork it and open a PR (POST /api/games/:slug/cards/propose does both in one step), or ask the owner for access" })
+  : ctx.send(401, { error: "sign in to save changes" });
+
 const requireGame = (ctx) => {
   if (!store.has(ctx.params.slug)) { ctx.send(404, { error: `no game '${ctx.params.slug}'` }); return null; }
   return ctx.params.slug;
@@ -239,11 +255,9 @@ gw.route("GET", "/api/games", async (ctx) => {
     cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null,
     owner_handle: g.owner_handle ?? null })));
 }, "catalog from the rebuildable index (DA-3), star counts included");
-gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
-  const u = await requireAuth(ctx); if (!u) return;
-  const src = requireGame(ctx); if (!src) return;
+async function doFork(u, src) {
   const newSlug = `${src}-${u.handle}`.slice(0, 60);
-  if (store.has(newSlug)) return ctx.send(409, { error: `you already forked this ('${newSlug}')` });
+  if (store.has(newSlug)) { const e = new Error(`you already forked this ('${newSlug}')`); e.code = 409; throw e; }
   const srcYaml = (await store.readFile(src, "game.yaml")).toString();
   const title = (srcYaml.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? src;
   const lic = (srcYaml.match(/^license:\s*(\S+)/m) ?? [])[1] ?? "unknown";
@@ -259,8 +273,69 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
     `${u.handle} <${u.email}>`);
   await reindexGames();
   await q.setForkMeta(db, newSlug, src, u.id);
-  ctx.send(201, { slug: newSlug, forked_from: src, commit: sha, url: `/#/g/${newSlug}` });
+  return { slug: newSlug, sha };
+}
+gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const src = requireGame(ctx); if (!src) return;
+  try {
+    const f = await doFork(u, src);
+    ctx.send(201, { slug: f.slug, forked_from: src, commit: f.sha, url: `/#/g/${f.slug}` });
+  } catch (e) { ctx.send(e.code ?? 500, { error: e.message }); }
 }, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
+gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
+  // THE NO-ACCESS EDIT PATH: your edit becomes a commit in YOUR fork + a PR here
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const bodyIn = await json(ctx);
+  const cards = Array.isArray(bodyIn) ? bodyIn : bodyIn.cards;
+  const prTitle = (!Array.isArray(bodyIn) && bodyIn.title) || null;
+  const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
+  const changes = diffCards(before, cards ?? []);
+  if (!changes.length) return ctx.send(422, { error: "no changes to propose" });
+  const forkSlug = `${slug}-${u.handle}`.slice(0, 60);
+  if (!store.has(forkSlug)) await doFork(u, slug);
+  else {
+    const fr = await q.gameBySlug(db, forkSlug);
+    if (fr?.owner_id !== u.id) return ctx.send(409, { error: `'${forkSlug}' exists and isn't yours` });
+  }
+  const content = JSON.stringify(cards, null, 2) + "\n";
+  const v = await validateCandidate(forkSlug, "components/cards.json", content);
+  if (!v.ok) return ctx.send(422, { error: "validation failed", report: v.report });
+  const auto = summarize(changes);
+  const { sha } = await store.writeFiles(forkSlug, [{ path: "components/cards.json", content }],
+    `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);
+  const id = newId("pr");
+  await q.createPr(db, { id, to_slug: slug, from_slug: forkSlug,
+    title: prTitle ?? auto.title, body: null, author_id: u.id,
+    base: JSON.stringify(before), proposed: JSON.stringify(cards) });
+  ctx.send(201, { proposed: true, pr: id, fork: forkSlug, commit: sha, message: auto.title, changes });
+}, "edit without access → auto-fork, commit to your fork, PR opened for review");
+gw.route("GET", "/api/games/:slug/collaborators", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  ctx.send(200, await q.collaboratorsOf(db, slug));
+}, "who has commit access (besides the owner)");
+gw.route("PUT", "/api/games/:slug/collaborators/:handle", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const g = await q.gameBySlug(db, slug);
+  if (g?.owner_id !== u.id) return ctx.send(403, { error: "only the owner manages access" });
+  const target = await q.userByHandle(db, ctx.params.handle);
+  if (!target) return ctx.send(404, { error: `no user '${ctx.params.handle}'` });
+  if (target.id === u.id) return ctx.send(422, { error: "you already own this game" });
+  await q.addCollaborator(db, slug, target.id, u.id);
+  ctx.send(200, { granted: ctx.params.handle, collaborators: await q.collaboratorsOf(db, slug) });
+}, "owner grants direct-commit access");
+gw.route("DELETE", "/api/games/:slug/collaborators/:handle", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const g = await q.gameBySlug(db, slug);
+  if (g?.owner_id !== u.id) return ctx.send(403, { error: "only the owner manages access" });
+  const target = await q.userByHandle(db, ctx.params.handle);
+  if (!target) return ctx.send(404, { error: `no user '${ctx.params.handle}'` });
+  await q.removeCollaborator(db, slug, target.id);
+  ctx.send(200, { revoked: ctx.params.handle, collaborators: await q.collaboratorsOf(db, slug) });
+}, "owner revokes direct-commit access");
 gw.route("GET", "/api/games/:slug", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const r = py("stats.py", [await store.dir(slug), "--json"]);
@@ -272,6 +347,8 @@ gw.route("GET", "/api/games/:slug/cards", async (ctx) => {
 }, "card data");
 gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
   const incoming = await json(ctx);
   const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
   const changes = diffCards(before, incoming);
@@ -281,16 +358,18 @@ gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(slug, [{ path: "components/cards.json", content }],
-    `${auto.title}\n\n${auto.body}`, await authorOf(ctx));
+    `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);
   ctx.send(200, { saved: true, commit: sha, message: auto.title, changes });
 }, "edit cards: validate candidate → commit w/ auto message (live tree never dirty)");
 gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
   const rel = ctx.url.searchParams.get("path");
   if (!rel || !rel.startsWith("assets/") || rel.includes("..")) return ctx.send(400, { error: "path must be under assets/ (SPEC §7)" });
   const buf = await readBody(ctx.req);
   try { assertAssetAllowed(rel, buf.length); } catch (e) { return ctx.send(422, { error: e.message }); }
-  const { mode, oid, sha } = await store.putAsset(slug, rel, buf, await authorOf(ctx));
+  const { mode, oid, sha } = await store.putAsset(slug, rel, buf, `${u.handle} <${u.email}>`);
   ctx.send(200, { saved: true, path: rel, mode, oid, commit: sha });
 }, "upload asset: LFS batch → pointer committed (the SPEC §7 write path)");
 gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {

@@ -111,6 +111,18 @@ export const q = {
     "UPDATE prs SET status = $1, merged_at = $2, merge_sha = $3 WHERE id = $4",
     [status, status === "merged" ? Date.now() : null, mergeSha ?? null, id]),
 
+  addCollaborator: (db, slug, userId, addedBy) => db.query(
+    `INSERT INTO collaborators (game_slug, user_id, role, added_by, added_at)
+     VALUES ($1, $2, 'maintainer', $3, $4) ON CONFLICT (game_slug, user_id) DO NOTHING`,
+    [slug, userId, addedBy, Date.now()]),
+  removeCollaborator: (db, slug, userId) => db.query(
+    "DELETE FROM collaborators WHERE game_slug = $1 AND user_id = $2", [slug, userId]),
+  isCollaborator: (db, slug, userId) => one(db,
+    "SELECT 1 AS y FROM collaborators WHERE game_slug = $1 AND user_id = $2", [slug, userId]),
+  collaboratorsOf: (db, slug) => all(db,
+    `SELECT u.handle, c.role, c.added_at FROM collaborators c JOIN users u ON u.id = c.user_id
+     WHERE c.game_slug = $1 ORDER BY c.added_at`, [slug]),
+
   claim: (db, userId, author) => db.query(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES ($1, $2, $3)`,
     [userId, author, Date.now()]),

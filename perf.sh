@@ -42,6 +42,7 @@ CPORT=$(( (RANDOM % 2000) + 28000 ))
 node server.mjs --port $CPORT > "$SCRATCH/csrv.log" 2>&1 &
 CPID=$!
 sleep 1.5
+PTOK=$(curl -s -X POST "localhost:$CPORT/api/auth/register" -H 'content-type: application/json' -d '{"handle":"perf-user","email":"p@e2e.io","password":"longenough1"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])")
 curl -s "localhost:$CPORT/api/games/ember/cards" > "$SCRATCH/base.json"
 python3 -c "
 import json
@@ -53,9 +54,9 @@ c=json.load(open('$SCRATCH/base.json'))
 for x in c:
     if x['id']=='bellows': x['attributes']['cost']=3
 json.dump(c,open('$SCRATCH/w2.json','w'))"
-curl -s -X PUT -H 'content-type: application/json' --data @"$SCRATCH/w1.json" "localhost:$CPORT/api/games/ember/cards" > "$SCRATCH/r1.json" &
+curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $PTOK" --data @"$SCRATCH/w1.json" "localhost:$CPORT/api/games/ember/cards" > "$SCRATCH/r1.json" &
 W1=$!
-curl -s -X PUT -H 'content-type: application/json' --data @"$SCRATCH/w2.json" "localhost:$CPORT/api/games/ember/cards" > "$SCRATCH/r2.json" &
+curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $PTOK" --data @"$SCRATCH/w2.json" "localhost:$CPORT/api/games/ember/cards" > "$SCRATCH/r2.json" &
 W2=$!
 wait $W1 $W2
 kill $CPID 2>/dev/null

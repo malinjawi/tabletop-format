@@ -141,6 +141,11 @@ assert(/attribution:/.test(forkYaml) && /source_id: tidepool/.test(forkYaml),
   "SPEC §9 attribution block committed into the fork");
 
 console.log("== ACT 4: parallel work, no bleed ==");
+const anonEdit = await api("PUT", "/api/games/tidepool/cards", { body: [] });
+assert(anonEdit.status === 401, "anonymous cannot commit to ANY game (401)");
+const bobEdit0 = await api("PUT", "/api/games/tidepool/cards", { token: B, body: [] });
+assert(bobEdit0.status === 403 && bobEdit0.data.propose === true,
+  "bob cannot commit to ALICE's game (403) — but is pointed at the PR path");
 const before = await repoRead("tidepool", "components/cards.json");
 const bobCards = (await api("GET", "/api/games/tidepool-bob/cards")).data;
 bobCards.find(c => c.id === "moon_jelly").text = "Drifts: copy any current in play.";

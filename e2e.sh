@@ -11,6 +11,9 @@ SCRATCH="$(mktemp -d)"
 PASS=0; FAIL=0; FAILED=()
 
 say()  { printf '%s\n' "$*"; }
+mint() { curl -s -X POST "localhost:$1/api/auth/register" -H 'content-type: application/json' \
+  -d '{"handle":"suite-'$RANDOM'","email":"s'$RANDOM'@e2e.io","password":"longenough1"}' \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])"; }
 ok()   { PASS=$((PASS+1)); say "  PASS  $1"; }
 bad()  { FAIL=$((FAIL+1)); FAILED+=("$1"); say "  FAIL  $1 ${2:+— $2}"; }
 check(){ # check <name> <command...>  (expects exit 0)
@@ -233,14 +236,17 @@ cards=json.load(sys.stdin)
 for c in cards:
     if c['id']=='kindling': c['attributes']['power']=3
 json.dump(cards,open('$SCRATCH/put.json','w'))" 2>/dev/null
-PUTMSG=$(curl -s -X PUT -H 'content-type: application/json' --data @"$SCRATCH/put.json" "localhost:$PORT/api/games/ember/cards" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message',''))" 2>/dev/null)
+GTOK=$(mint $PORT)
+ANON=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' --data @"$SCRATCH/put.json" "localhost:$PORT/api/games/ember/cards")
+[ "$ANON" = "401" ] && ok "anonymous commit REJECTED (401) — the hole is closed" || bad "anonymous commit allowed" "$ANON"
+PUTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" --data @"$SCRATCH/put.json" "localhost:$PORT/api/games/ember/cards" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message',''))" 2>/dev/null)
 echo "$PUTMSG" | grep -q "True cards: changed 1 card" && ok "HTTP PUT → git commit w/ auto message" || bad "HTTP PUT commit" "$PUTMSG"
 git log -1 --format=%s | grep -q "Kindling" && ok "commit subject names the card" || git log -1 --format=%B | grep -q "Kindling" && ok "commit body names the card" || bad "commit content"
 python3 -c "
 import json
 c=json.load(open('$SCRATCH/put.json')); c[0]['attributes']['power']='bad'
 json.dump(c,open('$SCRATCH/badput.json','w'))"
-BADCODE=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' --data @"$SCRATCH/badput.json" "localhost:$PORT/api/games/ember/cards")
+BADCODE=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" --data @"$SCRATCH/badput.json" "localhost:$PORT/api/games/ember/cards")
 [ "$BADCODE" = "422" ] && ok "invalid PUT rejected (422) with rollback" || bad "invalid PUT" "got $BADCODE"
 curl -s "localhost:$PORT/api/games/ember/validate" | grep -q '"ok": true' && ok "post-rollback state validates" || bad "rollback state"
 kill $SRVPID 2>/dev/null
@@ -324,7 +330,8 @@ sleep 1.5
 python3 -c "
 from PIL import Image
 Image.new('RGB',(200,120),(30,120,200)).save('$SCRATCH/blue.png')"
-RSP=$(curl -s -X POST --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/art/e2e_blue.png")
+ATOK=$(mint $APORT)
+RSP=$(curl -s -X POST -H "Authorization: Bearer $ATOK" --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/art/e2e_blue.png")
 echo "$RSP" | grep -q '"mode": "lfs"' && ok "server upload → LFS mode (pointer committed)" || bad "server LFS upload" "$RSP"
 head -1 examples/ember/assets/art/e2e_blue.png | grep -q "git-lfs" && ok "repo holds pointer, not binary" || bad "server pointer on disk"
 git log -1 --format=%s | grep -q "assets: add assets/art/e2e_blue.png" && ok "asset auto-committed" || bad "asset commit"
@@ -334,7 +341,7 @@ import hashlib
 a=hashlib.sha256(open('$SCRATCH/blue.png','rb').read()).hexdigest()
 b=hashlib.sha256(open('$SCRATCH/blue_back.png','rb').read()).hexdigest()
 assert a==b, (a,b)" && ok "GET materializes pointer from LFS, bytes identical" || bad "asset GET round-trip"
-BADRSP=$(curl -s -o /dev/null -w '%{http_code}' -X POST --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/x.exe")
+BADRSP=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $ATOK" --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/x.exe")
 [ "$BADRSP" = "422" ] && ok "server rejects disallowed type (422)" || bad "server type gate" "got $BADRSP"
 kill $APID 2>/dev/null
 say ""
@@ -420,6 +427,7 @@ EPORT=$(( (RANDOM % 2000) + 34000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $EPORT > "$SCRATCH/ed.log" 2>&1 &
 EPID=$!
 sleep 1.5
+ETOK=$(mint $EPORT)
 curl -s "localhost:$EPORT/edit/ember" > "$SCRATCH/live-editor.html"
 grep -q "saveToServer" "$SCRATCH/live-editor.html" && grep -q '"live_slug": "ember"' "$SCRATCH/live-editor.html" \
   && ok "GET /edit/ember serves live editor with Save wired" || bad "live editor page"
@@ -429,7 +437,7 @@ node -e "
 const cards = JSON.parse(require('fs').readFileSync('examples/ember/components/cards.json','utf8'));
 cards.find(c=>c.id==='twin_flame').attributes.cost = 3;
 fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
-  headers:{'content-type':'application/json'}, body:JSON.stringify(cards)})
+  headers:{'content-type':'application/json','Authorization':'Bearer $ETOK'}, body:JSON.stringify(cards)})
   .then(r=>r.json()).then(d=>{
     if(!(d.saved && d.commit && /Twin Flame/.test(d.message))) process.exit(1);
     console.log('commit:', d.commit, '—', d.message);
@@ -444,7 +452,7 @@ node -e "
 const cards = JSON.parse(require('fs').readFileSync('examples/ember/components/cards.json','utf8'));
 cards[0].attributes.cost = 'NaN-ish';
 fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
-  headers:{'content-type':'application/json'}, body:JSON.stringify(cards)})
+  headers:{'content-type':'application/json','Authorization':'Bearer $ETOK'}, body:JSON.stringify(cards)})
   .then(r=>process.exit(r.status===422?0:1)).catch(()=>process.exit(1))" \
   && [ "$(git rev-parse --short HEAD)" = "$AFTER_SHA" ] \
   && ok "invalid save → 422 toast path, history untouched" || bad "invalid save"
@@ -565,6 +573,52 @@ git log -5 --format='%an|%s' | grep -q "prbuddy|merge: Spark buff" && ok "merge 
 git log -5 --format='%b' | grep -q "merged-by: prhost" && ok "merge trailer records merged-by (owner accountability)" || bad "merged-by trailer"
 node -e "process.exit(0)" && python3 tools/validate.py "$SCRATCH/examples/pr-demo" >/dev/null 2>&1 && ok "post-merge game still validates" || bad "post-merge validation"
 kill $PRPID 2>/dev/null
+
+say "== ACCESS CONTROL: owner/collaborator matrix + edit-as-PR =="
+AZPORT=$(( (RANDOM % 2000) + 32000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $AZPORT > "$SCRATCH/az.log" 2>&1 &
+AZPID=$!
+sleep 1.5
+node -e "
+(async () => {
+  const base='http://localhost:$AZPORT';
+  const j=(r)=>r.json();
+  const reg=async(h)=>(await j(await fetch(base+'/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({handle:h,email:h+'@x.co',password:'longenough1'})}))).token;
+  const A=(t)=>({Authorization:'Bearer '+t,'content-type':'application/json'});
+  const TD=await reg('dana'), TC=await reg('carol');
+  const host=await j(await fetch(base+'/api/games',{method:'POST',headers:A(TD),body:JSON.stringify({title:'Az Demo',csv:'name,type,text,cost\\nBolt,spell,Zap.,1\\nShield,gear,Guard.,2'})}));
+  if(host.slug!=='az-demo') process.exit(1);
+  const cards=await j(await fetch(base+'/api/games/az-demo/cards'));
+  cards[0].text='Zap 2.';
+  // carol (no access) direct commit → 403 + propose flag
+  const c403=await fetch(base+'/api/games/az-demo/cards',{method:'PUT',headers:A(TC),body:JSON.stringify(cards)});
+  if(c403.status!==403 || !(await j(c403)).propose) process.exit(2);
+  // carol proposes instead → auto-fork + PR
+  const prop=await j(await fetch(base+'/api/games/az-demo/cards/propose',{method:'POST',headers:A(TC),body:JSON.stringify({cards,title:'Bolt buff'})}));
+  if(!(prop.proposed && prop.pr && prop.fork==='az-demo-carol')) process.exit(3);
+  const prs=await j(await fetch(base+'/api/games/az-demo/prs'));
+  if(!(prs.length===1 && prs[0].author_handle==='carol' && prs[0].from_slug==='az-demo-carol')) process.exit(4);
+  // dana merges carol's proposal
+  const m=await j(await fetch(base+'/api/games/az-demo/prs/'+prop.pr+'/merge',{method:'POST',headers:A(TD)}));
+  if(!m.merged) process.exit(5);
+  const after=await j(await fetch(base+'/api/games/az-demo/cards'));
+  if(after[0].text!=='Zap 2.') process.exit(6);
+  // collaborator lifecycle: grant → direct commit OK → revoke → 403 again
+  const g=await fetch(base+'/api/games/az-demo/collaborators/carol',{method:'PUT',headers:A(TD)});
+  if(g.status!==200) process.exit(7);
+  after[1].text='Guard 2.';
+  const direct=await fetch(base+'/api/games/az-demo/cards',{method:'PUT',headers:A(TC),body:JSON.stringify(after)});
+  if(direct.status!==200) process.exit(8);
+  // non-owner cannot manage access
+  if((await fetch(base+'/api/games/az-demo/collaborators/dana',{method:'PUT',headers:A(TC)})).status!==403) process.exit(9);
+  const r=await fetch(base+'/api/games/az-demo/collaborators/carol',{method:'DELETE',headers:A(TD)});
+  if(r.status!==200) process.exit(10);
+  const again=await fetch(base+'/api/games/az-demo/cards',{method:'PUT',headers:A(TC),body:JSON.stringify(cards)});
+  if(again.status!==403) process.exit(11);
+  console.log('authz matrix complete');
+})().catch(e=>{console.error(e);process.exit(12)})" && ok "authz: 403+propose → auto-fork PR → merge → grant → direct commit → revoke → 403" || bad "authz matrix"
+git log -8 --format='%an|%s' | grep -q "carol|cards: changed 1 card" && ok "carol's proposal commit authored as carol in HER fork" || bad "propose authorship"
+kill $AZPID 2>/dev/null
 
 say ""
 say "(perf: run ./perf.sh separately)"

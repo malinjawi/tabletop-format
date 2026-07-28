@@ -331,8 +331,9 @@ async function saveToServer(){
   const btn=document.getElementById("saveBtn");
   btn.disabled=true; btn.textContent="Saving…";
   try {
+    const auth=localStorage.forge_token?{Authorization:"Bearer "+localStorage.forge_token}:{};
     const rsp=await fetch(`/api/games/${DATA.live_slug}/cards`,{
-      method:"PUT", headers:{"content-type":"application/json"},
+      method:"PUT", headers:{"content-type":"application/json",...auth},
       body:JSON.stringify(cards)});
     const d=await rsp.json();
     if(rsp.status===200 && d.saved){
@@ -345,6 +346,17 @@ async function saveToServer(){
       toast(`<b style="color:#ffa198">✗ Not saved — validation failed</b><br>`+
         (d.report||[]).filter(l=>l.trim().startsWith("ERROR")).slice(0,4).map(esc).join("<br>")+
         `<br><span style="opacity:.7">Nothing was committed; fix and save again.</span>`, 10000);
+    } else if(rsp.status===401){
+      toast(`<b style="color:#ffa198">Sign in to save</b><br><span style="opacity:.8">Open the hub, sign in, and come back — your edits stay right here.</span>`, 9000);
+    } else if(rsp.status===403 && d.propose){
+      if(confirm("You don't have commit access to this game.\n\nPropose your edit as a PULL REQUEST instead?\n(We'll fork it under your name, commit there, and open the PR for review.)")){
+        const pr=await fetch(`/api/games/${DATA.live_slug}/cards/propose`,{
+          method:"POST", headers:{"content-type":"application/json",...auth},
+          body:JSON.stringify({cards})});
+        const pd=await pr.json();
+        if(pr.status===201) toast(`<b>⇡ PR opened</b><br>${esc(pd.message)}<br><span style="opacity:.7">Committed to your fork <b>${esc(pd.fork)}</b> as ${esc(pd.commit)} — the owner can review & merge on the hub.</span>`, 12000);
+        else toast(`<b style="color:#ffa198">✗ ${esc(pd.error||pr.status)}</b>`, 8000);
+      }
     } else {
       toast(`<b style="color:#ffa198">✗ ${esc(d.error||rsp.status)}</b>`, 8000);
     }
