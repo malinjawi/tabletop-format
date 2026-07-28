@@ -32,8 +32,9 @@ say "== boot Forgejo (docker compose) =="
 if [ "${R2:-0}" = "1" ]; then
   docker compose --env-file .env up -d
 else
-  # local-LFS variant: strip R2 env by overriding storage to local
-  FORGEJO__lfs__STORAGE_TYPE=local docker compose up -d 2>/dev/null || docker compose up -d
+  # fresh state every run: stale volumes keep old (possibly broken) app.ini config
+  docker compose down -v --remove-orphans >/dev/null 2>&1 || true
+  docker compose up -d
 fi
 for i in $(seq 1 60); do
   curl -sf "$HOST/api/healthz" >/dev/null 2>&1 && break; sleep 2
@@ -70,7 +71,7 @@ say "== C. THE LANDMINE: LFS via API (SPEC §7 write path, real Forgejo) =="
 PNGB64=$(node -e "console.log(Buffer.concat([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==','base64'),Buffer.alloc(400)]).toString('base64'))")
 api PUT /repos/alice/ember/contents/.gitattributes '{"branch":"main","message":"lfs attrs","content":"'"$(printf 'assets/** filter=lfs diff=lfs merge=lfs -text' | base64)"'","sha":"'"$(api GET /repos/alice/ember/contents/.gitattributes | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).sha)}catch{console.log('')}})")"'"}' -H "Sudo: alice" >/dev/null
 api POST /repos/alice/ember/contents '{"branch":"main","message":"naive png via API","files":[{"operation":"create","path":"assets/naive.png","content":"'"$PNGB64"'"}]}' -H "Sudo: alice" >/dev/null
-RAW=$(curl -s -H "Authorization: token $TOKEN" "$HOST/alice/ember/raw/branch/main/assets/naive.png" | head -c 20)
+RAW=$(curl -s -H "Authorization: token $TOKEN" "$HOST/alice/ember/raw/branch/main/assets/naive.png" | head -c 20 | LC_ALL=C tr -d '\0')
 case "$RAW" in "version https://git-"*) bad "C1: expected bypass NOT observed (Forgejo fixed it? update SPEC!)" ;; *) ok "C1: contents-API bypasses LFS (landmine confirmed on this version)";; esac
 # C2: OUR write path — real lfs.mjs client against real Forgejo LFS endpoint
 node --input-type=module -e "
@@ -114,10 +115,14 @@ require('http').createServer((q,r)=>{let b='';q.on('data',d=>b+=d);q.on('end',()
   require('fs').appendFileSync('/tmp/spike-hooks.log', (q.headers['x-forgejo-event']||q.headers['x-gitea-event']||'?')+'\n'); r.end('ok')})
 }).listen(9977)" & HOOKPID=$!
 sleep 0.5
-api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://host.docker.internal:9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null 2>&1 \
-  || api POST /repos/alice/ember/hooks '{"type":"gitea","active":true,"events":["push"],"config":{"url":"http://172.17.0.1:9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null
+# one hook per candidate route to the host; unreachable ones just fail delivery silently.
+# host.docker.internal = Docker Desktop / host-gateway; 192.168.5.2 = colima/lima; 172.17.0.1 = native Linux.
+for HH in host.docker.internal 192.168.5.2 172.17.0.1; do
+  api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://'"$HH"':9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null 2>&1 || true
+done
 api PUT /repos/alice/ember/contents/ping.txt '{"branch":"main","message":"hook ping","content":"'"$(printf 'ping' | base64)"'"}' -H "Sudo: alice" >/dev/null
-sleep 3; kill $HOOKPID 2>/dev/null
+for i in $(seq 1 16); do grep -q "push" /tmp/spike-hooks.log 2>/dev/null && break; sleep 0.5; done
+kill $HOOKPID 2>/dev/null
 grep -q "push" /tmp/spike-hooks.log 2>/dev/null && ok "F1: push webhook delivered" || bad "F1 webhook" "(check docker networking: host.docker.internal / 172.17.0.1)"
 
 say "== G. backup =="

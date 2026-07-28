@@ -20,23 +20,28 @@ services:
       - FORGEJO__security__INSTALL_LOCK=true
       - FORGEJO__server__ROOT_URL=http://localhost:3000/
       - FORGEJO__service__DISABLE_REGISTRATION=true   # platform API creates users; no self-signup
+      # --- LFS server (the spike's whole point; without these, /info/lfs 404s) ---
+      - FORGEJO__server__LFS_START_SERVER=true
+      - FORGEJO__server__LFS_JWT_SECRET=OizmmHygyaBUOBL08-CGAibFgmsSNneAblAzhMYI7AA  # spike-only; regenerate for prod
+      - FORGEJO__lfs__STORAGE_TYPE=local  # spike default: zero secrets, proves the protocol
       - FORGEJO__database__DB_TYPE=postgres
       - FORGEJO__database__HOST=db:5432
       - FORGEJO__database__NAME=forgejo
       - FORGEJO__database__USER=forgejo
       - FORGEJO__database__PASSWD=spikepass
-      # --- LFS on S3-compatible storage (R2) — decision D5 ---
-      # For the spike you can start with local LFS (comment the block below),
-      # then flip to R2 and re-run the checklist. R2 quirks: md5 checksum,
+      # --- production reference: LFS on S3-compatible storage (R2) — decision D5 ---
+      # Uncomment + set R2_* in .env, remove STORAGE_TYPE=local above, `docker compose down -v && up -d`. R2 quirks: md5 checksum,
       # SERVE_DIRECT off first (gitea issue #32407).
-      - FORGEJO__lfs__STORAGE_TYPE=minio
-      - FORGEJO__lfs__MINIO_ENDPOINT=${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
-      - FORGEJO__lfs__MINIO_ACCESS_KEY_ID=${R2_ACCESS_KEY}
-      - FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY=${R2_SECRET_KEY}
-      - FORGEJO__lfs__MINIO_BUCKET=spike-lfs
-      - FORGEJO__lfs__MINIO_USE_SSL=true
-      - FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM=md5
-      - FORGEJO__lfs__SERVE_DIRECT=false
+      # - FORGEJO__lfs__STORAGE_TYPE=minio
+      # - FORGEJO__lfs__MINIO_ENDPOINT=${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+      # - FORGEJO__lfs__MINIO_ACCESS_KEY_ID=${R2_ACCESS_KEY}
+      # - FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY=${R2_SECRET_KEY}
+      # - FORGEJO__lfs__MINIO_BUCKET=spike-lfs
+      # - FORGEJO__lfs__MINIO_USE_SSL=true
+      # - FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM=md5
+      # - FORGEJO__lfs__SERVE_DIRECT=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # native-Linux Docker parity
     depends_on:
       - db
 
