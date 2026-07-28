@@ -46,7 +46,7 @@ sleep 1.5
 if FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" node tools/journey.mjs "http://localhost:$SPORT"; then
   kill $SPID $FPID 2>/dev/null || true
   echo ""
-  echo "PRODUCTION JOURNEY GREEN — same 30 assertions, Store 1 on a real forge backend."
+  echo "PRODUCTION JOURNEY GREEN — same assertions as dev, Store 1 on a real forge backend."
 else
   RC=$?
   echo "--- server.log (tail) ---"; tail -25 "$SCRATCH/server.log"

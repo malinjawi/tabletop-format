@@ -154,6 +154,26 @@ assert(aliceHist.every(h => h.author !== "bob"), "no bob commits in alice's hist
 const forkValid = (await api("GET", "/api/games/tidepool-bob/validate")).data;
 assert(forkValid.ok, "bob's fork validates as a complete game");
 
+console.log("== ACT 5: the remix loop closes — bob proposes, alice merges ==");
+const prOpen = await api("POST", "/api/games/tidepool/prs", { token: B,
+  body: { from: "tidepool-bob", title: "Moon Jelly drift buff", body: "playtested in my fork" } });
+assert(prOpen.status === 201 && prOpen.data.changes.some(c => c.card === "moon_jelly"),
+  "bob opens a PR back to tidepool — semantic diff names Moon Jelly", prOpen.data);
+const prId = prOpen.data.id;
+const noMerge = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: B });
+assert(noMerge.status === 403, "bob CANNOT merge into alice's game (owner-only rule)");
+const prView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { token: A })).data;
+assert(prView.author === "bob" && prView.status === "open" && prView.conflicts.length === 0,
+  "alice reviews: bob's PR, open, conflict-free");
+const prMerged = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: A });
+assert(prMerged.status === 200 && prMerged.data.merged, "alice merges bob's PR", prMerged.data);
+const tpCards = (await api("GET", "/api/games/tidepool/cards")).data;
+assert(/copy any current in play/.test(tpCards.find(c => c.id === "moon_jelly").text),
+  "tidepool now carries bob's change — the remix loop is CLOSED");
+assert(/bob/.test((await lastCommit("tidepool")).an), "merge commit authored as BOB (credit follows the work)");
+const prAfter = (await api("GET", `/api/games/tidepool/prs/${prId}`)).data;
+assert(prAfter.status === "merged" && prAfter.merge_sha, "PR recorded as merged with the commit sha");
+
 console.log("== FINAL LEDGER CHECK: all three stores agree ==");
 const finalList = (await api("GET", "/api/games")).data;
 const ftp = finalList.find(g => g.slug === "tidepool");
@@ -169,4 +189,4 @@ const recheck = await api("GET", exp.data.urls[0]);
 assert(recheck.status === 200, "alice's frozen export URL still serves after all subsequent commits");
 
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
-console.log("The system is confirmed: host → own → author → fork → isolate → agree.");
+console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");

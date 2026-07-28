@@ -79,6 +79,23 @@ export const q = {
   starredBy: (db, userId) => db.prepare(
     "SELECT game_slug FROM stars WHERE user_id = ? ORDER BY created_at DESC").all(userId),
 
+  gameBySlug: (db, slug) => db.prepare("SELECT * FROM games WHERE slug = ?").get(slug),
+
+  createPr: (db, pr) => db.prepare(
+    `INSERT INTO prs (id, to_slug, from_slug, title, body, author_id, status, base, proposed, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)`)
+    .run(pr.id, pr.to_slug, pr.from_slug, pr.title, pr.body ?? null, pr.author_id, pr.base, pr.proposed, Date.now()),
+  prById: (db, id) => db.prepare(
+    `SELECT p.*, u.handle AS author_handle, u.email AS author_email FROM prs p JOIN users u ON u.id = p.author_id
+     WHERE p.id = ?`).get(id),
+  prsFor: (db, slug) => db.prepare(
+    `SELECT p.id, p.from_slug, p.title, p.status, p.created_at, p.merged_at, u.handle AS author_handle
+     FROM prs p JOIN users u ON u.id = p.author_id
+     WHERE p.to_slug = ? ORDER BY p.created_at DESC`).all(slug),
+  setPrStatus: (db, id, status, mergeSha) => db.prepare(
+    "UPDATE prs SET status = ?, merged_at = ?, merge_sha = ? WHERE id = ?")
+    .run(status, status === "merged" ? Date.now() : null, mergeSha ?? null, id),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),

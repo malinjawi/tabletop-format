@@ -512,6 +512,58 @@ python3 tools/validate.py "$SCRATCH/examples/ember-forker" >/dev/null 2>&1 && ok
 curl -s "localhost:$FPORT/" | grep -q "ember-forker" && ok "hub rebake includes the fork" || bad "hub shows fork"
 kill $FPID 2>/dev/null
 
+say "== FEATURE: pull requests across forks (the remix loop) =="
+PRPORT=$(( (RANDOM % 2000) + 36000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $PRPORT > "$SCRATCH/pr.log" 2>&1 &
+PRPID=$!
+sleep 1.5
+node -e "
+(async () => {
+  const base='http://localhost:$PRPORT';
+  const j=(r)=>r.json();
+  const reg=async(h)=>(await j(await fetch(base+'/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({handle:h,email:h+'@x.co',password:'longenough1'})}))).token;
+  const T1=await reg('prhost'), T2=await reg('prbuddy');
+  const A=(t)=>({Authorization:'Bearer '+t,'content-type':'application/json'});
+  const csv='name,type,text,cost\nSpark,unit,Deal 1.,1\nWall,unit,Block.,2';
+  const host=await j(await fetch(base+'/api/games',{method:'POST',headers:A(T1),body:JSON.stringify({title:'Pr Demo',csv})}));
+  if(host.slug!=='pr-demo') process.exit(1);
+  const fk=await j(await fetch(base+'/api/games/pr-demo/fork',{method:'POST',headers:A(T2)}));
+  if(fk.slug!=='pr-demo-prbuddy') process.exit(2);
+  let cards=await j(await fetch(base+'/api/games/pr-demo-prbuddy/cards'));
+  cards.find(c=>c.id==='spark').text='Deal 2.';
+  const ed=await j(await fetch(base+'/api/games/pr-demo-prbuddy/cards',{method:'PUT',headers:A(T2),body:JSON.stringify(cards)}));
+  if(!ed.saved) process.exit(3);
+  const pr=await j(await fetch(base+'/api/games/pr-demo/prs',{method:'POST',headers:A(T2),body:JSON.stringify({from:'pr-demo-prbuddy',title:'Spark buff'})}));
+  if(!(pr.id && pr.changes.some(c=>c.card==='spark'))) process.exit(4);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST',headers:A(T2)})).status!==403) process.exit(5);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST'})).status!==401) process.exit(6);
+  const m=await j(await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST',headers:A(T1)}));
+  if(!(m.merged && m.commit)) process.exit(7);
+  const after=await j(await fetch(base+'/api/games/pr-demo/cards'));
+  if(after.find(c=>c.id==='spark').text!=='Deal 2.') process.exit(8);
+  const st=await j(await fetch(base+'/api/games/pr-demo/prs/'+pr.id));
+  if(st.status!=='merged') process.exit(10);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST',headers:A(T1)})).status!==409) process.exit(11);
+  cards=await j(await fetch(base+'/api/games/pr-demo-prbuddy/cards'));
+  cards.find(c=>c.id==='wall').text='Block 2.';
+  await fetch(base+'/api/games/pr-demo-prbuddy/cards',{method:'PUT',headers:A(T2),body:JSON.stringify(cards)});
+  const pr2=await j(await fetch(base+'/api/games/pr-demo/prs',{method:'POST',headers:A(T2),body:JSON.stringify({from:'pr-demo-prbuddy',title:'Wall buff'})}));
+  let host2=await j(await fetch(base+'/api/games/pr-demo/cards'));
+  host2.find(c=>c.id==='wall').text='Block 3.';
+  await fetch(base+'/api/games/pr-demo/cards',{method:'PUT',headers:A(T1),body:JSON.stringify(host2)});
+  const cm=await fetch(base+'/api/games/pr-demo/prs/'+pr2.id+'/merge',{method:'POST',headers:A(T1)});
+  if(cm.status!==409) process.exit(12);
+  const cj=await cm.json();
+  if(!(cj.conflicts||[]).includes('wall')) process.exit(13);
+  const list=await j(await fetch(base+'/api/games/pr-demo/prs'));
+  if(!(list.length===2 && list.some(x=>x.status==='merged') && list.some(x=>x.status==='open'))) process.exit(14);
+  console.log('pr flow complete');
+})().catch(e=>{console.error(e);process.exit(9)})" && ok "PR flow: open → authz 401/403 → owner merges → change applied → 409 on re-merge" || bad "PR flow"
+git log -5 --format='%an|%s' | grep -q "prbuddy|merge: Spark buff" && ok "merge commit AUTHORED AS THE PROPOSER (credit follows the work)" || bad "merge authorship"
+git log -5 --format='%b' | grep -q "merged-by: prhost" && ok "merge trailer records merged-by (owner accountability)" || bad "merged-by trailer"
+node -e "process.exit(0)" && python3 tools/validate.py "$SCRATCH/examples/pr-demo" >/dev/null 2>&1 && ok "post-merge game still validates" || bad "post-merge validation"
+kill $PRPID 2>/dev/null
+
 say ""
 say "(perf: run ./perf.sh separately)"
 

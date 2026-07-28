@@ -73,3 +73,33 @@ export function formatChanges(changes) {
   }
   return out.trimEnd();
 }
+
+/**
+ * mergeCards(base, proposed, current) — card-level three-way merge.
+ * base     = target when the PR was opened
+ * proposed = the fork's cards (what the PR wants)
+ * current  = target now (may have moved on)
+ *
+ * Per card id: if the PR changed it and the target hasn't → apply; if the
+ * target already matches the proposal → no-op; if BOTH changed it → conflict.
+ * Cards the PR didn't touch are left exactly as `current` has them.
+ * Returns { merged, conflicts:[card ids] }.
+ */
+export function mergeCards(base, proposed, current) {
+  const by = (arr) => Object.fromEntries(arr.map(c => [c.id, c]));
+  const B = by(base), P = by(proposed), C = by(current);
+  const eq = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const conflicts = [];
+  const merged = current.map(c => ({ ...c }));
+  const idx = () => Object.fromEntries(merged.map((c, i) => [c.id, i]));
+  for (const id of new Set([...Object.keys(B), ...Object.keys(P)])) {
+    if (eq(B[id], P[id])) continue;               // PR does not change this card
+    if (eq(C[id], P[id])) continue;               // target already there
+    if (!eq(C[id], B[id])) { conflicts.push(id); continue; } // both sides moved
+    const i = idx()[id];
+    if (!P[id]) { if (i !== undefined) merged.splice(i, 1); }        // deletion
+    else if (i === undefined) merged.push({ ...P[id] });             // addition
+    else merged[i] = { ...P[id] };                                   // change
+  }
+  return { merged, conflicts };
+}

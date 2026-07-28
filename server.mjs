@@ -20,7 +20,7 @@ import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createGateway, readBody } from "./platform/gateway.mjs";
-import { diffCards, summarize } from "./tools/lib/carddiff.mjs";
+import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { assertAssetAllowed } from "./tools/lib/limits.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
@@ -330,6 +330,80 @@ gw.route("GET", "/api/games/:slug/credits", async (ctx) => {
   const r = py("credits.py", [await store.dir(slug)]);
   ctx.send(200, { ok: r.status === 0, credits: (await store.readFile(slug, "CREDITS.md")).toString() });
 }, "auto credit roll");
+/* ---------- routes: pull requests — the remix loop closed ----------
+ * The PROPOSAL lives in Store 2 (conversation); the MERGE is a real commit
+ * through the Store-1 seam, authored as the PROPOSER. Owner-only merge is the
+ * platform's first authorization rule beyond authorship. */
+const cardsOf = async (slug) => JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
+gw.route("POST", "/api/games/:slug/prs", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const to = requireGame(ctx); if (!to) return;
+  const { from, title, body } = await json(ctx);
+  if (!from || !store.has(from)) return ctx.send(422, { error: "unknown source game 'from'" });
+  if (from === to) return ctx.send(422, { error: "cannot PR a game into itself" });
+  const fromRow = await q.gameBySlug(db, from);
+  if (fromRow?.owner_id !== u.id) return ctx.send(403, { error: "you can only propose from a game you own" });
+  if (!title?.trim()) return ctx.send(422, { error: "title required" });
+  const base = await cardsOf(to);
+  const proposed = await cardsOf(from);
+  const changes = diffCards(base, proposed);
+  if (!changes.length) return ctx.send(422, { error: "no card changes between the games" });
+  const id = newId("pr");
+  await q.createPr(db, { id, to_slug: to, from_slug: from, title: title.trim(), body,
+    author_id: u.id, base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
+  ctx.send(201, { id, to, from, title: title.trim(), changes, summary: summarize(changes)?.title });
+}, "open a PR: propose your fork's card changes back to the source");
+gw.route("GET", "/api/games/:slug/prs", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  ctx.send(200, await q.prsFor(db, slug));
+}, "list PRs targeting this game");
+gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const pr = await q.prById(db, ctx.params.id);
+  if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
+  const base = JSON.parse(pr.base), proposed = JSON.parse(pr.proposed);
+  const current = await cardsOf(slug);
+  const { conflicts } = mergeCards(base, proposed, current);
+  ctx.send(200, { id: pr.id, to: pr.to_slug, from: pr.from_slug, title: pr.title, body: pr.body,
+    author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
+    changes: diffCards(base, proposed),
+    stale: diffCards(base, current).length > 0, conflicts });
+}, "PR detail: semantic diff + live staleness/conflict check");
+gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const pr = await q.prById(db, ctx.params.id);
+  if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
+  if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
+  const game = await q.gameBySlug(db, slug);
+  if (game?.owner_id !== u.id) return ctx.send(403, { error: "only the game's owner can merge" });
+  const current = await cardsOf(slug);
+  const { merged, conflicts } = mergeCards(JSON.parse(pr.base), JSON.parse(pr.proposed), current);
+  if (conflicts.length) return ctx.send(409, { error: "conflicts — both sides changed these cards", conflicts });
+  const content = JSON.stringify(merged, null, 2) + "\n";
+  const v = await validateCandidate(slug, "components/cards.json", content);
+  if (!v.ok) return ctx.send(422, { error: "merged result fails validation", report: v.report });
+  const changes = diffCards(current, merged);
+  const auto = summarize(changes);
+  const { sha } = await store.writeFiles(slug, [{ path: "components/cards.json", content }],
+    `merge: ${pr.title} (PR from ${pr.from_slug})\n\n${auto?.body ?? ""}\nmerged-by: ${u.handle}`,
+    `${pr.author_handle} <${pr.author_email}>`);
+  await q.setPrStatus(db, pr.id, "merged", sha);
+  ctx.send(200, { merged: true, commit: sha, changes });
+}, "merge a PR: card-level three-way merge → validate → commit AUTHORED AS THE PROPOSER");
+gw.route("POST", "/api/games/:slug/prs/:id/close", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const pr = await q.prById(db, ctx.params.id);
+  if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
+  if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
+  const game = await q.gameBySlug(db, slug);
+  if (game?.owner_id !== u.id && pr.author_id !== u.id)
+    return ctx.send(403, { error: "only the owner or the author can close" });
+  await q.setPrStatus(db, pr.id, "closed");
+  ctx.send(200, { closed: true });
+}, "close a PR without merging");
+
 gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const { fmt } = ctx.params;
