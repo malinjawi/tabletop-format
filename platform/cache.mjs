@@ -50,10 +50,10 @@ function materialize(src, ref) {
 }
 
 /** Ensure all face renders for a game at a sha exist in the cache; returns key dir. Idempotent. */
-export function ensureRenders(gameRel, gameSlug, sha) {
+export async function ensureRenders(gameRel, gameSlug, sha) {
   const keyDir = join(CACHE_DIR, "renders", gameSlug, sha);
   if (existsSync(keyDir) && readdirSync(keyDir).length > 0) return { keyDir, hit: true };
-  const { dir, cleanup } = materialize(gameRel, sha);
+  const { dir, cleanup } = await materialize(gameRel, sha);
   try {
     mkdirSync(keyDir, { recursive: true });
     execFileSync("python3", [join(ROOT, "tools/render_cards.py"), dir, keyDir], { stdio: "pipe" });
@@ -62,11 +62,11 @@ export function ensureRenders(gameRel, gameSlug, sha) {
 }
 
 /** Ensure pnp/tts exports for a game at a ref (sha or tag). Idempotent per key. */
-export function ensureExport(gameRel, gameSlug, ref, kind) {
+export async function ensureExport(gameRel, gameSlug, ref, kind) {
   const outDir = join(CACHE_DIR, "exports", gameSlug, ref);
   const done = { pnp: join(outDir, "pnp.pdf"), tts: join(outDir, "tts.json") }[kind];
   if (existsSync(done)) return { dir: outDir, hit: true };
-  const { dir, cleanup } = materialize(gameRel, ref);
+  const { dir, cleanup } = await materialize(gameRel, ref);
   try {
     mkdirSync(outDir, { recursive: true });
     execFileSync("python3", [join(ROOT, "tools/render_cards.py"), dir], { stdio: "pipe" });

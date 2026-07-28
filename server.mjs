@@ -51,20 +51,20 @@ const store = STORE1 === "forgejo"
   : createLocalStore({ root: ROOT, gamesDir: GAMES_DIR, lfsUrl: process.env.LFS_URL ?? null });
 const mat = (slug) => (ref) => store.materialize(slug, ref); // Store-3 feed
 
-function reindexGames() { // DA-3: derived, rebuildable
-  for (const slug of store.list()) {
-    const m = store.readMeta(slug);
+async function reindexGames() { // DA-3: derived, rebuildable
+  for (const slug of await store.list()) {
+    const m = await store.readMeta(slug);
     q.upsertGame(db, { slug, title: m.title, license: m.license, card_count: m.cardCount });
   }
 }
-reindexGames();
+await reindexGames();
 
 let hubVersion = null;
-function hubHtml() {
-  const v = store.catalogVersion();
+async function hubHtml() {
+  const v = await store.catalogVersion();
   const out = join(ROOT, "hub.html");
   if (!existsSync(out) || hubVersion !== v) {
-    const r = py("build_hub.py", ["-o", out, "--games", store.treeRoot()]);
+    const r = py("build_hub.py", ["-o", out, "--games", await store.treeRoot()]);
     if (r.status !== 0) throw new Error(r.stderr);
     hubVersion = v;
   }
@@ -103,8 +103,8 @@ const json = async (ctx) => JSON.parse((await readBody(ctx.req)).toString());
 
 /** Validate a candidate tree = game at HEAD + one replaced file. Never touches
  *  the live tree — the rollback path is simply "don't commit". Backend-agnostic. */
-function validateCandidate(slug, relPath, content) {
-  const { dir, cleanup } = store.materialize(slug, "HEAD");
+async function validateCandidate(slug, relPath, content) {
+  const { dir, cleanup } = await store.materialize(slug, "HEAD");
   try {
     writeFileSync(join(dir, relPath), content);
     const v = py("validate.py", [dir]);
@@ -113,16 +113,16 @@ function validateCandidate(slug, relPath, content) {
 }
 
 /* ---------- routes: hub + live editor ---------- */
-gw.route("GET", "/", (ctx) => ctx.send(200, hubHtml(), "text/html; charset=utf-8"), "hub UI");
+gw.route("GET", "/", async (ctx) => ctx.send(200, await hubHtml(), "text/html; charset=utf-8"), "hub UI");
 const editorBuilt = new Map(); // slug -> {version}
-gw.route("GET", "/edit/:slug", (ctx) => {
+gw.route("GET", "/edit/:slug", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const v = store.version(slug);
+  const v = await store.version(slug);
   const out = join(ROOT, "data", `editor-${slug}.html`);
   const cached = editorBuilt.get(slug);
   if (!cached || cached.version !== v || !existsSync(out)) {
     mkdirSync(join(ROOT, "data"), { recursive: true });
-    const r = py("build_editor.py", [store.dir(slug), "-o", out, "--live", slug]);
+    const r = py("build_editor.py", [await store.dir(slug), "-o", out, "--live", slug]);
     if (r.status !== 0) return ctx.send(500, { error: r.stderr });
     editorBuilt.set(slug, { version: v });
   }
@@ -130,23 +130,23 @@ gw.route("GET", "/edit/:slug", (ctx) => {
 }, "LIVE editor: edit cards in browser, Save = real git commit");
 
 /* ---------- routes: Store 3 — immutable cache (DA-5) ---------- */
-gw.route("GET", "/cache/renders/:slug/:ref/*", (ctx) => {
+gw.route("GET", "/cache/renders/:slug/:ref/*", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const { ref } = ctx.params;
   if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || ctx.params["*"].includes("..")) return ctx.send(404, { error: "bad ref" });
-  const { keyDir } = cache.ensureRenders(mat(slug), slug, ref);
+  const { keyDir } = await cache.ensureRenders(mat(slug), slug, ref);
   const fp = join(keyDir, ctx.params["*"]);
   if (!existsSync(fp)) return ctx.send(404, { error: "not producible" });
   ctx.sendRaw(200, readFileSync(fp), { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
     "cache-control": "public, max-age=31536000, immutable" });
 }, "card render at exact commit — URL never changes meaning");
-gw.route("GET", "/cache/exports/:slug/:ref/*", (ctx) => {
+gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const { ref } = ctx.params;
   const file = ctx.params["*"];
   if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || file.includes("..")) return ctx.send(404, { error: "bad ref" });
   const kind = file.startsWith("pnp") ? "pnp" : "tts";
-  const { dir } = cache.ensureExport(mat(slug), slug, ref, kind);
+  const { dir } = await cache.ensureExport(mat(slug), slug, ref, kind);
   const fp = join(dir, file);
   if (!existsSync(fp)) return ctx.send(404, { error: "not producible" });
   ctx.sendRaw(200, readFileSync(fp), { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
@@ -200,10 +200,10 @@ gw.route("POST", "/api/games", async (ctx) => {
     if (v.status !== 0) return ctx.send(422, { error: "imported game failed validation", report: v.stdout.split("\n") });
     const { sha } = await store.createGame(slug, join(tmp, "game"),
       `new game: ${title.trim()} (${slug})\n\nimported from CSV via platform`, authorOf(ctx));
-    reindexGames();
+    await reindexGames();
     q.setForkMeta(db, slug, null, u.id);  // ownership
     ctx.send(201, { slug, owner: u.handle, commit: sha,
-      cards: JSON.parse(store.readFile(slug, "components/cards.json").toString()).length,
+      cards: JSON.parse((await store.readFile(slug, "components/cards.json")).toString()).length,
       url: `/#/g/${slug}`, edit: `/edit/${slug}` });
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }, "host a NEW game from a CSV — owned, committed, validated, live");
@@ -229,8 +229,8 @@ gw.route("DELETE", "/api/stars/:slug", (ctx) => {
 }, "unstar");
 
 /* ---------- routes: Store 1 — games (behind the store interface) ---------- */
-gw.route("GET", "/api/games", (ctx) => {
-  reindexGames();
+gw.route("GET", "/api/games", async (ctx) => {
+  await reindexGames();
   ctx.send(200, q.listGames(db).map(g => ({ slug: g.slug, title: g.title, license: g.license,
     cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null,
     owner_handle: g.owner_handle ?? null })));
@@ -240,7 +240,7 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const src = requireGame(ctx); if (!src) return;
   const newSlug = `${src}-${u.handle}`.slice(0, 60);
   if (store.has(newSlug)) return ctx.send(409, { error: `you already forked this ('${newSlug}')` });
-  const srcYaml = store.readFile(src, "game.yaml").toString();
+  const srcYaml = (await store.readFile(src, "game.yaml")).toString();
   const title = (srcYaml.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? src;
   const lic = (srcYaml.match(/^license:\s*(\S+)/m) ?? [])[1] ?? "unknown";
   const transform = (yaml) => {
@@ -253,27 +253,27 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const { sha } = await store.fork(src, newSlug, transform,
     `fork: ${src} → ${newSlug} by ${u.handle}\n\nattribution committed per SPEC §9`,
     `${u.handle} <${u.email}>`);
-  reindexGames();
+  await reindexGames();
   q.setForkMeta(db, newSlug, src, u.id);
   ctx.send(201, { slug: newSlug, forked_from: src, commit: sha, url: `/#/g/${newSlug}` });
 }, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
-gw.route("GET", "/api/games/:slug", (ctx) => {
+gw.route("GET", "/api/games/:slug", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const r = py("stats.py", [store.dir(slug), "--json"]);
+  const r = py("stats.py", [await store.dir(slug), "--json"]);
   ctx.send(200, { slug, stats: JSON.parse(r.stdout || "{}") });
 }, "game meta + design/playtest stats");
-gw.route("GET", "/api/games/:slug/cards", (ctx) => {
+gw.route("GET", "/api/games/:slug/cards", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  ctx.send(200, JSON.parse(store.readFile(slug, "components/cards.json").toString()));
+  ctx.send(200, JSON.parse((await store.readFile(slug, "components/cards.json")).toString()));
 }, "card data");
 gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const incoming = await json(ctx);
-  const before = JSON.parse(store.readFile(slug, "components/cards.json").toString());
+  const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
   const changes = diffCards(before, incoming);
   if (!changes.length) return ctx.send(200, { saved: false, message: "no changes" });
   const content = JSON.stringify(incoming, null, 2) + "\n";
-  const v = validateCandidate(slug, "components/cards.json", content);
+  const v = await validateCandidate(slug, "components/cards.json", content);
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(slug, [{ path: "components/cards.json", content }],
@@ -300,44 +300,46 @@ gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
   ctx.sendRaw(200, buf, { "content-type": MIME[rel.toLowerCase().split(".").pop()] ?? "application/octet-stream",
     "cache-control": "public, max-age=31536000, immutable" });
 }, "serve asset, materializing LFS pointers");
-gw.route("GET", "/api/games/:slug/history", (ctx) => {
+gw.route("GET", "/api/games/:slug/history", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const at = (ref) => {
-    const b = store.fileAt(slug, ref, "components/cards.json");
+  const at = async (ref) => {
+    const b = await store.fileAt(slug, ref, "components/cards.json");
     try { return b ? JSON.parse(b.toString()) : []; } catch { return []; }
   };
-  ctx.send(200, store.history(slug, "components/cards.json", 20).map(h => ({
+  const hist = await store.history(slug, "components/cards.json", 20);
+  ctx.send(200, await Promise.all(hist.map(async h => ({
     sha: h.sha, author: h.author, date: h.date, subject: h.subject,
-    changes: diffCards(at(`${h.full}^`), at(h.full)) })));
+    changes: diffCards(await at(`${h.full}^`), await at(h.full)) }))));
 }, "git log as semantic card changes");
-gw.route("GET", "/api/games/:slug/stats", (ctx) => {
+gw.route("GET", "/api/games/:slug/stats", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const r = py("stats.py", [store.dir(slug), "--json"]);
+  const r = py("stats.py", [await store.dir(slug), "--json"]);
   ctx.send(r.status ? 500 : 200, JSON.parse(r.stdout || "{}"));
 }, "design + playtest analytics");
-gw.route("GET", "/api/games/:slug/validate", (ctx) => {
+gw.route("GET", "/api/games/:slug/validate", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const r = py("validate.py", [store.dir(slug)]);
+  const r = py("validate.py", [await store.dir(slug)]);
   ctx.send(200, { ok: r.status === 0, report: r.stdout.trim().split("\n") });
 }, "format conformance (SPEC §10)");
-gw.route("GET", "/api/games/:slug/credits", (ctx) => {
+gw.route("GET", "/api/games/:slug/credits", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const r = py("credits.py", [store.dir(slug)]);
-  ctx.send(200, { ok: r.status === 0, credits: store.readFile(slug, "CREDITS.md").toString() });
+  const r = py("credits.py", [await store.dir(slug)]);
+  ctx.send(200, { ok: r.status === 0, credits: (await store.readFile(slug, "CREDITS.md")).toString() });
 }, "auto credit roll");
-gw.route("POST", "/api/games/:slug/export/:fmt", (ctx) => {
+gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const { fmt } = ctx.params;
   if (!["pnp", "tts"].includes(fmt)) return ctx.send(400, { error: "pnp or tts" });
-  const sha = store.headSha(slug);
-  const { hit } = cache.ensureExport(mat(slug), slug, sha, fmt);
+  const sha = await store.headSha(slug);
+  const { hit } = await cache.ensureExport(mat(slug), slug, sha, fmt);
   const base = `/cache/exports/${slug}/${sha}`;
   ctx.send(200, { ok: true, ref: sha, cached: hit,
     urls: fmt === "pnp" ? [`${base}/pnp.pdf`] : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`] });
 }, "export into the immutable cache; returns permanent URLs");
 
 /* ---------- boot ---------- */
+const nGames = (await Promise.resolve(store.list())).length;
 gw.listen(PORT, () => console.log(
   `forge-platform gateway on http://localhost:${PORT}\n` +
-  `  store1: ${store.kind} · games: ${store.list().length} · readonly: ${READONLY}\n` +
+  `  store1: ${store.kind} · games: ${nGames} · readonly: ${READONLY}\n` +
   `  GET /api for the route index · /healthz for probes`));
