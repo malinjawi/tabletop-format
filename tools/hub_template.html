@@ -77,6 +77,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .prh{padding:14px 18px;border-bottom:1px solid var(--bd)}
 .prh h3{margin:0 0 3px;font-size:16px}
 .prstate{background:var(--grn);color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600}
+.prstate.merged{background:#8250df}.prstate.closed{background:#57606a}
 .prbody{padding:16px 18px}
 .prcard{display:flex;gap:20px;align-items:flex-start;border-top:1px solid #eaeef2;padding:16px 0;flex-wrap:wrap}
 .prcard img{width:180px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
@@ -417,7 +418,73 @@ function history(g){
   `).join("")||"<div class='emptystate'>No history yet.</div>";
 }
 
-function suggestions(g){
+/* ---- LIVE pull requests: the real merge loop, in the browser ---- */
+function prNote(msg,bad){const n=document.createElement("div");n.textContent=msg;
+  n.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:"+(bad?"#b35900":"var(--grn)")+";color:#fff;padding:10px 22px;border-radius:8px;z-index:99;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.3)";
+  document.body.appendChild(n);setTimeout(()=>n.remove(),3500);}
+const authHdr=()=>({Authorization:"Bearer "+localStorage.forge_token,"content-type":"application/json"});
+function chgHtml(ch){return ch.kind==="changed"
+  ?`<div class="chg"><b>${esc(ch.name)}</b> · ${esc(String(ch.field).replace("attributes.",""))}: <span class="old">${esc(String(ch.from))}</span> → <span class="new">${esc(String(ch.to))}</span></div>`
+  :`<div class="chg"><b>${esc(ch.name)}</b> ${ch.kind}</div>`;}
+async function liveSuggestions(g){
+  const pane=$("#pane");
+  pane.innerHTML="<div class='emptystate'>Loading pull requests…</div>";
+  const [prs,catalog]=await Promise.all([
+    (await fetch(`/api/games/${g.slug}/prs`)).json(),
+    (await fetch(`/api/games`)).json()]);
+  const meGames=(ME&&ME.games)||[];
+  const myFork=meGames.find(s=>s===`${g.slug}-${ME&&ME.handle}`);
+  const thisRow=catalog.find(c=>c.slug===g.slug);
+  const proposeUp=thisRow&&thisRow.forked_from&&meGames.includes(g.slug)?thisRow.forked_from:null;
+  let head="";
+  if(myFork) head+=`<button class="btn primary" onclick="proposePr('${myFork}','${g.slug}')">⇡ Propose changes from your fork (${esc(myFork)})</button> `;
+  if(proposeUp) head+=`<button class="btn primary" onclick="proposePr('${g.slug}','${proposeUp}')">⇡ Propose these changes to ${esc(proposeUp)}</button>`;
+  if(head) head=`<div style="margin-bottom:14px">${head}</div>`;
+  if(!prs.length){pane.innerHTML=head+"<div class='emptystate'>No pull requests yet.<br><span style='font-size:13px'>Fork this game, edit your copy, and propose the changes back — the diff will be cards, not code.</span></div>";return;}
+  pane.innerHTML=head+prs.map(pr=>`
+    <div class="pr" id="pr-${pr.id}">
+      <div class="prh"><span class="prstate ${pr.status}">${pr.status[0].toUpperCase()+pr.status.slice(1)}</span>
+        &nbsp;<h3 style="display:inline">${esc(pr.title)}</h3>
+        <div style="color:var(--mut);font-size:13px;margin-top:6px"><b>${esc(pr.author_handle)}</b> proposes <code>${esc(pr.from_slug)}</code> → <code>${esc(g.slug)}</code></div></div>
+      <div class="prbody" id="prb-${pr.id}"><button class="btn" onclick="prDetail('${g.slug}','${pr.id}')">View card changes</button></div>
+    </div>`).join("");
+}
+async function prDetail(slug,id){
+  const pr=await (await fetch(`/api/games/${slug}/prs/${id}`)).json();
+  const box=$(`#prb-${id}`);
+  const conflictNote=pr.conflicts&&pr.conflicts.length
+    ?`<div class="chg" style="color:#b35900"><b>⚠ conflicts:</b> both sides changed ${pr.conflicts.map(esc).join(", ")} — resolve in the fork first</div>`:"";
+  const actions=pr.status==="open"&&ME?`<div class="mergebar">
+      <button class="btn primary" onclick="mergePr('${slug}','${id}')">Merge — commits as ${esc(pr.author)}</button>
+      <button class="btn" onclick="closePr('${slug}','${id}')">Close</button>
+      <span style="color:var(--mut);font-size:13px">Accepted changes keep ${esc(pr.author)}'s name in the history.</span></div>`
+    :(pr.status==="merged"?`<div class="mergebar"><span style="color:var(--mut)">merged as <code>${esc(pr.merge_sha||"")}</code></span></div>`:"");
+  box.innerHTML=(pr.changes||[]).map(chgHtml).join("")+conflictNote+actions;
+}
+async function mergePr(slug,id){
+  const r=await fetch(`/api/games/${slug}/prs/${id}/merge`,{method:"POST",headers:authHdr()});
+  const d=await r.json();
+  if(r.ok){prNote(`Merged as ${d.commit} — ${d.changes.length} change${d.changes.length===1?"":"s"} landed`);setTimeout(()=>location.reload(),1200);}
+  else prNote(d.error+(d.conflicts?": "+d.conflicts.join(", "):""),true);
+}
+async function closePr(slug,id){
+  const r=await fetch(`/api/games/${slug}/prs/${id}/close`,{method:"POST",headers:authHdr()});
+  const d=await r.json();
+  if(r.ok){prNote("PR closed");prDetail(slug,id);liveSuggestions(G(slug));}
+  else prNote(d.error,true);
+}
+async function proposePr(from,to){
+  if(!ME){prNote("Sign in first",true);return;}
+  const title=prompt(`Propose changes: ${from} → ${to}\n\nTitle for your pull request:`);
+  if(!title) return;
+  const r=await fetch(`/api/games/${to}/prs`,{method:"POST",headers:authHdr(),
+    body:JSON.stringify({from,title})});
+  const d=await r.json();
+  if(r.ok) prNote(`PR opened: "${title}" (${d.changes.length} card change${d.changes.length===1?"":"s"})`);
+  else prNote(d.error,true);
+}
+async function suggestions(g){
+  if(LIVE) return liveSuggestions(g);
   if(!g.prs.length){$("#pane").innerHTML="<div class='emptystate'>No open pull requests.<br><span style='font-size:13px'>Fork this game, make changes, and open a PR — the diff will be cards, not code.</span></div>";return;}
   $("#pane").innerHTML=g.prs.map(pr=>{
     const byCard={};

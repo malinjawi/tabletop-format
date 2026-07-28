@@ -131,9 +131,12 @@ def render_ref_faces(game_rel, ref, want_ids):
         return out
 
 def build_game(gd):
-    gd = Path(gd)
+    gd = Path(gd).resolve()
     slug = gd.name
-    game_rel = str(gd.relative_to(ROOT))
+    # games can live OUTSIDE the platform repo (forgejo-backend checkout farm,
+    # scratch dirs): git-derived views degrade gracefully instead of crashing
+    try: game_rel = str(gd.relative_to(ROOT))
+    except ValueError: game_rel = None
     game = yaml.safe_load((gd / "game.yaml").read_text())
     cards = json.loads((gd / "components/cards.json").read_text())
     printings = json.loads((gd / "components/printings.json").read_text())
@@ -150,13 +153,12 @@ def build_game(gd):
         f = faces / f"{pid}.png"
         if pid and f.exists(): images[c["id"]] = b64(f)
 
-    rel = f"{game_rel}/components/cards.json"
-    history = git_history(rel)
+    rel = f"{game_rel}/components/cards.json" if game_rel else None
+    history = git_history(rel) if rel else []
 
     # rules: rendered markdown + its own git history (errata trail)
     rules_md = (gd / "rules" / "rules.md").read_text() if (gd / "rules" / "rules.md").exists() else ""
-    rules_rel = f"{game_rel}/rules/rules.md"
-    rules_log = sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", rules_rel], ok_fail=True) or ""
+    rules_log = (sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", f"{game_rel}/rules/rules.md"], ok_fail=True) or "") if game_rel else ""
     rules_history = [dict(zip(["sha", "author", "date", "subject"], l.split("|", 3)))
                      for l in rules_log.split("\n") if l]
     tokens = []
@@ -174,7 +176,7 @@ def build_game(gd):
     people = {}
     for c in community.get("contributors") or []:
         people[c["name"]] = {"roles": set(c["roles"]), "commits": 0, "sessions": 0}
-    authors = (sh(["git", "log", "--format=%an", "--", game_rel], ok_fail=True) or "").splitlines()
+    authors = ((sh(["git", "log", "--format=%an", "--", game_rel], ok_fail=True) or "").splitlines()) if game_rel else []
     for a in authors:
         a = a.strip()
         if not a: continue
@@ -204,6 +206,7 @@ def build_game(gd):
     # branches as PRs (any branch whose cards.json differs from main)
     prs = []
     branches = (sh(["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/"], ok_fail=True) or "").split("\n")
+    if not rel: branches = []
     for br in branches:
         if br in ("", "main"): continue
         base = cards_at("main", rel); head = cards_at(br, rel)

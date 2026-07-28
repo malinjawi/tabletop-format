@@ -459,6 +459,8 @@ sleep 2
 curl -s "localhost:$HPORT/" > "$SCRATCH/live-hub.html"
 grep -q "authModal" "$SCRATCH/live-hub.html" && grep -q "toggleStar" "$SCRATCH/live-hub.html" \
   && grep -q "refreshLive" "$SCRATCH/live-hub.html" && ok "live hub ships auth modal + star wiring" || bad "hub auth UI markers"
+grep -q "liveSuggestions" "$SCRATCH/live-hub.html" && grep -q "proposePr" "$SCRATCH/live-hub.html" \
+  && grep -q "mergePr" "$SCRATCH/live-hub.html" && ok "live hub ships PR review+merge wiring" || bad "hub PR wiring"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
 node -e "
 (async () => {
