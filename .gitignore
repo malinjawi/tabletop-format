@@ -9,3 +9,4 @@ examples/*/exports/
 .DS_Store
 package-lock.json
 data/
+__pycache__/
