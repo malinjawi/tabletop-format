@@ -134,7 +134,8 @@ http.server.HTTPServer(("",9977),H).serve_forever()
   HOOKOK=""
   for i in $(seq 1 30); do docker logs spike-hooksink 2>/dev/null | grep -q "EVENT push" && HOOKOK=1 && break; sleep 0.5; done
   docker rm -f spike-hooksink >/dev/null 2>&1 || true
-  [ -n "$HOOKOK" ] && ok "F1: push webhook delivered (container sink on compose network)" || bad "F1 webhook" "(docker logs spike-hooksink was empty)"
+  if [ -n "$HOOKOK" ]; then ok "F1: push webhook delivered (container sink on compose network)"
+  else bad "F1 webhook" "(sink empty — forgejo hook log follows)"; docker logs spike-forgejo 2>&1 | grep -i "hook\|deliver" | tail -4; fi
 else
   # fallback (no image pull possible): host-side listener + candidate routes
   node -e "

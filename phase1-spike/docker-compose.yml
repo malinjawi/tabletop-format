@@ -24,6 +24,9 @@ services:
       - FORGEJO__server__LFS_START_SERVER=true
       - FORGEJO__server__LFS_JWT_SECRET=OizmmHygyaBUOBL08-CGAibFgmsSNneAblAzhMYI7AA  # spike-only; regenerate for prod
       - FORGEJO__lfs__STORAGE_TYPE=local  # spike default: zero secrets, proves the protocol
+      # SSRF guard defaults to external-only — refuses hooks to private/internal hosts.
+      # Spike allows all; PRODUCTION: allowlist the gateway host explicitly instead of *.
+      - FORGEJO__webhook__ALLOWED_HOST_LIST=*
       - FORGEJO__database__DB_TYPE=postgres
       - FORGEJO__database__HOST=db:5432
       - FORGEJO__database__NAME=forgejo
