@@ -156,3 +156,13 @@ zero-dependency `git clone` (NF1) outranks LFS purity at this size; LFS activate
 platform hosting per §7; (b) `fmt fork` now auto-commits the §9 attribution block
 when `game.yaml` is at repo root (the one-game-one-repo model), and validators warn
 on dangling asset references.
+
+### 2026-07-28 — §7 landmine is version-dependent (spike evidence)
+The Phase-1 spike against Forgejo 11 observed the contents API **honoring**
+`.gitattributes` (naive binary upload stored as an LFS pointer): the gitea
+#18297 bypass is fixed on that version. Earlier verified behavior (LFS server
+misconfigured/disabled, older Gitea/Forgejo) stores raw binary — the landmine.
+No spec change: the platform's write path REMAINS explicit LFS batch upload +
+pointer commit (§7), because it is correct on every version, keeps oid/dedup
+under platform control, and allows pointer+JSON in one atomic commit. The
+spike's C1 records observed behavior per target rather than gating on it.

@@ -72,7 +72,11 @@ PNGB64=$(node -e "console.log(Buffer.concat([Buffer.from('iVBORw0KGgoAAAANSUhEUg
 api PUT /repos/alice/ember/contents/.gitattributes '{"branch":"main","message":"lfs attrs","content":"'"$(printf 'assets/** filter=lfs diff=lfs merge=lfs -text' | base64)"'","sha":"'"$(api GET /repos/alice/ember/contents/.gitattributes | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).sha)}catch{console.log('')}})")"'"}' -H "Sudo: alice" >/dev/null
 api POST /repos/alice/ember/contents '{"branch":"main","message":"naive png via API","files":[{"operation":"create","path":"assets/naive.png","content":"'"$PNGB64"'"}]}' -H "Sudo: alice" >/dev/null
 RAW=$(curl -s -H "Authorization: token $TOKEN" "$HOST/alice/ember/raw/branch/main/assets/naive.png" | head -c 20 | LC_ALL=C tr -d '\0')
-case "$RAW" in "version https://git-"*) bad "C1: expected bypass NOT observed (Forgejo fixed it? update SPEC!)" ;; *) ok "C1: contents-API bypasses LFS (landmine confirmed on this version)";; esac
+# C1 is a VERSION PROBE, not a gate: either behavior passes, we record which.
+case "$RAW" in
+  "version https://git-"*) ok "C1: contents API honors .gitattributes on THIS Forgejo (bypass fixed upstream) — explicit LFS path kept as version-independent hardening";;
+  *) ok "C1: contents-API bypasses LFS on THIS Forgejo (landmine live — workaround REQUIRED)";;
+esac
 # C2: OUR write path — real lfs.mjs client against real Forgejo LFS endpoint
 node --input-type=module -e "
 import { uploadAsset, downloadAsset } from '$REPO/tools/lib/lfs.mjs';
@@ -110,20 +114,42 @@ MERGED=$(api GET "/repos/alice/ember/pulls/$PRN" | node -e "let s='';process.std
 [ "$MERGED" = "true" ] && ok "E2: alice merged bob's PR; authorship preserved in history" || bad "E2 merge" "$MERGED"
 
 say "== F. webhooks =="
-node -e "
+rm -f /tmp/spike-hooks.log
+NET=$(docker inspect spike-forgejo --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')
+docker rm -f spike-hooksink >/dev/null 2>&1 || true
+# Listener runs as a CONTAINER on the compose network: same-network delivery is
+# identical under Docker Desktop, colima, and native Linux — no host routing games.
+if docker run -d --name spike-hooksink --network "$NET" python:3-alpine python -u -c '
+import http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_POST(s):
+        s.rfile.read(int(s.headers.get("content-length",0) or 0))
+        print("EVENT", s.headers.get("x-forgejo-event") or s.headers.get("x-gitea-event") or "?", flush=True)
+        s.send_response(200); s.end_headers(); s.wfile.write(b"ok")
+    def log_message(s,*a): pass
+http.server.HTTPServer(("",9977),H).serve_forever()
+' >/dev/null 2>&1; then
+  api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://spike-hooksink:9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null
+  api PUT /repos/alice/ember/contents/ping.txt '{"branch":"main","message":"hook ping","content":"'"$(printf 'ping' | base64)"'"}' -H "Sudo: alice" >/dev/null
+  HOOKOK=""
+  for i in $(seq 1 30); do docker logs spike-hooksink 2>/dev/null | grep -q "EVENT push" && HOOKOK=1 && break; sleep 0.5; done
+  docker rm -f spike-hooksink >/dev/null 2>&1 || true
+  [ -n "$HOOKOK" ] && ok "F1: push webhook delivered (container sink on compose network)" || bad "F1 webhook" "(docker logs spike-hooksink was empty)"
+else
+  # fallback (no image pull possible): host-side listener + candidate routes
+  node -e "
 require('http').createServer((q,r)=>{let b='';q.on('data',d=>b+=d);q.on('end',()=>{
   require('fs').appendFileSync('/tmp/spike-hooks.log', (q.headers['x-forgejo-event']||q.headers['x-gitea-event']||'?')+'\n'); r.end('ok')})
 }).listen(9977)" & HOOKPID=$!
-sleep 0.5
-# one hook per candidate route to the host; unreachable ones just fail delivery silently.
-# host.docker.internal = Docker Desktop / host-gateway; 192.168.5.2 = colima/lima; 172.17.0.1 = native Linux.
-for HH in host.docker.internal 192.168.5.2 172.17.0.1; do
-  api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://'"$HH"':9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null 2>&1 || true
-done
-api PUT /repos/alice/ember/contents/ping.txt '{"branch":"main","message":"hook ping","content":"'"$(printf 'ping' | base64)"'"}' -H "Sudo: alice" >/dev/null
-for i in $(seq 1 16); do grep -q "push" /tmp/spike-hooks.log 2>/dev/null && break; sleep 0.5; done
-kill $HOOKPID 2>/dev/null
-grep -q "push" /tmp/spike-hooks.log 2>/dev/null && ok "F1: push webhook delivered" || bad "F1 webhook" "(check docker networking: host.docker.internal / 172.17.0.1)"
+  sleep 0.5
+  for HH in host.docker.internal 192.168.5.2 172.17.0.1; do
+    api POST /repos/alice/ember/hooks '{"type":"forgejo","active":true,"events":["push"],"config":{"url":"http://'"$HH"':9977/","content_type":"json"}}' -H "Sudo: alice" >/dev/null 2>&1 || true
+  done
+  api PUT /repos/alice/ember/contents/ping.txt '{"branch":"main","message":"hook ping","content":"'"$(printf 'ping' | base64)"'"}' -H "Sudo: alice" >/dev/null
+  for i in $(seq 1 16); do grep -q "push" /tmp/spike-hooks.log 2>/dev/null && break; sleep 0.5; done
+  kill $HOOKPID 2>/dev/null
+  grep -q "push" /tmp/spike-hooks.log 2>/dev/null && ok "F1: push webhook delivered (host fallback)" || bad "F1 webhook" "(no route from containers to host)"
+fi
 
 say "== G. backup =="
 docker compose exec -T -u 1000 forgejo forgejo dump -f /tmp/spike-dump.zip >/dev/null 2>&1 \
