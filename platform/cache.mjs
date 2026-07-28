@@ -35,13 +35,18 @@ export const pathOf = (key) => p(key);
 
 const sh = (args, cwd = ROOT) => execFileSync(args[0], args.slice(1), { cwd, encoding: "utf8" }).trim();
 
-/** Materialize a game dir exactly as it was at `sha` (git archive → temp). */
-function materialize(gameRel, sha) {
+/** Materialize a game dir exactly as it was at `ref`.
+ *  `src` is either a repo-relative path (legacy: git archive in the platform
+ *  monorepo) or a MATERIALIZER FUNCTION `(ref) => ({dir, cleanup})` provided
+ *  by a Store-1 backend (store1-local / store1-forgejo) — the store decides
+ *  how trees are produced; this store only derives from them. */
+function materialize(src, ref) {
+  if (typeof src === "function") return src(ref);
   const tmp = mkdtempSync(join(tmpdir(), "at-sha-"));
   execFileSync("bash", ["-c",
-    `git archive ${sha} -- ${JSON.stringify(gameRel)} | tar -x -C ${JSON.stringify(tmp)}`],
+    `git archive ${ref} -- ${JSON.stringify(src)} | tar -x -C ${JSON.stringify(tmp)}`],
     { cwd: ROOT });
-  return { dir: join(tmp, gameRel), cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
+  return { dir: join(tmp, src), cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
 }
 
 /** Ensure all face renders for a game at a sha exist in the cache; returns key dir. Idempotent. */
