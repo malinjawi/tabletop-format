@@ -311,6 +311,16 @@ gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
     base: JSON.stringify(before), proposed: JSON.stringify(cards) });
   ctx.send(201, { proposed: true, pr: id, fork: forkSlug, commit: sha, message: auto.title, changes });
 }, "edit without access → auto-fork, commit to your fork, PR opened for review");
+gw.route("GET", "/api/games/:slug/access", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  const g = await q.gameBySlug(db, slug);
+  const owner = g?.owner_id ?? null;
+  ctx.send(200, { authed: !!u,
+    canWrite: await canWrite(u, slug),
+    isOwner: !!(u && owner && owner === u.id),
+    ownerless: !owner });
+}, "can the current user commit here directly? (editor picks commit vs propose)");
 gw.route("GET", "/api/games/:slug/collaborators", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   ctx.send(200, await q.collaboratorsOf(db, slug));

@@ -469,6 +469,9 @@ grep -q "authModal" "$SCRATCH/live-hub.html" && grep -q "toggleStar" "$SCRATCH/l
   && grep -q "refreshLive" "$SCRATCH/live-hub.html" && ok "live hub ships auth modal + star wiring" || bad "hub auth UI markers"
 grep -q "liveSuggestions" "$SCRATCH/live-hub.html" && grep -q "proposePr" "$SCRATCH/live-hub.html" \
   && grep -q "mergePr" "$SCRATCH/live-hub.html" && ok "live hub ships PR review+merge wiring" || bad "hub PR wiring"
+grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q "ed-canvas" "$SCRATCH/live-hub.html" \
+  && grep -q "edPreview" "$SCRATCH/live-hub.html" && grep -q "edCommit" "$SCRATCH/live-hub.html" \
+  && ok "live hub ships the IN-HUB card editor (drawer + live canvas preview + commit/propose)" || bad "hub editor wiring"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
 node -e "
 (async () => {
@@ -590,6 +593,11 @@ node -e "
   if(host.slug!=='az-demo') process.exit(1);
   const cards=await j(await fetch(base+'/api/games/az-demo/cards'));
   cards[0].text='Zap 2.';
+  // access endpoint drives the editor's commit-vs-propose choice
+  const accO=await j(await fetch(base+'/api/games/az-demo/access',{headers:A(TD)}));
+  if(!(accO.canWrite===true && accO.isOwner===true)) process.exit(20);
+  const accC=await j(await fetch(base+'/api/games/az-demo/access',{headers:A(TC)}));
+  if(accC.canWrite!==false) process.exit(21);
   // carol (no access) direct commit → 403 + propose flag
   const c403=await fetch(base+'/api/games/az-demo/cards',{method:'PUT',headers:A(TC),body:JSON.stringify(cards)});
   if(c403.status!==403 || !(await j(c403)).propose) process.exit(2);

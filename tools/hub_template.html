@@ -97,6 +97,34 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .emptystate{color:var(--mut);text-align:center;padding:40px 0}
 .activity{font-size:13px;padding:7px 0;border-bottom:1px solid #eaeef2;display:flex;gap:8px}
 .activity:last-child{border:none}
+/* ---- in-hub card editor drawer ---- */
+#drawer{position:fixed;inset:0;background:rgba(28,33,40,.5);display:none;z-index:60}
+#drawer.on{display:block}
+.dpanel{position:absolute;top:0;right:0;height:100%;width:min(940px,96vw);background:var(--bg2,#fff);box-shadow:-12px 0 40px rgba(0,0,0,.3);display:flex;flex-direction:column;transform:translateX(30px);opacity:0;transition:transform .22s ease,opacity .22s ease}
+#drawer.on .dpanel{transform:none;opacity:1}
+.dhead{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--bd)}
+.dhead h2{margin:0;font-size:18px}.dhead .sub{color:var(--mut);font-size:13px}
+.dbody{flex:1;overflow-y:auto;display:flex;gap:26px;padding:22px}
+.dprev{flex:0 0 300px;position:sticky;top:0}
+.dprev canvas{width:300px;height:420px;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28)}
+.dprev .hint{color:var(--mut);font-size:12px;text-align:center;margin-top:10px}
+.dform{flex:1;min-width:280px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--mut);margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;font:inherit;font-size:14px;background:#fff;box-sizing:border-box}
+.fld textarea{min-height:84px;resize:vertical;line-height:1.5}
+.fld .row{display:flex;gap:10px}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.ecardlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.epill{border:1px solid var(--bd);background:#fff;border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer}
+.epill.sel{background:var(--acc,#0969da);color:#fff;border-color:var(--acc,#0969da)}
+.epill.new{border-style:dashed;color:var(--mut)}
+.epill.dirty::after{content:"•";color:#d29922;margin-left:5px}
+.dbar{border-top:1px solid var(--bd);padding:14px 22px;background:var(--bg2,#fff);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.dbar .msg{flex:1;min-width:200px;font-size:13px}
+.dbar .msg b{color:var(--fg,#1f2328)}
+.dbar .msg .mut{color:var(--mut)}
+.symbtn{border:1px solid var(--bd);background:#fff;border-radius:6px;padding:2px 8px;font-size:13px;cursor:pointer}
 </style></head><body>
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
@@ -123,6 +151,27 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 </div>
 <div id="view"></div>
 <div id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
+<div id="drawer" onclick="if(event.target===this)closeEditor()"><div class="dpanel">
+  <div class="dhead">
+    <div style="flex:1"><h2 id="ed-title">Edit cards</h2><div class="sub" id="ed-sub"></div></div>
+    <button class="btn" onclick="closeEditor()">Close ✕</button>
+  </div>
+  <div class="dbody">
+    <div class="dprev">
+      <canvas id="ed-canvas" width="600" height="840"></canvas>
+      <div class="hint">live preview — updates as you type</div>
+    </div>
+    <div class="dform">
+      <div class="ecardlist" id="ed-list"></div>
+      <div id="ed-fields"></div>
+    </div>
+  </div>
+  <div class="dbar">
+    <div class="msg" id="ed-msg"></div>
+    <button class="btn" id="ed-del" onclick="edDelete()" style="color:#cf222e">Delete card</button>
+    <button class="btn primary" id="ed-commit" onclick="edCommit()">Commit</button>
+  </div>
+</div></div>
 <script>
 const DATA = __DATA__;
 /* ---- live mode + auth + stars (feature: accounts & stars end-to-end) ---- */
@@ -308,6 +357,7 @@ function cards(g){
     <div class="filterbar">
       <input id="cardq" placeholder="Filter cards… (name, text, keyword)" oninput="filterCards('${g.slug}')">
       <select id="cardt" onchange="filterCards('${g.slug}')"><option value="">All types</option>${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select>
+      ${LIVE?`<button class="btn primary" style="margin-left:auto" onclick="openEditor('${g.slug}')">✎ Edit cards</button>`:``}
     </div><div class="cgrid" id="cgrid"></div>`;
   filterCards(g.slug);
 }
@@ -320,6 +370,181 @@ function filterCards(slug){
       <div class="cn">${esc(c.name)}</div>
     </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
 }
+/* ================= IN-HUB CARD EDITOR (live preview + commit/propose) ================= */
+let ED=null; // {slug, cards, orig, sel, access, dirty:Set}
+function edToken(){return localStorage.forge_token?{Authorization:"Bearer "+localStorage.forge_token}:{};}
+function edSym(g){return (g.symbols||[]).reduce((m,s)=>(m[s.key]=s.glyph||("["+s.key+"]"),m),{});}
+function edColors(g,type){const c=(g.type_colors||{})[type]; return c||{fg:"#334",bg:"#eef1f4"};}
+
+async function openEditor(slug, cid){
+  const g=G(slug);
+  if(!LIVE){alert("The editor runs on the platform server (node server.mjs).");return;}
+  if(!ME){authOpen();return;}
+  let access={canWrite:false,authed:true,ownerless:false};
+  try{access=await (await fetch(`/api/games/${slug}/access`,{headers:edToken()})).json();}catch(e){}
+  ED={slug, cards:JSON.parse(JSON.stringify(g.cards)), orig:JSON.parse(JSON.stringify(g.cards)),
+      sel:cid||g.cards[0]?.id, access, dirty:new Set()};
+  $("#ed-title").textContent=`Editing ${g.title}`;
+  $("#ed-sub").innerHTML=access.canWrite
+    ? `<span style="color:var(--grn)">✓ you can commit directly to <code>${esc(slug)}</code></span>`
+    : `you don't have write access — your edits will open a <b>pull request</b> from your fork`;
+  $("#ed-commit").textContent=access.canWrite?"Commit changes":"Propose as PR";
+  document.getElementById("drawer").classList.add("on");
+  edRenderList(); edSelect(ED.sel);
+}
+function closeEditor(){ if(ED&&ED.dirty.size&&!confirm("Discard unsaved edits?"))return; ED=null; document.getElementById("drawer").classList.remove("on"); }
+function edCard(){return ED.cards.find(c=>c.id===ED.sel);}
+function edOrig(id){return ED.orig.find(c=>c.id===id);}
+function edCardDirty(id){const c=ED.cards.find(x=>x.id===id),o=edOrig(id); return JSON.stringify(c)!==JSON.stringify(o);}
+function edRefreshDirty(){ED.dirty=new Set(ED.cards.filter(c=>edCardDirty(c.id)).map(c=>c.id));
+  for(const c of ED.orig) if(!ED.cards.find(x=>x.id===c.id)) ED.dirty.add(c.id);}
+
+function edRenderList(){
+  const g=G(ED.slug);
+  $("#ed-list").innerHTML=ED.cards.map(c=>
+    `<span class="epill ${c.id===ED.sel?'sel':''} ${ED.dirty.has(c.id)?'dirty':''}" onclick="edSelect('${c.id}')">${esc(c.name||c.id)}</span>`
+  ).join("")+`<span class="epill new" onclick="edAdd()">+ new card</span>`;
+}
+function edSelect(id){ ED.sel=id; edRenderList(); edRenderFields(); edPreview(); edBar(); }
+function toast(html,ms){let t=document.getElementById("hubtoast");if(!t){t=document.createElement("div");t.id="hubtoast";
+  t.style.cssText="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#1f2328;color:#fff;padding:14px 22px;border-radius:10px;z-index:99;max-width:520px;box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:14px;line-height:1.4";document.body.appendChild(t);}
+  t.innerHTML=html;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",ms||5000);}
+async function reload(){ location.reload(); }
+
+function edField(label, key, val, opts){
+  const id="ef-"+key.replace(/\./g,"_");
+  if(opts&&opts.type==="select")
+    return `<div class="fld"><label>${esc(label)}</label><select id="${id}" onchange="edSet('${key}',this.value)">${opts.options.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join("")}</select></div>`;
+  if(opts&&opts.type==="textarea"){
+    const g=G(ED.slug), syms=(g.symbols||[]);
+    const chips=syms.length?`<div style="margin-bottom:6px">${syms.map(s=>`<button class="symbtn" onclick="edInsert('${key}','[${s.key}]')" title="${esc(s.name||s.key)}">${esc(s.glyph||s.key)} ${esc(s.key)}</button>`).join(" ")}</div>`:``;
+    return `<div class="fld"><label>${esc(label)}</label>${chips}<textarea id="${id}" oninput="edSet('${key}',this.value)">${esc(val||"")}</textarea></div>`;
+  }
+  const t=opts&&opts.type==="integer"?"number":"text";
+  return `<div class="fld"><label>${esc(label)}</label><input id="${id}" type="${t}" value="${esc(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})"></div>`;
+}
+function edRenderFields(){
+  const g=G(ED.slug), c=edCard(); if(!c){$("#ed-fields").innerHTML="";return;}
+  const types=Object.keys(g.type_colors||{}); if(!types.includes(c.type)&&c.type)types.unshift(c.type);
+  const defs=g.schema||[];
+  let h=edField("Name","name",c.name);
+  h+=`<div class="row">${types.length?edField("Type","type",c.type,{type:"select",options:types}):edField("Type","type",c.type)}
+       <div style="flex:1">${edField("Deck limit","deck_limit",c.deck_limit)}</div></div>`;
+  h+=edField("Subtypes (comma-sep)","__subtypes",(c.subtypes||[]).join(", "));
+  h+=`<div class="row">${defs.map(d=>`<div style="flex:1">${edField(d.name||d.key,"attributes."+d.key,(c.attributes||{})[d.key],{type:d.type})}</div>`).join("")||""}</div>`;
+  h+=edField("Rules text","text",c.text,{type:"textarea"});
+  h+=edField("Keywords (comma-sep)","__keywords",(c.keywords||[]).join(", "));
+  $("#ed-fields").innerHTML=h;
+}
+function edSet(key,val){
+  const c=edCard(); if(!c)return;
+  if(key==="__subtypes"){c.subtypes=val.split(",").map(s=>s.trim()).filter(Boolean);}
+  else if(key==="__keywords"){c.keywords=val.split(",").map(s=>s.trim()).filter(Boolean);}
+  else if(key==="deck_limit"){c.deck_limit=val===""||val==null?null:Number(val);}
+  else if(key.startsWith("attributes.")){c.attributes=c.attributes||{};const k=key.slice(11);
+    if(val===""||val==null||(typeof val==="number"&&isNaN(val)))delete c.attributes[k];else c.attributes[k]=val;}
+  else c[key]=val;
+  edRefreshDirty(); edRenderList();
+  if(key==="name"||key==="type")edRenderFields();
+  edPreview(); edBar();
+}
+function edInsert(key,token){const el=document.getElementById("ef-"+key);if(!el)return;
+  const s=el.selectionStart??el.value.length; el.value=el.value.slice(0,s)+token+el.value.slice(el.selectionEnd??s);
+  el.focus(); el.selectionStart=el.selectionEnd=s+token.length; edSet(key,el.value);}
+function edAdd(){
+  let n=1,id; do{id="new_card_"+n++;}while(ED.cards.find(c=>c.id===id));
+  const g=G(ED.slug), t=Object.keys(g.type_colors||{})[0]||"card";
+  ED.cards.push({id,name:"New Card",type:t,subtypes:[],text:"",keywords:[],attributes:{},deck_limit:1});
+  edRefreshDirty(); edSelect(id); edBar();
+}
+function edDelete(){
+  const c=edCard(); if(!c)return;
+  if(!confirm(`Remove "${c.name}" from this edit?`))return;
+  ED.cards=ED.cards.filter(x=>x.id!==c.id); edRefreshDirty();
+  edSelect(ED.cards[0]?.id); edBar();
+}
+/* ---- the money shot: draw the card face live on a canvas ---- */
+function edPreview(){
+  const cv=document.getElementById("ed-canvas"),x=cv.getContext("2d");
+  const g=G(ED.slug),c=edCard(); const W=cv.width,H=cv.height;
+  x.clearRect(0,0,W,H);
+  if(!c)return;
+  const col=edColors(g,c.type), sym=edSym(g);
+  const rr=(a,b,w,h,r)=>{x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();};
+  x.fillStyle=col.bg; rr(12,12,W-24,H-24,34); x.fill();
+  x.lineWidth=6; x.strokeStyle=col.fg; x.stroke();
+  // title bar
+  x.fillStyle=col.fg; rr(30,30,W-60,86,20); x.fill();
+  x.fillStyle="#fff"; x.font="bold 46px DejaVu Sans, Arial, sans-serif"; x.textBaseline="middle";
+  x.fillText((c.name||"Untitled").slice(0,20),52,74);
+  // cost badge (first numeric attribute)
+  const defs=g.schema||[]; const costKey=(defs[0]||{}).key;
+  if(costKey&&(c.attributes||{})[costKey]!=null){
+    x.beginPath();x.arc(W-70,73,34,0,7);x.fillStyle="#fff";x.fill();x.lineWidth=5;x.strokeStyle=col.fg;x.stroke();
+    x.fillStyle=col.fg;x.font="bold 40px DejaVu Sans, Arial";x.textAlign="center";x.fillText(String(c.attributes[costKey]),W-70,75);x.textAlign="left";
+  }
+  // type line
+  x.fillStyle=col.fg; x.font="italic 30px DejaVu Sans, Arial";
+  x.fillText([c.type,(c.subtypes||[]).join(" ")].filter(Boolean).join(" · ").slice(0,28),40,150);
+  // art well
+  x.fillStyle="rgba(0,0,0,.06)"; rr(40,175,W-80,250,16); x.fill();
+  const img=g.images[c.id];
+  if(img&&!c.__isnew){const im=new Image();im.onload=()=>{x.save();rr(40,175,W-80,250,16);x.clip();x.drawImage(im,40,175,W-80,250);x.restore();};im.src=img;}
+  else{x.fillStyle=col.fg;x.globalAlpha=.35;x.font="20px DejaVu Sans, Arial";x.textAlign="center";x.fillText("art",W/2,305);x.textAlign="left";x.globalAlpha=1;}
+  // rules text with symbol glyph substitution + wrapping
+  const txt=(c.text||"").replace(/\[(\w+)\]/g,(m,k)=>sym[k]||m);
+  x.fillStyle="#1a1a1a"; x.font="30px DejaVu Sans, Arial";
+  let ty=470; const words=txt.split(/\s+/); let line="";
+  for(const w of words){const t=line?line+" "+w:w;
+    if(x.measureText(t).width>W-90&&line){x.fillText(line,45,ty);ty+=40;line=w;}else line=t;
+    if(ty>H-70)break;}
+  if(line&&ty<=H-70)x.fillText(line,45,ty);
+  // other attributes footer
+  const rest=defs.slice(1).filter(d=>(c.attributes||{})[d.key]!=null).map(d=>`${d.name||d.key} ${c.attributes[d.key]}`).join("   ");
+  if(rest){x.fillStyle=col.fg;x.font="bold 26px DejaVu Sans, Arial";x.fillText(rest.slice(0,30),45,H-50);}
+}
+function edSummary(){ // mirror carddiff.summarize titles
+  const changed=[],added=[],removed=[];
+  const om=new Map(ED.orig.map(c=>[c.id,c])),nm=new Map(ED.cards.map(c=>[c.id,c]));
+  for(const[id,o]of om){const n=nm.get(id);if(!n)removed.push(o.name);else if(JSON.stringify(o)!==JSON.stringify(n))changed.push(n.name);}
+  for(const[id,n]of nm)if(!om.has(id))added.push(n.name);
+  const parts=[];const names=[...changed,...added.map(a=>a+" (new)"),...removed.map(r=>r+" (removed)")];
+  const n=changed.length+added.length+removed.length;
+  if(!n)return null;
+  const verb=changed.length&&!added.length&&!removed.length?"changed":"updated";
+  return {title:`cards: ${verb} ${n} card${n===1?"":"s"} (${names.slice(0,3).join(", ")}${names.length>3?", …":""})`, n};
+}
+function edBar(){
+  const s=edSummary();
+  $("#ed-del").style.display=edCard()?"":"none";
+  $("#ed-commit").disabled=!s;
+  $("#ed-msg").innerHTML=s
+    ? `<b>${esc(s.title)}</b><br><span class="mut">this message writes itself from the diff — ${ED.access.canWrite?"lands as a commit":"opens a pull request"}</span>`
+    : `<span class="mut">No changes yet. Pick a card and start editing — the preview updates live.</span>`;
+}
+async function edCommit(){
+  const s=edSummary(); if(!s)return;
+  const btn=$("#ed-commit"); btn.disabled=true; const was=btn.textContent; btn.textContent="Saving…";
+  try{
+    if(ED.access.canWrite){
+      const r=await fetch(`/api/games/${ED.slug}/cards`,{method:"PUT",headers:{"content-type":"application/json",...edToken()},body:JSON.stringify(ED.cards)});
+      const d=await r.json();
+      if(r.status===200&&d.saved){toast(`<b>✓ Committed ${esc(d.commit)}</b><br>${esc(d.message)}<br><span style="opacity:.7">Now in ${esc(ED.slug)}'s history.</span>`);closeEditorForce();await reload();}
+      else if(r.status===422)toast(`<b style="color:#ffa198">✗ Validation failed</b><br>`+(d.report||[]).filter(l=>l.includes("ERROR")).slice(0,3).map(esc).join("<br>"),9000);
+      else if(r.status===403&&d.propose){ED.access.canWrite=false;$("#ed-commit").textContent="Propose as PR";toast("You don't have write access — switching to propose.",6000);}
+      else toast(`<b style="color:#ffa198">✗ ${esc(d.error||r.status)}</b>`,8000);
+    } else {
+      const title=prompt("Title for your pull request:",s.title); if(!title){btn.disabled=false;btn.textContent=was;return;}
+      const r=await fetch(`/api/games/${ED.slug}/cards/propose`,{method:"POST",headers:{"content-type":"application/json",...edToken()},body:JSON.stringify({cards:ED.cards,title})});
+      const d=await r.json();
+      if(r.status===201)toast(`<b>⇡ Pull request opened</b><br>${esc(d.message)}<br><span style="opacity:.7">Committed to your fork <b>${esc(d.fork)}</b> as ${esc(d.commit)} — owner can review on the Pull requests tab.</span>`,12000);
+      else toast(`<b style="color:#ffa198">✗ ${esc(d.error||r.status)}</b>`,8000);
+    }
+  }catch(e){toast(`<b style="color:#ffa198">✗ ${esc(e.message)}</b>`,8000);}
+  btn.disabled=false; btn.textContent=was; edBar();
+}
+function closeEditorForce(){ED=null;document.getElementById("drawer").classList.remove("on");}
+
 function cardModal(slug,cid){
   const g=G(slug), c=g.cards.find(x=>x.id===cid);
   const hist=[];
@@ -328,7 +553,7 @@ function cardModal(slug,cid){
   $("#mbody").innerHTML=`
     ${g.images[cid]?`<img src="${g.images[cid]}">`:""}
     <div style="flex:1">
-      <h2>${esc(c.name)}</h2>
+      <h2>${esc(c.name)}${LIVE?` <button class="btn" style="font-size:13px;vertical-align:middle" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit</button>`:``}</h2>
       <div class="kv"><b>Type</b>${esc(c.type)}${c.subtypes&&c.subtypes.length?" · "+esc(c.subtypes.join(", ")):""}</div>
       ${Object.entries(c.attributes||{}).map(([k,v])=>`<div class="kv"><b>${esc(k)}</b>${esc(v)}</div>`).join("")}
       ${c.deck_limit!=null?`<div class="kv"><b>Deck limit</b>${c.deck_limit}</div>`:""}
