@@ -456,8 +456,19 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
   ctx.send(200, { id: pr.id, to: pr.to_slug, from: pr.from_slug, title: pr.title, body: pr.body,
     author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
     changes: diffCards(base, proposed),
-    stale: diffCards(base, current).length > 0, conflicts });
-}, "PR detail: semantic diff + live staleness/conflict check");
+    stale: diffCards(base, current).length > 0, conflicts,
+    comments: await q.commentsFor(db, "pr", pr.id) });
+}, "PR detail: semantic diff + live staleness/conflict check + discussion");
+gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const pr = await q.prById(db, ctx.params.id);
+  if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
+  const { body } = await json(ctx);
+  if (!body?.trim()) return ctx.send(422, { error: "comment body required" });
+  await q.addComment(db, { id: newId("c"), target_type: "pr", target_id: pr.id, author_id: u.id, body: body.trim() });
+  ctx.send(201, { comments: await q.commentsFor(db, "pr", pr.id) });
+}, "comment on a PR (review discussion)");
 gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
@@ -492,6 +503,51 @@ gw.route("POST", "/api/games/:slug/prs/:id/close", async (ctx) => {
   await q.setPrStatus(db, pr.id, "closed");
   ctx.send(200, { closed: true });
 }, "close a PR without merging");
+
+/* ---------- routes: issues — bug reports & balance debates (the community layer) ---------- */
+gw.route("GET", "/api/games/:slug/issues", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  ctx.send(200, await q.issuesFor(db, slug));
+}, "list issues on a game");
+gw.route("POST", "/api/games/:slug/issues", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const { title, body } = await json(ctx);
+  if (!title?.trim()) return ctx.send(422, { error: "issue title required" });
+  const number = await q.nextIssueNumber(db, slug);
+  const id = newId("i");
+  await q.createIssue(db, { id, game_slug: slug, number, title: title.trim(), body: body ?? null, author_id: u.id });
+  ctx.send(201, { id, number, title: title.trim(), status: "open" });
+}, "open an issue (any signed-in user)");
+gw.route("GET", "/api/games/:slug/issues/:n", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const iss = await q.issueByNumber(db, slug, parseInt(ctx.params.n, 10));
+  if (!iss) return ctx.send(404, { error: "no such issue" });
+  ctx.send(200, { number: iss.number, title: iss.title, body: iss.body, author: iss.author_handle,
+    status: iss.status, created_at: iss.created_at,
+    comments: await q.commentsFor(db, "issue", iss.id) });
+}, "issue detail + comment thread");
+gw.route("POST", "/api/games/:slug/issues/:n/comments", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const iss = await q.issueByNumber(db, slug, parseInt(ctx.params.n, 10));
+  if (!iss) return ctx.send(404, { error: "no such issue" });
+  const { body } = await json(ctx);
+  if (!body?.trim()) return ctx.send(422, { error: "comment body required" });
+  await q.addComment(db, { id: newId("c"), target_type: "issue", target_id: iss.id, author_id: u.id, body: body.trim() });
+  ctx.send(201, { comments: await q.commentsFor(db, "issue", iss.id) });
+}, "comment on an issue");
+gw.route("POST", "/api/games/:slug/issues/:n/close", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const iss = await q.issueByNumber(db, slug, parseInt(ctx.params.n, 10));
+  if (!iss) return ctx.send(404, { error: "no such issue" });
+  const g = await q.gameBySlug(db, slug);
+  if (g?.owner_id !== u.id && iss.author_id !== u.id)
+    return ctx.send(403, { error: "only the owner or the issue author can close" });
+  await q.setIssueStatus(db, iss.id, iss.status === "open" ? "closed" : "open");
+  ctx.send(200, { status: iss.status === "open" ? "closed" : "open" });
+}, "close (or reopen) an issue — owner or author");
 
 gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;

@@ -71,4 +71,20 @@ await q.claim(db, ana.id, author);
 assert((await q.claimOwner(db, author)).user_id === ana.id, "claimOwner");
 assert((await q.claimsOf(db, ana.id)).includes(author), "claimsOf");
 
+const n1 = await q.nextIssueNumber(db, slug);
+assert(n1 === 1, "first issue number is 1");
+const iid = newId("i");
+await q.createIssue(db, { id: iid, game_slug: slug, number: n1, title: "Bolt too cheap", body: "1/1", author_id: ana.id });
+const ilist = await q.issuesFor(db, slug);
+assert(ilist.length === 1 && ilist[0].author_handle === ana.handle, "issuesFor joins author");
+assert(ilist[0].comment_count === 0 && typeof ilist[0].comment_count === "number", "comment_count is a number (pg ::int)");
+assert(await q.nextIssueNumber(db, slug) === 2, "next issue number increments per game");
+await q.addComment(db, { id: newId("c"), target_type: "issue", target_id: iid, author_id: ana.id, body: "agreed" });
+await q.addComment(db, { id: newId("c"), target_type: "pr", target_id: "pr_x", author_id: ana.id, body: "on a PR" });
+assert((await q.commentsFor(db, "issue", iid)).length === 1, "commentsFor filters by target (issue)");
+assert((await q.commentsFor(db, "pr", "pr_x")).length === 1, "commentsFor filters by target (pr)");
+assert((await q.issuesFor(db, slug))[0].comment_count === 1, "comment_count reflects added comment");
+await q.setIssueStatus(db, iid, "closed");
+assert((await q.issueByNumber(db, slug, n1)).status === "closed", "setIssueStatus closes");
+
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);

@@ -125,6 +125,14 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .dbar .msg b{color:var(--fg,#1f2328)}
 .dbar .msg .mut{color:var(--mut)}
 .symbtn{border:1px solid var(--bd);background:#fff;border-radius:6px;padding:2px 8px;font-size:13px;cursor:pointer}
+.issrow{display:flex;gap:10px;align-items:flex-start;padding:11px 6px;border-bottom:1px solid var(--bd);cursor:pointer}
+.issrow:hover{background:var(--bg2,#f6f8fa)}
+.istatus.open{color:#1a7f37}.istatus.closed{color:#8250df}
+.thread{display:flex;flex-direction:column;gap:10px}
+.cmt{border:1px solid var(--bd);border-radius:8px;padding:10px 12px;background:var(--bg2,#fff)}
+.cmt-h{font-size:13px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.cmt-b{font-size:14px;white-space:pre-wrap;line-height:1.5}
+.av.sm{width:20px;height:20px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#6e40c9;color:#fff}
 </style></head><body>
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
@@ -299,7 +307,7 @@ function repoPage(g, tab){
   const tabs = [
     ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
     ["playtests","Playtests",g.playtests.length],["history","Commits",g.history.length],
-    ["suggestions","Pull requests",g.prs.length],["releases","Releases",g.releases.length],
+    ["suggestions","Pull requests",g.prs.length],["issues","Issues",null],["releases","Releases",g.releases.length],
     ["banlist","Banlist",null],["decks","Decks",g.decks.length],
     ["community","Community",g.credit_roll.length]];
   $("#view").innerHTML = `
@@ -313,14 +321,14 @@ function repoPage(g, tab){
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
         <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
-        <button class="btn primary" onclick="LIVE?location.href='/edit/${g.slug}':alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>
+        <button class="btn primary" onclick="LIVE?openEditor('${g.slug}'):alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>
       </div>
     </div>
     <div class="tabs">${tabs.map(([id,label,n])=>
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,rules,playtests,history,suggestions,releases,banlist,decks,community})[tab](g);
+  ({overview,cards,rules,playtests,history,suggestions,issues,releases,banlist,decks,community})[tab](g);
 }
 
 /* ---------- tabs ---------- */
@@ -643,6 +651,69 @@ function history(g){
   `).join("")||"<div class='emptystate'>No history yet.</div>";
 }
 
+/* ---------- Issues: bug reports & balance debates ---------- */
+function fmtWhen(ms){const d=new Date(ms);return isNaN(d)?"":d.toLocaleDateString();}
+function commentThread(list){
+  return `<div class="thread">${(list||[]).map(c=>`
+    <div class="cmt"><div class="cmt-h"><span class="av sm">${esc((c.author_handle||"?")[0])}</span> <b>${esc(c.author_handle)}</b> <span class="mut">${fmtWhen(c.created_at)}</span></div>
+    <div class="cmt-b">${esc(c.body)}</div></div>`).join("")||"<div class='mut' style='font-size:13px'>No comments yet.</div>"}</div>`;
+}
+function issues(g){
+  if(!LIVE){$("#pane").innerHTML="<div class='emptystate'>Issues are a platform feature — run <code>node server.mjs</code>.<br><span style='font-size:13px'>Bug reports, balance debates, and design questions live here.</span></div>";return;}
+  liveIssues(g);
+}
+async function liveIssues(g){
+  const pane=$("#pane");
+  pane.innerHTML="<div class='emptystate'>Loading issues…</div>";
+  const list=await (await fetch(`/api/games/${g.slug}/issues`)).json();
+  try{window.__catalog=await (await fetch('/api/games')).json();}catch(e){}
+  const openForm=ME?`
+    <div class="pr" style="margin-bottom:16px">
+      <input id="iss-t" placeholder="Issue title — e.g. Wildfire opening is too strong" style="width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;margin-bottom:8px">
+      <textarea id="iss-b" placeholder="Describe it — repro, playtest data, a proposed fix…" style="width:100%;min-height:66px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></textarea>
+      <div style="margin-top:8px"><button class="btn primary" onclick="openIssue('${g.slug}')">Open issue</button></div>
+    </div>`:`<div class="mut" style="font-size:13px;margin-bottom:14px">Sign in to open an issue.</div>`;
+  const open=list.filter(i=>i.status==="open"),closed=list.filter(i=>i.status==="closed");
+  const row=(i)=>`<div class="issrow" onclick="issueDetail('${g.slug}',${i.number})">
+    <span class="istatus ${i.status}">${i.status==="open"?"◉":"✓"}</span>
+    <div style="flex:1"><b>${esc(i.title)}</b> <span class="mut">#${i.number}</span>
+      <div class="mut" style="font-size:12px">by ${esc(i.author_handle)}${i.comment_count?` · 💬 ${i.comment_count}`:""}</div></div></div>`;
+  pane.innerHTML=openForm+
+    `<div class="mut" style="font-size:13px;margin-bottom:8px">${open.length} open · ${closed.length} closed</div>`+
+    (list.length?open.map(row).join("")+closed.map(row).join(""):"<div class='emptystate'>No issues yet — be the first to file one.</div>");
+}
+async function openIssue(slug){
+  const title=$("#iss-t").value.trim(); if(!title){prNote("Title required",true);return;}
+  const r=await fetch(`/api/games/${slug}/issues`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({title,body:$("#iss-b").value})});
+  const d=await r.json();
+  if(r.status===201){prNote(`Opened issue #${d.number}`);liveIssues(G(slug));}
+  else prNote(d.error||"failed",true);
+}
+async function issueDetail(slug,n){
+  const i=await (await fetch(`/api/games/${slug}/issues/${n}`)).json();
+  $("#pane").innerHTML=`
+    <button class="btn" onclick="liveIssues(G('${slug}'))">← all issues</button>
+    <div class="pr" style="margin-top:12px">
+      <div class="prh"><span class="istatus ${i.status}" style="font-size:15px">${i.status==="open"?"◉ open":"✓ closed"}</span>
+        &nbsp;<h3 style="display:inline">${esc(i.title)} <span class="mut">#${i.number}</span></h3>
+        <div class="mut" style="font-size:13px;margin-top:5px">opened by <b>${esc(i.author)}</b> · ${fmtWhen(i.created_at)}</div></div>
+      ${i.body?`<div class="cmt-b" style="padding:10px 0">${esc(i.body)}</div>`:""}
+      ${commentThread(i.comments)}
+      ${ME?`<div style="margin-top:12px"><textarea id="cbox" placeholder="Add to the discussion…" style="width:100%;min-height:60px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></textarea>
+        <div style="margin-top:8px"><button class="btn primary" onclick="commentIssue('${slug}',${n})">Comment</button>
+        ${(ME.handle===i.author||myOwns(slug))?`<button class="btn" onclick="closeIssue('${slug}',${n})">${i.status==="open"?"Close issue":"Reopen"}</button>`:""}</div></div>`:`<div class="mut" style="font-size:13px;margin-top:10px">Sign in to comment.</div>`}
+    </div>`;
+}
+function myOwns(slug){const c=(window.__catalog||[]).find(x=>x.slug===slug);return c&&ME&&c.owner_handle===ME.handle;}
+async function commentIssue(slug,n){
+  const body=$("#cbox").value.trim(); if(!body)return;
+  const r=await fetch(`/api/games/${slug}/issues/${n}/comments`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({body})});
+  if(r.status===201)issueDetail(slug,n); else prNote((await r.json()).error||"failed",true);
+}
+async function closeIssue(slug,n){
+  const r=await fetch(`/api/games/${slug}/issues/${n}/close`,{method:"POST",headers:authHdr()});
+  if(r.status===200)issueDetail(slug,n); else prNote((await r.json()).error||"failed",true);
+}
 /* ---- LIVE pull requests: the real merge loop, in the browser ---- */
 function prNote(msg,bad){const n=document.createElement("div");n.textContent=msg;
   n.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:"+(bad?"#b35900":"var(--grn)")+";color:#fff;padding:10px 22px;border-radius:8px;z-index:99;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.3)";
@@ -684,7 +755,15 @@ async function prDetail(slug,id){
       <button class="btn" onclick="closePr('${slug}','${id}')">Close</button>
       <span style="color:var(--mut);font-size:13px">Accepted changes keep ${esc(pr.author)}'s name in the history.</span></div>`
     :(pr.status==="merged"?`<div class="mergebar"><span style="color:var(--mut)">merged as <code>${esc(pr.merge_sha||"")}</code></span></div>`:"");
-  box.innerHTML=(pr.changes||[]).map(chgHtml).join("")+conflictNote+actions;
+  const discussion=`<div style="margin-top:14px"><div class="mut" style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Discussion</div>${commentThread(pr.comments)}
+    ${ME?`<textarea id="prc-${id}" placeholder="Leave a review comment…" style="width:100%;min-height:56px;margin-top:8px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></textarea>
+      <div style="margin-top:6px"><button class="btn" onclick="commentPr('${slug}','${id}')">Comment</button></div>`:``}</div>`;
+  box.innerHTML=(pr.changes||[]).map(chgHtml).join("")+conflictNote+discussion+actions;
+}
+async function commentPr(slug,id){
+  const el=$(`#prc-${id}`); const body=(el.value||"").trim(); if(!body)return;
+  const r=await fetch(`/api/games/${slug}/prs/${id}/comments`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({body})});
+  if(r.status===201)prDetail(slug,id); else prNote((await r.json()).error||"failed",true);
 }
 async function mergePr(slug,id){
   const r=await fetch(`/api/games/${slug}/prs/${id}/merge`,{method:"POST",headers:authHdr()});

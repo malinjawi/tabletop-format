@@ -179,6 +179,27 @@ assert(/bob/.test((await lastCommit("tidepool")).an), "merge commit authored as 
 const prAfter = (await api("GET", `/api/games/tidepool/prs/${prId}`)).data;
 assert(prAfter.status === "merged" && prAfter.merge_sha, "PR recorded as merged with the commit sha");
 
+console.log("== ACT 6: the community layer — issues & discussion ==");
+const iss = await api("POST", "/api/games/tidepool/issues", { token: B,
+  body: { title: "Riptide swingy at 3 cost", body: "pull 3 while leading ends games early" } });
+assert(iss.status === 201 && iss.data.number === 1 && iss.data.status === "open",
+  "bob opens issue #1 on tidepool", iss.data);
+const anonIss = await api("POST", "/api/games/tidepool/issues", { body: { title: "spam" } });
+assert(anonIss.status === 401, "anonymous cannot open issues (401)");
+const cmt = await api("POST", "/api/games/tidepool/issues/1/comments", { token: A,
+  body: { body: "Agreed - capping the lead bonus. Thanks for flagging." } });
+assert(cmt.status === 201 && cmt.data.comments.length === 1 && cmt.data.comments[0].author_handle === "alice",
+  "alice replies on the thread (comment recorded, authored)");
+const idet = (await api("GET", "/api/games/tidepool/issues/1")).data;
+assert(idet.comments.length === 1 && idet.author === "bob" && idet.status === "open",
+  "issue detail: bob's issue, alice's comment, still open");
+const badClose = await api("POST", "/api/games/tidepool/issues/1/close", { token: B });
+assert(badClose.status === 200 && badClose.data.status === "closed",
+  "bob (issue author) closes his own issue");
+const ilist = (await api("GET", "/api/games/tidepool/issues")).data;
+assert(ilist.length === 1 && ilist[0].comment_count === 1 && ilist[0].status === "closed",
+  "issues index: 1 issue, 1 comment, closed - conversation persisted in SQL (DA-9)");
+
 console.log("== FINAL LEDGER CHECK: all three stores agree ==");
 const finalList = (await api("GET", "/api/games")).data;
 const ftp = finalList.find(g => g.slug === "tidepool");

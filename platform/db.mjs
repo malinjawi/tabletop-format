@@ -108,6 +108,29 @@ export const q = {
     `SELECT u.handle, c.role, c.added_at FROM collaborators c JOIN users u ON u.id = c.user_id
      WHERE c.game_slug = ? ORDER BY c.added_at`).all(slug),
 
+  nextIssueNumber: (db, slug) => (db.prepare(
+    "SELECT COALESCE(MAX(number),0)+1 AS n FROM issues WHERE game_slug = ?").get(slug)).n,
+  createIssue: (db, i) => db.prepare(
+    `INSERT INTO issues (id, game_slug, number, title, body, author_id, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'open', ?)`).run(i.id, i.game_slug, i.number, i.title, i.body ?? null, i.author_id, Date.now()),
+  issuesFor: (db, slug) => db.prepare(
+    `SELECT i.*, u.handle AS author_handle,
+            (SELECT COUNT(*) FROM comments c WHERE c.target_type='issue' AND c.target_id=i.id) AS comment_count
+     FROM issues i JOIN users u ON u.id = i.author_id
+     WHERE i.game_slug = ? ORDER BY i.number DESC`).all(slug),
+  issueByNumber: (db, slug, number) => db.prepare(
+    `SELECT i.*, u.handle AS author_handle FROM issues i JOIN users u ON u.id = i.author_id
+     WHERE i.game_slug = ? AND i.number = ?`).get(slug, number),
+  setIssueStatus: (db, id, status) => db.prepare(
+    "UPDATE issues SET status = ?, closed_at = ? WHERE id = ?").run(status, status === "closed" ? Date.now() : null, id),
+
+  addComment: (db, c) => db.prepare(
+    `INSERT INTO comments (id, target_type, target_id, author_id, body, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`).run(c.id, c.target_type, c.target_id, c.author_id, c.body, Date.now()),
+  commentsFor: (db, targetType, targetId) => db.prepare(
+    `SELECT c.body, c.created_at, u.handle AS author_handle FROM comments c JOIN users u ON u.id = c.author_id
+     WHERE c.target_type = ? AND c.target_id = ? ORDER BY c.created_at`).all(targetType, targetId),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),

@@ -123,6 +123,30 @@ export const q = {
     `SELECT u.handle, c.role, c.added_at FROM collaborators c JOIN users u ON u.id = c.user_id
      WHERE c.game_slug = $1 ORDER BY c.added_at`, [slug]),
 
+  nextIssueNumber: async (db, slug) => (await one(db,
+    "SELECT COALESCE(MAX(number),0)+1 AS n FROM issues WHERE game_slug = $1", [slug])).n,
+  createIssue: (db, i) => db.query(
+    `INSERT INTO issues (id, game_slug, number, title, body, author_id, status, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)`,
+    [i.id, i.game_slug, i.number, i.title, i.body ?? null, i.author_id, Date.now()]),
+  issuesFor: (db, slug) => all(db,
+    `SELECT i.*, u.handle AS author_handle,
+            (SELECT COUNT(*)::int FROM comments c WHERE c.target_type='issue' AND c.target_id=i.id) AS comment_count
+     FROM issues i JOIN users u ON u.id = i.author_id
+     WHERE i.game_slug = $1 ORDER BY i.number DESC`, [slug]),
+  issueByNumber: (db, slug, number) => one(db,
+    `SELECT i.*, u.handle AS author_handle FROM issues i JOIN users u ON u.id = i.author_id
+     WHERE i.game_slug = $1 AND i.number = $2`, [slug, number]),
+  setIssueStatus: (db, id, status) => db.query(
+    "UPDATE issues SET status = $1, closed_at = $2 WHERE id = $3", [status, status === "closed" ? Date.now() : null, id]),
+
+  addComment: (db, c) => db.query(
+    `INSERT INTO comments (id, target_type, target_id, author_id, body, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6)`, [c.id, c.target_type, c.target_id, c.author_id, c.body, Date.now()]),
+  commentsFor: (db, targetType, targetId) => all(db,
+    `SELECT c.body, c.created_at, u.handle AS author_handle FROM comments c JOIN users u ON u.id = c.author_id
+     WHERE c.target_type = $1 AND c.target_id = $2 ORDER BY c.created_at`, [targetType, targetId]),
+
   claim: (db, userId, author) => db.query(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES ($1, $2, $3)`,
     [userId, author, Date.now()]),

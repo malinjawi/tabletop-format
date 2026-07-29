@@ -27,7 +27,12 @@ check_fails(){ # inverse: command MUST exit nonzero
 
 say "e2e: scratch at $SCRATCH"
 tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='examples/*/exports' -cf - . | tar -C "$SCRATCH" -xf -
-cd "$SCRATCH"
+cd "$SCRATCH" || { echo "FATAL: cannot cd to scratch"; exit 2; }
+# SAFETY: git must never walk up into the real repo (scratch has no .git of its own
+# until section 'git porcelain' inits it). Without this, a failed scratch copy would
+# make git commit/reset --hard operate on the source repo and destroy work.
+export GIT_CEILING_DIRECTORIES="$(dirname "$SCRATCH")"
+[ -f "$SCRATCH/server.mjs" ] || { echo "FATAL: scratch copy incomplete — aborting before any git op"; exit 2; }
 
 say ""
 say "== schemas =="
@@ -472,6 +477,8 @@ grep -q "liveSuggestions" "$SCRATCH/live-hub.html" && grep -q "proposePr" "$SCRA
 grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q "ed-canvas" "$SCRATCH/live-hub.html" \
   && grep -q "edPreview" "$SCRATCH/live-hub.html" && grep -q "edCommit" "$SCRATCH/live-hub.html" \
   && ok "live hub ships the IN-HUB card editor (drawer + live canvas preview + commit/propose)" || bad "hub editor wiring"
+grep -q "liveIssues" "$SCRATCH/live-hub.html" && grep -q "commentThread" "$SCRATCH/live-hub.html" \
+  && grep -q "commentPr" "$SCRATCH/live-hub.html" && ok "live hub ships Issues tab + comment threads (issues & PRs)" || bad "hub issues wiring"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
 node -e "
 (async () => {
@@ -627,6 +634,50 @@ node -e "
 })().catch(e=>{console.error(e);process.exit(12)})" && ok "authz: 403+propose → auto-fork PR → merge → grant → direct commit → revoke → 403" || bad "authz matrix"
 git log -8 --format='%an|%s' | grep -q "carol|cards: changed 1 card" && ok "carol's proposal commit authored as carol in HER fork" || bad "propose authorship"
 kill $AZPID 2>/dev/null
+
+say "== FEATURE: issues + threaded comments (the community layer) =="
+ISPORT=$(( (RANDOM % 2000) + 30000 ))
+DB_PATH="$SCRATCH/platform.db" node server.mjs --port $ISPORT > "$SCRATCH/iss.log" 2>&1 &
+ISPID=$!
+sleep 1.5
+node -e "
+(async () => {
+  const base='http://localhost:$ISPORT';
+  const j=(r)=>r.json();
+  const reg=async(h)=>(await j(await fetch(base+'/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({handle:h,email:h+'@x.co',password:'longenough1'})}))).token;
+  const A=(t)=>({Authorization:'Bearer '+t,'content-type':'application/json'});
+  const OWN=await reg('issowner'), REP=await reg('reporter'), OTH=await reg('bystander');
+  const host=await j(await fetch(base+'/api/games',{method:'POST',headers:A(OWN),body:JSON.stringify({title:'Iss Demo',csv:'name,type,text,cost\\nBolt,spell,Zap.,1'})}));
+  if(host.slug!=='iss-demo') process.exit(1);
+  if((await fetch(base+'/api/games/iss-demo/issues',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({title:'x'})})).status!==401) process.exit(2);
+  const iss=await j(await fetch(base+'/api/games/iss-demo/issues',{method:'POST',headers:A(REP),body:JSON.stringify({title:'Bolt too cheap',body:'1/1 feels low'})}));
+  if(!(iss.number===1 && iss.status==='open')) process.exit(3);
+  const iss2=await j(await fetch(base+'/api/games/iss-demo/issues',{method:'POST',headers:A(OTH),body:JSON.stringify({title:'typo'})}));
+  if(iss2.number!==2) process.exit(4);
+  const list=await j(await fetch(base+'/api/games/iss-demo/issues'));
+  if(!(list.length===2 && list[0].number===2 && list.find(i=>i.number===1).author_handle==='reporter')) process.exit(5);
+  await fetch(base+'/api/games/iss-demo/issues/1/comments',{method:'POST',headers:A(OWN),body:JSON.stringify({body:'Good catch, bumping to 2.'})});
+  const c=await j(await fetch(base+'/api/games/iss-demo/issues/1/comments',{method:'POST',headers:A(REP),body:JSON.stringify({body:'thanks!'})}));
+  if(!(c.comments.length===2 && c.comments[1].author_handle==='reporter')) process.exit(6);
+  const det=await j(await fetch(base+'/api/games/iss-demo/issues/1'));
+  if(!(det.title==='Bolt too cheap' && det.comments.length===2 && det.status==='open')) process.exit(7);
+  if((await fetch(base+'/api/games/iss-demo/issues/1/close',{method:'POST',headers:A(OTH)})).status!==403) process.exit(8);
+  const cl=await j(await fetch(base+'/api/games/iss-demo/issues/1/close',{method:'POST',headers:A(REP)}));
+  if(cl.status!=='closed') process.exit(9);
+  const cl2=await j(await fetch(base+'/api/games/iss-demo/issues/2/close',{method:'POST',headers:A(OWN)}));
+  if(cl2.status!=='closed') process.exit(10);
+  await fetch(base+'/api/games/iss-demo/fork',{method:'POST',headers:A(REP)});
+  let cards=await j(await fetch(base+'/api/games/iss-demo-reporter/cards'));
+  cards[0].attributes={cost:2}; cards[0].text='Zap harder.';
+  await fetch(base+'/api/games/iss-demo-reporter/cards',{method:'PUT',headers:A(REP),body:JSON.stringify(cards)});
+  const pr=await j(await fetch(base+'/api/games/iss-demo/prs',{method:'POST',headers:A(REP),body:JSON.stringify({from:'iss-demo-reporter',title:'Bolt to 2'})}));
+  const pc=await j(await fetch(base+'/api/games/iss-demo/prs/'+pr.id+'/comments',{method:'POST',headers:A(OWN),body:JSON.stringify({body:'LGTM, merging.'})}));
+  if(pc.comments.length!==1) process.exit(11);
+  const prd=await j(await fetch(base+'/api/games/iss-demo/prs/'+pr.id));
+  if(!(prd.comments && prd.comments.length===1 && prd.comments[0].author_handle==='issowner')) process.exit(12);
+  console.log('issues+comments complete');
+})().catch(e=>{console.error(e);process.exit(13)})" && ok "issues: 401 gate -> open -> number-per-game -> thread -> author/owner close (403 for others)" || bad "issues flow"
+kill $ISPID 2>/dev/null
 
 say ""
 say "(perf: run ./perf.sh separately)"
