@@ -51,6 +51,12 @@
       "usage": "<game-dir>",
       "desc": "Tabletop Club asset pack (open-source 3D playspace; carries provenance)"
     },
+    "nandeck": {
+      "runner": "python",
+      "script": "export_nandeck.py",
+      "usage": "<game-dir>",
+      "desc": "nanDECK project (script + CSV) for pro card layout - open in nanDECK; bridge only, nothing runs server-side"
+    },
     "site": {
       "runner": "python",
       "script": "build_site.py",

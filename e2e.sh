@@ -110,6 +110,14 @@ check "playtest ingest" node tools/import-playtest.mjs "$SCRATCH/tts-rt" "$SCRAT
 python3 tools/validate.py "$SCRATCH/tts-rt" >/dev/null 2>&1 && ok "ingested playtest validates against the schema" || bad "playtest ingest validate"
 python3 -c "import json;s=json.load(open('$SCRATCH/tts-rt/playtests/2026-07-30-screentop.json'));assert s['version_ref']=='abc1234';assert all(p.get('result') in (None,'win','loss','draw') for p in s['players']);assert all('elo' not in p for p in s['players']);assert len(s.get('card_notes',[]))==1" && ok "ingest normalizes: version pinned, results validated, junk + bad-tag dropped" || bad "playtest ingest normalize"
 python3 tools/stats.py "$SCRATCH/tts-rt" --json 2>/dev/null | python3 -c "import json,sys;assert json.load(sys.stdin)['sessions']>=1" && ok "stats aggregates the ingested session" || bad "playtest ingest stats"
+say "== interop: nanDECK bridge (script + CSV; nothing runs server-side) =="
+check "nandeck export" python3 tools/export_nandeck.py examples/ember
+NDCSV=examples/ember/exports/nandeck/ember.csv; NDTXT=examples/ember/exports/nandeck/ember.txt
+NDROWS=$(python3 -c "import csv;print(sum(1 for _ in csv.reader(open('$NDCSV')))-1)")
+[ "$NDROWS" = "$QSUM" ] && ok "nandeck csv: one row per physical card ($NDROWS == deck size)" || bad "nandeck row count" "$NDROWS != $QSUM"
+grep -q '^LINK=ember.csv' "$NDTXT" && grep -q '^CARDSIZE=' "$NDTXT" && grep -q '\[name\]' "$NDTXT" && grep -q '\[text\]' "$NDTXT" && ok "nandeck script binds LINK + CARDSIZE + [name]/[text] columns" || bad "nandeck script"
+head -1 "$NDCSV" | grep -q name && head -1 "$NDCSV" | grep -q cost && head -1 "$NDCSV" | grep -q collector_number && ok "nandeck csv header carries the referenced columns" || bad "nandeck header"
+python3 -c "import csv,sys;rows=list(csv.DictReader(open('$NDCSV')));sys.exit(0 if all('[' not in r['text'] for r in rows) else 1)" && ok "symbol tokens rewritten so they don't collide with nanDECK [column] syntax" || bad "nandeck symbol escape"
 
 say ""
 say "== decks & legality =="
