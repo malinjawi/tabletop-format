@@ -1104,11 +1104,10 @@ function jamPage(id){
     <h1>${esc(j.title)} <span class="badge" style="color:#fff;border-color:rgba(255,255,255,.5)">${label}</span></h1>
     <p><b>Theme: ${esc(j.theme)}</b> · ${esc(j.starts)} → ${esc(j.ends)} · ${jamCountdown(j)}</p>
     <p>${esc(j.tagline||"")}</p>
-    <div class="cta"><button class="btn primary" style="background:#e0632f;color:#fff;border:none"
-      onclick="alert('Enter in 3 steps:\\n1. Make your game (import a spreadsheet or start in the editor)\\n2. Run: fmt jam-check your-game jams/${j.id}.yaml\\n3. Submit your game link before ${j.ends}\\n\\nOn the platform this is one button.')">🎪 Enter this jam</button></div>
+    <div class="cta">${j.status==="running"?`<button class="btn primary" style="background:#e0632f;color:#fff;border:none" onclick="joinJam('${j.id}')">⚡ Join &amp; start a game</button> <button class="btn" onclick="submitJam('${j.id}')" style="color:#fff;border-color:rgba(255,255,255,.5)">Submit a game you own</button>`:`<span style="color:rgba(255,255,255,.85)">${j.status==="judging"?"Entries closed — judging underway.":j.status==="complete"?"This jam has finished.":"Starting soon."}</span>`}</div>
   </div></div>
   <div class="wrap"><div class="pane"><div class="two"><div>
-    <div class="box"><div class="bh">Entries <span class="count">${(j.entries||[]).length}</span></div><div class="bb">
+    <div class="box"><div class="bh">Entries <span class="count">${(j.entries||[]).length}</span></div><div class="bb" id="jam-entries">
       ${(j.entries||[]).map(e=>{
         const g=e.game_id?G(e.game_id):null;
         const thumb=g?Object.values(g.images)[0]:null;
@@ -1128,6 +1127,43 @@ function jamPage(id){
     ${(j.judging||[]).length?`<div class="box"><div class="bh">Judging</div><div class="bb">${j.judging.map((x,i)=>`<div class="kv">${i+1}. ${esc(x)}</div>`).join("")}</div></div>`:""}
     ${(j.prizes||[]).length?`<div class="box"><div class="bh">🏆 Prizes</div><div class="bb">${j.prizes.map(p=>`<div class="kv" style="margin:6px 0">${esc(p)}</div>`).join("")}</div></div>`:""}
   </div></div></div></div>`;
+  renderJamEntries(id);
+}
+
+async function joinJam(id){
+  if(!ME){ toast("Sign in to join this jam."); return; }
+  const r=await fetch(`/api/jams/${id}/join`,{method:"POST",headers:authHdr()});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===201){ toast("You're in — a starter game was forked into your account. Opening it…"); setTimeout(()=>{ location.hash="#/g/"+d.slug; location.reload(); },900); }
+  else toast(d.error||"Couldn't join.");
+}
+async function submitJam(id){
+  if(!ME){ toast("Sign in to submit."); return; }
+  const game=prompt("Submit which game?\nEnter the slug of a game you own:");
+  if(!game) return;
+  const r=await fetch(`/api/jams/${id}/submit`,{method:"POST",headers:authHdr(),body:JSON.stringify({game:game.trim()})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===201){ toast("Submitted — your entry qualifies! 🎉"); renderJamEntries(id); }
+  else toast((d.error||"Submit failed")+(d.reasons?": "+d.reasons.join("; "):""));
+}
+async function renderJamEntries(id){
+  let data; try{ data=await (await fetch(`/api/jams/${id}`)).json(); }catch{ return; }
+  if(!data||!Array.isArray(data.entries)) return;
+  const box=$("#jam-entries"); if(!box) return;
+  const es=data.entries;
+  const cnt=box.parentElement&&box.parentElement.querySelector(".count"); if(cnt)cnt.textContent=es.length;
+  if(!es.length){ box.innerHTML="<div class='emptystate'>No entries yet — be first.</div>"; return; }
+  const slugs=new Set(es.map(e=>e.game_slug));
+  const kids=s=>es.filter(e=>e.forked_from===s);
+  const roots=es.filter(e=>!e.forked_from||!slugs.has(e.forked_from));
+  const row=(e,depth)=>`<div style="display:flex;gap:10px;align-items:center;margin:9px 0;padding-left:${depth*22}px">
+      ${depth?'<span style="color:var(--mut)">↳</span>':''}
+      <div style="flex:1"><b><a onclick="go('g/${e.game_slug}')">${esc(e.title)}</a></b>
+        ${e.qualified?'<span class="revbadge approve">✓ qualifies</span>':'<span class="revbadge request_changes">needs work</span>'}
+        ${e.award?`<span class="badge" style="color:var(--org);border-color:var(--org)">${esc(e.award)}</span>`:""}
+        <div style="color:var(--mut);font-size:12.5px">${e.author?"by "+userLink(e.author):"host entry"}${e.forked_from&&slugs.has(e.forked_from)?" · remix of "+esc(e.forked_from):""}</div></div>
+    </div>${kids(e.game_slug).map(k=>row(k,depth+1)).join("")}`;
+  box.innerHTML=roots.map(e=>row(e,0)).join("");
 }
 
 function community(g){

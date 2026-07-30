@@ -1,0 +1,26 @@
+id: spark-jam
+title: "Spark Jam"
+theme: spark
+tagline: "A rolling, open jam: prototype a tiny card game from a single spark of an idea. Placeholder art welcome — this jam judges design, not illustration."
+host: Forge
+status: running
+starts: "2026-07-15"
+ends: "2026-08-31"
+constraints:
+  max_cards: 24
+  min_cards: 3
+  max_deck_size: 60
+  required_license: [CC0-1.0, CC-BY-4.0, CC-BY-SA-4.0]
+  theme_word_required: true
+  notes: >
+    Keep the rules to one page. Solo entries and teams both welcome.
+    One-click "Join" forks a tiny spark starter into your account so you
+    can begin from something playable.
+judging:
+  - fun in the first game
+  - theme use
+  - elegance (rules-to-depth ratio)
+prizes:
+  - "Winner: featured on the platform front page"
+  - "Community pick: a featured card frame for your game page"
+entries: []

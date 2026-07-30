@@ -219,5 +219,18 @@ assert(meA.games.includes("tidepool") && !meA.starred.length &&
 const recheck = await api("GET", exp.data.urls[0]);
 assert(recheck.status === 200, "alice's frozen export URL still serves after all subsequent commits");
 
+console.log("== ACT 7: game jams — the co-creation front door (live) ==");
+const jamAnon = await api("POST", "/api/jams/spark-jam/join", {});
+assert(jamAnon.status === 401, "anonymous cannot join a jam (401)");
+const jamJoin = await api("POST", "/api/jams/spark-jam/join", { token: A });
+assert(jamJoin.status === 201 && jamJoin.data.entered && jamJoin.data.slug,
+  "alice one-click joins Spark Jam → a starter game is forked into her account and entered", jamJoin.data);
+const jamView = (await api("GET", "/api/jams/spark-jam")).data;
+assert(jamView.entries.some(e => e.game_slug === jamJoin.data.slug && e.qualified && e.author === "alice"),
+  "her entry is live on the jam page — qualified and attributed (Store-2 backed)");
+const offTheme = await api("POST", "/api/jams/spark-jam/submit", { token: B, body: { game: "tidepool-bob" } });
+assert(offTheme.status === 422 && (offTheme.data.reasons || []).some(r => /theme word/.test(r)),
+  "an off-theme game is refused — qualification is a machine check, not a mod ruling");
+
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
 console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");

@@ -101,4 +101,14 @@ await q.addReview(db, { pr_id: prId, reviewer_id: rev.id, verdict: "request_chan
 rl = await q.reviewsFor(db, prId);
 assert(rl.length === 1 && rl[0].verdict === "request_changes", "re-review replaces the verdict (one per reviewer, upsert)");
 
+// jam entries (001 table, now wired) — live join/submit backing
+await q.enterJam(db, { jam_id: "jam1", game_slug: slug, user_id: ana.id, qualified: 1 });
+await q.enterJam(db, { jam_id: "jam1", game_slug: fork, user_id: ana.id, qualified: 0 });
+let je = await q.jamEntriesFor(db, "jam1");
+assert(je.length === 2 && je.every(e => "title" in e), "jamEntriesFor lists entries joined to games");
+assert(je.find(e => e.game_slug === slug).author_handle === ana.handle, "jam entry joins the author handle");
+await q.enterJam(db, { jam_id: "jam1", game_slug: slug, user_id: ana.id, qualified: 0 });
+je = await q.jamEntriesFor(db, "jam1");
+assert(je.length === 2 && Number(je.find(e => e.game_slug === slug).qualified) === 0, "re-enter updates qualification (upsert: one row per game per jam)");
+
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);

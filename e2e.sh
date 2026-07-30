@@ -205,6 +205,9 @@ j=yaml.safe_load(open('jams/first-flame-jam.yaml'))
 j['theme']='submarines'
 yaml.safe_dump(j,open('$SCRATCH/offtheme.yaml','w'))"
 check_fails "theme-word check enforced" python3 tools/check_jam.py examples/ember "$SCRATCH/offtheme.yaml"
+node tools/import-csv.mjs jams/spark-jam-starter.csv "$SCRATCH/spark-start" --title "Spark Starter" >/dev/null 2>&1
+check "drafted Spark Jam starter qualifies (the one-click-join invariant)" python3 tools/check_jam.py "$SCRATCH/spark-start" jams/spark-jam.yaml
+python3 -c "import yaml,json,jsonschema;jsonschema.Draft7Validator(json.load(open('schemas/jam.schema.json'))).validate(yaml.safe_load(open('jams/spark-jam.yaml').read()))" && ok "spark-jam.yaml valid against jam.schema.json" || bad "spark-jam schema"
 
 say ""
 say "== UI generators =="

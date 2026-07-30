@@ -1,0 +1,6 @@
+name,type,text,cost,quantity
+Spark,unit,"Deal 1 damage. Spark: draw a card.",1,3
+Kindle,action,"Give a unit +1 attack this turn.",1,3
+Emberling,unit,"When played, add a Spark to your hand.",2,2
+Firewall,unit,"Blocks. Spark: gain 1 life instead.",2,2
+Ignite,action,"Deal 2 damage to a unit.",2,2

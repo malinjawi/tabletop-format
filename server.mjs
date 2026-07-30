@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createGateway, readBody } from "./platform/gateway.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
+import { jamQualify } from "./tools/lib/jamcheck.mjs";
 import { assertAssetAllowed } from "./tools/lib/limits.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
@@ -62,6 +63,19 @@ async function reindexGames() { // DA-3: derived, rebuildable
   }
 }
 await reindexGames();
+
+/* ---------- jams: definitions from jams/*.yaml, entries live in Store 2 ---------- */
+function loadJams() {
+  const r = spawnSync("python3", ["-c",
+    "import yaml,json,glob,os,sys\nprint(json.dumps([yaml.safe_load(open(f).read()) for f in sorted(glob.glob(os.path.join(sys.argv[1],'jams','*.yaml')))]))",
+    ROOT], { encoding: "utf8" });
+  try { return JSON.parse(r.stdout || "[]"); } catch { return []; }
+}
+const JAMS = loadJams();
+const jamById = (id) => JAMS.find(j => j.id === id);
+for (const j of JAMS) for (const e of (j.entries || []))   // seed static host entries once
+  if (e.game_id && !(await q.jamEntryOf(db, j.id, e.game_id)))
+    await q.enterJam(db, { jam_id: j.id, game_slug: e.game_id, user_id: null, qualified: 1, award: e.award ?? null });
 
 let hubVersion = null;
 async function hubHtml() {
@@ -204,32 +218,35 @@ gw.route("GET", "/api/me", async (ctx) => {
     claims: await q.claimsOf(db, u.id), starred: (await q.starredBy(db, u.id)).map(r => r.game_slug),
     games: await q.gamesOwnedBy(db, u.id) });
 }, "who am I + claims + stars + owned games");
-gw.route("POST", "/api/games", async (ctx) => {
-  // THE HOSTING VERB: a designer brings a CSV, leaves with a hosted, owned, versioned game
-  const u = await requireAuth(ctx); if (!u) return;
-  const { title, csv } = await json(ctx);
-  if (!title?.trim()) return ctx.send(422, { error: "title required" });
+async function hostGameFromCsv(u, title, csv, authorStr) {
   const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
-  if (!slug || store.has(slug)) return ctx.send(409, { error: `slug '${slug}' unavailable` });
-  // import into a SCRATCH tree, validate there, only then let the store commit it —
-  // no backend ever holds an invalid or uncommitted game
+  if (!slug || store.has(slug)) return { error: { code: 409, body: { error: `slug '${slug}' unavailable` } } };
   const tmp = mkdtempSync(join(tmpdir(), "csv-"));
   try {
     writeFileSync(join(tmp, "in.csv"), csv ?? "name,type,text\nFirst Card,card,Hello world.");
     const imp = spawnSync(process.execPath,
       [join(ROOT, "tools/import-csv.mjs"), join(tmp, "in.csv"), join(tmp, "game"), "--title", title.trim()],
       { encoding: "utf8" });
-    if (imp.status !== 0) return ctx.send(422, { error: "import failed", detail: imp.stderr });
+    if (imp.status !== 0) return { error: { code: 422, body: { error: "import failed", detail: imp.stderr } } };
     const v = py("validate.py", [join(tmp, "game")]);
-    if (v.status !== 0) return ctx.send(422, { error: "imported game failed validation", report: v.stdout.split("\n") });
+    if (v.status !== 0) return { error: { code: 422, body: { error: "imported game failed validation", report: v.stdout.split("\n") } } };
     const { sha } = await store.createGame(slug, join(tmp, "game"),
-      `new game: ${title.trim()} (${slug})\n\nimported from CSV via platform`, await authorOf(ctx));
+      `new game: ${title.trim()} (${slug})\n\nimported from CSV via platform`, authorStr);
     await reindexGames();
     await q.setForkMeta(db, slug, null, u.id);  // ownership
-    ctx.send(201, { slug, owner: u.handle, commit: sha,
-      cards: JSON.parse((await store.readFile(slug, "components/cards.json")).toString()).length,
-      url: `/#/g/${slug}`, edit: `/edit/${slug}` });
+    return { slug, sha };
   } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+gw.route("POST", "/api/games", async (ctx) => {
+  // THE HOSTING VERB: a designer brings a CSV, leaves with a hosted, owned, versioned game
+  const u = await requireAuth(ctx); if (!u) return;
+  const { title, csv } = await json(ctx);
+  if (!title?.trim()) return ctx.send(422, { error: "title required" });
+  const r = await hostGameFromCsv(u, title.trim(), csv, await authorOf(ctx));
+  if (r.error) return ctx.send(r.error.code, r.error.body);
+  ctx.send(201, { slug: r.slug, owner: u.handle, commit: r.sha,
+    cards: JSON.parse((await store.readFile(r.slug, "components/cards.json")).toString()).length,
+    url: `/#/g/${r.slug}`, edit: `/edit/${r.slug}` });
 }, "host a NEW game from a CSV — owned, committed, validated, live");
 gw.route("POST", "/api/claims", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
@@ -604,6 +621,53 @@ gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
     : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`];
   ctx.send(200, { ok: true, ref: sha, cached: hit, urls });
 }, "export into the immutable cache; returns permanent URLs");
+
+/* ---------- routes: jams (Store-2-backed entries; the co-creation front door) ---------- */
+gw.route("GET", "/api/jams", async (ctx) => {
+  const out = [];
+  for (const j of JAMS) out.push({ id: j.id, title: j.title, theme: j.theme, tagline: j.tagline ?? "",
+    status: j.status, starts: j.starts, ends: j.ends, entries: (await q.jamEntriesFor(db, j.id)).length });
+  ctx.send(200, out);
+}, "list jams (definitions + live entry counts)");
+gw.route("GET", "/api/jams/:id", async (ctx) => {
+  const j = jamById(ctx.params.id);
+  if (!j) return ctx.send(404, { error: "no such jam" });
+  const entries = (await q.jamEntriesFor(db, j.id)).map(e => ({ game_slug: e.game_slug,
+    title: e.title ?? e.game_slug, author: e.author_handle ?? null, forked_from: e.forked_from ?? null,
+    qualified: !!e.qualified, award: e.award ?? null, submitted_at: e.submitted_at }));
+  ctx.send(200, { ...j, entries });
+}, "jam detail: definition + LIVE entries (Store 2)");
+gw.route("POST", "/api/jams/:id/join", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const j = jamById(ctx.params.id);
+  if (!j) return ctx.send(404, { error: "no such jam" });
+  if (j.status !== "running") return ctx.send(409, { error: `jam is ${j.status} — not accepting entries` });
+  const starter = join(ROOT, "jams", `${j.id}-starter.csv`);
+  const csv = existsSync(starter) ? readFileSync(starter, "utf8")
+    : `name,type,text\n${j.theme} Spark,card,"A ${j.theme} to build on."`;
+  const r = await hostGameFromCsv(u, `${u.handle}'s ${j.theme} entry`, csv, await authorOf(ctx));
+  if (r.error) return ctx.send(r.error.code, r.error.body);
+  await q.enterJam(db, { jam_id: j.id, game_slug: r.slug, user_id: u.id, qualified: 1 });
+  ctx.send(201, { slug: r.slug, entered: true, url: `/#/g/${r.slug}` });
+}, "one-click join: fork the jam starter into your account and enter it");
+gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const j = jamById(ctx.params.id);
+  if (!j) return ctx.send(404, { error: "no such jam" });
+  if (j.status !== "running") return ctx.send(409, { error: `jam is ${j.status} — not accepting entries` });
+  const { game } = await json(ctx);
+  if (!game || !store.has(game)) return ctx.send(422, { error: "unknown game" });
+  const g = await q.gameBySlug(db, game);
+  if (g?.owner_id !== u.id) return ctx.send(403, { error: "you can only submit a game you own" });
+  const cards = JSON.parse((await store.readFile(game, "components/cards.json")).toString());
+  const printings = JSON.parse((await store.readFile(game, "components/printings.json")).toString());
+  const gameYaml = (await store.readFile(game, "game.yaml")).toString();
+  let rulesMd = ""; try { rulesMd = (await store.readFile(game, "rules/rules.md")).toString(); } catch {}
+  const res = jamQualify(j, { gameYaml, cards, printings, rulesMd });
+  if (!res.qualified) return ctx.send(422, { error: "entry does not qualify", reasons: res.reasons });
+  await q.enterJam(db, { jam_id: j.id, game_slug: game, user_id: u.id, qualified: 1 });
+  ctx.send(201, { entered: true, qualified: true, game });
+}, "submit a game you own to a jam (qualification enforced)");
 
 /* ---------- boot ---------- */
 const nGames = (await Promise.resolve(store.list())).length;

@@ -139,6 +139,19 @@ export const q = {
     `SELECT rv.verdict, rv.created_at, u.handle AS reviewer_handle FROM reviews rv JOIN users u ON u.id = rv.reviewer_id
      WHERE rv.pr_id = ? ORDER BY rv.created_at`).all(prId),
 
+  enterJam: (db, e) => db.prepare(
+    `INSERT INTO jam_entries (jam_id, game_slug, user_id, submitted_at, qualified, award)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (jam_id, game_slug) DO UPDATE SET user_id = excluded.user_id, submitted_at = excluded.submitted_at, qualified = excluded.qualified`)
+    .run(e.jam_id, e.game_slug, e.user_id ?? null, Date.now(), e.qualified ? 1 : 0, e.award ?? null),
+  jamEntriesFor: (db, jamId) => db.prepare(
+    `SELECT je.jam_id, je.game_slug, je.submitted_at, je.qualified, je.award,
+            g.title, g.forked_from, u.handle AS author_handle
+     FROM jam_entries je LEFT JOIN games g ON g.slug = je.game_slug LEFT JOIN users u ON u.id = je.user_id
+     WHERE je.jam_id = ? ORDER BY je.submitted_at`).all(jamId),
+  jamEntryOf: (db, jamId, slug) => db.prepare(
+    "SELECT * FROM jam_entries WHERE jam_id = ? AND game_slug = ?").get(jamId, slug),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),
