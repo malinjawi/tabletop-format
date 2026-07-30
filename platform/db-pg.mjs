@@ -168,6 +168,16 @@ export const q = {
   jamEntryOf: (db, jamId, slug) => one(db,
     "SELECT * FROM jam_entries WHERE jam_id = $1 AND game_slug = $2", [jamId, slug]),
 
+  createRelease: (db, r) => db.query(
+    `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [r.game_slug, r.tag, r.sha, r.title ?? null, r.notes ?? null, r.author_id ?? null, Date.now()]),
+  releasesFor: (db, slug) => all(db,
+    `SELECT rl.tag, rl.sha, rl.title, rl.created_at, u.handle AS author_handle
+     FROM releases rl LEFT JOIN users u ON u.id = rl.author_id WHERE rl.game_slug = $1 ORDER BY rl.created_at DESC`, [slug]),
+  releaseByTag: (db, slug, tag) => one(db,
+    `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
+     WHERE rl.game_slug = $1 AND rl.tag = $2`, [slug, tag]),
+
   claim: (db, userId, author) => db.query(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES ($1, $2, $3)`,
     [userId, author, Date.now()]),

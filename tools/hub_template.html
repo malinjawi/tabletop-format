@@ -1010,6 +1010,30 @@ function releases(g){
     <button class="btn" onclick="alert('Platform: frozen PnP PDF + TTS mod attached to every release.')">⤓ PnP PDF</button>
     <button class="btn" onclick="alert('Platform: frozen TTS mod for this exact version.')">⤓ TTS mod</button></div>`).join("")
   :"<div class='emptystate'>No releases yet — <code>fmt release &lt;game&gt; 1.0.0</code></div>";
+  if(typeof LIVE!=="undefined" && LIVE) liveReleases(g);
+}
+async function liveReleases(g){
+  let rels; try{ rels=await (await fetch(`/api/games/${g.slug}/releases`)).json(); }catch{ return; }
+  if(!Array.isArray(rels)) return;
+  const cut=(typeof ME!=="undefined"&&ME)?`<div style="margin-bottom:16px"><button class="btn primary" onclick="cutRelease('${g.slug}')">🏷 Cut a release</button></div>`:"";
+  const dl=(sha,file,label)=>`<a class="btn" style="text-decoration:none" href="/cache/exports/${g.slug}/${sha}/${file}">⤓ ${label}</a>`;
+  const body=rels.length?rels.map(r=>`
+    <div class="rel"><h3>🏷 ${esc(r.tag)} <span style="color:var(--mut);font-weight:400;font-size:13px">pinned <code>${esc(r.sha)}</code>${r.author_handle?` · ${esc(r.author_handle)}`:""}</span></h3>
+    ${r.title?`<div style="font-weight:600;margin:2px 0 8px">${esc(r.title)}</div>`:""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${dl(r.sha,"pnp.pdf","PnP PDF")}${dl(r.sha,"tts.json","TTS mod")}${dl(r.sha,g.slug+"-ttc.zip","TTC pack")}</div>
+    <div style="color:var(--mut);font-size:12px;margin-top:8px">Frozen forever — content-addressed by sha, these bytes never change.</div></div>`).join("")
+    :"<div class='emptystate'>No releases yet — cut one to freeze a citable version.</div>";
+  $("#pane").innerHTML=cut+body;
+}
+async function cutRelease(slug){
+  if(!ME){ toast("Sign in to cut a release"); return; }
+  const tag=prompt("Tag for this release (e.g. v1.0):"); if(!tag) return;
+  const title=prompt("Title (optional):")||"";
+  toast("Cutting release + freezing exports…");
+  const r=await fetch(`/api/games/${slug}/releases`,{method:"POST",headers:authHdr(),body:JSON.stringify({tag,title})});
+  const d=await r.json();
+  if(r.status===201){ toast(`Released ${d.tag} — pinned to ${d.sha}`); liveReleases(G(slug)); }
+  else toast(d.error||"couldn't cut release");
 }
 
 function banlist(g){

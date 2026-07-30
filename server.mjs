@@ -672,6 +672,39 @@ gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
   ctx.send(201, { id, commit: sha, pinned: session.version_ref });
 }, "log a playtest session (owner/collaborator) → validated, version-pinned commit");
 
+/* ---------- routes: releases (citable, immutable versions) ---------- */
+const TAG_RE = /^v?[0-9][0-9A-Za-z._-]{0,31}$/;
+gw.route("GET", "/api/games/:slug/releases", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  ctx.send(200, await q.releasesFor(db, slug));
+}, "list a game's releases (citable versions)");
+gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const r = await q.releaseByTag(db, slug, ctx.params.tag);
+  if (!r) return ctx.send(404, { error: "no such release" });
+  const base = `/cache/exports/${slug}/${r.sha}`;
+  ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes, author: r.author_handle, created_at: r.created_at,
+    downloads: { pnp: `${base}/pnp.pdf`, tts: `${base}/tts.json`, ttc: `${base}/${slug}-ttc.zip` } });
+}, "release detail + frozen (immutable) export URLs pinned to the exact sha");
+gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const game = await q.gameBySlug(db, slug);
+  if (game?.owner_id !== u.id) return ctx.send(403, { error: "only the game's owner can cut a release" });
+  const { tag, title } = await json(ctx);
+  if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must look like v1.0 (letters, digits, . _ -)" });
+  if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
+  const sha = await store.headSha(slug);
+  const prev = (await q.releasesFor(db, slug))[0];
+  const hist = await store.history(slug, "components/cards.json", 30);
+  let commits = hist;
+  if (prev) { const i = hist.findIndex(h => h.sha === prev.sha || h.full === prev.sha); if (i >= 0) commits = hist.slice(0, i); }
+  const notes = commits.map(h => `- ${h.subject} (${h.author})`).join("\n") || "- (initial release)";
+  await q.createRelease(db, { game_slug: slug, tag, sha, title: title?.trim() || null, notes, author_id: u.id });
+  for (const kind of ["pnp", "tts", "ttc"]) { try { await cache.ensureExport(mat(slug), slug, sha, kind); } catch {} }  // freeze exports at the sha
+  ctx.send(201, { tag, sha, notes });
+}, "cut a release: pin a tag to the current sha with an auto-changelog (owner only)");
+
 /* ---------- routes: jams (Store-2-backed entries; the co-creation front door) ---------- */
 gw.route("GET", "/api/jams", async (ctx) => {
   const out = [];

@@ -244,5 +244,19 @@ assert(an.sessions === 1 && an.table_minutes === 30 && an.results.win === 1 && a
   "live analytics aggregate it: 1 session, 30 min, 1W/1L (result normalized server-side)");
 assert(an.flagged && an.flagged.riptide, "card note flagged riptide (tag normalized)");
 
+console.log("== ACT 9: releases — cut a citable, immutable version ==");
+const relBad = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "not a tag!" } });
+assert(relBad.status === 422, "a malformed tag is rejected (422)");
+const relBob = await api("POST", "/api/games/tidepool/releases", { token: B, body: { tag: "v0.1" } });
+assert(relBob.status === 403, "only the owner can cut a release (403)");
+const rel = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1", title: "First cut" } });
+assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").startsWith("- "),
+  "alice cuts v0.1 → pinned to a sha with an auto-changelog", rel.data);
+const relList = (await api("GET", "/api/games/tidepool/releases")).data;
+assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha, "releases list shows the pinned version");
+const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
+const frozen = await api("GET", relDet.downloads.ttc);
+assert(frozen.status === 200, "the frozen TTC download serves at the pinned sha — a citable, immutable version");
+
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
 console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");

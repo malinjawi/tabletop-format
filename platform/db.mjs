@@ -152,6 +152,16 @@ export const q = {
   jamEntryOf: (db, jamId, slug) => db.prepare(
     "SELECT * FROM jam_entries WHERE jam_id = ? AND game_slug = ?").get(jamId, slug),
 
+  createRelease: (db, r) => db.prepare(
+    `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(r.game_slug, r.tag, r.sha, r.title ?? null, r.notes ?? null, r.author_id ?? null, Date.now()),
+  releasesFor: (db, slug) => db.prepare(
+    `SELECT rl.tag, rl.sha, rl.title, rl.created_at, u.handle AS author_handle
+     FROM releases rl LEFT JOIN users u ON u.id = rl.author_id WHERE rl.game_slug = ? ORDER BY rl.created_at DESC`).all(slug),
+  releaseByTag: (db, slug, tag) => db.prepare(
+    `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
+     WHERE rl.game_slug = ? AND rl.tag = ?`).get(slug, tag),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),
