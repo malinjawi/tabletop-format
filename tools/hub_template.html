@@ -108,6 +108,29 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .editcol-prev canvas{width:300px;height:420px;border-radius:16px;box-shadow:0 10px 34px rgba(0,0,0,.22)}
 .editcol-list .ecardlist{flex-direction:column;align-items:stretch;gap:4px}
 .editcol-list .epill{text-align:left}
+.edhrow{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.edwrap{display:grid;grid-template-columns:240px 1fr 336px;border:1px solid var(--bd);border-radius:14px;overflow:hidden;background:#fff;min-height:560px}
+.edside{border-right:1px solid var(--bd);background:var(--bg);display:flex;flex-direction:column}
+.edside .edsearch{padding:12px}
+.edside .edsearch input{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:8px;font-size:13px;box-sizing:border-box}
+.edlist2{flex:1;overflow:auto;padding:0 6px 6px}
+.edrow{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:14px;border-left:3px solid transparent}
+.edrow:hover{background:#eceff2}
+.edrow.sel{background:#fff;border-left-color:var(--acc);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.edrow .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.15)}
+.edrow .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.edrow .dd{width:7px;height:7px;border-radius:50%;background:var(--org);flex:0 0 auto}
+.ednew{margin:6px 8px 10px;padding:9px;border:1px dashed var(--bd);border-radius:8px;text-align:center;color:var(--mut);cursor:pointer;font-size:13px}
+.ednew:hover{border-color:var(--acc);color:var(--acc);background:#fff}
+.edform{padding:24px 26px;overflow:auto}
+.edprev{border-left:1px solid var(--bd);background:var(--bg);padding:22px 20px;display:flex;flex-direction:column;align-items:center}
+.edprev canvas{width:292px;height:409px;border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.2)}
+.edcommit{margin-top:18px;width:100%;border-top:1px solid var(--bd);padding-top:14px}
+.edcommit .msg{font-size:13px;line-height:1.5;margin-bottom:11px;min-height:32px;color:var(--mut)}
+.edcommit .msg b{color:var(--fg)}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(130,80,223,.12)}
+.fld.name input{font-size:17px;font-weight:600}
+@media(max-width:880px){.edwrap{grid-template-columns:1fr}.edside,.edprev{border-right:none;border-left:none;border-bottom:1px solid var(--bd)}}
 #drawer.on .dpanel{transform:none;opacity:1}
 .dhead{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--bd)}
 .dhead h2{margin:0;font-size:18px}.dhead .sub{color:var(--mut);font-size:13px}
@@ -419,25 +442,32 @@ async function cardsEdit(g){
       sel:(window._edSel && g.cards.find(c=>c.id===window._edSel)?window._edSel:g.cards[0]?.id), access, dirty:new Set()};
   window._edSel=null;
   $("#pane").innerHTML = `
-    <div class="dhead" style="border:none;padding:0 0 14px">
-      <div style="flex:1"><h2 id="ed-title" style="margin:0">Editing cards</h2><div class="sub" id="ed-sub"></div></div>
-      <button class="btn" onclick="go('g/${g.slug}/cards')">Done</button>
+    <div class="edhrow">
+      <div style="flex:1"><h2 style="margin:0;font-size:19px">✎ Editing cards — ${esc(g.title)}</h2>
+        <div id="ed-sub" style="color:var(--mut);font-size:13px;margin-top:2px"></div></div>
+      <button class="btn" onclick="go('g/${g.slug}/cards')">← Done editing</button>
     </div>
-    <div class="editgrid">
-      <div class="editcol-list"><div class="ecardlist" id="ed-list"></div></div>
-      <div class="editcol-form" id="ed-fields"></div>
-      <div class="editcol-prev">
-        <canvas id="ed-canvas" width="600" height="840"></canvas>
-        <div class="msg" id="ed-msg" style="font-size:13px;margin:10px 0"></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="ed-del" onclick="edDelete()" style="color:#cf222e">Delete</button>
-          <button class="btn primary" id="ed-commit" onclick="edCommit()" style="flex:1">Commit</button>
+    <div class="edwrap">
+      <div class="edside">
+        <div class="edsearch"><input id="ed-filter" placeholder="Filter cards…" oninput="edRenderList()"></div>
+        <div class="edlist2" id="ed-list"></div>
+        <div class="ednew" onclick="edAdd()">+ New card</div>
+      </div>
+      <div class="edform" id="ed-fields"></div>
+      <div class="edprev">
+        <canvas id="ed-canvas" width="584" height="818"></canvas>
+        <div class="edcommit">
+          <div class="msg" id="ed-msg"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="ed-del" onclick="edDelete()" style="color:var(--red)">Delete card</button>
+            <button class="btn primary" id="ed-commit" onclick="edCommit()" style="flex:1">Commit</button>
+          </div>
         </div>
       </div>
     </div>`;
   $("#ed-sub").innerHTML=access.canWrite
-    ? `<span style="color:var(--grn)">✓ commits directly to <code>${esc(g.slug)}</code></span>`
-    : `no write access — your edits open a <b>pull request</b> from your fork`;
+    ? `<span style="color:var(--grn)">● commits directly to <b>${esc(g.slug)}</b></span>`
+    : `● no write access — your edits open a <b>pull request</b> from your fork`;
   $("#ed-commit").textContent=access.canWrite?"Commit changes":"Propose as PR";
   edRenderList(); edSelect(ED.sel);
 }
@@ -469,10 +499,15 @@ function edRefreshDirty(){ED.dirty=new Set(ED.cards.filter(c=>edCardDirty(c.id))
   for(const c of ED.orig) if(!ED.cards.find(x=>x.id===c.id)) ED.dirty.add(c.id);}
 
 function edRenderList(){
-  const g=G(ED.slug);
-  $("#ed-list").innerHTML=ED.cards.map(c=>
-    `<span class="epill ${c.id===ED.sel?'sel':''} ${ED.dirty.has(c.id)?'dirty':''}" onclick="edSelect('${c.id}')">${esc(c.name||c.id)}</span>`
-  ).join("")+`<span class="epill new" onclick="edAdd()">+ new card</span>`;
+  const g=G(ED.slug), q=($("#ed-filter")?.value||"").toLowerCase();
+  const col=(t)=>((g.type_colors||{})[t]||{}).fg||"#9aa0a6";
+  const list=ED.cards.filter(c=>!q||(c.name||c.id).toLowerCase().includes(q)||(c.type||"").toLowerCase().includes(q));
+  $("#ed-list").innerHTML=list.map(c=>
+    `<div class="edrow ${c.id===ED.sel?'sel':''}" onclick="edSelect('${c.id}')">
+      <span class="dot" style="background:${col(c.type)}"></span>
+      <span class="nm">${esc(c.name||c.id)}</span>
+      ${ED.dirty.has(c.id)?'<span class="dd" title="unsaved change"></span>':''}
+    </div>`).join("")||"<div style='padding:14px;color:var(--mut);font-size:13px'>No cards match.</div>";
 }
 function edSelect(id){ ED.sel=id; edRenderList(); edRenderFields(); edPreview(); edBar(); }
 function toast(html,ms){let t=document.getElementById("hubtoast");if(!t){t=document.createElement("div");t.id="hubtoast";
@@ -492,17 +527,27 @@ function edField(label, key, val, opts){
   const t=opts&&opts.type==="integer"?"number":"text";
   return `<div class="fld"><label>${esc(label)}</label><input id="${id}" type="${t}" value="${esc(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})"></div>`;
 }
+function edCtl(key,val,opts){
+  const id="ef-"+key.replace(/\./g,"_");
+  if(opts&&opts.type==="select") return `<select id="${id}" onchange="edSet('${key}',this.value)">${opts.options.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join("")}</select>`;
+  const t=opts&&opts.type==="integer"?"number":"text";
+  return `<input id="${id}" type="${t}" value="${esc(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})">`;
+}
 function edRenderFields(){
-  const g=G(ED.slug), c=edCard(); if(!c){$("#ed-fields").innerHTML="";return;}
+  const g=G(ED.slug), c=edCard();
+  if(!c){$("#ed-fields").innerHTML="<div style='color:var(--mut);padding:8px'>Select a card on the left, or add a new one.</div>";return;}
   const types=Object.keys(g.type_colors||{}); if(!types.includes(c.type)&&c.type)types.unshift(c.type);
-  const defs=g.schema||[];
-  let h=edField("Name","name",c.name);
-  h+=`<div class="row">${types.length?edField("Type","type",c.type,{type:"select",options:types}):edField("Type","type",c.type)}
-       <div style="flex:1">${edField("Deck limit","deck_limit",c.deck_limit)}</div></div>`;
-  h+=edField("Subtypes (comma-sep)","__subtypes",(c.subtypes||[]).join(", "));
-  h+=`<div class="row">${defs.map(d=>`<div style="flex:1">${edField(d.name||d.key,"attributes."+d.key,(c.attributes||{})[d.key],{type:d.type})}</div>`).join("")||""}</div>`;
-  h+=edField("Rules text","text",c.text,{type:"textarea"});
-  h+=edField("Keywords (comma-sep)","__keywords",(c.keywords||[]).join(", "));
+  const defs=g.schema||[]; const syms=(g.symbols||[]);
+  const chips=syms.length?`<div style="margin-bottom:7px">${syms.map(s=>`<button class="symbtn" onclick="edInsert('text','[${s.key}]')" title="${esc(s.name||s.key)}">${esc(s.glyph||s.key)} ${esc(s.key)}</button>`).join("")}</div>`:``;
+  let h=`<div class="fld name"><label>Name</label>${edCtl("name",c.name)}</div>`;
+  h+=`<div class="fld"><div class="row">
+      <div style="flex:1.2"><label>Type</label>${types.length?edCtl("type",c.type,{type:"select",options:types}):edCtl("type",c.type)}</div>
+      ${defs.map(d=>`<div style="flex:1"><label>${esc(d.name||d.key)}</label>${edCtl("attributes."+d.key,(c.attributes||{})[d.key],{type:d.type})}</div>`).join("")}
+      <div style="flex:1"><label>Deck limit</label>${edCtl("deck_limit",c.deck_limit,{type:"integer"})}</div>
+    </div></div>`;
+  h+=`<div class="fld"><label>Subtypes <span style="text-transform:none;font-weight:400">(comma-separated)</span></label>${edCtl("__subtypes",(c.subtypes||[]).join(", "))}</div>`;
+  h+=`<div class="fld"><label>Rules text <span style="text-transform:none;font-weight:400">— symbols like [spark] become glyphs</span></label>${chips}<textarea id="ef-text" oninput="edSet('text',this.value)">${esc(c.text||"")}</textarea></div>`;
+  h+=`<div class="fld"><label>Keywords <span style="text-transform:none;font-weight:400">(comma-separated)</span></label>${edCtl("__keywords",(c.keywords||[]).join(", "))}</div>`;
   $("#ed-fields").innerHTML=h;
 }
 function edSet(key,val){
