@@ -109,7 +109,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .editcol-list .ecardlist{flex-direction:column;align-items:stretch;gap:4px}
 .editcol-list .epill{text-align:left}
 .edhrow{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.edwrap{display:grid;grid-template-columns:240px 1fr 336px;border:1px solid var(--bd);border-radius:14px;overflow:hidden;background:#fff;min-height:560px}
+.edwrap{display:grid;grid-template-columns:minmax(190px,220px) minmax(0,1fr) minmax(280px,320px);border:1px solid var(--bd);border-radius:14px;overflow:hidden;background:#fff;min-height:560px}
 .edside{border-right:1px solid var(--bd);background:var(--bg);display:flex;flex-direction:column}
 .edside .edsearch{padding:12px}
 .edside .edsearch input{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:8px;font-size:13px;box-sizing:border-box}
@@ -122,7 +122,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .edrow .dd{width:7px;height:7px;border-radius:50%;background:var(--org);flex:0 0 auto}
 .ednew{margin:6px 8px 10px;padding:9px;border:1px dashed var(--bd);border-radius:8px;text-align:center;color:var(--mut);cursor:pointer;font-size:13px}
 .ednew:hover{border-color:var(--acc);color:var(--acc);background:#fff}
-.edform{padding:24px 26px;overflow:auto}
+.edform{padding:24px 26px;overflow:auto;min-width:0}
 .edprev{border-left:1px solid var(--bd);background:var(--bg);padding:22px 20px;display:flex;flex-direction:column;align-items:center}
 .edprev canvas{width:292px;height:409px;border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.2)}
 .edcommit{margin-top:18px;width:100%;border-top:1px solid var(--bd);padding-top:14px}
@@ -130,7 +130,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .edcommit .msg b{color:var(--fg)}
 .fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(130,80,223,.12)}
 .fld.name input{font-size:17px;font-weight:600}
-@media(max-width:880px){.edwrap{grid-template-columns:1fr}.edside,.edprev{border-right:none;border-left:none;border-bottom:1px solid var(--bd)}}
+@media(max-width:960px){.edwrap{grid-template-columns:1fr}.edside,.edprev{border-right:none;border-left:none;border-bottom:1px solid var(--bd)}.edprev{align-items:flex-start}}
 #drawer.on .dpanel{transform:none;opacity:1}
 .dhead{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--bd)}
 .dhead h2{margin:0;font-size:18px}.dhead .sub{color:var(--mut);font-size:13px}
@@ -143,7 +143,8 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .fld label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--mut);margin-bottom:5px}
 .fld input,.fld select,.fld textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;font:inherit;font-size:14px;background:#fff;box-sizing:border-box}
 .fld textarea{min-height:84px;resize:vertical;line-height:1.5}
-.fld .row{display:flex;gap:10px}
+.fld .row{display:flex;gap:12px;flex-wrap:wrap}
+.fld .row>div{min-width:88px}
 .chiprow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .ecardlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 .epill{border:1px solid var(--bd);background:#fff;border-radius:16px;padding:5px 12px;font-size:13px;cursor:pointer}
@@ -558,9 +559,19 @@ function edSet(key,val){
   else if(key.startsWith("attributes.")){c.attributes=c.attributes||{};const k=key.slice(11);
     if(val===""||val==null||(typeof val==="number"&&isNaN(val)))delete c.attributes[k];else c.attributes[k]=val;}
   else c[key]=val;
-  edRefreshDirty(); edRenderList();
-  if(key==="name"||key==="type")edRenderFields();
+  edRefreshDirty();
+  edRowSync();      // update only the current sidebar row (no form rebuild = no focus loss)
   edPreview(); edBar();
+}
+// update just the active card's sidebar row text/dot — never touches the form inputs
+function edRowSync(){
+  const c=edCard(); if(!c)return;
+  const row=document.querySelector(`.edrow.sel .nm`);
+  if(row) row.textContent=c.name||c.id;
+  const dot=document.querySelector(`.edrow.sel .dot`);
+  const g=G(ED.slug); if(dot) dot.style.background=((g.type_colors||{})[c.type]||{}).fg||"#9aa0a6";
+  const r=document.querySelector(`.edrow.sel`);
+  if(r){ if(ED.dirty.has(c.id) && !r.querySelector(".dd")){const d=document.createElement("span");d.className="dd";r.appendChild(d);} }
 }
 function edInsert(key,token){const el=document.getElementById("ef-"+key);if(!el)return;
   const s=el.selectionStart??el.value.length; el.value=el.value.slice(0,s)+token+el.value.slice(el.selectionEnd??s);
