@@ -57,6 +57,12 @@
       "usage": "<game-dir>",
       "desc": "nanDECK project (script + CSV) for pro card layout - open in nanDECK; bridge only, nothing runs server-side"
     },
+    "htmlcards": {
+      "runner": "python",
+      "script": "render_html.py",
+      "usage": "<game-dir> [--theme NAME] [--png]",
+      "desc": "HTML/CSS card sheet with a swappable theme (classic/minimal/foil); --png rasterizes faces via Chromium"
+    },
     "site": {
       "runner": "python",
       "script": "build_site.py",

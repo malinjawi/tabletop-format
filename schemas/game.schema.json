@@ -19,6 +19,10 @@
     },
     "title": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
+    "theme": {
+      "type": "string",
+      "description": "Card-layout theme for HTML/CSS rendering: a built-in theme name (themes/<name>.css) or 'local' to use templates/card.css. Optional; defaults to classic."
+    },
     "version": {
       "type": "string",
       "description": "Version of the GAME content (semver). Releases tag this.",

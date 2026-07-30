@@ -118,6 +118,13 @@ NDROWS=$(python3 -c "import csv;print(sum(1 for _ in csv.reader(open('$NDCSV')))
 grep -q '^LINK=ember.csv' "$NDTXT" && grep -q '^CARDSIZE=' "$NDTXT" && grep -q '\[name\]' "$NDTXT" && grep -q '\[text\]' "$NDTXT" && ok "nandeck script binds LINK + CARDSIZE + [name]/[text] columns" || bad "nandeck script"
 head -1 "$NDCSV" | grep -q name && head -1 "$NDCSV" | grep -q cost && head -1 "$NDCSV" | grep -q collector_number && ok "nandeck csv header carries the referenced columns" || bad "nandeck header"
 python3 -c "import csv,sys;rows=list(csv.DictReader(open('$NDCSV')));sys.exit(0 if all('[' not in r['text'] for r in rows) else 1)" && ok "symbol tokens rewritten so they don't collide with nanDECK [column] syntax" || bad "nandeck symbol escape"
+say "== card themes (HTML/CSS render, swappable) =="
+check "html render (themed)" python3 tools/render_html.py examples/ember --theme classic -o "$SCRATCH/cards.html"
+HC=$(python3 -c "print(open('$SCRATCH/cards.html').read().count('data-type='))")
+[ "$HC" -ge 6 ] && grep -q 'data-theme="classic"' "$SCRATCH/cards.html" && grep -q 'Cinzel' "$SCRATCH/cards.html" && ok "themed sheet renders all cards + inlines theme & web fonts ($HC)" || bad "html render"
+python3 tools/render_html.py examples/ember --theme foil -o "$SCRATCH/foil.html" && grep -q 'background:#20242b' "$SCRATCH/foil.html" && ok "swapping --theme swaps the whole look (foil is dark)" || bad "theme swap"
+python3 tools/render_html.py examples/ember --theme nope >/dev/null 2>&1 && bad "unknown theme should fail" || ok "unknown theme rejected with the available list"
+[ -f themes/classic.css ] && [ -f themes/minimal.css ] && [ -f themes/foil.css ] && ok "3 built-in themes shipped in themes/" || bad "themes missing"
 
 say ""
 say "== decks & legality =="
