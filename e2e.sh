@@ -80,6 +80,16 @@ check "tts export" python3 tools/export_tts.py examples/ember
 DECKIDS=$(python3 -c "import json;s=json.load(open('examples/ember/exports/tts/ember.json'));print(len(s['ObjectStates'][0]['DeckIDs']))")
 QSUM=$(python3 -c "import json;print(sum(p.get('quantity',1) for p in json.load(open('examples/ember/components/printings.json'))))")
 [ "$DECKIDS" = "$QSUM" ] && ok "tts deck honors quantities ($DECKIDS cards)" || bad "tts quantities" "$DECKIDS != $QSUM"
+python3 - <<'PY' && ok "tts carries provenance (GMNotes credit on every card + visible in-game Note)" || bad "tts provenance"
+import json
+s=json.load(open('examples/ember/exports/tts/ember.json'))
+co=s['ObjectStates'][0]['ContainedObjects']
+assert co and all(o.get('GMNotes') for o in co), "every card needs a GMNotes credit"
+assert 'License' in co[0]['GMNotes']
+assert 'TBD' in s.get('Note',''), "non-default art credit surfaced in the Note panel"
+assert any('(alt-art)' in o['Nickname'] for o in co), "variant reflected in the nickname"
+PY
+python3 -c "import json,sys;d=json.load(open('examples/ember/exports/tts/ember.json'))['ObjectStates'][0]['CustomDeck']['1'];sys.exit(0 if d['NumWidth']<=10 and d['NumHeight']<=7 else 1)" && ok "tts sheet within TTS grid limits (<=10x7)" || bad "tts sheet limits"
 check "ttc export" python3 tools/export_ttc.py examples/ember
 TTCPACK=examples/ember/exports/ttc/Ember/cards
 [ -f "$TTCPACK/config.cfg" ] && [ -f "$TTCPACK/stacks.cfg" ] && [ -f "$TTCPACK/_back.png" ] && ok "ttc pack: cards/ + config.cfg + stacks.cfg + _back.png" || bad "ttc pack layout"

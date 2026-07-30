@@ -31,7 +31,7 @@
       "runner": "python",
       "script": "export_tts.py",
       "usage": "<game-dir> [--face-url U] [--back-url U]",
-      "desc": "Tabletop Simulator mod (sprite sheet + save JSON)"
+      "desc": "Tabletop Simulator mod (sprite sheet + save JSON; carries provenance)"
     },
     "ttc": {
       "runner": "python",
