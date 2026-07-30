@@ -37,7 +37,7 @@ export function createGateway({ name = "gateway", version = "0" } = {}) {
     return null;
   }
 
-  function listen(port, cb) {
+  function listen(port, cb, _tries = 0) {
     const server = createServer(async (req, res) => {
       const t0 = Date.now();
       const url = new URL(req.url, `http://localhost:${port}`);
@@ -79,7 +79,13 @@ export function createGateway({ name = "gateway", version = "0" } = {}) {
         else console.error("post-send error:", e.message);
       }
     });
-    server.listen(port, cb);
+    server.on("error", (e) => {
+      if (e.code === "EADDRINUSE" && _tries < 20) {
+        console.error(`port ${port} in use — trying ${port + 1}…`);
+        setTimeout(() => listen(port + 1, cb, _tries + 1), 0);
+      } else throw e;
+    });
+    server.listen(port, () => { if (cb) cb(port); });
     return server;
   }
 

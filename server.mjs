@@ -592,7 +592,7 @@ gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
 
 /* ---------- boot ---------- */
 const nGames = (await Promise.resolve(store.list())).length;
-gw.listen(PORT, () => console.log(
-  `forge-platform gateway on http://localhost:${PORT}\n` +
+gw.listen(PORT, (port) => console.log(
+  `forge-platform gateway on http://localhost:${port}\n` +
   `  store1: ${store.kind} · games: ${nGames} · readonly: ${READONLY}\n` +
   `  GET /api for the route index · /healthz for probes`));
