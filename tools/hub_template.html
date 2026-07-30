@@ -475,6 +475,7 @@ async function cardsEdit(g){
         <div class="edcommit">
           <div class="msg" id="ed-msg"></div>
           <div style="display:flex;gap:8px">
+            <button class="btn" onclick="edArt()" title="Upload + assign card art with credit">🎨 Art</button>
             <button class="btn" id="ed-del" onclick="edDelete()" style="color:var(--red)">Delete card</button>
             <button class="btn primary" id="ed-commit" onclick="edCommit()" style="flex:1">Commit</button>
           </div>
@@ -509,6 +510,26 @@ async function openEditor_UNUSED(slug, cid){
 }
 function closeEditor(){ const sl=ED&&ED.slug; ED=null; if(sl) go(`g/${sl}/cards`); }
 function edCard(){return ED.cards.find(c=>c.id===ED.sel);}
+function edArt(){
+  if(typeof LIVE==="undefined"||!LIVE){ toast("Art upload needs the platform server (node server.mjs)."); return; }
+  const c=edCard(); if(!c) return;
+  const inp=document.createElement("input"); inp.type="file"; inp.accept="image/png,image/jpeg,image/webp";
+  inp.onchange=async()=>{
+    const f=inp.files[0]; if(!f) return;
+    const ext=(f.name.split(".").pop()||"png").toLowerCase();
+    const path=`assets/art/${c.id}.${ext}`;
+    toast("Uploading art…");
+    const up=await fetch(`/api/games/${ED.slug}/assets?path=${encodeURIComponent(path)}`,{method:"POST",headers:{Authorization:"Bearer "+localStorage.forge_token},body:f});
+    if(!up.ok){ toast("Upload failed: "+(((await up.json().catch(()=>({}))).error)||up.status)); return; }
+    const artist=(prompt("Artist / credit for this art (optional):")||"").trim();
+    const body={printing_id:`p_${c.id}_core`,art:path}; if(artist){ body.artist=artist; body.license="CC-BY-4.0"; }
+    const r=await fetch(`/api/games/${ED.slug}/art`,{method:"PUT",headers:authHdr(),body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok) toast(`Art assigned to ${c.name}${artist?` · credited to ${artist}`:""}`);
+    else toast("Assign failed: "+(d.error||r.status));
+  };
+  inp.click();
+}
 function edOrig(id){return ED.orig.find(c=>c.id===id);}
 function edCardDirty(id){const c=ED.cards.find(x=>x.id===id),o=edOrig(id); return JSON.stringify(c)!==JSON.stringify(o);}
 function edRefreshDirty(){ED.dirty=new Set(ED.cards.filter(c=>edCardDirty(c.id)).map(c=>c.id));

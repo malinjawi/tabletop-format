@@ -95,6 +95,14 @@ assert(/alice/.test((await lastCommit("tidepool")).an), "asset commit authored a
 const artBack = await api("GET", "/api/games/tidepool/assets/art/riptide.png");
 assert(artBack.status === 200 && Buffer.compare(artBack.data, PNG) === 0,
   "GET asset materializes from LFS — bytes identical round-trip");
+const artAssign = await api("PUT", "/api/games/tidepool/art", { token: A,
+  body: { printing_id: "p_riptide_core", art: "assets/art/riptide.png", artist: "Alice", license: "CC-BY-4.0" } });
+assert(artAssign.status === 200 && artAssign.data.art === "assets/art/riptide.png",
+  "alice assigns the uploaded art to the riptide printing with credit");
+const pj = JSON.parse(await repoRead("tidepool", "components/printings.json"));
+const rp = pj.find(p => p.id === "p_riptide_core");
+assert(rp && rp.art === "assets/art/riptide.png" && rp.provenance && rp.provenance.creator === "Alice",
+  "the printing carries the art + provenance — credit follows the work (SPEC §9)");
 
 const cards = (await api("GET", "/api/games/tidepool/cards")).data;
 cards.find(c => c.id === "riptide").attributes.cost = 4;

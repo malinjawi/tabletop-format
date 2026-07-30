@@ -420,6 +420,36 @@ gw.route("PUT", "/api/games/:slug/artifact", async (ctx) => {
   const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
   ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label });
 }, "edit a non-card artifact (rules, community, design, metadata) → validated commit");
+gw.route("PUT", "/api/games/:slug/art", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const { printing_id, art, artist, license, source } = await json(ctx);
+  if (!printing_id) return ctx.send(422, { error: "printing_id required" });
+  if (art && (!art.startsWith("assets/") || art.includes(".."))) return ctx.send(422, { error: "art must be a path under assets/ (upload it first via POST /assets)" });
+  const printings = JSON.parse((await store.readFile(slug, "components/printings.json")).toString());
+  const p = printings.find(x => x.id === printing_id);
+  if (!p) return ctx.send(404, { error: `no printing '${printing_id}'` });
+  if (art) {
+    let asset = null; try { asset = await store.readFile(slug, art); } catch {}
+    if (!asset) return ctx.send(422, { error: `asset not found in the repo: ${art} (upload it first via POST /assets)` });
+    p.art = art;
+  }
+  if (artist) p.artist = artist;
+  if (artist || license || source) {
+    const prov = { ...(p.provenance || {}) };
+    prov.source = source || prov.source || "human";
+    if (artist) prov.creator = artist;
+    if (license) prov.license = license;
+    p.provenance = prov;
+  }
+  const content = JSON.stringify(printings, null, 2) + "\n";
+  const v = await validateCandidate(slug, "components/printings.json", content);
+  if (!v.ok) return ctx.send(422, { error: "printings failed validation", report: v.report });
+  const { sha } = await store.writeFiles(slug, [{ path: "components/printings.json", content }],
+    `art: ${art ? "assign " + art : "credit"} on ${printing_id}`, `${u.handle} <${u.email}>`);
+  ctx.send(200, { saved: true, commit: sha, printing_id, art: p.art ?? null, artist: p.artist ?? null });
+}, "assign uploaded art + credit/provenance to a printing — credit follows the work (SPEC §9)");
 gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
