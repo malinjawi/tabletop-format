@@ -305,6 +305,8 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   try {
     const f = await doFork(u, src);
     await q.recordEvent(db, { id: newId("ev"), kind: "fork", actor_id: u.id, game_slug: f.slug, target: src });
+    const _og = await q.gameBySlug(db, src);
+    if (_og?.owner_id && _og.owner_id !== u.id) await q.notify(db, { id: newId("n"), user_id: _og.owner_id, kind: "fork", actor_handle: u.handle, game_slug: src, target: f.slug });
     ctx.send(201, { slug: f.slug, forked_from: src, commit: f.sha, url: `/#/g/${f.slug}` });
   } catch (e) { ctx.send(e.code ?? 500, { error: e.message }); }
 }, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
@@ -547,6 +549,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
   const { body } = await json(ctx);
   if (!body?.trim()) return ctx.send(422, { error: "comment body required" });
   await q.addComment(db, { id: newId("c"), target_type: "pr", target_id: pr.id, author_id: u.id, body: body.trim() });
+  if (pr.author_id !== u.id) await q.notify(db, { id: newId("n"), user_id: pr.author_id, kind: "pr_comment", actor_handle: u.handle, game_slug: slug, target: pr.id });
   ctx.send(201, { comments: await q.commentsFor(db, "pr", pr.id) });
 }, "comment on a PR (review discussion)");
 gw.route("POST", "/api/games/:slug/prs/:id/review", async (ctx) => {
@@ -561,6 +564,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/review", async (ctx) => {
   if (!["approve", "request_changes"].includes(verdict))
     return ctx.send(422, { error: "verdict must be 'approve' or 'request_changes'" });
   await q.addReview(db, { pr_id: pr.id, reviewer_id: u.id, verdict });
+  if (pr.author_id !== u.id) await q.notify(db, { id: newId("n"), user_id: pr.author_id, kind: "pr_review", actor_handle: u.handle, game_slug: slug, target: pr.id });
   ctx.send(201, { reviews: await q.reviewsFor(db, pr.id) });
 }, "review a PR: approve or request changes (maintainers only, not the proposer)");
 gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
@@ -584,6 +588,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
     `${pr.author_handle} <${pr.author_email}>`);
   await q.setPrStatus(db, pr.id, "merged", sha);
   await q.recordEvent(db, { id: newId("ev"), kind: "pr_merge", actor_id: u.id, game_slug: slug, target: pr.from_slug });
+  if (pr.author_id !== u.id) await q.notify(db, { id: newId("n"), user_id: pr.author_id, kind: "pr_merge", actor_handle: u.handle, game_slug: slug, target: pr.id });
   ctx.send(200, { merged: true, commit: sha, changes });
 }, "merge a PR: card-level three-way merge → validate → commit AUTHORED AS THE PROPOSER");
 gw.route("POST", "/api/games/:slug/prs/:id/close", async (ctx) => {
@@ -771,6 +776,15 @@ gw.route("GET", "/api/activity", async (ctx) => {
   }
   ctx.send(200, await q.recentEvents(db, 30));
 }, "recent activity feed (global, or ?user=<handle> for one person)");
+gw.route("GET", "/api/notifications", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  ctx.send(200, { unread: await q.unreadCount(db, u.id), items: await q.notificationsFor(db, u.id, 30) });
+}, "your notification inbox");
+gw.route("POST", "/api/notifications/read", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  await q.markAllRead(db, u.id);
+  ctx.send(200, { ok: true, unread: 0 });
+}, "mark all your notifications read");
 
 /* ---------- routes: jams (Store-2-backed entries; the co-creation front door) ---------- */
 gw.route("GET", "/api/jams", async (ctx) => {

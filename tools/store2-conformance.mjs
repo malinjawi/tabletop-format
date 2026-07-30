@@ -127,4 +127,15 @@ const ev = await q.recentEvents(db, 10);
 assert(ev.length >= 2 && ev[0].actor_handle === ana.handle && ev[0].kind === "release", "recentEvents newest-first, joined to actor");
 assert((await q.eventsByActor(db, ana.id, 10)).length >= 2, "eventsByActor filters to one user's activity");
 
+// notifications (008) — per-user inbox
+const rcv = { id: newId("u"), handle: h("rcv"), email: `${h("rcv")}@x.io`, pass_hash: "h" };
+await q.createUser(db, rcv);
+await q.notify(db, { id: newId("n"), user_id: rcv.id, kind: "fork", actor_handle: ana.handle, game_slug: slug, target: fork });
+await q.notify(db, { id: newId("n"), user_id: rcv.id, kind: "pr_comment", actor_handle: ana.handle, game_slug: slug, target: "pr_x" });
+assert(await q.unreadCount(db, rcv.id) === 2, "unreadCount counts unread notifications");
+const nl = await q.notificationsFor(db, rcv.id, 10);
+assert(nl.length === 2 && nl[0].actor_handle === ana.handle, "notificationsFor newest-first with actor");
+await q.markAllRead(db, rcv.id);
+assert(await q.unreadCount(db, rcv.id) === 0, "markAllRead clears the unread count");
+
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);

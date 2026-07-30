@@ -172,6 +172,15 @@ export const q = {
     `SELECT e.kind, e.game_slug, e.target, e.created_at, u.handle AS actor_handle
      FROM events e LEFT JOIN users u ON u.id = e.actor_id WHERE e.actor_id = ? ORDER BY e.created_at DESC LIMIT ?`).all(actorId, limit),
 
+  notify: (db, n) => db.prepare(
+    `INSERT INTO notifications (id, user_id, kind, actor_handle, game_slug, target, read, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)`)
+    .run(n.id, n.user_id, n.kind, n.actor_handle ?? null, n.game_slug ?? null, n.target ?? null, Date.now()),
+  notificationsFor: (db, userId, limit = 30) => db.prepare(
+    `SELECT id, kind, actor_handle, game_slug, target, read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`).all(userId, limit),
+  unreadCount: (db, userId) => db.prepare(
+    `SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read = 0`).get(userId).n,
+  markAllRead: (db, userId) => db.prepare(`UPDATE notifications SET read = 1 WHERE user_id = ?`).run(userId),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),

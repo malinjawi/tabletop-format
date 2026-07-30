@@ -275,5 +275,16 @@ assert(feed.length >= 3 && feed[0].actor_handle && feed.some(e => e.kind === "re
 const aliceFeed = (await api("GET", "/api/activity?user=alice")).data;
 assert(aliceFeed.length >= 1 && aliceFeed.every(e => e.actor_handle === "alice"), "personal feed ?user=alice filters to her activity");
 
+console.log("== ACT 11: notifications — your inbox ==");
+const anonN = await api("GET", "/api/notifications");
+assert(anonN.status === 401, "notifications require auth (401)");
+const aliceN = (await api("GET", "/api/notifications", { token: A })).data;
+assert(aliceN.items.some(n => n.kind === "fork" && n.actor_handle === "bob"), "alice was notified that bob forked her game");
+const bobN = (await api("GET", "/api/notifications", { token: B })).data;
+assert(bobN.items.some(n => n.kind === "pr_merge" && n.actor_handle === "alice") && bobN.unread >= 1,
+  "bob was notified that alice merged his PR (unread inbox)");
+assert((await api("POST", "/api/notifications/read", { token: B })).status === 200, "bob marks all read");
+assert((await api("GET", "/api/notifications", { token: B })).data.unread === 0, "bob's unread count is now zero");
+
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
 console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");

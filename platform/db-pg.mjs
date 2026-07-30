@@ -188,6 +188,15 @@ export const q = {
     `SELECT e.kind, e.game_slug, e.target, e.created_at, u.handle AS actor_handle
      FROM events e LEFT JOIN users u ON u.id = e.actor_id WHERE e.actor_id = $1 ORDER BY e.created_at DESC LIMIT $2`, [actorId, limit]),
 
+  notify: (db, n) => db.query(
+    `INSERT INTO notifications (id, user_id, kind, actor_handle, game_slug, target, read, created_at) VALUES ($1, $2, $3, $4, $5, $6, 0, $7)`,
+    [n.id, n.user_id, n.kind, n.actor_handle ?? null, n.game_slug ?? null, n.target ?? null, Date.now()]),
+  notificationsFor: (db, userId, limit = 30) => all(db,
+    `SELECT id, kind, actor_handle, game_slug, target, read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`, [userId, limit]),
+  unreadCount: async (db, userId) => (await one(db,
+    `SELECT COUNT(*)::int AS n FROM notifications WHERE user_id = $1 AND read = 0`, [userId])).n,
+  markAllRead: (db, userId) => db.query(`UPDATE notifications SET read = 1 WHERE user_id = $1`, [userId]),
+
   claim: (db, userId, author) => db.query(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES ($1, $2, $3)`,
     [userId, author, Date.now()]),

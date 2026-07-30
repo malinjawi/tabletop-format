@@ -170,7 +170,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
   <input id="q" placeholder="Search games and cards…" oninput="searchAll(this.value)">
-  <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="go('jams')">Jams</a><a class="nl" onclick="alert('Platform feature: your games, forks, and suggestions in one place.')">Your games</a>
+  <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="go('jams')">Jams</a><a class="nl" onclick="showNotifs()" title="Notifications">🔔 Inbox</a>
   <div class="spacer"></div>
   <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="alert('Platform: creates a repo + format scaffold. CLI today: fmt import csv your.csv my-game')">+ New game</button>
   <span id="authArea"><div class="av" title="you"></div></span>
@@ -341,6 +341,16 @@ async function loadFeed(){
     return `<div style="padding:8px 0;border-bottom:1px solid var(--bd);font-size:13.5px">${who} ${verb[e.kind]||e.kind} ${g}${tgt}</div>`;};
   feed.innerHTML=`<div class="box"><div class="bh">⚡ Recent activity</div><div class="bb">${ev.slice(0,12).map(line).join("")}</div></div>`;
 }
+async function showNotifs(){
+  if(typeof LIVE==="undefined"||!LIVE||!ME){ toast(ME?"No notifications.":"Sign in to see your notifications."); return; }
+  const d=await (await fetch("/api/notifications",{headers:authHdr()})).json();
+  const verb={pr_comment:"commented on your PR",fork:"forked your game",pr_review:"reviewed your PR",pr_merge:"merged your PR"};
+  const items=d.items||[];
+  $("#view").innerHTML=`<div class="wrap" style="max-width:720px;margin-top:20px"><div class="box"><div class="bh">🔔 Notifications ${d.unread?`<span class="badge" style="background:#e5484d;color:#fff;border:none">${d.unread} new</span>`:""}<button class="btn" style="float:right" onclick="markNotifs()">Mark all read</button></div><div class="bb">
+    ${items.length?items.map(n=>`<div style="padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px;${n.read?"":"font-weight:600"}"><b>${esc(n.actor_handle||"someone")}</b> ${verb[n.kind]||esc(n.kind)}${n.game_slug?` · <a onclick="go('g/${esc(n.game_slug)}')">${esc(n.game_slug)}</a>`:""}</div>`).join(""):"<div class='emptystate'>No notifications yet — you'll hear when someone forks your game or touches your PRs.</div>"}
+  </div></div></div>`;
+}
+async function markNotifs(){ if(!ME)return; await fetch("/api/notifications/read",{method:"POST",headers:authHdr()}); showNotifs(); }
 function searchAll(v){
   v=v.trim().toLowerCase();
   if(!location.hash || location.hash==="#"){ explorePage(v); return; }
@@ -1308,7 +1318,27 @@ function community(g){
       <div style="color:var(--mut);font-size:11.5px;margin-top:10px">Playtesters are credited automatically — showing up to break the game is a contribution. <code>fmt credits</code></div>
     </div></div>
   </div></div>`;
+  if(typeof LIVE!=="undefined"&&LIVE) liveCollab(g);
 }
+async function liveCollab(g){
+  let list; try{ list=await (await fetch(`/api/games/${g.slug}/collaborators`)).json(); }catch{ return; }
+  if(!Array.isArray(list)) return;
+  const side=document.querySelector("#pane .side"); if(!side) return;
+  const canManage=(typeof ME!=="undefined"&&ME);
+  const box=document.createElement("div"); box.className="box";
+  box.innerHTML=`<div class="bh">👥 Collaborators</div><div class="bb">
+    ${list.length?list.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;margin:7px 0;font-size:13px"><span><b>${esc(c.handle)}</b> <span style="color:var(--mut)">· ${esc(c.role||"maintainer")}</span></span>${canManage?`<button class="btn" style="padding:2px 8px" onclick="revokeCollab('${g.slug}','${esc(c.handle)}')">remove</button>`:""}</div>`).join(""):"<div style='color:var(--mut);font-size:13px'>No collaborators yet.</div>"}
+    ${canManage?`<div style="margin-top:10px;display:flex;gap:6px"><input id="collab-h" placeholder="handle to invite" style="flex:1;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font:inherit"><button class="btn primary" onclick="addCollab('${g.slug}')">Invite</button></div>`:""}
+    <div style="color:var(--mut);font-size:11.5px;margin-top:8px">Collaborators commit directly; everyone else forks + proposes. (Owner-only to change.)</div>
+  </div>`;
+  side.appendChild(box);
+}
+async function addCollab(slug){ const el=$("#collab-h"); const handle=((el&&el.value)||"").trim(); if(!handle)return;
+  const r=await fetch(`/api/games/${slug}/collaborators/${encodeURIComponent(handle)}`,{method:"PUT",headers:authHdr()}); const d=await r.json().catch(()=>({}));
+  if(r.ok){toast(`Invited ${handle}`);community(G(slug));}else toast(d.error||"couldn't invite (owner only)"); }
+async function revokeCollab(slug,handle){
+  const r=await fetch(`/api/games/${slug}/collaborators/${encodeURIComponent(handle)}`,{method:"DELETE",headers:authHdr()}); const d=await r.json().catch(()=>({}));
+  if(r.ok){toast(`Removed ${handle}`);community(G(slug));}else toast(d.error||"couldn't remove"); }
 
 render();
 </script></body></html>
