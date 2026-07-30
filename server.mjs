@@ -136,6 +136,10 @@ async function validateCandidate(slug, relPath, content) {
 gw.route("GET", "/", async (ctx) => ctx.send(200, await hubHtml(), "text/html; charset=utf-8"), "hub UI");
 const editorBuilt = new Map(); // slug -> {version}
 gw.route("GET", "/edit/:slug", async (ctx) => {
+  // legacy path → the app's routed edit mode (editing lives INSIDE the SPA now)
+  if (!ctx.url.searchParams.has("raw")) {
+    return ctx.sendRaw(302, "", { Location: `/#/g/${ctx.params.slug}/cards/edit` });
+  }
   const slug = requireGame(ctx); if (!slug) return;
   const v = await store.version(slug);
   const out = join(ROOT, "data", `editor-${slug}.html`);
@@ -371,6 +375,30 @@ gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
     `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);
   ctx.send(200, { saved: true, commit: sha, message: auto.title, changes });
 }, "edit cards: validate candidate → commit w/ auto message (live tree never dirty)");
+// EDITABLE ARTIFACTS beyond cards: rules, community, design notes, metadata.
+// Same access + validate-candidate + commit discipline; cards keep their own
+// semantic-diff route. Path is allowlisted — no arbitrary repo writes.
+const ARTIFACTS = {
+  "rules/rules.md":     { label: "rulebook",       msg: "rules: update rulebook" },
+  "community.yaml":     { label: "community",      msg: "community: update governance & credits" },
+  "design/notes.md":    { label: "design notes",   msg: "design: update notes" },
+  "game.yaml":          { label: "game metadata",  msg: "meta: update game info" },
+};
+gw.route("PUT", "/api/games/:slug/artifact", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const { path, content } = await json(ctx);
+  const spec = ARTIFACTS[path];
+  if (!spec) return ctx.send(422, { error: `not an editable artifact: ${path}`, editable: Object.keys(ARTIFACTS) });
+  if (typeof content !== "string") return ctx.send(422, { error: "content must be a string" });
+  const before = (await store.readFile(slug, path))?.toString() ?? "";
+  if (before === content) return ctx.send(200, { saved: false, message: "no changes" });
+  const v = await validateCandidate(slug, path, content);
+  if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
+  const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
+  ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label });
+}, "edit a non-card artifact (rules, community, design, metadata) → validated commit");
 gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);

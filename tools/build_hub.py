@@ -241,7 +241,7 @@ def build_game(gd):
         "symbols": game.get("symbols") or [],
         "sets": sets_, "formats": formats, "restrictions": restrictions,
         "decks": deck_data, "history": history, "prs": prs, "releases": releases,
-        "rules_html": md_to_html(rules_md), "rules_history": rules_history, "tokens": tokens,
+        "rules_html": md_to_html(rules_md), "rules_md": rules_md, "rules_history": rules_history, "tokens": tokens,
         "playtests": playtests,
         "community": community, "design_html": design_md, "credit_roll": credit_roll,
         "updated": last_commit["date"] if last_commit else "",

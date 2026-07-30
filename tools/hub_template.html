@@ -260,10 +260,10 @@ function go(hash){ location.hash = hash; }
 window.onhashchange = render;
 function render(){
   const h = location.hash.replace(/^#\/?/,"");
-  const [_, slug, tab] = h.match(/^g\/([^/]+)\/?(\w*)/) || [];
+  const [_, slug, tab, mode] = h.match(/^g\/([^/]+)(?:\/(\w+))?(?:\/(\w+))?/) || [];
   const [__, jamId] = h.match(/^jam\/([^/]+)/) || [];
   const [___, userName] = h.match(/^u\/(.+)/) || [];
-  if (slug && G(slug)) repoPage(G(slug), tab||"overview");
+  if (slug && G(slug)) repoPage(G(slug), tab||"overview", mode);
   else if (jamId) jamPage(jamId);
   else if (h === "jams") jamsPage();
   else if (userName) profilePage(decodeURIComponent(userName));
@@ -303,7 +303,7 @@ function searchAll(v){
 }
 
 /* ---------- repo page ---------- */
-function repoPage(g, tab){
+function repoPage(g, tab, mode){
   const tabs = [
     ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
     ["playtests","Playtests",g.playtests.length],["history","Commits",g.history.length],
@@ -321,15 +321,17 @@ function repoPage(g, tab){
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
         <button class="btn" onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Club asset pack (open-source 3D table)\\n· Tabletop Simulator mod\\n· Print-and-play PDF (300dpi, crop marks)')">⤓ Export</button>
-        <button class="btn primary" onclick="LIVE?openEditor('${g.slug}'):alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>
+        ${EDITABLE_TABS.includes(tab)?`<button class="btn primary" onclick="LIVE?go('g/${g.slug}/${tab}/edit'):alert('Live editing needs the platform server (node server.mjs).')">✎ Edit ${tab}</button>`:``}
       </div>
     </div>
     <div class="tabs">${tabs.map(([id,label,n])=>
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,rules,playtests,history,suggestions,issues,releases,banlist,decks,community})[tab](g);
+  ({overview,cards,rules,playtests,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
 }
+// which tabs have an editor (URL-addressable: #/g/slug/<tab>/edit)
+const EDITABLE_TABS = ["cards","rules"];
 
 /* ---------- tabs ---------- */
 function overview(g){
@@ -359,15 +361,16 @@ function overview(g){
   </div></div>`;
 }
 
-function cards(g){
+function cards(g, mode){
   const types=[...new Set(g.cards.map(c=>c.type))].sort();
   $("#pane").innerHTML = `
     <div class="filterbar">
       <input id="cardq" placeholder="Filter cards… (name, text, keyword)" oninput="filterCards('${g.slug}')">
       <select id="cardt" onchange="filterCards('${g.slug}')"><option value="">All types</option>${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select>
-      ${LIVE?`<button class="btn primary" style="margin-left:auto" onclick="openEditor('${g.slug}')">✎ Edit cards</button>`:``}
+      ${LIVE?`<button class="btn primary" style="margin-left:auto" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>`:``}
     </div><div class="cgrid" id="cgrid"></div>`;
   filterCards(g.slug);
+  if(mode==="edit" && LIVE) openEditor(g.slug);   // #/g/slug/cards/edit
 }
 function filterCards(slug){
   const g=G(slug), q=($("#cardq")?.value||"").toLowerCase(), t=$("#cardt")?.value||"";
@@ -416,7 +419,7 @@ async function openEditor(slug, cid){
   document.getElementById("drawer").classList.add("on");
   edRenderList(); edSelect(ED.sel);
 }
-function closeEditor(){ if(ED&&ED.dirty.size&&!confirm("Discard unsaved edits?"))return; ED=null; document.getElementById("drawer").classList.remove("on"); }
+function closeEditor(){ if(ED&&ED.dirty.size&&!confirm("Discard unsaved edits?"))return; const sl=ED&&ED.slug; ED=null; document.getElementById("drawer").classList.remove("on"); if(sl && location.hash.endsWith("/edit")) go(`g/${sl}/cards`); }
 function edCard(){return ED.cards.find(c=>c.id===ED.sel);}
 function edOrig(id){return ED.orig.find(c=>c.id===id);}
 function edCardDirty(id){const c=ED.cards.find(x=>x.id===id),o=edOrig(id); return JSON.stringify(c)!==JSON.stringify(o);}
@@ -588,12 +591,13 @@ function cardModal(slug,cid){
   $("#modal").classList.add("on");
 }
 
-function rules(g){
+function rules(g, mode){
+  if(mode==="edit" && LIVE) return rulesEdit(g);
   const syms = {spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"};
   let body = g.rules_html || "<div class='emptystate'>No rulebook yet — <code>rules/rules.md</code> diffs like everything else.</div>";
   body = body.replace(/\[([a-z0-9_]+)\]/g,(m,k)=>syms[k]?`<b>${syms[k]}</b>`:m);
   $("#pane").innerHTML = `<div class="two"><div>
-    <div class="box"><div class="bh">📖 rules/rules.md <span style="color:var(--mut);font-weight:400">· prose that diffs — every errata is a commit</span></div>
+    <div class="box"><div class="bh">📖 rules/rules.md <span style="color:var(--mut);font-weight:400">· prose that diffs — every errata is a commit</span>${LIVE?`<button class="btn" style="float:right;margin-top:-4px" onclick="go('g/${g.slug}/rules/edit')">✎ Edit rules</button>`:``}</div>
     <div class="bb" style="max-width:720px">${body}</div></div>
   </div><div class="side">
     <div class="box"><div class="bh">Components</div><div class="bb">
@@ -667,6 +671,47 @@ function history(g){
   `).join("")||"<div class='emptystate'>No history yet.</div>";
 }
 
+/* ---------- Rules editor: markdown -> PUT /artifact -> commit rules.md ---------- */
+async function rulesEdit(g){
+  if(!ME){ authOpen(); go(`g/${g.slug}/rules`); return; }
+  let acc={canWrite:true};
+  try{acc=await (await fetch(`/api/games/${g.slug}/access`,{headers:authHdr()})).json();}catch(e){}
+  const raw = g.rules_md || "";
+  const syms = {spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"};
+  window._mdPrev = (t)=>esc(t).replace(/^#{1,6}\s*(.+)$/gm,"<h4 style='margin:10px 0 4px'>$1</h4>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\[([a-z0-9_]+)\]/g,(m,k)=>syms[k]?`<b>${syms[k]}</b>`:m).replace(/\n\n/g,"<br><br>");
+  $("#pane").innerHTML = `
+    <div class="dhead" style="padding:0 0 12px;border:none">
+      <div style="flex:1"><h2 style="margin:0">Editing the rulebook</h2>
+        <div class="sub">${acc.canWrite?`<span style="color:var(--grn)">✓ commits directly to ${esc(g.slug)}</span>`:`no write access - Save opens a pull request from your fork`}</div></div>
+      <button class="btn" onclick="go('g/${g.slug}/rules')">Cancel</button>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <textarea id="rmd" style="flex:1;min-width:320px;min-height:460px;padding:12px;border:1px solid var(--bd);border-radius:8px;font:14px/1.6 ui-monospace,Menlo,monospace;box-sizing:border-box" oninput="$('#rprev').innerHTML=window._mdPrev(this.value)">${esc(raw)}</textarea>
+      <div style="flex:1;min-width:280px">
+        <div class="mut" style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Live preview</div>
+        <div id="rprev" class="bb" style="border:1px solid var(--bd);border-radius:8px;padding:14px;min-height:440px"></div>
+      </div>
+    </div>
+    <div class="dbar" style="border:none;padding:14px 0">
+      <div class="msg mut" id="rmsg">Markdown. Symbol tokens like [spark] render as glyphs. Every save is a commit - errata with a history.</div>
+      <button class="btn primary" id="rsave" onclick="rulesSave('${g.slug}')">${acc.canWrite?"Commit rulebook":"Propose as PR"}</button>
+    </div>`;
+  $("#rprev").innerHTML = window._mdPrev(raw);
+}
+async function rulesSave(slug){
+  const content = $("#rmd").value;
+  const btn=$("#rsave"); btn.disabled=true; const was=btn.textContent; btn.textContent="Saving...";
+  try{
+    const r = await fetch(`/api/games/${slug}/artifact`,{method:"PUT",headers:{"content-type":"application/json",...authHdr()},
+      body:JSON.stringify({path:"rules/rules.md", content})});
+    const d = await r.json();
+    if(r.status===200 && d.saved){ prNote(`✓ Committed ${d.commit} - ${d.message}`); setTimeout(()=>location.reload(),900); }
+    else if(r.status===200){ prNote("No changes."); }
+    else if(r.status===403 && d.propose){ prNote("No write access - fork & propose from the Cards tab for now.", true); }
+    else prNote("✗ "+(d.error||r.status), true);
+  }catch(e){ prNote("✗ "+e.message, true); }
+  btn.disabled=false; btn.textContent=was;
+}
 /* ---------- Issues: bug reports & balance debates ---------- */
 function fmtWhen(ms){const d=new Date(ms);return isNaN(d)?"":d.toLocaleDateString();}
 function commentThread(list){

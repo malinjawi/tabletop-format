@@ -256,6 +256,15 @@ ANON=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: applicati
 PUTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" --data @"$SCRATCH/put.json" "localhost:$PORT/api/games/ember/cards" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message',''))" 2>/dev/null)
 echo "$PUTMSG" | grep -q "True cards: changed 1 card" && ok "HTTP PUT → git commit w/ auto message" || bad "HTTP PUT commit" "$PUTMSG"
 git log -1 --format=%s | grep -q "Kindling" && ok "commit subject names the card" || git log -1 --format=%B | grep -q "Kindling" && ok "commit body names the card" || bad "commit content"
+# editing is NOT cards-only, and NOT a separate page: general artifact write + /edit redirect
+REDIR=$(curl -s -o /dev/null -w '%{redirect_url}' "localhost:$PORT/edit/ember")
+case "$REDIR" in *"#/g/ember/cards/edit") ok "/edit/:slug redirects into the SPA route (#/g/:slug/cards/edit)";; *) bad "edit redirect" "$REDIR";; esac
+ANONART=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -d '{"path":"rules/rules.md","content":"x"}' "localhost:$PORT/api/games/ember/artifact")
+[ "$ANONART" = "401" ] && ok "artifact write requires auth (401)" || bad "artifact auth" "$ANONART"
+ARTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d '{"path":"rules/rules.md","content":"# Ember\n\nEdited rulebook via artifact route."}' "localhost:$PORT/api/games/ember/artifact" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message'))" 2>/dev/null)
+echo "$ARTMSG" | grep -q "True rules: update rulebook" && ok "rules editable as an artifact → committed (not just cards)" || bad "artifact rules commit" "$ARTMSG"
+BADART=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d '{"path":"../secret","content":"x"}' "localhost:$PORT/api/games/ember/artifact")
+[ "$BADART" = "422" ] && ok "artifact path allowlist blocks traversal (422)" || bad "artifact allowlist" "$BADART"
 python3 -c "
 import json
 c=json.load(open('$SCRATCH/put.json')); c[0]['attributes']['power']='bad'
@@ -442,7 +451,7 @@ DB_PATH="$SCRATCH/platform.db" node server.mjs --port $EPORT > "$SCRATCH/ed.log"
 EPID=$!
 sleep 1.5
 ETOK=$(mint $EPORT)
-curl -s "localhost:$EPORT/edit/ember" > "$SCRATCH/live-editor.html"
+curl -s "localhost:$EPORT/edit/ember?raw" > "$SCRATCH/live-editor.html"
 grep -q "saveToServer" "$SCRATCH/live-editor.html" && grep -q '"live_slug": "ember"' "$SCRATCH/live-editor.html" \
   && ok "GET /edit/ember serves live editor with Save wired" || bad "live editor page"
 # simulate exactly what the Save button does
@@ -460,7 +469,7 @@ AFTER_SHA=$(git rev-parse --short HEAD)
 [ "$BEFORE_SHA" != "$AFTER_SHA" ] && git log -1 --format=%b | grep -q "Twin Flame" \
   && ok "commit landed in history, body names the card" || bad "commit in history"
 # editor page rebuilds with fresh data after the commit (cache invalidation)
-curl -s "localhost:$EPORT/edit/ember" | grep -q '"cost": 3' && ok "editor page reflects committed change (cache invalidated)" || bad "editor cache invalidation"
+curl -s "localhost:$EPORT/edit/ember?raw" | grep -q '"cost": 3' && ok "editor page reflects committed change (cache invalidated)" || bad "editor cache invalidation"
 # invalid save via the same path → 422, nothing committed
 node -e "
 const cards = JSON.parse(require('fs').readFileSync('examples/ember/components/cards.json','utf8'));
@@ -488,6 +497,8 @@ grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q "ed-canvas" "$SCRATCH/l
   && ok "live hub ships the IN-HUB card editor (drawer + live canvas preview + commit/propose)" || bad "hub editor wiring"
 grep -q "liveIssues" "$SCRATCH/live-hub.html" && grep -q "commentThread" "$SCRATCH/live-hub.html" \
   && grep -q "commentPr" "$SCRATCH/live-hub.html" && ok "live hub ships Issues tab + comment threads (issues & PRs)" || bad "hub issues wiring"
+grep -q "EDITABLE_TABS" "$SCRATCH/live-hub.html" && grep -q "rulesEdit" "$SCRATCH/live-hub.html" \
+  && grep -q "g/\${g.slug}/cards/edit" "$SCRATCH/live-hub.html" && ok "hub: editing is a routed mode (#/g/:slug/:tab/edit) for cards AND rules" || bad "hub edit routing"
 grep -q "exportMenu" "$SCRATCH/live-hub.html" && grep -q "Tabletop Club" "$SCRATCH/live-hub.html" \
   && ok "live hub Export offers Tabletop Club / TTS / PnP downloads" || bad "hub export wiring"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
