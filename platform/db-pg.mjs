@@ -147,6 +147,14 @@ export const q = {
     `SELECT c.body, c.created_at, u.handle AS author_handle FROM comments c JOIN users u ON u.id = c.author_id
      WHERE c.target_type = $1 AND c.target_id = $2 ORDER BY c.created_at`, [targetType, targetId]),
 
+  addReview: (db, r) => db.query(
+    `INSERT INTO reviews (pr_id, reviewer_id, verdict, created_at) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (pr_id, reviewer_id) DO UPDATE SET verdict = EXCLUDED.verdict, created_at = EXCLUDED.created_at`,
+    [r.pr_id, r.reviewer_id, r.verdict, Date.now()]),
+  reviewsFor: (db, prId) => all(db,
+    `SELECT rv.verdict, rv.created_at, u.handle AS reviewer_handle FROM reviews rv JOIN users u ON u.id = rv.reviewer_id
+     WHERE rv.pr_id = $1 ORDER BY rv.created_at`, [prId]),
+
   claim: (db, userId, author) => db.query(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES ($1, $2, $3)`,
     [userId, author, Date.now()]),

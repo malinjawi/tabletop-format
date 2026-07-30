@@ -170,6 +170,11 @@ assert(noMerge.status === 403, "bob CANNOT merge into alice's game (owner-only r
 const prView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { token: A })).data;
 assert(prView.author === "bob" && prView.status === "open" && prView.conflicts.length === 0,
   "alice reviews: bob's PR, open, conflict-free");
+const bobReview = await api("POST", `/api/games/tidepool/prs/${prId}/review`, { token: B, body: { verdict: "approve" } });
+assert(bobReview.status === 403, "bob can't review — he's the proposer, not a maintainer (403)");
+const aliceApprove = await api("POST", `/api/games/tidepool/prs/${prId}/review`, { token: A, body: { verdict: "approve" } });
+assert(aliceApprove.status === 201 && aliceApprove.data.reviews.some(r => r.verdict === "approve" && r.reviewer_handle === "alice"),
+  "alice approves the PR — maintainer sign-off recorded before merge");
 const prMerged = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: A });
 assert(prMerged.status === 200 && prMerged.data.merged, "alice merges bob's PR", prMerged.data);
 const tpCards = (await api("GET", "/api/games/tidepool/cards")).data;

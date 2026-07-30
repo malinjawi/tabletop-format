@@ -587,6 +587,13 @@ node -e "
   if(!ed.saved) process.exit(3);
   const pr=await j(await fetch(base+'/api/games/pr-demo/prs',{method:'POST',headers:A(T2),body:JSON.stringify({from:'pr-demo-prbuddy',title:'Spark buff'})}));
   if(!(pr.id && pr.changes.some(c=>c.card==='spark'))) process.exit(4);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/review',{method:'POST',headers:A(T2),body:JSON.stringify({verdict:'approve'})})).status!==403) process.exit(15);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({verdict:'approve'})})).status!==401) process.exit(16);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/review',{method:'POST',headers:A(T1),body:JSON.stringify({verdict:'nope'})})).status!==422) process.exit(19);
+  const rv=await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/review',{method:'POST',headers:A(T1),body:JSON.stringify({verdict:'approve'})});
+  if(rv.status!==201) process.exit(17);
+  const det=await j(await fetch(base+'/api/games/pr-demo/prs/'+pr.id));
+  if(!(det.reviews && det.reviews.some(x=>x.verdict==='approve' && x.reviewer_handle==='prhost'))) process.exit(18);
   if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST',headers:A(T2)})).status!==403) process.exit(5);
   if((await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST'})).status!==401) process.exit(6);
   const m=await j(await fetch(base+'/api/games/pr-demo/prs/'+pr.id+'/merge',{method:'POST',headers:A(T1)}));
@@ -610,7 +617,7 @@ node -e "
   const list=await j(await fetch(base+'/api/games/pr-demo/prs'));
   if(!(list.length===2 && list.some(x=>x.status==='merged') && list.some(x=>x.status==='open'))) process.exit(14);
   console.log('pr flow complete');
-})().catch(e=>{console.error(e);process.exit(9)})" && ok "PR flow: open → authz 401/403 → owner merges → change applied → 409 on re-merge" || bad "PR flow"
+})().catch(e=>{console.error(e);process.exit(9)})" && ok "PR flow: open → review (401 anon/403 non-maintainer/422 bad verdict/owner approves) → owner merges → change applied → 409 on re-merge" || bad "PR flow"
 git log -5 --format='%an|%s' | grep -q "prbuddy|merge: Spark buff" && ok "merge commit AUTHORED AS THE PROPOSER (credit follows the work)" || bad "merge authorship"
 git log -5 --format='%b' | grep -q "merged-by: prhost" && ok "merge trailer records merged-by (owner accountability)" || bad "merged-by trailer"
 node -e "process.exit(0)" && python3 tools/validate.py "$SCRATCH/examples/pr-demo" >/dev/null 2>&1 && ok "post-merge game still validates" || bad "post-merge validation"

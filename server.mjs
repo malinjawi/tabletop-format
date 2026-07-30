@@ -485,6 +485,7 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
     author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
     changes: diffCards(base, proposed),
     stale: diffCards(base, current).length > 0, conflicts,
+    reviews: await q.reviewsFor(db, pr.id),
     comments: await q.commentsFor(db, "pr", pr.id) });
 }, "PR detail: semantic diff + live staleness/conflict check + discussion");
 gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
@@ -497,6 +498,20 @@ gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
   await q.addComment(db, { id: newId("c"), target_type: "pr", target_id: pr.id, author_id: u.id, body: body.trim() });
   ctx.send(201, { comments: await q.commentsFor(db, "pr", pr.id) });
 }, "comment on a PR (review discussion)");
+gw.route("POST", "/api/games/:slug/prs/:id/review", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  const pr = await q.prById(db, ctx.params.id);
+  if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
+  if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
+  if (!await canWrite(u, slug)) return ctx.send(403, { error: "only the game's maintainers can review", propose: true });
+  if (pr.author_id === u.id) return ctx.send(422, { error: "you can't review your own proposal" });
+  const { verdict } = await json(ctx);
+  if (!["approve", "request_changes"].includes(verdict))
+    return ctx.send(422, { error: "verdict must be 'approve' or 'request_changes'" });
+  await q.addReview(db, { pr_id: pr.id, reviewer_id: u.id, verdict });
+  ctx.send(201, { reviews: await q.reviewsFor(db, pr.id) });
+}, "review a PR: approve or request changes (maintainers only, not the proposer)");
 gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;

@@ -131,6 +131,14 @@ export const q = {
     `SELECT c.body, c.created_at, u.handle AS author_handle FROM comments c JOIN users u ON u.id = c.author_id
      WHERE c.target_type = ? AND c.target_id = ? ORDER BY c.created_at`).all(targetType, targetId),
 
+  addReview: (db, r) => db.prepare(
+    `INSERT INTO reviews (pr_id, reviewer_id, verdict, created_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT (pr_id, reviewer_id) DO UPDATE SET verdict = excluded.verdict, created_at = excluded.created_at`)
+    .run(r.pr_id, r.reviewer_id, r.verdict, Date.now()),
+  reviewsFor: (db, prId) => db.prepare(
+    `SELECT rv.verdict, rv.created_at, u.handle AS reviewer_handle FROM reviews rv JOIN users u ON u.id = rv.reviewer_id
+     WHERE rv.pr_id = ? ORDER BY rv.created_at`).all(prId),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),

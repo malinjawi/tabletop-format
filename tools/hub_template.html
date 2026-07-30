@@ -78,6 +78,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .prh h3{margin:0 0 3px;font-size:16px}
 .prstate{background:var(--grn);color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600}
 .prstate.merged{background:#8250df}.prstate.closed{background:#57606a}
+.revbadge{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;background:#eef;color:#3538cd}
+.revbadge.approve{background:#e6f4ea;color:#1a7f37}.revbadge.request_changes{background:#fff1e5;color:#b35900}
 .prbody{padding:16px 18px}
 .prcard{display:flex;gap:20px;align-items:flex-start;border-top:1px solid #eaeef2;padding:16px 0;flex-wrap:wrap}
 .prcard img{width:180px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
@@ -911,6 +913,9 @@ async function prDetail(slug,id){
   const box=$(`#prb-${id}`);
   const conflictNote=pr.conflicts&&pr.conflicts.length
     ?`<div class="chg" style="color:#b35900"><b>⚠ conflicts:</b> both sides changed ${pr.conflicts.map(esc).join(", ")} — resolve in the fork first</div>`:"";
+  const revs=pr.reviews||[];
+  const reviewsHtml=revs.length?`<div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">${revs.map(r=>`<span class="revbadge ${r.verdict}">${r.verdict==="approve"?"✓":"✎"} ${esc(r.reviewer_handle)} ${r.verdict==="approve"?"approved":"requested changes"}</span>`).join("")}</div>`:"";
+  const reviewRow=pr.status==="open"&&ME?`<div style="margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" onclick="reviewPr('${slug}','${id}','approve')">✓ Approve</button><button class="btn" onclick="reviewPr('${slug}','${id}','request_changes')">✎ Request changes</button>${reviewsHtml}</div>`:reviewsHtml;
   const actions=pr.status==="open"&&ME?`<div class="mergebar">
       <button class="btn primary" onclick="mergePr('${slug}','${id}')">Merge — commits as ${esc(pr.author)}</button>
       <button class="btn" onclick="closePr('${slug}','${id}')">Close</button>
@@ -919,12 +924,18 @@ async function prDetail(slug,id){
   const discussion=`<div style="margin-top:14px"><div class="mut" style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Discussion</div>${commentThread(pr.comments)}
     ${ME?`<textarea id="prc-${id}" placeholder="Leave a review comment…" style="width:100%;min-height:56px;margin-top:8px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></textarea>
       <div style="margin-top:6px"><button class="btn" onclick="commentPr('${slug}','${id}')">Comment</button></div>`:``}</div>`;
-  box.innerHTML=(pr.changes||[]).map(chgHtml).join("")+conflictNote+discussion+actions;
+  box.innerHTML=(pr.changes||[]).map(chgHtml).join("")+conflictNote+reviewRow+discussion+actions;
 }
 async function commentPr(slug,id){
   const el=$(`#prc-${id}`); const body=(el.value||"").trim(); if(!body)return;
   const r=await fetch(`/api/games/${slug}/prs/${id}/comments`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({body})});
   if(r.status===201)prDetail(slug,id); else prNote((await r.json()).error||"failed",true);
+}
+async function reviewPr(slug,id,verdict){
+  const r=await fetch(`/api/games/${slug}/prs/${id}/review`,{method:"POST",headers:authHdr(),body:JSON.stringify({verdict})});
+  const d=await r.json();
+  if(r.status===201){prNote(verdict==="approve"?"You approved this PR":"You requested changes");prDetail(slug,id);}
+  else prNote(d.error||"failed",true);
 }
 async function mergePr(slug,id){
   const r=await fetch(`/api/games/${slug}/prs/${id}/merge`,{method:"POST",headers:authHdr()});

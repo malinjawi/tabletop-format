@@ -87,4 +87,18 @@ assert((await q.issuesFor(db, slug))[0].comment_count === 1, "comment_count refl
 await q.setIssueStatus(db, iid, "closed");
 assert((await q.issueByNumber(db, slug, n1)).status === "closed", "setIssueStatus closes");
 
+// reviews (005) — maintainer approve / request-changes on a PR
+const prId = newId("pr");
+await q.createPr(db, { id: prId, to_slug: slug, from_slug: fork, title: "buff", body: null,
+  author_id: ana.id, base: "[]", proposed: "[]" });
+const rev = { id: newId("u"), handle: h("rev"), email: `${h("rev")}@x.io`, pass_hash: "hash" };
+await q.createUser(db, rev);
+await q.addReview(db, { pr_id: prId, reviewer_id: rev.id, verdict: "approve" });
+let rl = await q.reviewsFor(db, prId);
+assert(rl.length === 1 && rl[0].verdict === "approve" && rl[0].reviewer_handle === rev.handle,
+  "addReview → reviewsFor joins reviewer handle");
+await q.addReview(db, { pr_id: prId, reviewer_id: rev.id, verdict: "request_changes" });
+rl = await q.reviewsFor(db, prId);
+assert(rl.length === 1 && rl[0].verdict === "request_changes", "re-review replaces the verdict (one per reviewer, upsert)");
+
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);
