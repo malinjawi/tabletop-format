@@ -481,7 +481,7 @@ async function cardsEdit(g){
       </div>
       <div class="edform" id="ed-fields"></div>
       <div class="edprev">
-        <canvas id="ed-canvas" width="584" height="818"></canvas>
+        <iframe id="ed-preview" title="Live themed card preview" style="width:280px;height:392px;border:0;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.18)"></iframe>
         <div class="edcommit">
           <div class="msg" id="ed-msg"></div>
           <div style="display:flex;gap:8px">
@@ -654,44 +654,42 @@ function edDelete(){
   edSelect(ED.cards[0]?.id); edBar();
 }
 /* ---- the money shot: draw the card face live on a canvas ---- */
+const ED_PREVIEW_CSS=`html,body{margin:0;height:100%}body{font-family:Inter,-apple-system,sans-serif;padding:2px;background:transparent}
+.card{height:calc(100% - 4px);border-radius:16px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(150deg,color-mix(in srgb,var(--fg) 55%,#fff),var(--fg) 70%);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.pb{display:flex;align-items:center;gap:6px;background:linear-gradient(var(--fg),color-mix(in srgb,var(--fg) 78%,#000));border-radius:9px 9px 0 0;padding:8px 11px}
+.pn{flex:1;font:700 16px/1.05 Cinzel,serif;color:#fdf3e3;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.pc2{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:800 14px Inter;color:#5a3d0c;background:radial-gradient(circle at 35% 30%,#fff6e6,#f2d089 45%,#b98a2e)}
+.pa{flex:1;min-height:60px;display:grid;place-items:center;overflow:hidden;border-left:4px solid var(--fg);border-right:4px solid var(--fg);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--bg) 78%,#fff),var(--bg))}
+.pa img{width:100%;height:100%;object-fit:cover}.pa .mk{font-size:50px;color:rgba(255,255,255,.32)}
+.ptl{font:700 10px/1 Cinzel,serif;letter-spacing:.08em;text-transform:uppercase;color:#fdf3e3;background:color-mix(in srgb,var(--fg) 82%,#000);padding:5px 11px}
+.ptx{flex:1.4;margin:0 3px 3px;padding:9px 11px;background:linear-gradient(#fbf1de,#f3e3c6);border:1px solid color-mix(in srgb,var(--fg) 45%,#c9a878);border-top:none;border-radius:0 0 9px 9px;font:400 13.5px/1.35 "EB Garamond",serif;color:#3a2c1a;overflow:auto}
+.psy{display:inline-block;min-width:16px;height:16px;line-height:16px;text-align:center;color:#fff;border-radius:5px;font-size:10px;background:#c8791a;vertical-align:-2px}
+.pf{display:flex;justify-content:space-between;align-items:center;padding:5px 10px 2px}
+.pkw{font:700 9px Inter;letter-spacing:.05em;text-transform:uppercase;color:#fbe6c9}
+.ppw{min-width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font:800 15px Inter;color:#fff;background:color-mix(in srgb,var(--fg) 88%,#000)}`;
+function edPreviewShell(){return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet"><style>${ED_PREVIEW_CSS}</style></head><body><div class="card" id="pc"></div></body></html>`;}
 function edPreview(){
-  const cv=document.getElementById("ed-canvas"),x=cv.getContext("2d");
-  const g=G(ED.slug),c=edCard(); const W=cv.width,H=cv.height;
-  x.clearRect(0,0,W,H);
-  if(!c)return;
+  const host=document.getElementById("ed-preview"); if(!host) return;
+  const d=host.contentDocument;
+  if(!d||!d.getElementById("pc")){ host.srcdoc=edPreviewShell(); host.addEventListener("load",edPreview,{once:true}); return; }
+  const g=G(ED.slug), c=edCard(); const pc=d.getElementById("pc");
+  if(!c){ pc.innerHTML=""; return; }
   const col=edColors(g,c.type), sym=edSym(g);
-  const rr=(a,b,w,h,r)=>{x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();};
-  x.fillStyle=col.bg; rr(12,12,W-24,H-24,34); x.fill();
-  x.lineWidth=6; x.strokeStyle=col.fg; x.stroke();
-  // title bar
-  x.fillStyle=col.fg; rr(30,30,W-60,86,20); x.fill();
-  x.fillStyle="#fff"; x.font="bold 46px DejaVu Sans, Arial, sans-serif"; x.textBaseline="middle";
-  x.fillText((c.name||"Untitled").slice(0,20),52,74);
-  // cost badge (first numeric attribute)
-  const defs=g.schema||[]; const costKey=(defs[0]||{}).key;
-  if(costKey&&(c.attributes||{})[costKey]!=null){
-    x.beginPath();x.arc(W-70,73,34,0,7);x.fillStyle="#fff";x.fill();x.lineWidth=5;x.strokeStyle=col.fg;x.stroke();
-    x.fillStyle=col.fg;x.font="bold 40px DejaVu Sans, Arial";x.textAlign="center";x.fillText(String(c.attributes[costKey]),W-70,75);x.textAlign="left";
-  }
-  // type line
-  x.fillStyle=col.fg; x.font="italic 30px DejaVu Sans, Arial";
-  x.fillText([c.type,(c.subtypes||[]).join(" ")].filter(Boolean).join(" · ").slice(0,28),40,150);
-  // art well
-  x.fillStyle="rgba(0,0,0,.06)"; rr(40,175,W-80,250,16); x.fill();
-  const img=g.images[c.id];
-  if(img&&!c.__isnew){const im=new Image();im.onload=()=>{x.save();rr(40,175,W-80,250,16);x.clip();x.drawImage(im,40,175,W-80,250);x.restore();};im.src=img;}
-  else{x.fillStyle=col.fg;x.globalAlpha=.35;x.font="20px DejaVu Sans, Arial";x.textAlign="center";x.fillText("art",W/2,305);x.textAlign="left";x.globalAlpha=1;}
-  // rules text with symbol glyph substitution + wrapping
-  const txt=(c.text||"").replace(/\[(\w+)\]/g,(m,k)=>sym[k]||m);
-  x.fillStyle="#1a1a1a"; x.font="30px DejaVu Sans, Arial";
-  let ty=470; const words=txt.split(/\s+/); let line="";
-  for(const w of words){const t=line?line+" "+w:w;
-    if(x.measureText(t).width>W-90&&line){x.fillText(line,45,ty);ty+=40;line=w;}else line=t;
-    if(ty>H-70)break;}
-  if(line&&ty<=H-70)x.fillText(line,45,ty);
-  // other attributes footer
-  const rest=defs.slice(1).filter(d=>(c.attributes||{})[d.key]!=null).map(d=>`${d.name||d.key} ${c.attributes[d.key]}`).join("   ");
-  if(rest){x.fillStyle=col.fg;x.font="bold 26px DejaVu Sans, Arial";x.fillText(rest.slice(0,30),45,H-50);}
+  d.body.style.setProperty("--fg",col.fg); d.body.style.setProperty("--bg",col.bg);
+  const at=c.attributes||{}, defs=g.schema||[];
+  const costKey=(defs.find(x=>/cost/i.test(x.key))||defs[0]||{}).key;
+  const powerKey=(defs.find(x=>/power|atk|attack|str|def/i.test(x.key))||{}).key;
+  const cost=(costKey&&at[costKey]!=null)?at[costKey]:null;
+  const power=(powerKey&&at[powerKey]!=null)?at[powerKey]:null;
+  const e=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const rich=t=>e(t).replace(/\[([a-z0-9_]+)\]/gi,(m,k)=>`<span class="psy">${e(sym[k]||k)}</span>`);
+  const sub=(c.subtypes||[]).join(" · ");
+  const img=g.images&&g.images[c.id];
+  pc.innerHTML=`<div class="pb"><span class="pn">${e(c.name||"Untitled")}</span>${cost!=null?`<span class="pc2">${e(cost)}</span>`:""}</div>`+
+    `<div class="pa">${img?`<img src="${img}">`:`<span class="mk">✦</span>`}</div>`+
+    `<div class="ptl">${e(c.type||"card")}${sub?" · "+e(sub):""}</div>`+
+    `<div class="ptx">${rich(c.text||"")}</div>`+
+    `<div class="pf"><span class="pkw">${e((c.keywords||[]).join(" · "))}</span>${power!=null?`<span class="ppw">${e(power)}</span>`:""}</div>`;
 }
 function edSummary(){ // mirror carddiff.summarize titles
   const changed=[],added=[],removed=[];
