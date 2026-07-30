@@ -18,6 +18,18 @@
       "script": "import-decklist.mjs",
       "usage": "<game-dir> <list.txt> [--name N] [--format F]",
       "desc": "Plaintext decklist ('3 Kindling') -> deck.json"
+    },
+    "tts": {
+      "runner": "node",
+      "script": "import-tts.mjs",
+      "usage": "<tts-save.json> <out-dir> [--title T]",
+      "desc": "Tabletop Simulator / Dextrous / Screentop deck export -> game project (round-trips the TTS exporter)"
+    },
+    "playtest": {
+      "runner": "node",
+      "script": "import-playtest.mjs",
+      "usage": "<game-dir> <session.json> [--ref SHA] [--date D]",
+      "desc": "Ingest a play-session's results (loose JSON) -> schema-valid playtests/*.json, pinned to the tested version"
     }
   },
   "exporters": {

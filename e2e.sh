@@ -99,6 +99,17 @@ TTCITEMS=$(python3 -c "import re;t=open('$TTCPACK/stacks.cfg').read();print(t.co
 TTCITEMS=$(python3 -c "import re;t=open('$TTCPACK/stacks.cfg').read();m=re.search(r'items = \[(.*?)\]',t,re.S);print(m.group(1).count(chr(34))//2)")
 [ "$TTCITEMS" = "$QSUM" ] && ok "ttc stacks.cfg deck honors quantities ($TTCITEMS cards)" || bad "ttc deck qty" "$TTCITEMS != $QSUM"
 python3 -c "import zipfile;z=zipfile.ZipFile('examples/ember/exports/ttc/ember-ttc.zip');import sys;sys.exit(0 if (z.testzip() is None and any('config.cfg' in n for n in z.namelist())) else 1)" && ok "ttc distributable zip valid (unzip into TabletopClub/assets/)" || bad "ttc zip"
+say "== interop importers (bring outside work in) =="
+check "tts import (round-trip)" node tools/import-tts.mjs examples/ember/exports/tts/ember.json "$SCRATCH/tts-rt" --title "Ember RT"
+RTQ=$(python3 -c "import json;print(sum(p.get('quantity',1) for p in json.load(open('$SCRATCH/tts-rt/components/printings.json'))))")
+[ "$RTQ" = "$QSUM" ] && ok "tts import round-trips the deck size ($RTQ cards)" || bad "tts round-trip qty" "$RTQ != $QSUM"
+python3 tools/validate.py "$SCRATCH/tts-rt" >/dev/null 2>&1 && ok "tts-imported game validates" || bad "tts import validate"
+grep -q '"artist"' "$SCRATCH/tts-rt/components/printings.json" && ok "tts import carries GMNotes credit back (provenance round-trip)" || bad "tts import provenance"
+printf '%s' '{"location":"screentop","duration_minutes":22,"players":[{"name":"Rae","result":"WIN","elo":1400},{"name":"Kai","result":"loss"}],"card_notes":[{"card_id":"wildfire","tag":"Balance","note":"snowballs"},{"card_id":"x","tag":"bogus","note":"drop"}],"secret":"nope"}' > "$SCRATCH/sess.json"
+check "playtest ingest" node tools/import-playtest.mjs "$SCRATCH/tts-rt" "$SCRATCH/sess.json" --ref abc1234 --date 2026-07-30
+python3 tools/validate.py "$SCRATCH/tts-rt" >/dev/null 2>&1 && ok "ingested playtest validates against the schema" || bad "playtest ingest validate"
+python3 -c "import json;s=json.load(open('$SCRATCH/tts-rt/playtests/2026-07-30-screentop.json'));assert s['version_ref']=='abc1234';assert all(p.get('result') in (None,'win','loss','draw') for p in s['players']);assert all('elo' not in p for p in s['players']);assert len(s.get('card_notes',[]))==1" && ok "ingest normalizes: version pinned, results validated, junk + bad-tag dropped" || bad "playtest ingest normalize"
+python3 tools/stats.py "$SCRATCH/tts-rt" --json 2>/dev/null | python3 -c "import json,sys;assert json.load(sys.stdin)['sessions']>=1" && ok "stats aggregates the ingested session" || bad "playtest ingest stats"
 
 say ""
 say "== decks & legality =="
