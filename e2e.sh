@@ -80,6 +80,15 @@ check "tts export" python3 tools/export_tts.py examples/ember
 DECKIDS=$(python3 -c "import json;s=json.load(open('examples/ember/exports/tts/ember.json'));print(len(s['ObjectStates'][0]['DeckIDs']))")
 QSUM=$(python3 -c "import json;print(sum(p.get('quantity',1) for p in json.load(open('examples/ember/components/printings.json'))))")
 [ "$DECKIDS" = "$QSUM" ] && ok "tts deck honors quantities ($DECKIDS cards)" || bad "tts quantities" "$DECKIDS != $QSUM"
+check "ttc export" python3 tools/export_ttc.py examples/ember
+TTCPACK=examples/ember/exports/ttc/Ember/cards
+[ -f "$TTCPACK/config.cfg" ] && [ -f "$TTCPACK/stacks.cfg" ] && [ -f "$TTCPACK/_back.png" ] && ok "ttc pack: cards/ + config.cfg + stacks.cfg + _back.png" || bad "ttc pack layout"
+grep -q 'back_face = "_back.png"' "$TTCPACK/config.cfg" && grep -q 'license = "CC0-1.0"' "$TTCPACK/config.cfg" && ok "ttc config.cfg: shared back_face + game license" || bad "ttc config"
+grep -q 'author = "TBD"' "$TTCPACK/config.cfg" && ok "ttc carries per-card provenance (credit follows the work onto the table)" || bad "ttc provenance"
+TTCITEMS=$(python3 -c "import re;t=open('$TTCPACK/stacks.cfg').read();print(t.count('\"'))")
+TTCITEMS=$(python3 -c "import re;t=open('$TTCPACK/stacks.cfg').read();m=re.search(r'items = \[(.*?)\]',t,re.S);print(m.group(1).count(chr(34))//2)")
+[ "$TTCITEMS" = "$QSUM" ] && ok "ttc stacks.cfg deck honors quantities ($TTCITEMS cards)" || bad "ttc deck qty" "$TTCITEMS != $QSUM"
+python3 -c "import zipfile;z=zipfile.ZipFile('examples/ember/exports/ttc/ember-ttc.zip');import sys;sys.exit(0 if (z.testzip() is None and any('config.cfg' in n for n in z.namelist())) else 1)" && ok "ttc distributable zip valid (unzip into TabletopClub/assets/)" || bad "ttc zip"
 
 say ""
 say "== decks & legality =="
@@ -479,6 +488,8 @@ grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q "ed-canvas" "$SCRATCH/l
   && ok "live hub ships the IN-HUB card editor (drawer + live canvas preview + commit/propose)" || bad "hub editor wiring"
 grep -q "liveIssues" "$SCRATCH/live-hub.html" && grep -q "commentThread" "$SCRATCH/live-hub.html" \
   && grep -q "commentPr" "$SCRATCH/live-hub.html" && ok "live hub ships Issues tab + comment threads (issues & PRs)" || bad "hub issues wiring"
+grep -q "exportMenu" "$SCRATCH/live-hub.html" && grep -q "Tabletop Club" "$SCRATCH/live-hub.html" \
+  && ok "live hub Export offers Tabletop Club / TTS / PnP downloads" || bad "hub export wiring"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
 node -e "
 (async () => {

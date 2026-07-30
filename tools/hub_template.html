@@ -320,7 +320,7 @@ function repoPage(g, tab){
       <div class="actions">
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
-        <button class="btn" onclick="alert('Same data, every output:\\n· Print-and-play PDF (crop marks, 300dpi)\\n· Tabletop Simulator mod\\n· CSV / InDesign data merge')">⤓ Export</button>
+        <button class="btn" onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Club asset pack (open-source 3D table)\\n· Tabletop Simulator mod\\n· Print-and-play PDF (300dpi, crop marks)')">⤓ Export</button>
         <button class="btn primary" onclick="LIVE?openEditor('${g.slug}'):alert('Live editing needs the platform server (node server.mjs).\\nStatic beta: try the editor demo from the landing page.')">✎ Edit cards</button>
       </div>
     </div>
@@ -377,6 +377,22 @@ function filterCards(slug){
       ${g.images[c.id]?`<img src="${g.images[c.id]}">`:`<div style="border:1px solid var(--bd);border-radius:8px;padding:30px 8px;text-align:center;color:var(--mut)">${esc(c.name)}</div>`}
       <div class="cn">${esc(c.name)}</div>
     </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
+}
+/* ---------- exports: same data, every table ---------- */
+async function doExport(slug, fmt, label){
+  prNote(`Building ${label}…`);
+  const r = await fetch(`/api/games/${slug}/export/${fmt}`, { method:"POST", headers: authHdr() });
+  const d = await r.json();
+  if(!r.ok){ prNote(d.error||"export failed", true); return; }
+  const url = d.urls[0];
+  prNote(`${label} ready — frozen at ${d.ref}`);
+  window.open(url, "_blank");
+}
+function exportMenu(slug){
+  const pick = prompt("Export "+slug+" to:\n\n  1 — Tabletop Club asset pack (open, 3D table)\n  2 — Tabletop Simulator mod\n  3 — Print-and-play PDF\n\nEnter 1, 2, or 3:");
+  if(pick==="1") doExport(slug,"ttc","Tabletop Club pack");
+  else if(pick==="2") doExport(slug,"tts","TTS mod");
+  else if(pick==="3") doExport(slug,"pnp","Print-and-play PDF");
 }
 /* ================= IN-HUB CARD EDITOR (live preview + commit/propose) ================= */
 let ED=null; // {slug, cards, orig, sel, access, dirty:Set}

@@ -1,15 +1,61 @@
 {
   "$comment": "Import/export plugin registry. fmt reads this to dispatch and to build its help text. Add a format = drop a script + one entry here. See PLUGINS.md.",
   "importers": {
-    "csv":      { "runner": "node",   "script": "import-csv.mjs",      "usage": "<cards.csv> <out-dir> [--title T]", "desc": "Spreadsheet (CSV/TSV) -> game project" },
-    "nrdb":     { "runner": "node",   "script": "import-nrdb.mjs",     "usage": "<nrdb-dir> <out-dir> [--title T]",  "desc": "NRDB/Alsciende-family JSON (Netrunner, Arkham, Marvel...)" },
-    "decklist": { "runner": "node",   "script": "import-decklist.mjs", "usage": "<game-dir> <list.txt> [--name N] [--format F]", "desc": "Plaintext decklist ('3 Kindling') -> deck.json" }
+    "csv": {
+      "runner": "node",
+      "script": "import-csv.mjs",
+      "usage": "<cards.csv> <out-dir> [--title T]",
+      "desc": "Spreadsheet (CSV/TSV) -> game project"
+    },
+    "nrdb": {
+      "runner": "node",
+      "script": "import-nrdb.mjs",
+      "usage": "<nrdb-dir> <out-dir> [--title T]",
+      "desc": "NRDB/Alsciende-family JSON (Netrunner, Arkham, Marvel...)"
+    },
+    "decklist": {
+      "runner": "node",
+      "script": "import-decklist.mjs",
+      "usage": "<game-dir> <list.txt> [--name N] [--format F]",
+      "desc": "Plaintext decklist ('3 Kindling') -> deck.json"
+    }
   },
   "exporters": {
-    "pnp":    { "runner": "python", "script": "export_pnp.py",   "usage": "<game-dir> [--dpi N]", "desc": "Print-and-play PDF (300dpi default, crop marks)" },
-    "tts":    { "runner": "python", "script": "export_tts.py",   "usage": "<game-dir> [--face-url U] [--back-url U]", "desc": "Tabletop Simulator mod (sprite sheet + save JSON)" },
-    "site":   { "runner": "python", "script": "build_site.py",   "usage": "<game-dir> [--diff cards.json] [-o out.html]", "desc": "Self-contained game page" },
-    "editor": { "runner": "python", "script": "build_editor.py", "usage": "<game-dir> [-o out.html]", "desc": "In-browser card editor" },
-    "hub":    { "runner": "python", "script": "build_hub.py",    "usage": "[-o out.html] [--games dir]", "desc": "Multi-game hub UI" }
+    "pnp": {
+      "runner": "python",
+      "script": "export_pnp.py",
+      "usage": "<game-dir> [--dpi N]",
+      "desc": "Print-and-play PDF (300dpi default, crop marks)"
+    },
+    "tts": {
+      "runner": "python",
+      "script": "export_tts.py",
+      "usage": "<game-dir> [--face-url U] [--back-url U]",
+      "desc": "Tabletop Simulator mod (sprite sheet + save JSON)"
+    },
+    "ttc": {
+      "runner": "python",
+      "script": "export_ttc.py",
+      "usage": "<game-dir>",
+      "desc": "Tabletop Club asset pack (open-source 3D playspace; carries provenance)"
+    },
+    "site": {
+      "runner": "python",
+      "script": "build_site.py",
+      "usage": "<game-dir> [--diff cards.json] [-o out.html]",
+      "desc": "Self-contained game page"
+    },
+    "editor": {
+      "runner": "python",
+      "script": "build_editor.py",
+      "usage": "<game-dir> [-o out.html]",
+      "desc": "In-browser card editor"
+    },
+    "hub": {
+      "runner": "python",
+      "script": "build_hub.py",
+      "usage": "[-o out.html] [--games dir]",
+      "desc": "Multi-game hub UI"
+    }
   }
 }

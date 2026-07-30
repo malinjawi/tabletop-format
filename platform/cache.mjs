@@ -64,7 +64,7 @@ export async function ensureRenders(gameRel, gameSlug, sha) {
 /** Ensure pnp/tts exports for a game at a ref (sha or tag). Idempotent per key. */
 export async function ensureExport(gameRel, gameSlug, ref, kind) {
   const outDir = join(CACHE_DIR, "exports", gameSlug, ref);
-  const done = { pnp: join(outDir, "pnp.pdf"), tts: join(outDir, "tts.json") }[kind];
+  const done = { pnp: join(outDir, "pnp.pdf"), tts: join(outDir, "tts.json"), ttc: join(outDir, `${gameSlug}-ttc.zip`) }[kind];
   if (existsSync(done)) return { dir: outDir, hit: true };
   const { dir, cleanup } = await materialize(gameRel, ref);
   try {
@@ -74,6 +74,10 @@ export async function ensureExport(gameRel, gameSlug, ref, kind) {
       execFileSync("python3", [join(ROOT, "tools/export_pnp.py"), dir], { stdio: "pipe" });
       const pdf = readdirSync(join(dir, "exports")).find(f => f.endsWith("-pnp.pdf"));
       cpSync(join(dir, "exports", pdf), join(outDir, "pnp.pdf"));
+    } else if (kind === "ttc") {
+      execFileSync("python3", [join(ROOT, "tools/export_ttc.py"), dir], { stdio: "pipe" });
+      const z = readdirSync(join(dir, "exports/ttc")).find(f => f.endsWith("-ttc.zip"));
+      cpSync(join(dir, "exports/ttc", z), join(outDir, `${gameSlug}-ttc.zip`));
     } else {
       execFileSync("python3", [join(ROOT, "tools/export_tts.py"), dir], { stdio: "pipe" });
       const tts = join(dir, "exports", "tts");

@@ -37,7 +37,7 @@ const READONLY = args.includes("--readonly");
 const RATE = { windowMs: 60_000, max: 120 };
 const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
                svg: "image/svg+xml", ogg: "audio/ogg", mp3: "audio/mpeg", woff2: "font/woff2",
-               pdf: "application/pdf", json: "application/json" };
+               pdf: "application/pdf", json: "application/json", zip: "application/zip" };
 
 /* ---------- stores ---------- */
 // Store 2 — driver behind the same q surface: node:sqlite (dev) or Postgres (prod)
@@ -165,7 +165,7 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
   const { ref } = ctx.params;
   const file = ctx.params["*"];
   if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || file.includes("..")) return ctx.send(404, { error: "bad ref" });
-  const kind = file.startsWith("pnp") ? "pnp" : "tts";
+  const kind = file.startsWith("pnp") ? "pnp" : file.endsWith("-ttc.zip") ? "ttc" : "tts";
   const { dir } = await cache.ensureExport(mat(slug), slug, ref, kind);
   const fp = join(dir, file);
   if (!existsSync(fp)) return ctx.send(404, { error: "not producible" });
@@ -552,12 +552,14 @@ gw.route("POST", "/api/games/:slug/issues/:n/close", async (ctx) => {
 gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const { fmt } = ctx.params;
-  if (!["pnp", "tts"].includes(fmt)) return ctx.send(400, { error: "pnp or tts" });
+  if (!["pnp", "tts", "ttc"].includes(fmt)) return ctx.send(400, { error: "pnp, tts, or ttc" });
   const sha = await store.headSha(slug);
   const { hit } = await cache.ensureExport(mat(slug), slug, sha, fmt);
   const base = `/cache/exports/${slug}/${sha}`;
-  ctx.send(200, { ok: true, ref: sha, cached: hit,
-    urls: fmt === "pnp" ? [`${base}/pnp.pdf`] : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`] });
+  const urls = fmt === "pnp" ? [`${base}/pnp.pdf`]
+    : fmt === "ttc" ? [`${base}/${slug}-ttc.zip`]
+    : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`];
+  ctx.send(200, { ok: true, ref: sha, cached: hit, urls });
 }, "export into the immutable cache; returns permanent URLs");
 
 /* ---------- boot ---------- */
