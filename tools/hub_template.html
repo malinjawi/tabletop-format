@@ -281,7 +281,7 @@ async function forkGame(slug){
     alert(`⑂ Forked! '${d.slug}' is yours — attribution to '${slug}' is committed (${d.commit}).\nTaking you to your copy…`);
     location.href=`/?t=${Date.now()}#/g/${d.slug}`; // reload → hub rebakes with the new game
   } else if(r.status===401){ authOpen(); }
-  else alert(`✗ ${d.error??r.status}`);
+  else toast(`✗ ${d.error??r.status}`);
 }
 refreshLive();
 const $ = s => document.querySelector(s);
@@ -531,7 +531,8 @@ function edArt(){
     toast("Uploading art…");
     const up=await fetch(`/api/games/${ED.slug}/assets?path=${encodeURIComponent(path)}`,{method:"POST",headers:{Authorization:"Bearer "+localStorage.forge_token},body:f});
     if(!up.ok){ toast("Upload failed: "+(((await up.json().catch(()=>({}))).error)||up.status)); return; }
-    const artist=(prompt("Artist / credit for this art (optional):")||"").trim();
+    const av=await askForm("Credit the artist",[{name:"artist",label:"Artist / credit (optional)"}],"Assign art"); if(av===null) return;
+    const artist=(av.artist||"").trim();
     const body={printing_id:`p_${c.id}_core`,art:path}; if(artist){ body.artist=artist; body.license="CC-BY-4.0"; }
     const r=await fetch(`/api/games/${ED.slug}/art`,{method:"PUT",headers:authHdr(),body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
@@ -560,6 +561,24 @@ function edSelect(id){ ED.sel=id; edRenderList(); edRenderFields(); edPreview();
 function toast(html,ms){let t=document.getElementById("hubtoast");if(!t){t=document.createElement("div");t.id="hubtoast";
   t.style.cssText="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#1f2328;color:#fff;padding:14px 22px;border-radius:10px;z-index:99;max-width:520px;box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:14px;line-height:1.4";document.body.appendChild(t);}
   t.innerHTML=html;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",ms||5000);}
+function askForm(title, fields, okLabel){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div");
+    ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
+    const box=document.createElement("div");
+    box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:440px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+    box.innerHTML=`<h3 style="margin:0 0 16px;font-size:17px;font-weight:600">${esc(title)}</h3>`+
+      fields.map(f=>`<label style="display:block;margin-bottom:12px;font-size:13px;color:var(--mut)">${esc(f.label||f.name)}<input data-n="${esc(f.name)}" type="${esc(f.type||'text')}" placeholder="${esc(f.placeholder||'')}" value="${esc(f.value||'')}" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>`).join("")+
+      `<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>${esc(okLabel||'OK')}</button></div>`;
+    ov.appendChild(box); document.body.appendChild(ov);
+    const done=v=>{ov.remove();resolve(v);};
+    box.querySelector("[data-x]").onclick=()=>done(null);
+    ov.addEventListener("mousedown",e=>{if(e.target===ov)done(null);});
+    box.querySelector("[data-ok]").onclick=()=>{const o={};box.querySelectorAll("[data-n]").forEach(i=>o[i.dataset.n]=i.value.trim());done(o);};
+    box.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.tagName==="INPUT")box.querySelector("[data-ok]").click();if(e.key==="Escape")done(null);});
+    const f0=box.querySelector("input"); if(f0)setTimeout(()=>f0.focus(),30);
+  });
+}
 async function reload(){ location.reload(); }
 
 function edField(label, key, val, opts){
@@ -815,7 +834,8 @@ async function liveAnalytics(slug){
       ${tot?`<div><div style="font-size:15px;font-weight:600">🏆 ${R.win||0}W · ${R.loss||0}L${R.draw?` · ${R.draw}D`:""}</div><div style="color:var(--mut);font-size:12px">results (${tot})</div></div>`:""}
       ${fl.length?`<div style="flex:1;min-width:180px"><div style="color:var(--mut);font-size:12px;margin-bottom:4px">most-flagged</div>${fl.map(([n,c])=>`<span class="badge" style="margin:2px 5px 2px 0">${esc(n)} <b>${c}×</b></span>`).join("")}</div>`:""}
     </div></div>`;
-  pane.insertBefore(box.firstChild, pane.firstChild);
+  const _ex=document.getElementById("live-insights"); if(_ex)_ex.remove();
+  const _node=box.firstChild; _node.id="live-insights"; pane.insertBefore(_node, pane.firstChild);
 }
 
 function history(g){
@@ -1012,8 +1032,9 @@ async function closePr(slug,id){
 }
 async function proposePr(from,to){
   if(!ME){prNote("Sign in first",true);return;}
-  const title=prompt(`Propose changes: ${from} → ${to}\n\nTitle for your pull request:`);
-  if(!title) return;
+  const v=await askForm(`Propose changes: ${from} → ${to}`,[{name:"title",label:"Title for your pull request",placeholder:"Buff Wildfire"}],"Open PR");
+  if(!v||!v.title) return;
+  const title=v.title;
   const r=await fetch(`/api/games/${to}/prs`,{method:"POST",headers:authHdr(),
     body:JSON.stringify({from,title})});
   const d=await r.json();
@@ -1071,10 +1092,10 @@ async function liveReleases(g){
 }
 async function cutRelease(slug){
   if(!ME){ toast("Sign in to cut a release"); return; }
-  const tag=prompt("Tag for this release (e.g. v1.0):"); if(!tag) return;
-  const title=prompt("Title (optional):")||"";
+  const v=await askForm("Cut a release",[{name:"tag",label:"Tag (e.g. v1.0)",placeholder:"v1.0"},{name:"title",label:"Title (optional)"}],"Release");
+  if(!v||!v.tag) return;
   toast("Cutting release + freezing exports…");
-  const r=await fetch(`/api/games/${slug}/releases`,{method:"POST",headers:authHdr(),body:JSON.stringify({tag,title})});
+  const r=await fetch(`/api/games/${slug}/releases`,{method:"POST",headers:authHdr(),body:JSON.stringify({tag:v.tag,title:v.title})});
   const d=await r.json();
   if(r.status===201){ toast(`Released ${d.tag} — pinned to ${d.sha}`); liveReleases(G(slug)); }
   else toast(d.error||"couldn't cut release");
@@ -1257,9 +1278,9 @@ async function joinJam(id){
 }
 async function submitJam(id){
   if(!ME){ toast("Sign in to submit."); return; }
-  const game=prompt("Submit which game?\nEnter the slug of a game you own:");
-  if(!game) return;
-  const r=await fetch(`/api/jams/${id}/submit`,{method:"POST",headers:authHdr(),body:JSON.stringify({game:game.trim()})});
+  const v=await askForm("Submit a game to this jam",[{name:"game",label:"Slug of a game you own",placeholder:"my-game"}],"Submit");
+  if(!v||!v.game) return;
+  const r=await fetch(`/api/jams/${id}/submit`,{method:"POST",headers:authHdr(),body:JSON.stringify({game:v.game})});
   const d=await r.json().catch(()=>({}));
   if(r.status===201){ toast("Submitted — your entry qualifies! 🎉"); renderJamEntries(id); }
   else toast((d.error||"Submit failed")+(d.reasons?": "+d.reasons.join("; "):""));
@@ -1331,6 +1352,7 @@ async function liveCollab(g){
     ${canManage?`<div style="margin-top:10px;display:flex;gap:6px"><input id="collab-h" placeholder="handle to invite" style="flex:1;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font:inherit"><button class="btn primary" onclick="addCollab('${g.slug}')">Invite</button></div>`:""}
     <div style="color:var(--mut);font-size:11.5px;margin-top:8px">Collaborators commit directly; everyone else forks + proposes. (Owner-only to change.)</div>
   </div>`;
+  const _exc=document.getElementById("collab-box"); if(_exc)_exc.remove(); box.id="collab-box";
   side.appendChild(box);
 }
 async function addCollab(slug){ const el=$("#collab-h"); const handle=((el&&el.value)||"").trim(); if(!handle)return;
