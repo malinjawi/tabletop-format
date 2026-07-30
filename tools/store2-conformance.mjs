@@ -120,4 +120,11 @@ let dupRel = false;
 try { await q.createRelease(db, { game_slug: slug, tag: "v1.0", sha: "z", author_id: ana.id }); } catch { dupRel = true; }
 assert(dupRel, "duplicate tag rejected (one release per tag per game)");
 
+// events (007) — the activity feed backing
+await q.recordEvent(db, { id: newId("ev"), kind: "fork", actor_id: ana.id, game_slug: fork, target: slug });
+await q.recordEvent(db, { id: newId("ev"), kind: "release", actor_id: ana.id, game_slug: slug, target: "v1.0" });
+const ev = await q.recentEvents(db, 10);
+assert(ev.length >= 2 && ev[0].actor_handle === ana.handle && ev[0].kind === "release", "recentEvents newest-first, joined to actor");
+assert((await q.eventsByActor(db, ana.id, 10)).length >= 2, "eventsByActor filters to one user's activity");
+
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);

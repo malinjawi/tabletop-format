@@ -162,6 +162,16 @@ export const q = {
     `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
      WHERE rl.game_slug = ? AND rl.tag = ?`).get(slug, tag),
 
+  recordEvent: (db, e) => db.prepare(
+    `INSERT INTO events (id, kind, actor_id, game_slug, target, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(e.id, e.kind, e.actor_id ?? null, e.game_slug ?? null, e.target ?? null, Date.now()),
+  recentEvents: (db, limit = 30) => db.prepare(
+    `SELECT e.kind, e.game_slug, e.target, e.created_at, u.handle AS actor_handle
+     FROM events e LEFT JOIN users u ON u.id = e.actor_id ORDER BY e.created_at DESC LIMIT ?`).all(limit),
+  eventsByActor: (db, actorId, limit = 30) => db.prepare(
+    `SELECT e.kind, e.game_slug, e.target, e.created_at, u.handle AS actor_handle
+     FROM events e LEFT JOIN users u ON u.id = e.actor_id WHERE e.actor_id = ? ORDER BY e.created_at DESC LIMIT ?`).all(actorId, limit),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),

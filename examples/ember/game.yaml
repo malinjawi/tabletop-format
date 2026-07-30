@@ -7,6 +7,8 @@ description: >
   copy, fork, sell, or set on fire.
 version: "0.2.0"
 license: CC0-1.0
+genre: card battler
+tags: [fire, dueling, spark, print-and-play]
 authors:
   - name: The Format Project
     role: design

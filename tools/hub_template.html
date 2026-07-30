@@ -326,7 +326,20 @@ function explorePage(filter){
         <span>updated ${esc(g.updated)}</span>
       </div>
     </div>`).join("")}
-  </div></div>`;
+  </div></div>
+  <div class="wrap"><div id="feed"></div></div>`;
+  if(typeof LIVE!=="undefined" && LIVE) loadFeed();
+}
+async function loadFeed(){
+  let ev; try{ ev=await (await fetch("/api/activity")).json(); }catch{ return; }
+  if(!Array.isArray(ev)||!ev.length) return;
+  const feed=$("#feed"); if(!feed) return;
+  const verb={fork:"forked",star:"starred",pr_merge:"merged a PR into",jam_join:"joined a jam with",release:"released"};
+  const line=e=>{const who=e.actor_handle?`<b>${esc(e.actor_handle)}</b>`:"someone";
+    const g=e.game_slug?`<a onclick="go('g/${esc(e.game_slug)}')">${esc(e.game_slug)}</a>`:"";
+    const tgt=e.target?` <span style="color:var(--mut)">(${esc(e.target)})</span>`:"";
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--bd);font-size:13.5px">${who} ${verb[e.kind]||e.kind} ${g}${tgt}</div>`;};
+  feed.innerHTML=`<div class="box"><div class="bh">⚡ Recent activity</div><div class="bb">${ev.slice(0,12).map(line).join("")}</div></div>`;
 }
 function searchAll(v){
   v=v.trim().toLowerCase();

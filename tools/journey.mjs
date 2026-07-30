@@ -258,5 +258,14 @@ const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
 const frozen = await api("GET", relDet.downloads.ttc);
 assert(frozen.status === 200, "the frozen TTC download serves at the pinned sha — a citable, immutable version");
 
+console.log("== ACT 10: discovery & the activity feed — the front door ==");
+const disc = (await api("GET", "/api/discover?q=tidepool")).data;
+assert(Array.isArray(disc) && disc.some(x => x.slug === "tidepool"), "discover/search finds tidepool by text");
+const feed = (await api("GET", "/api/activity")).data;
+assert(feed.length >= 3 && feed[0].actor_handle && feed.some(e => e.kind === "release") && feed.some(e => e.kind === "pr_merge"),
+  "activity feed records the story — release, merge, fork… newest first, attributed");
+const aliceFeed = (await api("GET", "/api/activity?user=alice")).data;
+assert(aliceFeed.length >= 1 && aliceFeed.every(e => e.actor_handle === "alice"), "personal feed ?user=alice filters to her activity");
+
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
 console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");

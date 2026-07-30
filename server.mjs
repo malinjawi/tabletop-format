@@ -262,6 +262,7 @@ gw.route("PUT", "/api/stars/:slug", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   if (!requireGame(ctx)) return;
   await q.star(db, u.id, ctx.params.slug);
+  await q.recordEvent(db, { id: newId("ev"), kind: "star", actor_id: u.id, game_slug: ctx.params.slug });
   ctx.send(200, { starred: true, stars: await q.starCount(db, ctx.params.slug) });
 }, "star");
 gw.route("DELETE", "/api/stars/:slug", async (ctx) => {
@@ -303,6 +304,7 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const src = requireGame(ctx); if (!src) return;
   try {
     const f = await doFork(u, src);
+    await q.recordEvent(db, { id: newId("ev"), kind: "fork", actor_id: u.id, game_slug: f.slug, target: src });
     ctx.send(201, { slug: f.slug, forked_from: src, commit: f.sha, url: `/#/g/${f.slug}` });
   } catch (e) { ctx.send(e.code ?? 500, { error: e.message }); }
 }, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
@@ -551,6 +553,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
     `merge: ${pr.title} (PR from ${pr.from_slug})\n\n${auto?.body ?? ""}\nmerged-by: ${u.handle}`,
     `${pr.author_handle} <${pr.author_email}>`);
   await q.setPrStatus(db, pr.id, "merged", sha);
+  await q.recordEvent(db, { id: newId("ev"), kind: "pr_merge", actor_id: u.id, game_slug: slug, target: pr.from_slug });
   ctx.send(200, { merged: true, commit: sha, changes });
 }, "merge a PR: card-level three-way merge → validate → commit AUTHORED AS THE PROPOSER");
 gw.route("POST", "/api/games/:slug/prs/:id/close", async (ctx) => {
@@ -701,9 +704,43 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   if (prev) { const i = hist.findIndex(h => h.sha === prev.sha || h.full === prev.sha); if (i >= 0) commits = hist.slice(0, i); }
   const notes = commits.map(h => `- ${h.subject} (${h.author})`).join("\n") || "- (initial release)";
   await q.createRelease(db, { game_slug: slug, tag, sha, title: title?.trim() || null, notes, author_id: u.id });
+  await q.recordEvent(db, { id: newId("ev"), kind: "release", actor_id: u.id, game_slug: slug, target: tag });
   for (const kind of ["pnp", "tts", "ttc"]) { try { await cache.ensureExport(mat(slug), slug, sha, kind); } catch {} }  // freeze exports at the sha
   ctx.send(201, { tag, sha, notes });
 }, "cut a release: pin a tag to the current sha with an auto-changelog (owner only)");
+
+/* ---------- routes: discovery + activity feed ---------- */
+gw.route("GET", "/api/discover", async (ctx) => {
+  const qs = (ctx.url.searchParams.get("q") || "").toLowerCase();
+  const genre = (ctx.url.searchParams.get("genre") || "").toLowerCase();
+  const tag = (ctx.url.searchParams.get("tag") || "").toLowerCase();
+  const clean = (s) => s.replace(/^["']|["']$/g, "").trim();
+  const out = [];
+  for (const slug of await store.list()) {
+    let y = ""; try { y = (await store.readFile(slug, "game.yaml")).toString(); } catch { continue; }
+    const title = clean((y.match(/^title:\s*(.+)$/m) || [])[1] || slug);
+    const g = clean((y.match(/^genre:\s*(.+)$/m) || [])[1] || "").toLowerCase();
+    const desc = clean((y.match(/^description:\s*(.+)$/m) || [])[1] || "");
+    const inline = (y.match(/^tags:\s*\[([^\]]*)\]/m) || [])[1];
+    const block = (y.match(/^tags:\s*\n((?:\s*-\s*.+\n?)+)/m) || [])[1];
+    const tags = (inline != null ? inline.split(",")
+      : (block || "").split("\n").map(l => l.replace(/^\s*-\s*/, "")))
+      .map(s => s.replace(/["']/g, "").trim().toLowerCase()).filter(Boolean);
+    if (qs && !(title + " " + desc + " " + g + " " + tags.join(" ") + " " + slug).toLowerCase().includes(qs)) continue;
+    if (genre && g !== genre) continue;
+    if (tag && !tags.includes(tag)) continue;
+    out.push({ slug, title, genre: g || null, tags });
+  }
+  ctx.send(200, out);
+}, "discover / search games by text, genre, or tag");
+gw.route("GET", "/api/activity", async (ctx) => {
+  const handle = ctx.url.searchParams.get("user");
+  if (handle) {
+    const u = await q.userByHandle(db, handle);
+    return ctx.send(200, u ? await q.eventsByActor(db, u.id, 30) : []);
+  }
+  ctx.send(200, await q.recentEvents(db, 30));
+}, "recent activity feed (global, or ?user=<handle> for one person)");
 
 /* ---------- routes: jams (Store-2-backed entries; the co-creation front door) ---------- */
 gw.route("GET", "/api/jams", async (ctx) => {
@@ -731,6 +768,7 @@ gw.route("POST", "/api/jams/:id/join", async (ctx) => {
   const r = await hostGameFromCsv(u, `${u.handle}'s ${j.theme} entry`, csv, await authorOf(ctx));
   if (r.error) return ctx.send(r.error.code, r.error.body);
   await q.enterJam(db, { jam_id: j.id, game_slug: r.slug, user_id: u.id, qualified: 1 });
+  await q.recordEvent(db, { id: newId("ev"), kind: "jam_join", actor_id: u.id, game_slug: r.slug, target: j.id });
   ctx.send(201, { slug: r.slug, entered: true, url: `/#/g/${r.slug}` });
 }, "one-click join: fork the jam starter into your account and enter it");
 gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
