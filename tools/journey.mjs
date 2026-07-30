@@ -251,6 +251,8 @@ const an = (await api("GET", "/api/games/tidepool/analytics")).data;
 assert(an.sessions === 1 && an.table_minutes === 30 && an.results.win === 1 && an.results.loss === 1,
   "live analytics aggregate it: 1 session, 30 min, 1W/1L (result normalized server-side)");
 assert(an.flagged && an.flagged.riptide, "card note flagged riptide (tag normalized)");
+const bd = (await api("GET", "/api/games/tidepool/diff")).data;
+assert(Array.isArray(bd.changes) && bd.from && bd.to && bd.from !== bd.to, "balance-diff compares two versions of the cards (from/to pinned)");
 
 console.log("== ACT 9: releases — cut a citable, immutable version ==");
 const relBad = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "not a tag!" } });

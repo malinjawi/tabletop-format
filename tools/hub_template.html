@@ -849,7 +849,19 @@ function history(g){
       ?`<div class="chg"><b>${esc(ch.name)}</b> · ${esc(ch.field.replace("attributes.",""))}: <span class="old">${esc(ch.from)}</span> → <span class="new">${esc(ch.to)}</span></div>`
       :`<div class="chg"><b>${esc(ch.name)}</b> ${ch.kind}</div>`).join("")||"<div class='chg' style='color:var(--mut)'>Initial import of all cards.</div>"}</div>
   `).join("")||"<div class='emptystate'>No history yet.</div>";
+
+  if(typeof LIVE!=="undefined"&&LIVE) liveDiff(g);
 }
+async function liveDiff(g){
+  let d; try{ d=await (await fetch(`/api/games/${g.slug}/diff`)).json(); }catch{ return; }
+  if(!d||d.error||!Array.isArray(d.changes)) return;
+  const pane=$("#pane"); if(!pane) return;
+  const ex=document.getElementById("balance-diff"); if(ex)ex.remove();
+  const box=document.createElement("div"); box.className="box"; box.id="balance-diff"; box.style.cssText="margin-bottom:14px;border:1px solid var(--acc)";
+  box.innerHTML=`<div class="bh">⚖️ Balance diff <span style="color:var(--mut);font-weight:400">· ${esc(d.from||"")} &rarr; ${esc(d.to||"")}${d.summary?" · "+esc(d.summary):""}</span></div><div class="bb">${d.changes.length?d.changes.map(chgHtml).join(""):"<div style='color:var(--mut);font-size:13px'>No card changes between these versions.</div>"}</div>`;
+  pane.insertBefore(box,pane.firstChild);
+}
+
 
 /* ---------- Rules editor: markdown -> PUT /artifact -> commit rules.md ---------- */
 async function rulesEdit(g){
@@ -1099,37 +1111,80 @@ async function cutRelease(slug){
   else toast(d.error||"couldn't cut release");
 }
 
-function play(g){ window._ps={g,deckIdx:0,seed:String(Math.floor(Math.random()*1e6)),hand:[],lib:[]}; renderPlay(); }
-function _plibrary(g,deck){
-  const byId=Object.fromEntries(g.cards.map(c=>[c.id,c]));
-  let ids=[];
-  if(deck&&deck.cards){ for(const [cid,n] of Object.entries(deck.cards)){ for(let i=0;i<n;i++) ids.push(cid); } }
-  else ids=g.cards.map(c=>c.id);
-  return ids.map(id=>byId[id]).filter(Boolean);
+function logPlaytest(slug){
+  if(typeof LIVE==="undefined"||!LIVE||!ME){ toast("Sign in on the platform server to log a playtest."); return; }
+  const g=G(slug), cards=g.cards||[], S=window._ps||{}, tags=["balance","fun","confusing","bug","timing","art"];
+  const ov=document.createElement("div");
+  ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
+  const box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:520px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+  box.innerHTML=`<h3 style="margin:0 0 4px;font-size:17px;font-weight:600">Log this playtest</h3>`+
+    `<p style="margin:0 0 16px;color:var(--mut);font-size:13px">Pinned to the exact version you're testing — that's the whole point.</p>`+
+    `<label style="display:block;font-size:13px;color:var(--mut);margin-bottom:12px">How did it go?<textarea id="pt-notes" style="display:block;width:100%;margin-top:5px;min-height:64px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit" placeholder="What worked, what dragged, what confused…"></textarea></label>`+
+    `<div style="display:flex;gap:12px;margin-bottom:14px"><label style="flex:1;font-size:13px;color:var(--mut)">Your result<select id="pt-res" style="display:block;width:100%;margin-top:5px;padding:8px;border:1px solid var(--bd);border-radius:8px;font:inherit"><option value="">—</option><option value="win">win</option><option value="loss">loss</option><option value="draw">draw</option></select></label>`+
+    `<label style="flex:1;font-size:13px;color:var(--mut)">Minutes<input id="pt-min" type="number" min="1" value="${S.turn?Math.max(5,S.turn*3):''}" style="display:block;width:100%;margin-top:5px;padding:8px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label></div>`+
+    `<div style="font-size:13px;color:var(--mut);margin-bottom:6px">Flag a card (optional)</div>`+
+    `<div style="display:flex;gap:8px;margin-bottom:12px"><select id="pt-card" style="flex:1.3;padding:8px;border:1px solid var(--bd);border-radius:8px;font:inherit"><option value="">— card —</option>${cards.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select>`+
+    `<select id="pt-tag" style="flex:1;padding:8px;border:1px solid var(--bd);border-radius:8px;font:inherit">${tags.map(t=>`<option>${t}</option>`).join("")}</select></div>`+
+    `<input id="pt-cnote" placeholder="Note on that card…" style="width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit;margin-bottom:16px">`+
+    `<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="pt-x">Cancel</button><button class="btn primary" id="pt-ok">Log playtest</button></div>`;
+  ov.appendChild(box); document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  box.querySelector("#pt-x").onclick=close; ov.addEventListener("mousedown",ev=>{if(ev.target===ov)close();});
+  box.querySelector("#pt-ok").onclick=async()=>{
+    const notes=box.querySelector("#pt-notes").value.trim(), res=box.querySelector("#pt-res").value, min=parseInt(box.querySelector("#pt-min").value,10);
+    const cid=box.querySelector("#pt-card").value, tag=box.querySelector("#pt-tag").value, cnote=box.querySelector("#pt-cnote").value.trim();
+    const body={location:"platform",players:[{name:ME,...(res?{result:res}:{})}]};
+    if(min>0)body.duration_minutes=min; if(notes)body.notes=notes; if(cid&&cnote)body.card_notes=[{card_id:cid,tag,note:cnote}];
+    const r=await fetch(`/api/games/${slug}/playtests`,{method:"POST",headers:authHdr(),body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){ toast(`Playtest logged — pinned to ${d.pinned||"this version"}`); close(); }
+    else toast(d.error||"couldn't log playtest");
+  };
 }
+function play(g){ window._ps={g,deckIdx:0,seed:String(Math.floor(Math.random()*1e6)),lib:[],hand:[],board:[],discard:[],life:20,turn:1,started:false}; renderPlay(); }
 function _prng(s){ let h=1779033703^s.length; for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19;} let a=(h>>>0)||1; return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;}; }
 function _pshuffle(arr,s){ const r=_prng(s); const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-function playShuffle(n){ const S=window._ps; const deck=(S.g.decks||[])[S.deckIdx]; const lib=_pshuffle(_plibrary(S.g,deck),S.seed); S.hand=lib.slice(0,n); S.lib=lib.slice(n); renderPlay(); }
-function playNew(){ window._ps.seed=String(Math.floor(Math.random()*1e6)); playShuffle(7); }
-function playSeed(){ const v=$("#pl-seed"); if(v)window._ps.seed=v.value.trim()||window._ps.seed; playShuffle(7); }
-function playDraw(){ const S=window._ps; if(S.lib.length){ S.hand.push(S.lib.shift()); renderPlay(); } }
+function _plibrary(g,deck){ const byId=Object.fromEntries(g.cards.map(c=>[c.id,c])); let ids=[]; if(deck&&deck.cards){for(const [cid,n] of Object.entries(deck.cards)){for(let i=0;i<n;i++) ids.push(cid);}} else ids=g.cards.map(c=>c.id); return ids.map(id=>byId[id]).filter(Boolean); }
+function playStart(){ const S=window._ps; const el=document.getElementById("pl-seed"); if(el)S.seed=el.value.trim()||S.seed; const deck=(S.g.decks||[])[S.deckIdx]; S.lib=_pshuffle(_plibrary(S.g,deck),S.seed); S.hand=S.lib.splice(0,7); S.board=[]; S.discard=[]; S.life=20; S.turn=1; S.started=true; renderPlay(); }
+function playNew(){ window._ps.seed=String(Math.floor(Math.random()*1e6)); playStart(); }
+function playDeckSel(i){ window._ps.deckIdx=i; playStart(); }
+function pDraw(){ const S=window._ps; if(S.lib.length){S.hand.push(S.lib.shift());renderPlay();} }
+function pPlay(i){ const S=window._ps; const c=S.hand.splice(i,1)[0]; if(c){S.board.push(c);renderPlay();} }
+function pBoardDisc(i){ const S=window._ps; const c=S.board.splice(i,1)[0]; if(c){S.discard.push(c);renderPlay();} }
+function pReturn(i){ const S=window._ps; const c=S.board.splice(i,1)[0]; if(c){S.hand.push(c);renderPlay();} }
+function pLife(d){ window._ps.life+=d; renderPlay(); }
+function pTurn(){ window._ps.turn++; pDraw(); }
 function renderPlay(){
-  const S=window._ps,g=S.g,tc=g.type_colors||{},decks=g.decks||[];
-  const mini=c=>{const col=tc[c.type]||{fg:'#555',bg:'#ececec'};const cost=(c.attributes||{}).cost;
-    return `<div style="width:122px;flex:none;border:1px solid var(--bd);border-top:4px solid ${col.fg};border-radius:8px;background:#fff;overflow:hidden">
-      <div style="background:${col.bg};color:${col.fg};padding:5px 8px;display:flex;justify-content:space-between;align-items:center;gap:4px"><b style="font-size:12px;line-height:1.1">${esc(c.name)}</b>${cost!=null?`<span style="font-weight:700;font-size:12px">${cost}</span>`:''}</div>
-      <div style="padding:6px 8px;font-size:11px;color:#333;min-height:54px;line-height:1.3">${esc(c.text||'')}</div></div>`;};
-  $("#pane").innerHTML=`<div class="box"><div class="bh">🎮 Play — draw a hand from a shuffled deck <span style="color:var(--mut);font-weight:400">· deterministic, shareable by seed</span></div><div class="bb">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
-      ${decks.length>1?`<select onchange="window._ps.deckIdx=this.selectedIndex;playShuffle(7)" style="padding:6px 8px;border:1px solid var(--bd);border-radius:6px">${decks.map((d,i)=>`<option ${i===S.deckIdx?'selected':''}>${esc(d.name||d.id)}</option>`).join("")}</select>`:`<span class="badge">${decks.length?esc(decks[0].name||decks[0].id):'all cards'}</span>`}
-      <label style="font-size:13px;color:var(--mut)">seed <input id="pl-seed" value="${esc(S.seed)}" style="width:96px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font:inherit"></label>
-      <button class="btn" onclick="playSeed()">Shuffle with seed</button>
-      <button class="btn primary" onclick="playNew()">New hand</button>
-      <button class="btn" onclick="playDraw()">Draw</button>
-      <span style="color:var(--mut);font-size:13px">library: <b>${S.lib.length}</b></span>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;min-height:88px">${S.hand.length?S.hand.map(mini).join(""):"<span style='color:var(--mut);align-self:center'>Press “New hand”. The same seed reproduces the same shuffle — copy it to share a hand.</span>"}</div>
-  </div></div>`;
+  const S=window._ps,g=S.g,tc=g.type_colors||{},decks=g.decks||[]; const e=s=>esc(s);
+  const mini=(c,onclick,foot)=>{const col=tc[c.type]||{fg:'#555',bg:'#ececec'};const cost=(c.attributes||{}).cost;
+    return `<div onclick="${onclick}" title="${e(c.text||'')}" style="cursor:pointer;width:100px;flex:none;border:1px solid var(--bd);border-top:4px solid ${col.fg};border-radius:8px;background:#fff;overflow:hidden" onmouseover="this.style.boxShadow='0 6px 16px rgba(0,0,0,.18)'" onmouseout="this.style.boxShadow=''">`+
+      `<div style="background:${col.bg};color:${col.fg};padding:4px 6px;display:flex;justify-content:space-between;align-items:center;gap:3px;font-size:11px"><b style="line-height:1.05">${e(c.name)}</b>${cost!=null?`<span style="font-weight:700">${cost}</span>`:''}</div>`+
+      `<div style="padding:5px 6px;font-size:10px;color:#3a3a3a;height:44px;overflow:hidden;line-height:1.25">${e(c.text||'')}</div>`+
+      `<div style="font-size:9px;color:var(--mut);text-align:center;padding-bottom:3px">${foot||''}</div></div>`;};
+  if(!S.started){
+    $("#pane").innerHTML=`<div class="box"><div class="bh">🎮 Play — test your deck at the table</div><div class="bb">`+
+      `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">`+
+        (decks.length>1?`<select onchange="playDeckSel(this.selectedIndex)" style="padding:6px 8px;border:1px solid var(--bd);border-radius:6px">${decks.map((d,i)=>`<option ${i===S.deckIdx?'selected':''}>${e(d.name||d.id)}</option>`).join("")}</select>`:`<span class="badge">${decks.length?e(decks[0].name||decks[0].id):'all cards'}</span>`)+
+        `<label style="font-size:13px;color:var(--mut)">seed <input id="pl-seed" value="${e(S.seed)}" style="width:96px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font:inherit"></label>`+
+        `<button class="btn primary" onclick="playStart()">Shuffle &amp; play</button></div>`+
+      `<div style="color:var(--mut);font-size:13px">Draw a hand, play cards to the table, track life and turns — a real solo playtest. The seed is deterministic, so a session reproduces exactly (copy it to share a game state).</div>`+
+    `</div></div>`; return;
+  }
+  const board=S.board.map((c,i)=>mini(c,`pBoardDisc(${i})`,'&#9656; discard')).join("")||"<span style='color:var(--mut);align-self:center'>Play cards from your hand here.</span>";
+  const hand=S.hand.map((c,i)=>mini(c,`pPlay(${i})`,'&#9656; play')).join("")||"<span style='color:var(--mut);align-self:center'>Hand empty — draw a card.</span>";
+  $("#pane").innerHTML=`<div class="box"><div class="bb">`+
+    `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bd)">`+
+      `<button class="btn primary" onclick="pDraw()">Draw <span style="opacity:.8">(${S.lib.length})</span></button>`+
+      `<div style="display:flex;align-items:center;gap:5px"><span style="color:var(--mut);font-size:12px">life</span><button class="btn" style="padding:2px 9px" onclick="pLife(-1)">−</button><b style="min-width:26px;text-align:center;font-size:16px">${S.life}</b><button class="btn" style="padding:2px 9px" onclick="pLife(1)">+</button></div>`+
+      `<div style="display:flex;align-items:center;gap:6px"><span style="color:var(--mut);font-size:12px">turn</span><b style="font-size:16px">${S.turn}</b><button class="btn" style="padding:2px 8px" onclick="pTurn()">end turn ↻</button></div>`+
+      `<span style="color:var(--mut);font-size:13px">discard <b>${S.discard.length}</b></span>`+
+      `<div style="flex:1"></div><span style="color:var(--mut);font-size:12px">seed ${e(S.seed)}</span><button class="btn" onclick="logPlaytest('${g.slug}')">📝 Log playtest</button><button class="btn" onclick="playNew()">New game</button></div>`+
+    `<div style="color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Table (click a card to discard)</div>`+
+    `<div style="display:flex;gap:8px;flex-wrap:wrap;min-height:148px;background:#f3f5f8;border-radius:10px;padding:10px;margin-bottom:18px">${board}</div>`+
+    `<div style="color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Your hand — ${S.hand.length} card${S.hand.length===1?'':'s'} (click to play)</div>`+
+    `<div style="display:flex;gap:8px;flex-wrap:wrap;min-height:148px">${hand}</div>`+
+  `</div></div>`;
 }
 
 function banlist(g){

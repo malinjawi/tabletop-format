@@ -709,6 +709,24 @@ gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
   const { sha } = await store.writeFiles(slug, [{ path, content }], `playtest: log session ${id}`, `${u.handle} <${u.email}>`);
   ctx.send(201, { id, commit: sha, pinned: session.version_ref });
 }, "log a playtest session (owner/collaborator) → validated, version-pinned commit");
+gw.route("GET", "/api/games/:slug/diff", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const to = ctx.url.searchParams.get("to") || await store.headSha(slug);
+  let from = ctx.url.searchParams.get("from");
+  if (!from) {
+    const rels = await q.releasesFor(db, slug);
+    from = rels[0]?.sha;
+    if (!from) { const h = await store.history(slug, "components/cards.json", 2); from = (h[1] || h[0] || {}).sha; }
+  }
+  if (!from) return ctx.send(422, { error: "nothing to compare against yet" });
+  const at = async (ref) => { const { dir, cleanup } = await store.materialize(slug, ref);
+    try { return JSON.parse(readFileSync(join(dir, "components/cards.json"), "utf8")); } finally { cleanup(); } };
+  try {
+    const [a, b] = [await at(from), await at(to)];
+    const changes = diffCards(a, b);
+    ctx.send(200, { from, to, changes, summary: summarize(changes)?.title || null });
+  } catch (e) { ctx.send(422, { error: "could not diff those versions", detail: e.message }); }
+}, "balance diff: what changed in the cards between two versions");
 
 /* ---------- routes: releases (citable, immutable versions) ---------- */
 const TAG_RE = /^v?[0-9][0-9A-Za-z._-]{0,31}$/;
