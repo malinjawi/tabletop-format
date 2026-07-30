@@ -101,6 +101,13 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 #drawer{position:fixed;inset:0;background:rgba(28,33,40,.5);display:none;z-index:60}
 #drawer.on{display:block}
 .dpanel{position:absolute;top:0;right:0;height:100%;width:min(940px,96vw);background:var(--bg2,#fff);box-shadow:-12px 0 40px rgba(0,0,0,.3);display:flex;flex-direction:column;transform:translateX(30px);opacity:0;transition:transform .22s ease,opacity .22s ease}
+.editgrid{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.editcol-list{flex:0 0 190px;max-height:640px;overflow:auto}
+.editcol-form{flex:1;min-width:300px}
+.editcol-prev{flex:0 0 300px;position:sticky;top:12px}
+.editcol-prev canvas{width:300px;height:420px;border-radius:16px;box-shadow:0 10px 34px rgba(0,0,0,.22)}
+.editcol-list .ecardlist{flex-direction:column;align-items:stretch;gap:4px}
+.editcol-list .epill{text-align:left}
 #drawer.on .dpanel{transform:none;opacity:1}
 .dhead{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--bd)}
 .dhead h2{margin:0;font-size:18px}.dhead .sub{color:var(--mut);font-size:13px}
@@ -321,7 +328,7 @@ function repoPage(g, tab, mode){
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
         <button class="btn" onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Club asset pack (open-source 3D table)\\n· Tabletop Simulator mod\\n· Print-and-play PDF (300dpi, crop marks)')">⤓ Export</button>
-        ${EDITABLE_TABS.includes(tab)?`<button class="btn primary" onclick="LIVE?go('g/${g.slug}/${tab}/edit'):alert('Live editing needs the platform server (node server.mjs).')">✎ Edit ${tab}</button>`:``}
+        ${EDITABLE_TABS.includes(tab)?`<button class="btn primary" onclick="go('g/${g.slug}/${tab}/edit')">✎ Edit ${tab}</button>`:``}
       </div>
     </div>
     <div class="tabs">${tabs.map(([id,label,n])=>
@@ -362,15 +369,15 @@ function overview(g){
 }
 
 function cards(g, mode){
+  if(mode==="edit") return cardsEdit(g);
   const types=[...new Set(g.cards.map(c=>c.type))].sort();
   $("#pane").innerHTML = `
     <div class="filterbar">
       <input id="cardq" placeholder="Filter cards… (name, text, keyword)" oninput="filterCards('${g.slug}')">
       <select id="cardt" onchange="filterCards('${g.slug}')"><option value="">All types</option>${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select>
-      ${LIVE?`<button class="btn primary" style="margin-left:auto" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>`:``}
+      <button class="btn primary" style="margin-left:auto" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>
     </div><div class="cgrid" id="cgrid"></div>`;
   filterCards(g.slug);
-  if(mode==="edit" && LIVE) openEditor(g.slug);   // #/g/slug/cards/edit
 }
 function filterCards(slug){
   const g=G(slug), q=($("#cardq")?.value||"").toLowerCase(), t=$("#cardt")?.value||"";
@@ -403,7 +410,42 @@ function edToken(){return localStorage.forge_token?{Authorization:"Bearer "+loca
 function edSym(g){return (g.symbols||[]).reduce((m,s)=>(m[s.key]=s.glyph||("["+s.key+"]"),m),{});}
 function edColors(g,type){const c=(g.type_colors||{})[type]; return c||{fg:"#334",bg:"#eef1f4"};}
 
+/* ---------- CARD EDITOR, embedded in the game page (a mode of the Cards tab) ---------- */
+async function cardsEdit(g){
+  if(LIVE && !ME){ authOpen(); go(`g/${g.slug}/cards`); return; }
+  let access={canWrite:true,authed:true,ownerless:false};
+  try{access=await (await fetch(`/api/games/${g.slug}/access`,{headers:edToken()})).json();}catch(e){}
+  ED={slug:g.slug, cards:JSON.parse(JSON.stringify(g.cards)), orig:JSON.parse(JSON.stringify(g.cards)),
+      sel:(window._edSel && g.cards.find(c=>c.id===window._edSel)?window._edSel:g.cards[0]?.id), access, dirty:new Set()};
+  window._edSel=null;
+  $("#pane").innerHTML = `
+    <div class="dhead" style="border:none;padding:0 0 14px">
+      <div style="flex:1"><h2 id="ed-title" style="margin:0">Editing cards</h2><div class="sub" id="ed-sub"></div></div>
+      <button class="btn" onclick="go('g/${g.slug}/cards')">Done</button>
+    </div>
+    <div class="editgrid">
+      <div class="editcol-list"><div class="ecardlist" id="ed-list"></div></div>
+      <div class="editcol-form" id="ed-fields"></div>
+      <div class="editcol-prev">
+        <canvas id="ed-canvas" width="600" height="840"></canvas>
+        <div class="msg" id="ed-msg" style="font-size:13px;margin:10px 0"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="ed-del" onclick="edDelete()" style="color:#cf222e">Delete</button>
+          <button class="btn primary" id="ed-commit" onclick="edCommit()" style="flex:1">Commit</button>
+        </div>
+      </div>
+    </div>`;
+  $("#ed-sub").innerHTML=access.canWrite
+    ? `<span style="color:var(--grn)">✓ commits directly to <code>${esc(g.slug)}</code></span>`
+    : `no write access — your edits open a <b>pull request</b> from your fork`;
+  $("#ed-commit").textContent=access.canWrite?"Commit changes":"Propose as PR";
+  edRenderList(); edSelect(ED.sel);
+}
 async function openEditor(slug, cid){
+  if(!LIVE){alert("The editor runs on the platform server (node server.mjs).");return;}
+  window._edSel=cid||null; go(`g/${slug}/cards/edit`);
+}
+async function openEditor_UNUSED(slug, cid){
   const g=G(slug);
   if(!LIVE){alert("The editor runs on the platform server (node server.mjs).");return;}
   if(!ME){authOpen();return;}
@@ -419,7 +461,7 @@ async function openEditor(slug, cid){
   document.getElementById("drawer").classList.add("on");
   edRenderList(); edSelect(ED.sel);
 }
-function closeEditor(){ if(ED&&ED.dirty.size&&!confirm("Discard unsaved edits?"))return; const sl=ED&&ED.slug; ED=null; document.getElementById("drawer").classList.remove("on"); if(sl && location.hash.endsWith("/edit")) go(`g/${sl}/cards`); }
+function closeEditor(){ const sl=ED&&ED.slug; ED=null; if(sl) go(`g/${sl}/cards`); }
 function edCard(){return ED.cards.find(c=>c.id===ED.sel);}
 function edOrig(id){return ED.orig.find(c=>c.id===id);}
 function edCardDirty(id){const c=ED.cards.find(x=>x.id===id),o=edOrig(id); return JSON.stringify(c)!==JSON.stringify(o);}
@@ -551,6 +593,7 @@ function edBar(){
 }
 async function edCommit(){
   const s=edSummary(); if(!s)return;
+  if(!LIVE){ toast("<b>Preview mode</b><br>Run <code>node server.mjs</code> to commit these changes."); return; }
   const btn=$("#ed-commit"); btn.disabled=true; const was=btn.textContent; btn.textContent="Saving…";
   try{
     if(ED.access.canWrite){
@@ -570,7 +613,7 @@ async function edCommit(){
   }catch(e){toast(`<b style="color:#ffa198">✗ ${esc(e.message)}</b>`,8000);}
   btn.disabled=false; btn.textContent=was; edBar();
 }
-function closeEditorForce(){ED=null;document.getElementById("drawer").classList.remove("on");}
+function closeEditorForce(){ED=null;}
 
 function cardModal(slug,cid){
   const g=G(slug), c=g.cards.find(x=>x.id===cid);
@@ -597,7 +640,7 @@ function rules(g, mode){
   let body = g.rules_html || "<div class='emptystate'>No rulebook yet — <code>rules/rules.md</code> diffs like everything else.</div>";
   body = body.replace(/\[([a-z0-9_]+)\]/g,(m,k)=>syms[k]?`<b>${syms[k]}</b>`:m);
   $("#pane").innerHTML = `<div class="two"><div>
-    <div class="box"><div class="bh">📖 rules/rules.md <span style="color:var(--mut);font-weight:400">· prose that diffs — every errata is a commit</span>${LIVE?`<button class="btn" style="float:right;margin-top:-4px" onclick="go('g/${g.slug}/rules/edit')">✎ Edit rules</button>`:``}</div>
+    <div class="box"><div class="bh">📖 rules/rules.md <span style="color:var(--mut);font-weight:400">· prose that diffs — every errata is a commit</span><button class="btn" style="float:right;margin-top:-4px" onclick="go('g/${g.slug}/rules/edit')">✎ Edit rules</button></div>
     <div class="bb" style="max-width:720px">${body}</div></div>
   </div><div class="side">
     <div class="box"><div class="bh">Components</div><div class="bb">
@@ -673,7 +716,7 @@ function history(g){
 
 /* ---------- Rules editor: markdown -> PUT /artifact -> commit rules.md ---------- */
 async function rulesEdit(g){
-  if(!ME){ authOpen(); go(`g/${g.slug}/rules`); return; }
+  if(LIVE && !ME){ authOpen(); go(`g/${g.slug}/rules`); return; }
   let acc={canWrite:true};
   try{acc=await (await fetch(`/api/games/${g.slug}/access`,{headers:authHdr()})).json();}catch(e){}
   const raw = g.rules_md || "";
@@ -699,6 +742,7 @@ async function rulesEdit(g){
   $("#rprev").innerHTML = window._mdPrev(raw);
 }
 async function rulesSave(slug){
+  if(!LIVE){ prNote("Preview mode — run node server.mjs to commit.", true); return; }
   const content = $("#rmd").value;
   const btn=$("#rsave"); btn.disabled=true; const was=btn.textContent; btn.textContent="Saving...";
   try{
