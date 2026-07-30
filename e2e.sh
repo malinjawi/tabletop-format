@@ -531,6 +531,8 @@ grep -q "authModal" "$SCRATCH/live-hub.html" && grep -q "toggleStar" "$SCRATCH/l
   && grep -q "refreshLive" "$SCRATCH/live-hub.html" && ok "live hub ships auth modal + star wiring" || bad "hub auth UI markers"
 grep -q "liveSuggestions" "$SCRATCH/live-hub.html" && grep -q "proposePr" "$SCRATCH/live-hub.html" \
   && grep -q "mergePr" "$SCRATCH/live-hub.html" && ok "live hub ships PR review+merge wiring" || bad "hub PR wiring"
+grep -q "function play(g)" "$SCRATCH/live-hub.html" && grep -q "_pshuffle" "$SCRATCH/live-hub.html" && ok "live hub ships the Play tab (seeded deterministic draw)" || bad "hub play wiring"
+grep -q "liveAnalytics" "$SCRATCH/live-hub.html" && grep -q "liveReleases" "$SCRATCH/live-hub.html" && grep -q "loadFeed" "$SCRATCH/live-hub.html" && ok "live hub ships analytics + releases + activity feed wiring" || bad "hub round-2/3 wiring"
 grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q "ed-canvas" "$SCRATCH/live-hub.html" \
   && grep -q "edPreview" "$SCRATCH/live-hub.html" && grep -q "edCommit" "$SCRATCH/live-hub.html" \
   && ok "live hub ships the IN-HUB card editor (drawer + live canvas preview + commit/propose)" || bad "hub editor wiring"

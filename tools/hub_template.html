@@ -352,7 +352,7 @@ function searchAll(v){
 function repoPage(g, tab, mode){
   const tabs = [
     ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
-    ["playtests","Playtests",g.playtests.length],["history","Commits",g.history.length],
+    ["playtests","Playtests",g.playtests.length],["play","Play",null],["history","Commits",g.history.length],
     ["suggestions","Pull requests",g.prs.length],["issues","Issues",null],["releases","Releases",g.releases.length],
     ["banlist","Banlist",null],["decks","Decks",g.decks.length],
     ["community","Community",g.credit_roll.length]];
@@ -374,7 +374,7 @@ function repoPage(g, tab, mode){
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,rules,playtests,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
+  ({overview,cards,rules,playtests,play,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
 }
 // which tabs have an editor (URL-addressable: #/g/slug/<tab>/edit)
 const EDITABLE_TABS = ["cards","rules"];
@@ -1047,6 +1047,39 @@ async function cutRelease(slug){
   const d=await r.json();
   if(r.status===201){ toast(`Released ${d.tag} — pinned to ${d.sha}`); liveReleases(G(slug)); }
   else toast(d.error||"couldn't cut release");
+}
+
+function play(g){ window._ps={g,deckIdx:0,seed:String(Math.floor(Math.random()*1e6)),hand:[],lib:[]}; renderPlay(); }
+function _plibrary(g,deck){
+  const byId=Object.fromEntries(g.cards.map(c=>[c.id,c]));
+  let ids=[];
+  if(deck&&deck.cards){ for(const [cid,n] of Object.entries(deck.cards)){ for(let i=0;i<n;i++) ids.push(cid); } }
+  else ids=g.cards.map(c=>c.id);
+  return ids.map(id=>byId[id]).filter(Boolean);
+}
+function _prng(s){ let h=1779033703^s.length; for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19;} let a=(h>>>0)||1; return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;}; }
+function _pshuffle(arr,s){ const r=_prng(s); const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function playShuffle(n){ const S=window._ps; const deck=(S.g.decks||[])[S.deckIdx]; const lib=_pshuffle(_plibrary(S.g,deck),S.seed); S.hand=lib.slice(0,n); S.lib=lib.slice(n); renderPlay(); }
+function playNew(){ window._ps.seed=String(Math.floor(Math.random()*1e6)); playShuffle(7); }
+function playSeed(){ const v=$("#pl-seed"); if(v)window._ps.seed=v.value.trim()||window._ps.seed; playShuffle(7); }
+function playDraw(){ const S=window._ps; if(S.lib.length){ S.hand.push(S.lib.shift()); renderPlay(); } }
+function renderPlay(){
+  const S=window._ps,g=S.g,tc=g.type_colors||{},decks=g.decks||[];
+  const mini=c=>{const col=tc[c.type]||{fg:'#555',bg:'#ececec'};const cost=(c.attributes||{}).cost;
+    return `<div style="width:122px;flex:none;border:1px solid var(--bd);border-top:4px solid ${col.fg};border-radius:8px;background:#fff;overflow:hidden">
+      <div style="background:${col.bg};color:${col.fg};padding:5px 8px;display:flex;justify-content:space-between;align-items:center;gap:4px"><b style="font-size:12px;line-height:1.1">${esc(c.name)}</b>${cost!=null?`<span style="font-weight:700;font-size:12px">${cost}</span>`:''}</div>
+      <div style="padding:6px 8px;font-size:11px;color:#333;min-height:54px;line-height:1.3">${esc(c.text||'')}</div></div>`;};
+  $("#pane").innerHTML=`<div class="box"><div class="bh">🎮 Play — draw a hand from a shuffled deck <span style="color:var(--mut);font-weight:400">· deterministic, shareable by seed</span></div><div class="bb">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+      ${decks.length>1?`<select onchange="window._ps.deckIdx=this.selectedIndex;playShuffle(7)" style="padding:6px 8px;border:1px solid var(--bd);border-radius:6px">${decks.map((d,i)=>`<option ${i===S.deckIdx?'selected':''}>${esc(d.name||d.id)}</option>`).join("")}</select>`:`<span class="badge">${decks.length?esc(decks[0].name||decks[0].id):'all cards'}</span>`}
+      <label style="font-size:13px;color:var(--mut)">seed <input id="pl-seed" value="${esc(S.seed)}" style="width:96px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font:inherit"></label>
+      <button class="btn" onclick="playSeed()">Shuffle with seed</button>
+      <button class="btn primary" onclick="playNew()">New hand</button>
+      <button class="btn" onclick="playDraw()">Draw</button>
+      <span style="color:var(--mut);font-size:13px">library: <b>${S.lib.length}</b></span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;min-height:88px">${S.hand.length?S.hand.map(mini).join(""):"<span style='color:var(--mut);align-self:center'>Press “New hand”. The same seed reproduces the same shuffle — copy it to share a hand.</span>"}</div>
+  </div></div>`;
 }
 
 function banlist(g){
