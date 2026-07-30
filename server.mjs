@@ -140,7 +140,9 @@ const json = async (ctx) => JSON.parse((await readBody(ctx.req)).toString());
 async function validateCandidate(slug, relPath, content) {
   const { dir, cleanup } = await store.materialize(slug, "HEAD");
   try {
-    writeFileSync(join(dir, relPath), content);
+    const full = join(dir, relPath);
+    mkdirSync(dirname(full), { recursive: true });   // new-file artifacts (e.g. playtests/) may need the dir
+    writeFileSync(full, content);
     const v = py("validate.py", [dir]);
     return { ok: v.status === 0, report: v.stdout.split("\n") };
   } finally { cleanup(); }
@@ -621,6 +623,54 @@ gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
     : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`];
   ctx.send(200, { ok: true, ref: sha, cached: hit, urls });
 }, "export into the immutable cache; returns permanent URLs");
+
+/* ---------- routes: playtest analytics + ingestion (the 'test' pillar) ---------- */
+gw.route("GET", "/api/games/:slug/analytics", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const sha = await store.headSha(slug);
+  const { dir, cleanup } = await store.materialize(slug, sha);
+  try {
+    const r = py("stats.py", [dir, "--json"]);
+    if (r.status !== 0) return ctx.send(500, { error: "analytics failed", detail: r.stderr });
+    ctx.send(200, { ref: sha, ...JSON.parse(r.stdout) });
+  } finally { cleanup(); }
+}, "live playtest analytics aggregated from the game's playtests/");
+gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const s = await json(ctx);
+  if (!s || !Array.isArray(s.players) || !s.players.some(p => p && p.name))
+    return ctx.send(422, { error: "a session needs at least one named player" });
+  const sha0 = await store.headSha(slug);
+  const date = (typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date)) ? s.date : new Date().toISOString().slice(0, 10);
+  let id = String(s.id || `${date}-${s.location || "session"}`).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  if (!/^[a-z0-9]/.test(id)) id = `${date}-session`;
+  const RES = new Set(["win", "loss", "draw"]);
+  const TAGS = new Set(["balance", "confusing", "fun", "bug", "art", "timing"]);
+  const session = {
+    id, date, version_ref: s.version_ref || sha0,
+    ...(s.format_id ? { format_id: s.format_id } : {}),
+    ...(s.location ? { location: s.location } : {}),
+    ...(s.duration_minutes ? { duration_minutes: parseInt(s.duration_minutes, 10) } : {}),
+    players: s.players.filter(p => p && p.name).map(p => { const res = typeof p.result === "string" ? p.result.toLowerCase() : p.result; return {
+      name: p.name, ...(p.deck_id ? { deck_id: p.deck_id } : {}),
+      ...(RES.has(res) ? { result: res } : {}),
+      ...(typeof p.score === "number" ? { score: p.score } : {}),
+      ...(p.first_game ? { first_game: true } : {}) }; }),
+    ...(Array.isArray(s.card_notes) ? { card_notes: s.card_notes
+      .map(n => (n && n.card_id && n.note) ? { card_id: n.card_id, tag: String(n.tag || "").toLowerCase(), note: n.note, ...(n.suggestion ? { suggestion: n.suggestion } : {}) } : null)
+      .filter(n => n && TAGS.has(n.tag)) } : {}),
+    ...(Array.isArray(s.decisions) ? { decisions: s.decisions.filter(d => d && d.action)
+      .map(d => ({ action: d.action, ...(d.card_id ? { card_id: d.card_id } : {}), ...(d.rationale ? { rationale: d.rationale } : {}) })) } : {}),
+  };
+  const path = `playtests/${id}.json`;
+  const content = JSON.stringify(session, null, 2) + "\n";
+  const v = await validateCandidate(slug, path, content);
+  if (!v.ok) return ctx.send(422, { error: "playtest failed validation", report: v.report });
+  const { sha } = await store.writeFiles(slug, [{ path, content }], `playtest: log session ${id}`, `${u.handle} <${u.email}>`);
+  ctx.send(201, { id, commit: sha, pinned: session.version_ref });
+}, "log a playtest session (owner/collaborator) → validated, version-pinned commit");
 
 /* ---------- routes: jams (Store-2-backed entries; the co-creation front door) ---------- */
 gw.route("GET", "/api/jams", async (ctx) => {

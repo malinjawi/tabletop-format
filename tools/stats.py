@@ -59,7 +59,10 @@ if as_json:
     print(json.dumps({
         "curve": dict(sorted(curve.items())), "types": dict(types), "keywords": dict(keywords),
         "power_per_cost": ppc, "sessions": len(playtests), "table_minutes": minutes,
-        "flagged": {cid: dict(tags) for cid, tags in flag_rank}, "decisions": decisions,
+        "results": dict(results),
+        "flagged": {cid: dict(tags) for cid, tags in flag_rank},
+        "flagged_names": {cid: card_names.get(cid, cid) for cid, _ in flag_rank},
+        "decisions": decisions,
     }, indent=2))
     sys.exit(0)
 

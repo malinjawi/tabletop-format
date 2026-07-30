@@ -716,7 +716,7 @@ function rules(g, mode){
 }
 
 function playtests(g){
-  if(!g.playtests.length){$("#pane").innerHTML="<div class='emptystate'>No sessions logged.<br><span style='font-size:13px'>playtests/*.json — feedback pinned to the exact version tested.</span></div>";return;}
+  if(!g.playtests.length){$("#pane").innerHTML="<div class='emptystate'>No sessions logged.<br><span style='font-size:13px'>playtests/*.json — feedback pinned to the exact version tested.</span></div>";if(typeof LIVE!=="undefined"&&LIVE)liveAnalytics(g.slug);return;}
   // insights: cost curve + most-flagged
   const curve={};
   for(const c of g.cards){const k=(c.attributes||{}).cost;if(k!=null)curve[k]=(curve[k]||0)+1;}
@@ -755,6 +755,23 @@ function playtests(g){
       <div style="color:var(--mut);font-size:11px;margin-top:6px">fmt stats — full analytics in the CLI</div>
     </div></div>
   </div></div>`;
+  if(typeof LIVE!=="undefined" && LIVE) liveAnalytics(g.slug);
+}
+async function liveAnalytics(slug){
+  let d; try{ d=await (await fetch(`/api/games/${slug}/analytics`)).json(); }catch{ return; }
+  if(!d || d.error) return;
+  const R=d.results||{}; const tot=(R.win||0)+(R.loss||0)+(R.draw||0);
+  const fl=Object.entries(d.flagged||{}).map(([cid,tags])=>[(d.flagged_names||{})[cid]||cid,Object.values(tags).reduce((a,b)=>a+b,0)]).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const pane=$("#pane"); if(!pane) return;
+  const box=document.createElement("div");
+  box.innerHTML=`<div class="box" style="margin-bottom:14px;border:1px solid var(--acc)"><div class="bh">📊 Live insights <span style="color:var(--mut);font-weight:400">· current version ${esc(d.ref||"")}</span></div>
+    <div class="bb" style="display:flex;gap:26px;flex-wrap:wrap;align-items:center">
+      <div><div style="font-size:22px;font-weight:700">${d.sessions||0}</div><div style="color:var(--mut);font-size:12px">sessions</div></div>
+      <div><div style="font-size:22px;font-weight:700">${d.table_minutes||0}</div><div style="color:var(--mut);font-size:12px">table minutes</div></div>
+      ${tot?`<div><div style="font-size:15px;font-weight:600">🏆 ${R.win||0}W · ${R.loss||0}L${R.draw?` · ${R.draw}D`:""}</div><div style="color:var(--mut);font-size:12px">results (${tot})</div></div>`:""}
+      ${fl.length?`<div style="flex:1;min-width:180px"><div style="color:var(--mut);font-size:12px;margin-bottom:4px">most-flagged</div>${fl.map(([n,c])=>`<span class="badge" style="margin:2px 5px 2px 0">${esc(n)} <b>${c}×</b></span>`).join("")}</div>`:""}
+    </div></div>`;
+  pane.insertBefore(box.firstChild, pane.firstChild);
 }
 
 function history(g){

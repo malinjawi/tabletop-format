@@ -232,5 +232,17 @@ const offTheme = await api("POST", "/api/jams/spark-jam/submit", { token: B, bod
 assert(offTheme.status === 422 && (offTheme.data.reasons || []).some(r => /theme word/.test(r)),
   "an off-theme game is refused — qualification is a machine check, not a mod ruling");
 
+console.log("== ACT 8: the test pillar — log a playtest, read live analytics ==");
+const anonPt = await api("POST", "/api/games/tidepool/playtests", { body: { players: [{ name: "x" }] } });
+assert(anonPt.status === 401, "anonymous cannot log a playtest (401)");
+const ptLog = await api("POST", "/api/games/tidepool/playtests", { token: A,
+  body: { location: "tts", duration_minutes: 30, players: [{ name: "Alice", result: "WIN" }, { name: "Bob", result: "loss" }],
+          card_notes: [{ card_id: "riptide", tag: "Balance", note: "swingy at 3 cost" }] } });
+assert(ptLog.status === 201 && ptLog.data.pinned, "alice logs a playtest → validated commit, pinned to a version", ptLog.data);
+const an = (await api("GET", "/api/games/tidepool/analytics")).data;
+assert(an.sessions === 1 && an.table_minutes === 30 && an.results.win === 1 && an.results.loss === 1,
+  "live analytics aggregate it: 1 session, 30 min, 1W/1L (result normalized server-side)");
+assert(an.flagged && an.flagged.riptide, "card note flagged riptide (tag normalized)");
+
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
 console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");
