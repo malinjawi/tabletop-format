@@ -122,6 +122,7 @@ assert(dupRel, "duplicate tag rejected (one release per tag per game)");
 
 // events (007) — the activity feed backing
 await q.recordEvent(db, { id: newId("ev"), kind: "fork", actor_id: ana.id, game_slug: fork, target: slug });
+await new Promise(r => setTimeout(r, 2));   // distinct ms so newest-first is deterministic
 await q.recordEvent(db, { id: newId("ev"), kind: "release", actor_id: ana.id, game_slug: slug, target: "v1.0" });
 const ev = await q.recentEvents(db, 10);
 assert(ev.length >= 2 && ev[0].actor_handle === ana.handle && ev[0].kind === "release", "recentEvents newest-first, joined to actor");
