@@ -417,6 +417,46 @@ function overview(g){
   </div></div>`;
 }
 
+async function liveSync(slug){
+  if(typeof LIVE==="undefined"||!LIVE) return;
+  let s; try{ s=await (await fetch(`/api/games/${slug}/sync`)).json(); }catch{ return; }
+  const pane=$("#pane"); if(!pane) return;
+  const old=document.getElementById("sync-box"); if(old)old.remove();
+  const box=document.createElement("div"); box.className="box"; box.id="sync-box"; box.style.marginBottom="14px";
+  box.innerHTML = s.connected
+    ? `<div class="bh">🔗 Connected spreadsheet <span style="color:var(--mut);font-weight:400">· this game's card data lives in a sheet</span></div><div class="bb">
+        <div style="font-size:12.5px;color:var(--mut);word-break:break-all;margin-bottom:10px">${esc(s.url)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="syncPull('${slug}',true)">Preview changes</button>
+          <button class="btn primary" onclick="syncPull('${slug}',false)">⟳ Pull from sheet</button>
+          <button class="btn" onclick="syncOff('${slug}')">Disconnect</button></div>
+        <div id="sync-out" style="margin-top:10px"></div></div>`
+    : `<div class="bh">🔗 Connect a spreadsheet</div><div class="bb">
+        <div style="font-size:13px;color:var(--mut);margin-bottom:10px">Keep designing in Google Sheets. Publish it (File → Share → anyone with the link) and paste the link — pulling turns sheet edits into a versioned commit, and every export follows.</div>
+        <div style="display:flex;gap:8px"><input id="sync-url" placeholder="https://docs.google.com/spreadsheets/…" style="flex:1;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit">
+        <button class="btn primary" onclick="syncConnect('${slug}')">Connect</button></div>
+        <div id="sync-out" style="margin-top:10px"></div></div>`;
+  pane.insertBefore(box, pane.firstChild);
+}
+async function syncConnect(slug){
+  const el=$("#sync-url"); const url=(el&&el.value||"").trim(); if(!url)return;
+  toast("Reading the sheet…");
+  const r=await fetch(`/api/games/${slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){ toast(`Connected — ${d.cards} cards visible in the sheet`); liveSync(slug); }
+  else toast(d.error||"couldn't connect");
+}
+async function syncOff(slug){ await fetch(`/api/games/${slug}/sync/sheet`,{method:"DELETE",headers:authHdr()}); toast("Disconnected"); liveSync(slug); }
+async function syncPull(slug,dry){
+  const out=$("#sync-out"); if(out)out.innerHTML="<span style='color:var(--mut);font-size:13px'>Reading the sheet…</span>";
+  const r=await fetch(`/api/games/${slug}/sync/pull${dry?"?dry=1":""}`,{method:"POST",headers:authHdr()});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){ if(out)out.innerHTML=`<div class="chg" style="color:var(--red)">${esc(d.error||"pull failed")}</div>`; return; }
+  const ch=d.changes||[];
+  if(!ch.length){ if(out)out.innerHTML="<span style='color:var(--mut);font-size:13px'>Already in sync.</span>"; return; }
+  if(out)out.innerHTML=(dry?`<div style="font-size:13px;color:var(--mut);margin-bottom:6px">${ch.length} change${ch.length===1?"":"s"} waiting — nothing committed yet.</div>`:"")+ch.map(chgHtml).join("");
+  if(!dry){ toast(`Pulled ${ch.length} change${ch.length===1?"":"s"} — committed as ${d.commit}`); setTimeout(()=>location.reload(),1400); }
+}
 function cards(g, mode){
   if(mode==="edit") return cardsEdit(g);
   const types=[...new Set(g.cards.map(c=>c.type))].sort();
@@ -427,6 +467,7 @@ function cards(g, mode){
       <button class="btn primary" style="margin-left:auto" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>
     </div><div class="cgrid" id="cgrid"></div>`;
   filterCards(g.slug);
+  liveSync(g.slug);
 }
 function filterCards(slug){
   const g=G(slug), q=($("#cardq")?.value||"").toLowerCase(), t=$("#cardt")?.value||"";

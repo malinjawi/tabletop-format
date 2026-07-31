@@ -197,6 +197,17 @@ export const q = {
     `SELECT COUNT(*)::int AS n FROM notifications WHERE user_id = $1 AND read = 0`, [userId])).n,
   markAllRead: (db, userId) => db.query(`UPDATE notifications SET read = 1 WHERE user_id = $1`, [userId]),
 
+  connectSource: (db, s) => db.query(
+    `INSERT INTO sync_sources (game_slug, kind, url, connected_by, created_at) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (game_slug, kind) DO UPDATE SET url = EXCLUDED.url, connected_by = EXCLUDED.connected_by`,
+    [s.game_slug, s.kind, s.url, s.connected_by ?? null, Date.now()]),
+  sourceFor: (db, slug, kind) => one(db,
+    "SELECT * FROM sync_sources WHERE game_slug = $1 AND kind = $2", [slug, kind]),
+  recordSync: (db, slug, kind, sha) => db.query(
+    "UPDATE sync_sources SET last_sync = $1, last_sha = $2 WHERE game_slug = $3 AND kind = $4", [Date.now(), sha, slug, kind]),
+  disconnectSource: (db, slug, kind) => db.query(
+    "DELETE FROM sync_sources WHERE game_slug = $1 AND kind = $2", [slug, kind]),
+
   claim: (db, userId, author) => db.query(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES ($1, $2, $3)`,
     [userId, author, Date.now()]),

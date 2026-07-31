@@ -181,6 +181,17 @@ export const q = {
     `SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read = 0`).get(userId).n,
   markAllRead: (db, userId) => db.prepare(`UPDATE notifications SET read = 1 WHERE user_id = ?`).run(userId),
 
+  connectSource: (db, s) => db.prepare(
+    `INSERT INTO sync_sources (game_slug, kind, url, connected_by, created_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (game_slug, kind) DO UPDATE SET url = excluded.url, connected_by = excluded.connected_by`)
+    .run(s.game_slug, s.kind, s.url, s.connected_by ?? null, Date.now()),
+  sourceFor: (db, slug, kind) => db.prepare(
+    "SELECT * FROM sync_sources WHERE game_slug = ? AND kind = ?").get(slug, kind),
+  recordSync: (db, slug, kind, sha) => db.prepare(
+    "UPDATE sync_sources SET last_sync = ?, last_sha = ? WHERE game_slug = ? AND kind = ?").run(Date.now(), sha, slug, kind),
+  disconnectSource: (db, slug, kind) => db.prepare(
+    "DELETE FROM sync_sources WHERE game_slug = ? AND kind = ?").run(slug, kind),
+
   claim: (db, userId, author) => db.prepare(
     `INSERT INTO claims (user_id, author_string, claimed_at) VALUES (?, ?, ?)`)
     .run(userId, author, Date.now()),

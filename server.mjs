@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { createGateway, readBody } from "./platform/gateway.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { jamQualify } from "./tools/lib/jamcheck.mjs";
+import { csvToCards, mergePrintings, normalizeSheetUrl } from "./tools/lib/cardcsv.mjs";
 import { assertAssetAllowed } from "./tools/lib/limits.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
@@ -137,12 +138,15 @@ const json = async (ctx) => JSON.parse((await readBody(ctx.req)).toString());
 
 /** Validate a candidate tree = game at HEAD + one replaced file. Never touches
  *  the live tree — the rollback path is simply "don't commit". Backend-agnostic. */
-async function validateCandidate(slug, relPath, content) {
+async function validateCandidate(slug, relPath, content, extra = {}) {
   const { dir, cleanup } = await store.materialize(slug, "HEAD");
   try {
     const full = join(dir, relPath);
     mkdirSync(dirname(full), { recursive: true });   // new-file artifacts (e.g. playtests/) may need the dir
     writeFileSync(full, content);
+    for (const [p, c] of Object.entries(extra)) {    // validate multi-file candidates together
+      const f = join(dir, p); mkdirSync(dirname(f), { recursive: true }); writeFileSync(f, c);
+    }
     const v = py("validate.py", [dir]);
     return { ok: v.status === 0, report: v.stdout.split("\n") };
   } finally { cleanup(); }
@@ -727,6 +731,80 @@ gw.route("GET", "/api/games/:slug/diff", async (ctx) => {
     ctx.send(200, { from, to, changes, summary: summarize(changes)?.title || null });
   } catch (e) { ctx.send(422, { error: "could not diff those versions", detail: e.message }); }
 }, "balance diff: what changed in the cards between two versions");
+
+/* ---------- routes: sync — external source of truth (the infra spine) ----------
+ * A game can bind its card data to a PUBLISHED spreadsheet (Google Sheets, or any
+ * CSV url). We never touch credentials: the sheet must be link-shared/published.
+ * Pull = fetch → parse → diff → validate → ONE commit. Everything downstream
+ * (PnP, TTS, TTC, nanDECK, renders) regenerates from that commit automatically. */
+async function fetchCsv(url) {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 15000);
+  try {
+    const r = await fetch(url, { signal: ac.signal, redirect: "follow" });
+    if (!r.ok) throw new Error(`source returned ${r.status}`);
+    const text = await r.text();
+    if (/^\s*<(!doctype|html)/i.test(text))
+      throw new Error("got a web page, not CSV — is the sheet published/shared as 'anyone with the link'?");
+    return text;
+  } finally { clearTimeout(t); }
+}
+gw.route("GET", "/api/games/:slug/sync", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const s = await q.sourceFor(db, slug, "sheet");
+  ctx.send(200, s ? { connected: true, kind: "sheet", url: s.url, last_sync: s.last_sync, last_sha: s.last_sha }
+                  : { connected: false });
+}, "is this game bound to an external source (published sheet)?");
+gw.route("PUT", "/api/games/:slug/sync/sheet", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const { url } = await json(ctx);
+  if (!url || !/^https?:\/\//i.test(url)) return ctx.send(422, { error: "a http(s) url is required" });
+  const norm = normalizeSheetUrl(url.trim());
+  try { const csv = await fetchCsv(norm); const { cards, warnings } = csvToCards(csv);
+    if (!cards.length) return ctx.send(422, { error: "could not read any cards from that sheet", warnings });
+    await q.connectSource(db, { game_slug: slug, kind: "sheet", url: norm, connected_by: u.id });
+    ctx.send(200, { connected: true, url: norm, cards: cards.length, warnings });
+  } catch (e) { return ctx.send(422, { error: `couldn't read the sheet: ${e.message}` }); }
+}, "connect a published spreadsheet as this game's card source");
+gw.route("DELETE", "/api/games/:slug/sync/sheet", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  await q.disconnectSource(db, slug, "sheet");
+  ctx.send(200, { connected: false });
+}, "disconnect the external source");
+gw.route("POST", "/api/games/:slug/sync/pull", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const src = await q.sourceFor(db, slug, "sheet");
+  if (!src) return ctx.send(422, { error: "no source connected — connect a sheet first" });
+  let csv; try { csv = await fetchCsv(src.url); }
+  catch (e) { return ctx.send(502, { error: `couldn't read the sheet: ${e.message}` }); }
+  const { cards, warnings, rows } = csvToCards(csv);
+  if (!cards.length) return ctx.send(422, { error: "no cards in the sheet — refusing to wipe the game", warnings });
+  const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
+  const prevPrintings = JSON.parse((await store.readFile(slug, "components/printings.json")).toString());
+  // every card needs a printing or it is invisible in every export (art/provenance preserved)
+  const printings = mergePrintings(prevPrintings, cards, rows);
+  const changes = diffCards(before, cards);
+  const printingsChanged = JSON.stringify(prevPrintings) !== JSON.stringify(printings);
+  const dry = ctx.url.searchParams.has("dry");
+  if (dry) return ctx.send(200, { dry: true, changes, warnings, summary: summarize(changes)?.title ?? null });
+  if (!changes.length && !printingsChanged) return ctx.send(200, { saved: false, changes: [], warnings, message: "already in sync" });
+  const content = JSON.stringify(cards, null, 2) + "\n";
+  const pcontent = JSON.stringify(printings, null, 2) + "\n";
+  const v = await validateCandidate(slug, "components/cards.json", content, { "components/printings.json": pcontent });
+  if (!v.ok) return ctx.send(422, { error: "the sheet's cards fail validation — nothing was committed", report: v.report });
+  const auto = summarize(changes);
+  const { sha } = await store.writeFiles(slug,
+    [{ path: "components/cards.json", content }, { path: "components/printings.json", content: pcontent }],
+    `sync: pull ${changes.length} change${changes.length === 1 ? "" : "s"} from the connected sheet\n\n${auto?.body ?? ""}`,
+    `${u.handle} <${u.email}>`);
+  await q.recordSync(db, slug, "sheet", sha);
+  ctx.send(200, { saved: true, commit: sha, changes, warnings, summary: auto?.title ?? null });
+}, "pull the connected sheet → diff → validated commit (?dry=1 to preview only)");
 
 /* ---------- routes: releases (citable, immutable versions) ---------- */
 const TAG_RE = /^v?[0-9][0-9A-Za-z._-]{0,31}$/;
