@@ -8,6 +8,11 @@ title: "Netrunner: System Gateway"
 # This fixture exists ONLY as an internal test fixture for the tabletop-format platform
 # and MUST NOT be hosted, published, or distributed as if it were an original game.
 # See README.md in this directory for the full provenance statement.
+#
+# NOTE: components/printings.json entries carry an "image" URL that hot-links full-size
+# card scans from card-images.netrunnerdb.com (NetrunnerDB's own CDN). This lets the hub
+# UI show the authentic printed card next to our rendered/editable preview. Test-fixture
+# convenience only -- do not copy this hot-linking pattern into a real/production game.
 license: Proprietary
 version: "0.1.0"
 description: >

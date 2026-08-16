@@ -36,6 +36,11 @@
       "type": "string",
       "description": "Relative path to face art asset (assets/...). Omit for template-only cards."
     },
+    "image": {
+      "type": "string",
+      "format": "uri",
+      "description": "External card scan URL (shown as the authentic printed card)"
+    },
     "back": {
       "type": "string",
       "description": "Relative path to back art if non-default."

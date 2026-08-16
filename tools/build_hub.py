@@ -152,6 +152,12 @@ def build_game(gd):
         pid = first.get(c["id"], {}).get("id")
         f = faces / f"{pid}.png"
         if pid and f.exists(): images[c["id"]] = b64(f)
+    # scans: real card-scan URLs (e.g. hot-linked from NetrunnerDB), first printing wins —
+    # parallel to `images` (our rendered/editable faces) so the hub can show BOTH.
+    scans = {}
+    for c in cards:
+        url = first.get(c["id"], {}).get("image")
+        if url: scans[c["id"]] = url
 
     rel = f"{game_rel}/components/cards.json" if game_rel else None
     history = git_history(rel) if rel else []
@@ -235,7 +241,7 @@ def build_game(gd):
         "provenance": (game.get("default_provenance") or {}).get("source", "?"),
         "authors": [a.get("name") for a in (game.get("authors") or [])],
         "attribution": game.get("attribution"),
-        "cards": cards, "images": images,
+        "cards": cards, "images": images, "scans": scans,
         "schema": game.get("attribute_definitions") or [],
         "type_colors": game.get("type_colors") or {},
         "symbols": game.get("symbols") or [],

@@ -474,7 +474,7 @@ function filterCards(slug){
   const list=g.cards.filter(c=>(!t||c.type===t)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
   $("#cgrid").innerHTML=list.map(c=>`
     <div class="ctile" onclick="cardModal('${slug}','${c.id}')">
-      ${g.images[c.id]?`<img src="${g.images[c.id]}">`:`<div style="border:1px solid var(--bd);border-radius:8px;padding:30px 8px;text-align:center;color:var(--mut)">${esc(c.name)}</div>`}
+      ${g.scans&&g.scans[c.id]?`<img src="${g.scans[c.id]}" loading="lazy">`:g.images[c.id]?`<img src="${g.images[c.id]}">`:`<div style="border:1px solid var(--bd);border-radius:8px;padding:30px 8px;text-align:center;color:var(--mut)">${esc(c.name)}</div>`}
       <div class="cn">${esc(c.name)}</div>
     </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
 }
@@ -522,6 +522,7 @@ async function cardsEdit(g){
       </div>
       <div class="edform" id="ed-fields"></div>
       <div class="edprev">
+        <div id="ed-scan"></div>
         <iframe id="ed-preview" title="Live themed card preview" style="width:280px;height:392px;border:0;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.18)"></iframe>
         <div class="edcommit">
           <div class="msg" id="ed-msg"></div>
@@ -710,6 +711,11 @@ const ED_PREVIEW_CSS=`html,body{margin:0;height:100%}body{font-family:Inter,-app
 .ppw{min-width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font:800 15px Inter;color:#fff;background:color-mix(in srgb,var(--fg) 88%,#000)}`;
 function edPreviewShell(){return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet"><style>${ED_PREVIEW_CSS}</style></head><body><div class="card" id="pc"></div></body></html>`;}
 function edPreview(){
+  const scanHost=document.getElementById("ed-scan");
+  if(scanHost){
+    const gs=G(ED.slug), cs=edCard(), scan=cs&&gs.scans&&gs.scans[cs.id];
+    scanHost.innerHTML=scan?`<div style="text-align:center;margin-bottom:10px"><img src="${scan}" loading="lazy" style="width:120px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)"><div style="font-size:11px;color:var(--mut);margin-top:4px;max-width:150px">original print — your edits update the live preview</div></div>`:"";
+  }
   const host=document.getElementById("ed-preview"); if(!host) return;
   const d=host.contentDocument;
   if(!d||!d.getElementById("pc")){ host.srcdoc=edPreviewShell(); host.addEventListener("load",edPreview,{once:true}); return; }
@@ -782,6 +788,7 @@ function cardModal(slug,cid){
     if(ch.card===cid&&ch.kind==="changed") hist.push({...ch,date:h.date,author:h.author,sha:h.sha});
   $("#mbody").innerHTML=`
     ${g.images[cid]?`<img src="${g.images[cid]}">`:""}
+    ${g.scans&&g.scans[cid]?`<div style="display:flex;flex-direction:column;align-items:center;gap:5px"><img src="${g.scans[cid]}" loading="lazy" style="width:auto;max-width:300px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.3)"><span style="font-size:11px;color:var(--mut)">printed card · NetrunnerDB</span></div>`:""}
     <div style="flex:1">
       <h2>${esc(c.name)}${LIVE?` <button class="btn" style="font-size:13px;vertical-align:middle" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit</button>`:``}</h2>
       <div class="kv"><b>Type</b>${esc(c.type)}${c.subtypes&&c.subtypes.length?" · "+esc(c.subtypes.join(", ")):""}</div>

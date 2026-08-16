@@ -43,6 +43,10 @@
       "minimum": 0,
       "description": "Max copies per deck, if the game has decks. Omit if not applicable."
     },
+    "orientation": {
+      "enum": ["portrait", "landscape"],
+      "description": "Physical card orientation. Omit to assume the game's default (portrait)."
+    },
     "tags": {
       "type": "array",
       "items": { "type": "string" },

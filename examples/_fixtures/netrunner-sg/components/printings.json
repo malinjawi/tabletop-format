@@ -5,7 +5,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "001",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30001.jpg"
   },
   {
     "id": "p_wildcat_strike_sg",
@@ -13,7 +14,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "002",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30002.jpg"
   },
   {
     "id": "p_carnivore_sg",
@@ -21,7 +23,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "003",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30003.jpg"
   },
   {
     "id": "p_botulus_sg",
@@ -29,7 +32,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "004",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30004.jpg"
   },
   {
     "id": "p_buzzsaw_sg",
@@ -37,7 +41,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "005",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30005.jpg"
   },
   {
     "id": "p_cleaver_sg",
@@ -45,7 +50,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "006",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30006.jpg"
   },
   {
     "id": "p_fermenter_sg",
@@ -53,7 +59,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "007",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30007.jpg"
   },
   {
     "id": "p_leech_sg",
@@ -61,7 +68,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "008",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30008.jpg"
   },
   {
     "id": "p_cookbook_sg",
@@ -69,7 +77,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "009",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30009.jpg"
   },
   {
     "id": "p_zahya_sadeghi_versatile_smuggler_sg",
@@ -77,7 +86,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "010",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30010.jpg"
   },
   {
     "id": "p_mutual_favor_sg",
@@ -85,7 +95,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "011",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30011.jpg"
   },
   {
     "id": "p_tread_lightly_sg",
@@ -93,7 +104,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "012",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30012.jpg"
   },
   {
     "id": "p_docklands_pass_sg",
@@ -101,7 +113,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "013",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30013.jpg"
   },
   {
     "id": "p_pennyshaver_sg",
@@ -109,7 +122,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "014",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30014.jpg"
   },
   {
     "id": "p_carmen_sg",
@@ -117,7 +131,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "015",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30015.jpg"
   },
   {
     "id": "p_marjanah_sg",
@@ -125,7 +140,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "016",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30016.jpg"
   },
   {
     "id": "p_tranquilizer_sg",
@@ -133,7 +149,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "017",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30017.jpg"
   },
   {
     "id": "p_red_team_sg",
@@ -141,7 +158,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "018",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30018.jpg"
   },
   {
     "id": "p_tao_salonga_telepresence_magician_sg",
@@ -149,7 +167,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "019",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30019.jpg"
   },
   {
     "id": "p_creative_commission_sg",
@@ -157,7 +176,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "020",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30020.jpg"
   },
   {
     "id": "p_vrcation_sg",
@@ -165,7 +185,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "021",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30021.jpg"
   },
   {
     "id": "p_dzmz_optimizer_sg",
@@ -173,7 +194,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "022",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30022.jpg"
   },
   {
     "id": "p_pantograph_sg",
@@ -181,7 +203,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "023",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30023.jpg"
   },
   {
     "id": "p_conduit_sg",
@@ -189,7 +212,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "024",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30024.jpg"
   },
   {
     "id": "p_echelon_sg",
@@ -197,7 +221,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "025",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30025.jpg"
   },
   {
     "id": "p_unity_sg",
@@ -205,7 +230,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "026",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30026.jpg"
   },
   {
     "id": "p_telework_contract_sg",
@@ -213,7 +239,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "027",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30027.jpg"
   },
   {
     "id": "p_jailbreak_sg",
@@ -221,7 +248,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "028",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30028.jpg"
   },
   {
     "id": "p_overclock_sg",
@@ -229,7 +257,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "029",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30029.jpg"
   },
   {
     "id": "p_sure_gamble_sg",
@@ -237,7 +266,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "030",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30030.jpg"
   },
   {
     "id": "p_t400_memory_diamond_sg",
@@ -245,7 +275,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "031",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30031.jpg"
   },
   {
     "id": "p_mayfly_sg",
@@ -253,7 +284,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "032",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30032.jpg"
   },
   {
     "id": "p_smartware_distributor_sg",
@@ -261,7 +293,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "033",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30033.jpg"
   },
   {
     "id": "p_verbal_plasticity_sg",
@@ -269,7 +302,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "034",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30034.jpg"
   },
   {
     "id": "p_haas_bioroid_precision_design_sg",
@@ -277,7 +311,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "035",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30035.jpg"
   },
   {
     "id": "p_luminal_transubstantiation_sg",
@@ -285,7 +320,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "036",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30036.jpg"
   },
   {
     "id": "p_nico_campaign_sg",
@@ -293,7 +329,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "037",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30037.jpg"
   },
   {
     "id": "p_ansel_1_0_sg",
@@ -301,7 +338,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "038",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30038.jpg"
   },
   {
     "id": "p_bran_1_0_sg",
@@ -309,7 +347,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "039",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30039.jpg"
   },
   {
     "id": "p_seamless_launch_sg",
@@ -317,7 +356,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "040",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30040.jpg"
   },
   {
     "id": "p_sprint_sg",
@@ -325,7 +365,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "041",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30041.jpg"
   },
   {
     "id": "p_manegarm_skunkworks_sg",
@@ -333,7 +374,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "042",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30042.jpg"
   },
   {
     "id": "p_jinteki_restoring_humanity_sg",
@@ -341,7 +383,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "043",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30043.jpg"
   },
   {
     "id": "p_longevity_serum_sg",
@@ -349,7 +392,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "044",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30044.jpg"
   },
   {
     "id": "p_urtica_cipher_sg",
@@ -357,7 +401,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "045",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30045.jpg"
   },
   {
     "id": "p_diviner_sg",
@@ -365,7 +410,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "046",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30046.jpg"
   },
   {
     "id": "p_karuna_sg",
@@ -373,7 +419,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "047",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30047.jpg"
   },
   {
     "id": "p_hansei_review_sg",
@@ -381,7 +428,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "048",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30048.jpg"
   },
   {
     "id": "p_neurospike_sg",
@@ -389,7 +437,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "049",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30049.jpg"
   },
   {
     "id": "p_anoetic_void_sg",
@@ -397,7 +446,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "050",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30050.jpg"
   },
   {
     "id": "p_nbn_reality_plus_sg",
@@ -405,7 +455,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "051",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30051.jpg"
   },
   {
     "id": "p_tomorrows_headline_sg",
@@ -413,7 +464,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "052",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30052.jpg"
   },
   {
     "id": "p_spin_doctor_sg",
@@ -421,7 +473,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "053",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30053.jpg"
   },
   {
     "id": "p_funhouse_sg",
@@ -429,7 +482,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "054",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30054.jpg"
   },
   {
     "id": "p_ping_sg",
@@ -437,7 +491,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "055",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30055.jpg"
   },
   {
     "id": "p_predictive_planogram_sg",
@@ -445,7 +500,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "056",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30056.jpg"
   },
   {
     "id": "p_public_trail_sg",
@@ -453,7 +509,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "057",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30057.jpg"
   },
   {
     "id": "p_amaze_amusements_sg",
@@ -461,7 +518,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "058",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30058.jpg"
   },
   {
     "id": "p_weyland_consortium_built_to_last_sg",
@@ -469,7 +527,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "059",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30059.jpg"
   },
   {
     "id": "p_above_the_law_sg",
@@ -477,7 +536,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "060",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30060.jpg"
   },
   {
     "id": "p_clearinghouse_sg",
@@ -485,7 +545,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "061",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30061.jpg"
   },
   {
     "id": "p_ballista_sg",
@@ -493,7 +554,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "062",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30062.jpg"
   },
   {
     "id": "p_pharos_sg",
@@ -501,7 +563,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "063",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30063.jpg"
   },
   {
     "id": "p_government_subsidy_sg",
@@ -509,7 +572,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "064",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30064.jpg"
   },
   {
     "id": "p_retribution_sg",
@@ -517,7 +581,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "065",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30065.jpg"
   },
   {
     "id": "p_malapert_data_vault_sg",
@@ -525,7 +590,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "066",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30066.jpg"
   },
   {
     "id": "p_offworld_office_sg",
@@ -533,7 +599,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "067",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30067.jpg"
   },
   {
     "id": "p_orbital_superiority_sg",
@@ -541,7 +608,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "068",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30068.jpg"
   },
   {
     "id": "p_send_a_message_sg",
@@ -549,7 +617,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "069",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30069.jpg"
   },
   {
     "id": "p_superconducting_hub_sg",
@@ -557,7 +626,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "070",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30070.jpg"
   },
   {
     "id": "p_regolith_mining_license_sg",
@@ -565,7 +635,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "071",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30071.jpg"
   },
   {
     "id": "p_palisade_sg",
@@ -573,7 +644,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "072",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30072.jpg"
   },
   {
     "id": "p_tithe_sg",
@@ -581,7 +653,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "073",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30073.jpg"
   },
   {
     "id": "p_whitespace_sg",
@@ -589,7 +662,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "074",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30074.jpg"
   },
   {
     "id": "p_hedge_fund_sg",
@@ -597,7 +671,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "075",
-    "quantity": 3
+    "quantity": 3,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30075.jpg"
   },
   {
     "id": "p_the_catalyst_convention_breaker_sg",
@@ -605,7 +680,8 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "076",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30076.jpg"
   },
   {
     "id": "p_the_syndicate_profit_over_principle_sg",
@@ -613,6 +689,7 @@
     "set_id": "sg",
     "template_id": "standard_face",
     "collector_number": "077",
-    "quantity": 1
+    "quantity": 1,
+    "image": "https://card-images.netrunnerdb.com/v2/large/30077.jpg"
   }
 ]
