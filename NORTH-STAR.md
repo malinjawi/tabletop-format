@@ -6,7 +6,13 @@ flawless, before anything else is touched.** "Finished" means a stranger can wal
 without hitting a single rough edge — no dead buttons, no placeholder text, no layout breaks,
 no unstyled states, no surprise alerts, mobile-sane, loading/empty/error states designed.
 
-## Slice 1 (current): THE CARD LOOP — GAME LOCKED: Cards Against Humanity
+## Slice 1 (current): THE CARD LOOP — GAMES LOCKED (founder decision)
+**Primary yardstick: Netrunner — System Gateway** (maximum card complexity: 8 attributes,
+per-type layouts, factions, symbols, influence, decks, banlist — if the loop is flawless here,
+simpler games pass for free; internal fixture only, never shipped publicly).
+**Public demo: Cards Against Humanity** (license-clean CC BY-NC-SA; the loop must ALSO pass
+here before the slice is done).
+Original note on CAH:
 (Locked by the founder 2026-08. Why CAH: CC BY-NC-SA license means the exact physical look is
 legal even in public; cards are text-only so every edit keeps perfect physical fidelity; the
 game is instantly recognizable in any demo. Every polish decision is made against THIS game
