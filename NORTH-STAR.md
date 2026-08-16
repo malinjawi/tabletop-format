@@ -6,7 +6,11 @@ flawless, before anything else is touched.** "Finished" means a stranger can wal
 without hitting a single rough edge — no dead buttons, no placeholder text, no layout breaks,
 no unstyled states, no surprise alerts, mobile-sane, loading/empty/error states designed.
 
-## Slice 1 (current): THE CARD LOOP on one real game (CAH — license-clean)
+## Slice 1 (current): THE CARD LOOP — GAME LOCKED: Cards Against Humanity
+(Locked by the founder 2026-08. Why CAH: CC BY-NC-SA license means the exact physical look is
+legal even in public; cards are text-only so every edit keeps perfect physical fidelity; the
+game is instantly recognizable in any demo. Every polish decision is made against THIS game
+only. Other games stay installed but are not the yardstick.)
 A visitor can, with zero instruction:
 1. Land on the game page and understand it in 5 seconds.
 2. Browse cards that look exactly like the physical cards. Fast, clean grid.
