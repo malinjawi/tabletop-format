@@ -10,6 +10,10 @@ no unstyled states, no surprise alerts, mobile-sane, loading/empty/error states 
 **Primary yardstick: Netrunner — System Gateway** (maximum card complexity: 8 attributes,
 per-type layouts, factions, symbols, influence, decks, banlist — if the loop is flawless here,
 simpler games pass for free; internal fixture only, never shipped publicly).
+IMPORTANT: Netrunner has NO official formatter and never will (NSG reserves frames/fonts and
+invites original fan frames). The yardstick is therefore OUR frame system rendering maximum
+complexity beautifully — which is the exact surface community games will use. Do not chase
+pixel-parity with the printed card; the scan is reference only. CAH is where exactness is judged.
 **Public demo: Cards Against Humanity** (license-clean CC BY-NC-SA; the loop must ALSO pass
 here before the slice is done).
 Original note on CAH:
