@@ -1,0 +1,24 @@
+{
+  "id": "runner-criminal-toolbox",
+  "name": "Smash and Grab (Zahya Sadeghi)",
+  "format_id": "standard",
+  "author": "tabletop-format fixture",
+  "cards": {
+    "zahya_sadeghi_versatile_smuggler": 1,
+    "marjanah": 3,
+    "carmen": 3,
+    "mayfly": 3,
+    "buzzsaw": 3,
+    "docklands_pass": 3,
+    "pennyshaver": 3,
+    "red_team": 3,
+    "mutual_favor": 3,
+    "tread_lightly": 3,
+    "tranquilizer": 3,
+    "sure_gamble": 3,
+    "t400_memory_diamond": 3,
+    "smartware_distributor": 3,
+    "verbal_plasticity": 3
+  },
+  "notes": "Mono-Criminal + neutral toolbox, sample Runner deck for the netrunner-sg fixture. 43 rows total (1 identity + 42 deck cards; minimum_deck_size for this identity is 40 non-identity cards -- see the same identity-slot note as the Corp decklist). Icebreaker suite covers all three types the hard way (Marjanah/Fracter, Carmen/Killer, Mayfly/AI as a decoder-substitute) plus a splash of 3x Buzzsaw (Anarch Decoder, 1 influence each = 3 of 15 available) for real code-gate coverage. Does not include Cleaver, which is BANNED as of restrictions/standard-2026-08.yaml even though it would otherwise be a fine in-faction-adjacent Fracter."
+}

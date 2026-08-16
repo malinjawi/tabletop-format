@@ -1,0 +1,22 @@
+id: standard-2026-08
+name: "Standard Balance Update 26.08"
+date_start: "2026-08-01"
+banned:
+  - cleaver
+  - luminal_transubstantiation
+  - offworld_office
+restricted: []
+notes: >
+  Fetched live from https://netrunnerdb.com/api/2.0/public/mwl (2026-08-16):
+  this is entry id 44 / code "standard-balance-update-26-08", the currently
+  active ("active": true) Standard-format banlist. The live endpoint returns
+  41 dated entries going back to 2016; only System Gateway (pack "sg") codes
+  were extracted for this fixture (cleaver=30006, luminal_transubstantiation=
+  30036, offworld_office=30067 - each listed with "deck_limit": 0, i.e. a
+  full ban, not a restricted-to-1 entry). Every other card in this MWL entry
+  belongs to sets not ported into this fixture and was dropped. This is
+  contrary to the task brief's expectation that "probably none [are] banned
+  in SG" - as of the fetch date, three SG cards ARE banned in Standard. This
+  file represents ONE dated snapshot; the platform's restriction model treats
+  each MWL wave as its own immutable file (see WHAT-BROKE.md for why the
+  other 40 historical waves were not each ported as separate files).

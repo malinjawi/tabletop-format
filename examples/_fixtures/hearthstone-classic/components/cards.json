@@ -1,0 +1,721 @@
+[
+  {
+    "id": "wisp",
+    "name": "Wisp",
+    "type": "minion",
+    "subtypes": [],
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "mana": 0,
+      "attack": 1,
+      "health": 1,
+      "class": "Neutral",
+      "rarity": "Free"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "argent_squire",
+    "name": "Argent Squire",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Divine Shield.",
+    "keywords": [
+      "Divine Shield"
+    ],
+    "attributes": {
+      "mana": 1,
+      "attack": 1,
+      "health": 1,
+      "class": "Neutral",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "dark_iron_dwarf",
+    "name": "Dark Iron Dwarf",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Battlecry: Give a minion +2 Attack this turn.",
+    "keywords": [
+      "Battlecry"
+    ],
+    "attributes": {
+      "mana": 4,
+      "attack": 4,
+      "health": 4,
+      "class": "Neutral",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "senjin_shieldmasta",
+    "name": "Sen'jin Shieldmasta",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Taunt.",
+    "keywords": [
+      "Taunt"
+    ],
+    "attributes": {
+      "mana": 4,
+      "attack": 3,
+      "health": 5,
+      "class": "Neutral",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "chillwind_yeti",
+    "name": "Chillwind Yeti",
+    "type": "minion",
+    "subtypes": [],
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "attack": 4,
+      "health": 5,
+      "class": "Neutral",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "azure_drake",
+    "name": "Azure Drake",
+    "type": "minion",
+    "subtypes": [
+      "Dragon"
+    ],
+    "text": "Spell Damage +1. Battlecry: Draw a card.",
+    "keywords": [
+      "Spell Damage",
+      "Battlecry"
+    ],
+    "attributes": {
+      "mana": 5,
+      "attack": 4,
+      "health": 4,
+      "class": "Neutral",
+      "rarity": "Rare"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "boulderfist_ogre",
+    "name": "Boulderfist Ogre",
+    "type": "minion",
+    "subtypes": [],
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "mana": 6,
+      "attack": 6,
+      "health": 7,
+      "class": "Neutral",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "cairne_bloodhoof",
+    "name": "Cairne Bloodhoof",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Deathrattle: Summon a 4/5 Baine Bloodhoof.",
+    "keywords": [
+      "Deathrattle"
+    ],
+    "attributes": {
+      "mana": 6,
+      "attack": 4,
+      "health": 5,
+      "class": "Neutral",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "sylvanas_windrunner",
+    "name": "Sylvanas Windrunner",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Deathrattle: Take control of a random enemy minion.",
+    "keywords": [
+      "Deathrattle"
+    ],
+    "attributes": {
+      "mana": 6,
+      "attack": 5,
+      "health": 5,
+      "class": "Neutral",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "leeroy_jenkins",
+    "name": "Leeroy Jenkins",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Charge. Battlecry: Summon two 1/1 Whelps for your opponent.",
+    "keywords": [
+      "Charge",
+      "Battlecry"
+    ],
+    "attributes": {
+      "mana": 5,
+      "attack": 6,
+      "health": 2,
+      "class": "Neutral",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "ragnaros_the_firelord",
+    "name": "Ragnaros the Firelord",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Can't attack. At the end of your turn, deal 8 damage to a random enemy character.",
+    "keywords": [],
+    "attributes": {
+      "mana": 8,
+      "attack": 8,
+      "health": 8,
+      "class": "Neutral",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "fireball",
+    "name": "Fireball",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 6 damage.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "class": "Mage",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "frostbolt",
+    "name": "Frostbolt",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 3 damage to a character and Freeze it.",
+    "keywords": [
+      "Freeze"
+    ],
+    "attributes": {
+      "mana": 2,
+      "class": "Mage",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "arcane_intellect",
+    "name": "Arcane Intellect",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Draw 2 cards.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "class": "Mage",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "polymorph",
+    "name": "Polymorph",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Transform a minion into a 1/1 Sheep.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "class": "Mage",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "water_elemental",
+    "name": "Water Elemental",
+    "type": "minion",
+    "subtypes": [
+      "Elemental"
+    ],
+    "text": "Freeze any character damaged by this minion.",
+    "keywords": [
+      "Freeze"
+    ],
+    "attributes": {
+      "mana": 4,
+      "attack": 3,
+      "health": 6,
+      "class": "Mage",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "flamestrike",
+    "name": "Flamestrike",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 4 damage to all enemy minions.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "class": "Mage",
+      "rarity": "Epic"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "arcane_shot",
+    "name": "Arcane Shot",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 2 damage.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "class": "Mage",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "truesilver_champion",
+    "name": "Truesilver Champion",
+    "type": "weapon",
+    "subtypes": [],
+    "text": "Whenever your hero attacks, restore 2 Health to your hero.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "attack": 4,
+      "durability": 2,
+      "class": "Paladin",
+      "rarity": "Rare"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "consecration",
+    "name": "Consecration",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 2 damage to all enemies.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "class": "Paladin",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "tirion_fordring",
+    "name": "Tirion Fordring",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Divine Shield, Taunt. Deathrattle: Equip a 5/3 Ashbringer.",
+    "keywords": [
+      "Divine Shield",
+      "Taunt",
+      "Deathrattle"
+    ],
+    "attributes": {
+      "mana": 8,
+      "attack": 6,
+      "health": 6,
+      "class": "Paladin",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "backstab",
+    "name": "Backstab",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 2 damage to an undamaged minion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 0,
+      "class": "Rogue",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "sap",
+    "name": "Sap",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Return a minion to its owner's hand.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "class": "Rogue",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "eviscerate",
+    "name": "Eviscerate",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 2 damage. Combo: Deal 4 damage instead.",
+    "keywords": [
+      "Combo"
+    ],
+    "attributes": {
+      "mana": 2,
+      "class": "Rogue",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "si7_agent",
+    "name": "SI:7 Agent",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Combo: Deal 2 damage.",
+    "keywords": [
+      "Combo"
+    ],
+    "attributes": {
+      "mana": 3,
+      "attack": 3,
+      "health": 3,
+      "class": "Rogue",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "cold_blood",
+    "name": "Cold Blood",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a minion +2 Attack. Combo: +4 Attack instead.",
+    "keywords": [
+      "Combo"
+    ],
+    "attributes": {
+      "mana": 1,
+      "class": "Rogue",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "mind_control",
+    "name": "Mind Control",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Take control of an enemy minion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 10,
+      "class": "Priest",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "savannah_highmane",
+    "name": "Savannah Highmane",
+    "type": "minion",
+    "subtypes": [
+      "Beast"
+    ],
+    "text": "Deathrattle: Summon two 2/2 Hyenas.",
+    "keywords": [
+      "Deathrattle"
+    ],
+    "attributes": {
+      "mana": 6,
+      "attack": 6,
+      "health": 5,
+      "class": "Hunter",
+      "rarity": "Rare"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "animal_companion",
+    "name": "Animal Companion",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Summon a random Animal Companion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "class": "Hunter",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "kill_command",
+    "name": "Kill Command",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 3 damage. If you have a Beast, deal 5 damage instead.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "class": "Hunter",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "wild_growth",
+    "name": "Wild Growth",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Gain an empty Mana Crystal.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "class": "Druid",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "innervate",
+    "name": "Innervate",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Gain 2 Mana Crystals this turn only.",
+    "keywords": [],
+    "attributes": {
+      "mana": 0,
+      "class": "Druid",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "swipe",
+    "name": "Swipe",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 4 damage to an enemy and 1 damage to all other enemies.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "class": "Druid",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "starfire",
+    "name": "Starfire",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 5 damage. Draw a card.",
+    "keywords": [],
+    "attributes": {
+      "mana": 6,
+      "class": "Druid",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "shield_slam",
+    "name": "Shield Slam",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal damage equal to your hero's Armor.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "class": "Warrior",
+      "rarity": "Rare"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "whirlwind",
+    "name": "Whirlwind",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 1 damage to all minions.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "class": "Warrior",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "execute",
+    "name": "Execute",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy a damaged enemy minion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "class": "Warrior",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "armorsmith",
+    "name": "Armorsmith",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever a minion you control takes damage, gain 1 Armor.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "attack": 1,
+      "health": 4,
+      "class": "Warrior",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "hex",
+    "name": "Hex",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Transform a minion into a 0/1 Frog with Taunt.",
+    "keywords": [
+      "Taunt"
+    ],
+    "attributes": {
+      "mana": 4,
+      "class": "Shaman",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "lightning_bolt",
+    "name": "Lightning Bolt",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 3 damage. Overload: (1).",
+    "keywords": [
+      "Overload"
+    ],
+    "attributes": {
+      "mana": 1,
+      "class": "Shaman",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "feral_spirit",
+    "name": "Feral Spirit",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload: (2).",
+    "keywords": [
+      "Taunt",
+      "Overload"
+    ],
+    "attributes": {
+      "mana": 3,
+      "class": "Shaman",
+      "rarity": "Rare"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "doomhammer",
+    "name": "Doomhammer",
+    "type": "weapon",
+    "subtypes": [],
+    "text": "Windfury.",
+    "keywords": [
+      "Windfury"
+    ],
+    "attributes": {
+      "mana": 5,
+      "attack": 2,
+      "durability": 8,
+      "class": "Shaman",
+      "rarity": "Epic"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "mortal_coil",
+    "name": "Mortal Coil",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 1 damage to a minion. If that kills it, draw a card.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "class": "Warlock",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "void_terror",
+    "name": "Void Terror",
+    "type": "minion",
+    "subtypes": [
+      "Demon"
+    ],
+    "text": "Battlecry: Destroy the minions on either side of this minion and gain their Attack and Health.",
+    "keywords": [
+      "Battlecry"
+    ],
+    "attributes": {
+      "mana": 3,
+      "attack": 3,
+      "health": 3,
+      "class": "Warlock",
+      "rarity": "Rare"
+    },
+    "deck_limit": 2
+  },
+  {
+    "id": "soulfire",
+    "name": "Soulfire",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 4 damage. Discard a random card.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "class": "Warlock",
+      "rarity": "Common"
+    },
+    "deck_limit": 2
+  }
+]

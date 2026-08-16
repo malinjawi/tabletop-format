@@ -1,0 +1,21 @@
+id: standard
+name: Standard (fixture)
+description: >
+  Fixture-only format: the legal pool is just this repo's single "classic"
+  set. NOTE: real Hearthstone Standard rotates to only the last ~2 years of
+  expansion sets and, since 2021, does NOT include the Classic set at all
+  (Classic became its own separate eternal format) — this file exists only
+  so decks/ has a format to target, not as a faithful port of Standard's
+  rotation rules. See WHAT-BROKE.md.
+card_pool:
+  - classic
+deck_rules:
+  min_size: 30
+  max_size: 30
+  notes: >
+    Real Hearthstone constructed decks are exactly 30 cards, one class (plus
+    any Neutral cards), max 2 copies of a card except Legendary rarity which
+    is capped at 1 copy. The per-rarity copy cap isn't expressible in
+    deck_rules (size-only) — it's enforced per-card via card.deck_limit
+    instead. Class-restricted card pools aren't expressible here either
+    (card_pool is set-based, not class-based). See WHAT-BROKE.md.

@@ -1,0 +1,317 @@
+[
+  {
+    "id": "p_wisp_classic",
+    "card_id": "wisp",
+    "set_id": "classic",
+    "collector_number": "001",
+    "quantity": 2
+  },
+  {
+    "id": "p_argent_squire_classic",
+    "card_id": "argent_squire",
+    "set_id": "classic",
+    "collector_number": "002",
+    "quantity": 2
+  },
+  {
+    "id": "p_dark_iron_dwarf_classic",
+    "card_id": "dark_iron_dwarf",
+    "set_id": "classic",
+    "collector_number": "003",
+    "quantity": 2
+  },
+  {
+    "id": "p_senjin_shieldmasta_classic",
+    "card_id": "senjin_shieldmasta",
+    "set_id": "classic",
+    "collector_number": "004",
+    "quantity": 2
+  },
+  {
+    "id": "p_chillwind_yeti_classic",
+    "card_id": "chillwind_yeti",
+    "set_id": "classic",
+    "collector_number": "005",
+    "quantity": 2
+  },
+  {
+    "id": "p_azure_drake_classic",
+    "card_id": "azure_drake",
+    "set_id": "classic",
+    "collector_number": "006",
+    "quantity": 2
+  },
+  {
+    "id": "p_boulderfist_ogre_classic",
+    "card_id": "boulderfist_ogre",
+    "set_id": "classic",
+    "collector_number": "007",
+    "quantity": 2
+  },
+  {
+    "id": "p_cairne_bloodhoof_classic",
+    "card_id": "cairne_bloodhoof",
+    "set_id": "classic",
+    "collector_number": "008",
+    "quantity": 1
+  },
+  {
+    "id": "p_sylvanas_windrunner_classic",
+    "card_id": "sylvanas_windrunner",
+    "set_id": "classic",
+    "collector_number": "009",
+    "quantity": 1
+  },
+  {
+    "id": "p_leeroy_jenkins_classic",
+    "card_id": "leeroy_jenkins",
+    "set_id": "classic",
+    "collector_number": "010",
+    "quantity": 1
+  },
+  {
+    "id": "p_ragnaros_the_firelord_classic",
+    "card_id": "ragnaros_the_firelord",
+    "set_id": "classic",
+    "collector_number": "011",
+    "quantity": 1
+  },
+  {
+    "id": "p_fireball_classic",
+    "card_id": "fireball",
+    "set_id": "classic",
+    "collector_number": "012",
+    "quantity": 2
+  },
+  {
+    "id": "p_frostbolt_classic",
+    "card_id": "frostbolt",
+    "set_id": "classic",
+    "collector_number": "013",
+    "quantity": 2
+  },
+  {
+    "id": "p_arcane_intellect_classic",
+    "card_id": "arcane_intellect",
+    "set_id": "classic",
+    "collector_number": "014",
+    "quantity": 2
+  },
+  {
+    "id": "p_polymorph_classic",
+    "card_id": "polymorph",
+    "set_id": "classic",
+    "collector_number": "015",
+    "quantity": 2
+  },
+  {
+    "id": "p_water_elemental_classic",
+    "card_id": "water_elemental",
+    "set_id": "classic",
+    "collector_number": "016",
+    "quantity": 2
+  },
+  {
+    "id": "p_flamestrike_classic",
+    "card_id": "flamestrike",
+    "set_id": "classic",
+    "collector_number": "017",
+    "quantity": 2
+  },
+  {
+    "id": "p_arcane_shot_classic",
+    "card_id": "arcane_shot",
+    "set_id": "classic",
+    "collector_number": "018",
+    "quantity": 2
+  },
+  {
+    "id": "p_truesilver_champion_classic",
+    "card_id": "truesilver_champion",
+    "set_id": "classic",
+    "collector_number": "019",
+    "quantity": 2
+  },
+  {
+    "id": "p_consecration_classic",
+    "card_id": "consecration",
+    "set_id": "classic",
+    "collector_number": "020",
+    "quantity": 2
+  },
+  {
+    "id": "p_tirion_fordring_classic",
+    "card_id": "tirion_fordring",
+    "set_id": "classic",
+    "collector_number": "021",
+    "quantity": 1
+  },
+  {
+    "id": "p_backstab_classic",
+    "card_id": "backstab",
+    "set_id": "classic",
+    "collector_number": "022",
+    "quantity": 2
+  },
+  {
+    "id": "p_sap_classic",
+    "card_id": "sap",
+    "set_id": "classic",
+    "collector_number": "023",
+    "quantity": 2
+  },
+  {
+    "id": "p_eviscerate_classic",
+    "card_id": "eviscerate",
+    "set_id": "classic",
+    "collector_number": "024",
+    "quantity": 2
+  },
+  {
+    "id": "p_si7_agent_classic",
+    "card_id": "si7_agent",
+    "set_id": "classic",
+    "collector_number": "025",
+    "quantity": 2
+  },
+  {
+    "id": "p_cold_blood_classic",
+    "card_id": "cold_blood",
+    "set_id": "classic",
+    "collector_number": "026",
+    "quantity": 2
+  },
+  {
+    "id": "p_mind_control_classic",
+    "card_id": "mind_control",
+    "set_id": "classic",
+    "collector_number": "027",
+    "quantity": 2
+  },
+  {
+    "id": "p_savannah_highmane_classic",
+    "card_id": "savannah_highmane",
+    "set_id": "classic",
+    "collector_number": "028",
+    "quantity": 2
+  },
+  {
+    "id": "p_animal_companion_classic",
+    "card_id": "animal_companion",
+    "set_id": "classic",
+    "collector_number": "029",
+    "quantity": 2
+  },
+  {
+    "id": "p_kill_command_classic",
+    "card_id": "kill_command",
+    "set_id": "classic",
+    "collector_number": "030",
+    "quantity": 2
+  },
+  {
+    "id": "p_wild_growth_classic",
+    "card_id": "wild_growth",
+    "set_id": "classic",
+    "collector_number": "031",
+    "quantity": 2
+  },
+  {
+    "id": "p_innervate_classic",
+    "card_id": "innervate",
+    "set_id": "classic",
+    "collector_number": "032",
+    "quantity": 2
+  },
+  {
+    "id": "p_swipe_classic",
+    "card_id": "swipe",
+    "set_id": "classic",
+    "collector_number": "033",
+    "quantity": 2
+  },
+  {
+    "id": "p_starfire_classic",
+    "card_id": "starfire",
+    "set_id": "classic",
+    "collector_number": "034",
+    "quantity": 2
+  },
+  {
+    "id": "p_shield_slam_classic",
+    "card_id": "shield_slam",
+    "set_id": "classic",
+    "collector_number": "035",
+    "quantity": 2
+  },
+  {
+    "id": "p_whirlwind_classic",
+    "card_id": "whirlwind",
+    "set_id": "classic",
+    "collector_number": "036",
+    "quantity": 2
+  },
+  {
+    "id": "p_execute_classic",
+    "card_id": "execute",
+    "set_id": "classic",
+    "collector_number": "037",
+    "quantity": 2
+  },
+  {
+    "id": "p_armorsmith_classic",
+    "card_id": "armorsmith",
+    "set_id": "classic",
+    "collector_number": "038",
+    "quantity": 2
+  },
+  {
+    "id": "p_hex_classic",
+    "card_id": "hex",
+    "set_id": "classic",
+    "collector_number": "039",
+    "quantity": 2
+  },
+  {
+    "id": "p_lightning_bolt_classic",
+    "card_id": "lightning_bolt",
+    "set_id": "classic",
+    "collector_number": "040",
+    "quantity": 2
+  },
+  {
+    "id": "p_feral_spirit_classic",
+    "card_id": "feral_spirit",
+    "set_id": "classic",
+    "collector_number": "041",
+    "quantity": 2
+  },
+  {
+    "id": "p_doomhammer_classic",
+    "card_id": "doomhammer",
+    "set_id": "classic",
+    "collector_number": "042",
+    "quantity": 2
+  },
+  {
+    "id": "p_mortal_coil_classic",
+    "card_id": "mortal_coil",
+    "set_id": "classic",
+    "collector_number": "043",
+    "quantity": 2
+  },
+  {
+    "id": "p_void_terror_classic",
+    "card_id": "void_terror",
+    "set_id": "classic",
+    "collector_number": "044",
+    "quantity": 2
+  },
+  {
+    "id": "p_soulfire_classic",
+    "card_id": "soulfire",
+    "set_id": "classic",
+    "collector_number": "045",
+    "quantity": 2
+  }
+]

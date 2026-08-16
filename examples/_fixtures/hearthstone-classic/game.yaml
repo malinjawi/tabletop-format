@@ -1,0 +1,65 @@
+format_version: "0.1.0"
+id: hearthstone-classic
+title: "Hearthstone: Classic (fixture)"
+description: >
+  A hand-transcribed, ~45-card subset of Blizzard's Hearthstone Classic set —
+  a spread of iconic effects across all nine classes plus neutrals. Built as
+  a TEST-ONLY fixture to exercise this format against a real, well-known
+  digital CCG: per-card mana curves, hero powers, keyword-heavy minion
+  combat, weapons/durability, and deliberately "unportable" digital
+  randomness. Not a complete or balanced card pool — see README.md.
+genre: collectible card game
+tags: [fixture, test-only, digital-ccg, hearthstone]
+version: "0.1.0"
+license: Proprietary
+authors:
+  - name: Format Project (fixture transcription)
+    role: test-fixture transcription
+players:
+  min: 2
+  max: 2
+playtime_minutes:
+  min: 8
+  max: 25
+default_provenance:
+  source: human
+  creator: >
+    Original design, names, and text: Blizzard Entertainment (Hearthstone).
+    This subset was hand-transcribed from public game knowledge for
+    format-interoperability testing; the official Hearthstone card API was
+    unreachable from the build sandbox. See README.md.
+  notes: Proprietary IP reproduced for testing only — not for redistribution.
+attribute_definitions:
+  - key: mana
+    name: Mana Cost
+    type: integer
+    required: true
+    description: Mana crystals paid to play this card.
+  - key: attack
+    name: Attack
+    type: integer
+    description: Damage dealt in combat (minions and weapons).
+  - key: health
+    name: Health
+    type: integer
+    description: Damage a minion can take before it dies.
+  - key: durability
+    name: Durability
+    type: integer
+    description: Number of attacks a weapon can make before it breaks.
+  - key: class
+    name: Class
+    type: string
+    required: true
+    description: The hero class that can play this card, or "Neutral".
+  - key: rarity
+    name: Rarity
+    type: string
+    required: true
+    description: Free, Common, Rare, Epic, or Legendary.
+symbols: []
+type_colors:
+  minion: { fg: "#1f3a1f", bg: "#dcecd8" }
+  spell:  { fg: "#1b3a6b", bg: "#dbe6f6" }
+  weapon: { fg: "#5a2d0c", bg: "#f0ddc8" }
+  hero:   { fg: "#5a1b1b", bg: "#f6dbdb" }

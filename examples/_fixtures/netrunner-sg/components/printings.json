@@ -1,0 +1,618 @@
+[
+  {
+    "id": "p_rene_loup_arcemont_party_animal_sg",
+    "card_id": "rene_loup_arcemont_party_animal",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "001",
+    "quantity": 1
+  },
+  {
+    "id": "p_wildcat_strike_sg",
+    "card_id": "wildcat_strike",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "002",
+    "quantity": 3
+  },
+  {
+    "id": "p_carnivore_sg",
+    "card_id": "carnivore",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "003",
+    "quantity": 3
+  },
+  {
+    "id": "p_botulus_sg",
+    "card_id": "botulus",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "004",
+    "quantity": 3
+  },
+  {
+    "id": "p_buzzsaw_sg",
+    "card_id": "buzzsaw",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "005",
+    "quantity": 3
+  },
+  {
+    "id": "p_cleaver_sg",
+    "card_id": "cleaver",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "006",
+    "quantity": 3
+  },
+  {
+    "id": "p_fermenter_sg",
+    "card_id": "fermenter",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "007",
+    "quantity": 3
+  },
+  {
+    "id": "p_leech_sg",
+    "card_id": "leech",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "008",
+    "quantity": 3
+  },
+  {
+    "id": "p_cookbook_sg",
+    "card_id": "cookbook",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "009",
+    "quantity": 3
+  },
+  {
+    "id": "p_zahya_sadeghi_versatile_smuggler_sg",
+    "card_id": "zahya_sadeghi_versatile_smuggler",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "010",
+    "quantity": 1
+  },
+  {
+    "id": "p_mutual_favor_sg",
+    "card_id": "mutual_favor",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "011",
+    "quantity": 3
+  },
+  {
+    "id": "p_tread_lightly_sg",
+    "card_id": "tread_lightly",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "012",
+    "quantity": 3
+  },
+  {
+    "id": "p_docklands_pass_sg",
+    "card_id": "docklands_pass",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "013",
+    "quantity": 3
+  },
+  {
+    "id": "p_pennyshaver_sg",
+    "card_id": "pennyshaver",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "014",
+    "quantity": 3
+  },
+  {
+    "id": "p_carmen_sg",
+    "card_id": "carmen",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "015",
+    "quantity": 3
+  },
+  {
+    "id": "p_marjanah_sg",
+    "card_id": "marjanah",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "016",
+    "quantity": 3
+  },
+  {
+    "id": "p_tranquilizer_sg",
+    "card_id": "tranquilizer",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "017",
+    "quantity": 3
+  },
+  {
+    "id": "p_red_team_sg",
+    "card_id": "red_team",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "018",
+    "quantity": 3
+  },
+  {
+    "id": "p_tao_salonga_telepresence_magician_sg",
+    "card_id": "tao_salonga_telepresence_magician",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "019",
+    "quantity": 1
+  },
+  {
+    "id": "p_creative_commission_sg",
+    "card_id": "creative_commission",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "020",
+    "quantity": 3
+  },
+  {
+    "id": "p_vrcation_sg",
+    "card_id": "vrcation",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "021",
+    "quantity": 3
+  },
+  {
+    "id": "p_dzmz_optimizer_sg",
+    "card_id": "dzmz_optimizer",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "022",
+    "quantity": 3
+  },
+  {
+    "id": "p_pantograph_sg",
+    "card_id": "pantograph",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "023",
+    "quantity": 3
+  },
+  {
+    "id": "p_conduit_sg",
+    "card_id": "conduit",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "024",
+    "quantity": 3
+  },
+  {
+    "id": "p_echelon_sg",
+    "card_id": "echelon",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "025",
+    "quantity": 3
+  },
+  {
+    "id": "p_unity_sg",
+    "card_id": "unity",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "026",
+    "quantity": 3
+  },
+  {
+    "id": "p_telework_contract_sg",
+    "card_id": "telework_contract",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "027",
+    "quantity": 3
+  },
+  {
+    "id": "p_jailbreak_sg",
+    "card_id": "jailbreak",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "028",
+    "quantity": 3
+  },
+  {
+    "id": "p_overclock_sg",
+    "card_id": "overclock",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "029",
+    "quantity": 3
+  },
+  {
+    "id": "p_sure_gamble_sg",
+    "card_id": "sure_gamble",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "030",
+    "quantity": 3
+  },
+  {
+    "id": "p_t400_memory_diamond_sg",
+    "card_id": "t400_memory_diamond",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "031",
+    "quantity": 3
+  },
+  {
+    "id": "p_mayfly_sg",
+    "card_id": "mayfly",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "032",
+    "quantity": 3
+  },
+  {
+    "id": "p_smartware_distributor_sg",
+    "card_id": "smartware_distributor",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "033",
+    "quantity": 3
+  },
+  {
+    "id": "p_verbal_plasticity_sg",
+    "card_id": "verbal_plasticity",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "034",
+    "quantity": 3
+  },
+  {
+    "id": "p_haas_bioroid_precision_design_sg",
+    "card_id": "haas_bioroid_precision_design",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "035",
+    "quantity": 1
+  },
+  {
+    "id": "p_luminal_transubstantiation_sg",
+    "card_id": "luminal_transubstantiation",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "036",
+    "quantity": 1
+  },
+  {
+    "id": "p_nico_campaign_sg",
+    "card_id": "nico_campaign",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "037",
+    "quantity": 3
+  },
+  {
+    "id": "p_ansel_1_0_sg",
+    "card_id": "ansel_1_0",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "038",
+    "quantity": 3
+  },
+  {
+    "id": "p_bran_1_0_sg",
+    "card_id": "bran_1_0",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "039",
+    "quantity": 3
+  },
+  {
+    "id": "p_seamless_launch_sg",
+    "card_id": "seamless_launch",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "040",
+    "quantity": 3
+  },
+  {
+    "id": "p_sprint_sg",
+    "card_id": "sprint",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "041",
+    "quantity": 3
+  },
+  {
+    "id": "p_manegarm_skunkworks_sg",
+    "card_id": "manegarm_skunkworks",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "042",
+    "quantity": 3
+  },
+  {
+    "id": "p_jinteki_restoring_humanity_sg",
+    "card_id": "jinteki_restoring_humanity",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "043",
+    "quantity": 1
+  },
+  {
+    "id": "p_longevity_serum_sg",
+    "card_id": "longevity_serum",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "044",
+    "quantity": 1
+  },
+  {
+    "id": "p_urtica_cipher_sg",
+    "card_id": "urtica_cipher",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "045",
+    "quantity": 3
+  },
+  {
+    "id": "p_diviner_sg",
+    "card_id": "diviner",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "046",
+    "quantity": 3
+  },
+  {
+    "id": "p_karuna_sg",
+    "card_id": "karuna",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "047",
+    "quantity": 3
+  },
+  {
+    "id": "p_hansei_review_sg",
+    "card_id": "hansei_review",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "048",
+    "quantity": 3
+  },
+  {
+    "id": "p_neurospike_sg",
+    "card_id": "neurospike",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "049",
+    "quantity": 3
+  },
+  {
+    "id": "p_anoetic_void_sg",
+    "card_id": "anoetic_void",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "050",
+    "quantity": 3
+  },
+  {
+    "id": "p_nbn_reality_plus_sg",
+    "card_id": "nbn_reality_plus",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "051",
+    "quantity": 1
+  },
+  {
+    "id": "p_tomorrows_headline_sg",
+    "card_id": "tomorrows_headline",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "052",
+    "quantity": 1
+  },
+  {
+    "id": "p_spin_doctor_sg",
+    "card_id": "spin_doctor",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "053",
+    "quantity": 3
+  },
+  {
+    "id": "p_funhouse_sg",
+    "card_id": "funhouse",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "054",
+    "quantity": 3
+  },
+  {
+    "id": "p_ping_sg",
+    "card_id": "ping",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "055",
+    "quantity": 3
+  },
+  {
+    "id": "p_predictive_planogram_sg",
+    "card_id": "predictive_planogram",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "056",
+    "quantity": 3
+  },
+  {
+    "id": "p_public_trail_sg",
+    "card_id": "public_trail",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "057",
+    "quantity": 3
+  },
+  {
+    "id": "p_amaze_amusements_sg",
+    "card_id": "amaze_amusements",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "058",
+    "quantity": 3
+  },
+  {
+    "id": "p_weyland_consortium_built_to_last_sg",
+    "card_id": "weyland_consortium_built_to_last",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "059",
+    "quantity": 1
+  },
+  {
+    "id": "p_above_the_law_sg",
+    "card_id": "above_the_law",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "060",
+    "quantity": 1
+  },
+  {
+    "id": "p_clearinghouse_sg",
+    "card_id": "clearinghouse",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "061",
+    "quantity": 3
+  },
+  {
+    "id": "p_ballista_sg",
+    "card_id": "ballista",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "062",
+    "quantity": 3
+  },
+  {
+    "id": "p_pharos_sg",
+    "card_id": "pharos",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "063",
+    "quantity": 3
+  },
+  {
+    "id": "p_government_subsidy_sg",
+    "card_id": "government_subsidy",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "064",
+    "quantity": 3
+  },
+  {
+    "id": "p_retribution_sg",
+    "card_id": "retribution",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "065",
+    "quantity": 3
+  },
+  {
+    "id": "p_malapert_data_vault_sg",
+    "card_id": "malapert_data_vault",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "066",
+    "quantity": 3
+  },
+  {
+    "id": "p_offworld_office_sg",
+    "card_id": "offworld_office",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "067",
+    "quantity": 3
+  },
+  {
+    "id": "p_orbital_superiority_sg",
+    "card_id": "orbital_superiority",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "068",
+    "quantity": 3
+  },
+  {
+    "id": "p_send_a_message_sg",
+    "card_id": "send_a_message",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "069",
+    "quantity": 3
+  },
+  {
+    "id": "p_superconducting_hub_sg",
+    "card_id": "superconducting_hub",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "070",
+    "quantity": 3
+  },
+  {
+    "id": "p_regolith_mining_license_sg",
+    "card_id": "regolith_mining_license",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "071",
+    "quantity": 3
+  },
+  {
+    "id": "p_palisade_sg",
+    "card_id": "palisade",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "072",
+    "quantity": 3
+  },
+  {
+    "id": "p_tithe_sg",
+    "card_id": "tithe",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "073",
+    "quantity": 3
+  },
+  {
+    "id": "p_whitespace_sg",
+    "card_id": "whitespace",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "074",
+    "quantity": 3
+  },
+  {
+    "id": "p_hedge_fund_sg",
+    "card_id": "hedge_fund",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "075",
+    "quantity": 3
+  },
+  {
+    "id": "p_the_catalyst_convention_breaker_sg",
+    "card_id": "the_catalyst_convention_breaker",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "076",
+    "quantity": 1
+  },
+  {
+    "id": "p_the_syndicate_profit_over_principle_sg",
+    "card_id": "the_syndicate_profit_over_principle",
+    "set_id": "sg",
+    "template_id": "standard_face",
+    "collector_number": "077",
+    "quantity": 1
+  }
+]

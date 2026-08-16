@@ -1,0 +1,21 @@
+id: standard
+name: Standard
+description: >
+  Standard-format constructed play restricted to the System Gateway card pool
+  (this fixture only ports one set, so the pool is necessarily just [sg]).
+  In the real game "Standard" includes every legal cycle; here it is
+  deliberately narrowed to keep the fixture self-contained.
+card_pool:
+  - sg
+active_restriction_id: standard-2026-08
+deck_rules:
+  min_size: 40
+  notes: >
+    Real minimum deck size is PER IDENTITY (40 for the seven faction
+    identities in this set, 30 for the two neutral starter identities,
+    "The Catalyst" and "The Syndicate" - see each identity's
+    attributes.minimum_deck_size). This format only has one global
+    min_size, so it is set to the common case (40); the two 30-card
+    starter identities are therefore under-constrained here. There is
+    intentionally no max_size: real Netrunner decks have no upper size
+    limit. See WHAT-BROKE.md.

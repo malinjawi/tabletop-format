@@ -1,0 +1,123 @@
+format_version: "0.1.0"
+id: netrunner-sg
+title: "Netrunner: System Gateway"
+# license: this fixture reproduces card names/text/costs fetched from NetrunnerDB
+# (community-maintained, CC-BY-NC data covering Fantasy Flight Games' / Null Signal
+# Games' Android: Netrunner and its "System Gateway" (2021) product line). "Proprietary"
+# below is a placeholder - the underlying IP is NOT owned by this repo or its authors.
+# This fixture exists ONLY as an internal test fixture for the tabletop-format platform
+# and MUST NOT be hosted, published, or distributed as if it were an original game.
+# See README.md in this directory for the full provenance statement.
+license: Proprietary
+version: "0.1.0"
+description: >
+  Test fixture: a faithful port of the 77-card System Gateway set for the
+  asymmetric Corp-vs-Runner cyberpunk card game, used to stress-test the
+  tabletop-format schema against a real, well-documented trading card game
+  (two-sided decks, influence-based deckbuilding, non-deck-limit-of-N
+  singleton cards, a banlist with live entries, etc). Not a production game.
+genre: asymmetric deckbuilding card game
+tags: [cyberpunk, asymmetric, two-player, test-fixture, ccg]
+authors:
+  - name: Fantasy Flight Games / Null Signal Games (original design)
+    role: design
+  - name: NetrunnerDB contributors (card data)
+    role: data
+players:
+  min: 2
+  max: 2
+playtime_minutes:
+  min: 45
+  max: 75
+default_provenance:
+  source: human
+  creator: NetrunnerDB community data (imported); original design by FFG / Null Signal Games
+attribute_definitions:
+  - key: side
+    name: Side
+    type: string
+    required: true
+    description: Which side of the asymmetric matchup this card belongs to ("corp" or "runner").
+  - key: faction
+    name: Faction
+    type: string
+    required: true
+    description: Card's faction (e.g. anarch, criminal, shaper, haas-bioroid, jinteki, nbn, weyland-consortium, or a neutral-* faction).
+  - key: influence
+    name: Influence
+    type: integer
+    description: Influence cost to include this card in a deck of a different faction (from NRDB faction_cost). Absent on identities and true faction agendas, which are influence-exempt.
+  - key: cost
+    name: Cost
+    type: integer
+    description: Credits to play/install/rez this card. Identities have no cost.
+  - key: strength
+    name: Strength
+    type: integer
+    description: Ice strength, or icebreaker strength.
+  - key: memory_cost
+    name: Memory (MU)
+    type: integer
+    description: Memory units required to install this program.
+  - key: trash_cost
+    name: Trash cost
+    type: integer
+    description: Credits the Runner must pay to trash this installed/accessed card.
+  - key: advancement_cost
+    name: Advancement requirement
+    type: integer
+    description: Advancement tokens needed for the Corp to score this agenda.
+  - key: agenda_points
+    name: Agenda points
+    type: integer
+    description: Points toward the 7-point win condition when this agenda is scored or stolen.
+  - key: minimum_deck_size
+    name: Minimum deck size
+    type: integer
+    description: Identity-only. Smallest legal deck size when using this identity.
+  - key: influence_limit
+    name: Influence limit
+    type: integer
+    description: Identity-only. Total influence this identity may spend on out-of-faction cards. Absent (not zero) on the two neutral starter identities, which cannot splash at all.
+  - key: base_link
+    name: Base link
+    type: integer
+    description: Runner identity-only. Starting link strength (trace defense).
+  - key: unique
+    name: Unique
+    type: boolean
+    required: true
+    description: True if only one copy of this card may be in play/scored at a time (printed with a diamond marker on the real card).
+symbols:
+  - key: click
+    name: Click
+    glyph: "▸"
+  - key: credit
+    name: Credit
+    glyph: "¢"
+  - key: subroutine
+    name: Subroutine
+    glyph: "⇒"
+  - key: recurring_credit
+    name: Recurring credit
+    glyph: "↺"
+  - key: mu
+    name: Memory unit
+    glyph: "◇"
+  - key: trash
+    name: Trash
+    glyph: "🗑"
+  - key: link
+    name: Link
+    glyph: "🔗"
+type_colors:
+  identity:  { fg: "#1a1a1a", bg: "#d9d9d9" }
+  agenda:    { fg: "#8a6d00", bg: "#fbf0c4" }
+  asset:     { fg: "#1b5e20", bg: "#dcedc8" }
+  upgrade:   { fg: "#4a148c", bg: "#e6d6f5" }
+  operation: { fg: "#0d47a1", bg: "#d6e4f5" }
+  ice:       { fg: "#b71c1c", bg: "#f8d7d7" }
+  program:   { fg: "#1b5e20", bg: "#c8e6c9" }
+  hardware:  { fg: "#0d47a1", bg: "#c9dcf5" }
+  resource:  { fg: "#8a6d00", bg: "#f5e6a8" }
+  event:     { fg: "#b71c1c", bg: "#f5c9c9" }

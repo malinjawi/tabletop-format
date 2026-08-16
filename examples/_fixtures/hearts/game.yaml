@@ -1,0 +1,76 @@
+format_version: "0.1.0"
+id: hearts
+title: Hearts
+version: "1.0.0"
+description: >
+  The classic 4-player trick-taking card game, played with a standard
+  52-card deck. Avoid taking hearts (1 penalty point each) and the queen of
+  spades (13 penalty points); when someone reaches 100 points the game
+  ends and the LOWEST score wins. Public domain, no known single author.
+  This fixture is the format's control case: a traditional game with no
+  deck-building, no expansions, and no card advantage — everything the
+  format's other examples (Ember, Harbor Nine, Netrunner) assume by
+  default. See WHAT-BROKE.md for where that assumption showed.
+license: CC0-1.0
+genre: trick-taking
+tags: [cards, trick-taking, trump-less, public-domain, classic, 4-player, fixture]
+authors:
+  - name: Traditional (public domain)
+    role: original design
+  - name: The Format Project
+    role: fixture adaptation
+players:
+  min: 4
+  max: 4
+playtime_minutes:
+  min: 20
+  max: 45
+default_provenance:
+  source: human
+  creator: Traditional / public domain
+  notes: >
+    Hearts descends from 19th-century "Reverse" games; no known single
+    inventor and no rights to clear. No AI-generated content in this
+    fixture.
+attribute_definitions:
+  - key: suit
+    name: Suit
+    type: string
+    required: true
+    description: One of hearts, diamonds, clubs, spades.
+  - key: rank
+    name: Rank
+    type: string
+    required: true
+    description: "2-10, or J, Q, K, A."
+  - key: rank_value
+    name: Rank Value
+    type: integer
+    required: true
+    description: >
+      Numeric rank used to compare cards within a trick: 2-10 as printed,
+      J=11, Q=12, K=13, A=14. Hearts has no trump suit, so the highest
+      rank_value of the SUIT LED always wins a trick.
+  - key: penalty
+    name: Penalty Points
+    type: integer
+    required: true
+    description: >
+      Points scored against whoever takes this card in a trick. Every
+      heart = 1, the queen of spades = 13, everything else = 0. Sums to
+      26 across the full deck.
+symbols:
+  - key: suit_hearts
+    name: Hearts suit
+    glyph: "♥"
+  - key: suit_diamonds
+    name: Diamonds suit
+    glyph: "♦"
+  - key: suit_clubs
+    name: Clubs suit
+    glyph: "♣"
+  - key: suit_spades
+    name: Spades suit
+    glyph: "♠"
+type_colors:
+  playing-card: { fg: "#1a1a1a", bg: "#f7f5f0" }

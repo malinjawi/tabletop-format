@@ -1,0 +1,18 @@
+id: standard
+name: Standard
+description: >
+  The only way Hearts is played: the full 52-card deck, exactly 4 players,
+  13 cards dealt to each. Hearts has no banlists, card pools, or
+  competitive formats in the TCG sense — this file exists because the
+  platform's format concept requires at least one card_pool entry pointing
+  at a set.
+card_pool:
+  - standard-52
+deck_rules:
+  min_size: 52
+  max_size: 52
+  notes: >
+    Not a deckbuilding constraint: Hearts has exactly one legal "deck" —
+    all 52 cards, redealt in full every hand. min_size/max_size just
+    describe that fixed deck; no player ever chooses which 52 cards to
+    play with.

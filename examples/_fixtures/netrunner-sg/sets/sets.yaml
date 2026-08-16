@@ -1,0 +1,9 @@
+- id: sg
+  name: System Gateway
+  position: 1
+  release_date: "2021-02-19"
+  size: 77
+  description: >
+    The 2021 non-collectible entry-point set for Netrunner: two 3-faction-per-side
+    starter decks worth of cards plus the neutral cores, 77 unique cards / 205
+    physical cards. Source data: NetrunnerDB pack "sg".

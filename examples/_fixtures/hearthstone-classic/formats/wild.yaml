@@ -1,0 +1,15 @@
+id: wild
+name: Wild (fixture)
+description: >
+  Fixture-only format: same single "classic" card pool as standard.yaml —
+  they are identical in this repo ONLY because this fixture has just one
+  set. NOTE: in real Hearthstone, Wild includes every set ever released
+  (no rotation) while Standard rotates every ~2 years; the meaningful
+  distinction between the two formats is entirely about set rotation, which
+  this single-set fixture cannot demonstrate. See WHAT-BROKE.md.
+card_pool:
+  - classic
+deck_rules:
+  min_size: 30
+  max_size: 30
+  notes: Same 30-card / one-class-plus-neutral / 2-copy (1 Legendary) rules as standard.yaml.

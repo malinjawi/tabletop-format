@@ -1,0 +1,1421 @@
+[
+  {
+    "id": "rene_loup_arcemont_party_animal",
+    "name": "René “Loup” Arcemont: Party Animal",
+    "type": "identity",
+    "subtypes": [
+      "G-mod"
+    ],
+    "text": "The first time each turn you trash a card you are accessing, gain 1[credit] and draw 1 card.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15,
+      "base_link": 0
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "wildcat_strike",
+    "name": "Wildcat Strike",
+    "type": "event",
+    "subtypes": [],
+    "text": "Resolve 1 of the following of the Corpʼs choice:\n- Gain 6[credit].\n- Draw 4 cards.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "cost": 2,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "carnivore",
+    "name": "Carnivore",
+    "type": "hardware",
+    "subtypes": [
+      "Console"
+    ],
+    "text": "+1[mu]\nAccess, once per turn → Trash 2 cards from your grip: Trash the card you are accessing.\nLimit 1 console per player.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": true,
+      "cost": 4,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "botulus",
+    "name": "Botulus",
+    "type": "program",
+    "subtypes": [
+      "Virus",
+      "Trojan"
+    ],
+    "text": "Install only on a piece of ice. (If the host ice is uninstalled, this program is trashed.)\nWhen you install this program and when your turn begins, place 1 virus counter on this program.\nHosted virus counter: Break 1 subroutine on host ice.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "cost": 2,
+      "memory_cost": 1,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "buzzsaw",
+    "name": "Buzzsaw",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "Decoder"
+    ],
+    "text": "Interface → 1[credit]: Break up to 2 code gate subroutines.\n3[credit]: +1 strength.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "cost": 4,
+      "strength": 3,
+      "memory_cost": 1,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cleaver",
+    "name": "Cleaver",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "Fracter"
+    ],
+    "text": "Interface → 1[credit]: Break up to 2 barrier subroutines.\n2[credit]: +1 strength.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "cost": 3,
+      "strength": 3,
+      "memory_cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "fermenter",
+    "name": "Fermenter",
+    "type": "program",
+    "subtypes": [
+      "Virus"
+    ],
+    "text": "When you install this program and when your turn begins, place 1 virus counter on this program.\n[click], [trash]: Gain 2[credit] for each hosted virus counter.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "cost": 1,
+      "memory_cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "leech",
+    "name": "Leech",
+    "type": "program",
+    "subtypes": [
+      "Virus"
+    ],
+    "text": "Whenever you make a successful run on a central server, place 1 virus counter on this program.\nHosted virus counter: The ice you are encountering gets -1 strength for the remainder of this encounter.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": false,
+      "cost": 1,
+      "memory_cost": 1,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cookbook",
+    "name": "Cookbook",
+    "type": "resource",
+    "subtypes": [
+      "Virtual"
+    ],
+    "text": "Whenever you install a virus program, you may place 1 virus counter on it.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "anarch",
+      "unique": true,
+      "cost": 1,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "zahya_sadeghi_versatile_smuggler",
+    "name": "Zahya Sadeghi: Versatile Smuggler",
+    "type": "identity",
+    "subtypes": [
+      "Cyborg"
+    ],
+    "text": "Once per turn → When a run on HQ or R&D ends, you may gain 1[credit] for each time you accessed a card during that run.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15,
+      "base_link": 0
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "mutual_favor",
+    "name": "Mutual Favor",
+    "type": "event",
+    "subtypes": [],
+    "text": "Search your stack for 1 icebreaker and reveal it. (Shuffle your stack after searching it.) If you made a successful run this turn, you may install that program. If you do not, add it to your grip.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "cost": 0,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "tread_lightly",
+    "name": "Tread Lightly",
+    "type": "event",
+    "subtypes": [
+      "Run"
+    ],
+    "text": "Run any server. During that run, the rez cost of each piece of ice is increased by 3[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "cost": 1,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "docklands_pass",
+    "name": "Docklands Pass",
+    "type": "hardware",
+    "subtypes": [],
+    "text": "The first time each turn you breach HQ, access 1 additional card.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": true,
+      "cost": 2,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "pennyshaver",
+    "name": "Pennyshaver",
+    "type": "hardware",
+    "subtypes": [
+      "Console"
+    ],
+    "text": "+1[mu]\nWhenever you make a successful run, place 1[credit] on this hardware.\n[click]: Place 1[credit] on this hardware, then take all credits from it.\nLimit 1 console per player.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": true,
+      "cost": 3,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "carmen",
+    "name": "Carmen",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "Killer"
+    ],
+    "text": "If you made a successful run this turn, this program costs 2[credit] less to install.\nInterface → 1[credit]: Break 1 sentry subroutine.\n2[credit]: +3 strength.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "cost": 5,
+      "strength": 2,
+      "memory_cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "marjanah",
+    "name": "Marjanah",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "Fracter"
+    ],
+    "text": "Interface → 2[credit]: Break 1 barrier subroutine. If you made a successful run this turn, this ability costs 1[credit] less to use.\n1[credit]: +1 strength.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "cost": 0,
+      "strength": 1,
+      "memory_cost": 1,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "tranquilizer",
+    "name": "Tranquilizer",
+    "type": "program",
+    "subtypes": [
+      "Virus",
+      "Trojan"
+    ],
+    "text": "Install only on a piece of ice. (If the host ice is uninstalled, this program is trashed.)\nWhen you install this program and when your turn begins, place 1 virus counter on this program. Then, if there are 3 or more hosted virus counters, derez host ice.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "cost": 2,
+      "memory_cost": 1,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "red_team",
+    "name": "Red Team",
+    "type": "resource",
+    "subtypes": [
+      "Job"
+    ],
+    "text": "When you install this resource, load 12[credit] onto it. When it is empty, trash it.\n[click]: Run a central server you have not run this turn. If successful, take 3[credit] from this resource.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "criminal",
+      "unique": false,
+      "cost": 5,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "tao_salonga_telepresence_magician",
+    "name": "Tāo Salonga: Telepresence Magician",
+    "type": "identity",
+    "subtypes": [
+      "Natural"
+    ],
+    "text": "Whenever an agenda is scored or stolen, you may swap 2 installed pieces of ice.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15,
+      "base_link": 0
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "creative_commission",
+    "name": "Creative Commission",
+    "type": "event",
+    "subtypes": [],
+    "text": "Gain 5[credit]. If you have any [click] remaining, lose [click].",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "vrcation",
+    "name": "VRcation",
+    "type": "event",
+    "subtypes": [],
+    "text": "Draw 4 cards. If you have any [click] remaining, lose [click].",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dzmz_optimizer",
+    "name": "DZMZ Optimizer",
+    "type": "hardware",
+    "subtypes": [],
+    "text": "+1[mu]\nThe first program you install each turn costs 1[credit] less to install.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 2,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "pantograph",
+    "name": "Pantograph",
+    "type": "hardware",
+    "subtypes": [
+      "Console"
+    ],
+    "text": "+1[mu]\nWhenever an agenda is scored or stolen, gain 1[credit]. Then, you may install 1 card from your grip.\nLimit 1 console per player.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": true,
+      "cost": 2,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "conduit",
+    "name": "Conduit",
+    "type": "program",
+    "subtypes": [
+      "Virus"
+    ],
+    "text": "Whenever a successful run on R&D ends, you may place 1 virus counter on this program.\n[click]: Run R&D. If successful, access X additional cards when you breach R&D. X is equal to the number of hosted virus counters.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 4,
+      "memory_cost": 1,
+      "influence": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "echelon",
+    "name": "Echelon",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "Killer"
+    ],
+    "text": "This program gets +1 strength for each installed icebreaker (including this one).\nInterface → 1[credit]: Break 1 sentry subroutine.\n3[credit]: +2 strength.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 3,
+      "strength": 0,
+      "memory_cost": 1,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "unity",
+    "name": "Unity",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "Decoder"
+    ],
+    "text": "Interface → 1[credit]: Break 1 code gate subroutine.\n1[credit]: +X strength. X is equal to the number of installed icebreakers (including this one).",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 3,
+      "strength": 1,
+      "memory_cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "telework_contract",
+    "name": "Telework Contract",
+    "type": "resource",
+    "subtypes": [
+      "Job"
+    ],
+    "text": "When you install this resource, load 9[credit] onto it. When it is empty, trash it.\nOnce per turn → [click]: Take 3[credit] from this resource.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "shaper",
+      "unique": false,
+      "cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "jailbreak",
+    "name": "Jailbreak",
+    "type": "event",
+    "subtypes": [
+      "Run"
+    ],
+    "text": "Run HQ or R&D. If successful, draw 1 card and when you breach the attacked server, access 1 additional card.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "cost": 0,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "overclock",
+    "name": "Overclock",
+    "type": "event",
+    "subtypes": [
+      "Run"
+    ],
+    "text": "Place 5[credit] on this event, then run any server. You can spend hosted credits during that run.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "cost": 1,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sure_gamble",
+    "name": "Sure Gamble",
+    "type": "event",
+    "subtypes": [],
+    "text": "Gain 9[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "cost": 5,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "t400_memory_diamond",
+    "name": "T400 Memory Diamond",
+    "type": "hardware",
+    "subtypes": [
+      "Chip"
+    ],
+    "text": "+1[mu]\nYou get +1 maximum hand size.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "cost": 2,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "mayfly",
+    "name": "Mayfly",
+    "type": "program",
+    "subtypes": [
+      "Icebreaker",
+      "AI"
+    ],
+    "text": "Interface → 1[credit]: Break 1 subroutine. When this run ends, trash this program.\n1[credit]: +1 strength.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "cost": 1,
+      "strength": 1,
+      "memory_cost": 2,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "smartware_distributor",
+    "name": "Smartware Distributor",
+    "type": "resource",
+    "subtypes": [
+      "Connection"
+    ],
+    "text": "[click]: Place 3[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "cost": 0,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "verbal_plasticity",
+    "name": "Verbal Plasticity",
+    "type": "resource",
+    "subtypes": [
+      "Genetics"
+    ],
+    "text": "The first time each turn you take the basic action to draw 1 card, instead draw 2 cards.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": true,
+      "cost": 3,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "haas_bioroid_precision_design",
+    "name": "Haas-Bioroid: Precision Design",
+    "type": "identity",
+    "subtypes": [
+      "Megacorp"
+    ],
+    "text": "You get +1 maximum hand size.\nWhenever you score an agenda, you may add 1 card from Archives to HQ.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "luminal_transubstantiation",
+    "name": "Luminal Transubstantiation",
+    "type": "agenda",
+    "subtypes": [
+      "Research"
+    ],
+    "text": "When you score this agenda, gain [click][click][click]. You cannot score agendas for the remainder of the turn.\nLimit 1 per deck.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "advancement_cost": 3,
+      "agenda_points": 2
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "nico_campaign",
+    "name": "Nico Campaign",
+    "type": "asset",
+    "subtypes": [
+      "Advertisement"
+    ],
+    "text": "When you rez this asset, load 9[credit] onto it. When it is empty, trash it and draw 1 card.\nWhen your turn begins, take 3[credit] from this asset.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "cost": 2,
+      "trash_cost": 2,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ansel_1_0",
+    "name": "Ansel 1.0",
+    "type": "ice",
+    "subtypes": [
+      "Sentry",
+      "Bioroid",
+      "Destroyer"
+    ],
+    "text": "Lose [click]: Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] Trash 1 installed Runner card.\n[subroutine] You may install 1 card from HQ or Archives.\n[subroutine] The Runner cannot steal or trash Corp cards for the remainder of this run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "cost": 6,
+      "strength": 4,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "bran_1_0",
+    "name": "Brân 1.0",
+    "type": "ice",
+    "subtypes": [
+      "Barrier",
+      "Bioroid"
+    ],
+    "text": "Lose [click]: Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs.\n[subroutine] End the run.\n[subroutine] End the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "cost": 6,
+      "strength": 6,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "seamless_launch",
+    "name": "Seamless Launch",
+    "type": "operation",
+    "subtypes": [],
+    "text": "Place 2 advancement counters on 1 installed card that you did not install this turn.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "cost": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sprint",
+    "name": "Sprint",
+    "type": "operation",
+    "subtypes": [],
+    "text": "Draw 3 cards. Shuffle 2 cards from HQ into R&D.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": false,
+      "cost": 0,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "manegarm_skunkworks",
+    "name": "Manegarm Skunkworks",
+    "type": "upgrade",
+    "subtypes": [],
+    "text": "Whenever the Runner approaches this server, end the run unless they either spend [click][click] or pay 5[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "haas-bioroid",
+      "unique": true,
+      "cost": 2,
+      "trash_cost": 3,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "jinteki_restoring_humanity",
+    "name": "Jinteki: Restoring Humanity",
+    "type": "identity",
+    "subtypes": [
+      "Megacorp"
+    ],
+    "text": "When your discard phase ends, if there is a facedown card in Archives, gain 1[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "longevity_serum",
+    "name": "Longevity Serum",
+    "type": "agenda",
+    "subtypes": [
+      "Research"
+    ],
+    "text": "When you score this agenda, trash any number of cards from HQ. Shuffle up to 3 cards from Archives into R&D.\nLimit 1 per deck.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "advancement_cost": 3,
+      "agenda_points": 2
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "urtica_cipher",
+    "name": "Urtica Cipher",
+    "type": "asset",
+    "subtypes": [
+      "Ambush"
+    ],
+    "text": "You can advance this asset.\nWhen the Runner accesses this asset while it is installed, do 2 net damage plus 1 net damage for each hosted advancement counter.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "cost": 0,
+      "trash_cost": 2,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "diviner",
+    "name": "Diviner",
+    "type": "ice",
+    "subtypes": [
+      "Code Gate",
+      "AP"
+    ],
+    "text": "[subroutine] Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. (0 is not odd.)",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "cost": 2,
+      "strength": 3,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "karuna",
+    "name": "Karunā",
+    "type": "ice",
+    "subtypes": [
+      "Sentry",
+      "AP"
+    ],
+    "text": "[subroutine] Do 2 net damage. The Runner may jack out.\n[subroutine] Do 2 net damage.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "cost": 4,
+      "strength": 3,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "hansei_review",
+    "name": "Hansei Review",
+    "type": "operation",
+    "subtypes": [
+      "Transaction"
+    ],
+    "text": "Gain 10[credit]. If there are any cards in HQ, trash 1 of them.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "cost": 5,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "neurospike",
+    "name": "Neurospike",
+    "type": "operation",
+    "subtypes": [
+      "Gray Ops"
+    ],
+    "text": "Do X net damage, where X is equal to the sum of the printed agenda points on agendas you scored this turn.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": false,
+      "cost": 3,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "anoetic_void",
+    "name": "Anoetic Void",
+    "type": "upgrade",
+    "subtypes": [],
+    "text": "Whenever the Runner approaches this server, you may pay 2[credit] and trash 2 cards from HQ. If you do, end the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "jinteki",
+      "unique": true,
+      "cost": 0,
+      "trash_cost": 1,
+      "influence": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "nbn_reality_plus",
+    "name": "NBN: Reality Plus",
+    "type": "identity",
+    "subtypes": [
+      "Megacorp"
+    ],
+    "text": "The first time each turn the Runner takes a tag, gain 2[credit] or draw 2 cards.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "tomorrows_headline",
+    "name": "Tomorrowʼs Headline",
+    "type": "agenda",
+    "subtypes": [
+      "Ambush"
+    ],
+    "text": "When this agenda is scored or stolen, give the Runner 1 tag.\nLimit 1 per deck.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": false,
+      "advancement_cost": 3,
+      "agenda_points": 2
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "spin_doctor",
+    "name": "Spin Doctor",
+    "type": "asset",
+    "subtypes": [
+      "Character"
+    ],
+    "text": "When you rez this asset, draw 2 cards.\nRemove this asset from the game: Shuffle up to 2 cards from Archives into R&D.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": true,
+      "cost": 0,
+      "trash_cost": 2,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "funhouse",
+    "name": "Funhouse",
+    "type": "ice",
+    "subtypes": [
+      "Code Gate"
+    ],
+    "text": "When the Runner encounters this ice, end the run unless the Runner takes 1 tag.\n[subroutine] Give the Runner 1 tag unless they pay 4[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": false,
+      "cost": 5,
+      "strength": 4,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ping",
+    "name": "Ping",
+    "type": "ice",
+    "subtypes": [
+      "Barrier"
+    ],
+    "text": "When you rez this ice during a run against this server, give the Runner 1 tag.\n[subroutine] End the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": false,
+      "cost": 2,
+      "strength": 1,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "predictive_planogram",
+    "name": "Predictive Planogram",
+    "type": "operation",
+    "subtypes": [
+      "Transaction"
+    ],
+    "text": "Resolve 1 of the following. If the Runner is tagged, you may resolve both instead.\n- Gain 3[credit].\n- Draw 3 cards.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": false,
+      "cost": 0,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "public_trail",
+    "name": "Public Trail",
+    "type": "operation",
+    "subtypes": [
+      "Gray Ops"
+    ],
+    "text": "Play only if the Runner made a successful run during their last turn.\nGive the Runner 1 tag unless they pay 8[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": false,
+      "cost": 4,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "amaze_amusements",
+    "name": "AMAZE Amusements",
+    "type": "upgrade",
+    "subtypes": [],
+    "text": "Persistent → Whenever a run on this server ends, if the Runner stole any agendas during that run, give the Runner 2 tags. (If the Runner trashes this card while accessing it, this ability still applies for the remainder of this run.)",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "nbn",
+      "unique": true,
+      "cost": 1,
+      "trash_cost": 3,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "weyland_consortium_built_to_last",
+    "name": "Weyland Consortium: Built to Last",
+    "type": "identity",
+    "subtypes": [
+      "Megacorp"
+    ],
+    "text": "Whenever you advance a card, gain 2[credit] if it had no advancement counters.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "minimum_deck_size": 40,
+      "influence_limit": 15
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "above_the_law",
+    "name": "Above the Law",
+    "type": "agenda",
+    "subtypes": [
+      "Security"
+    ],
+    "text": "When you score this agenda, you may trash 1 installed resource.\nLimit 1 per deck.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "advancement_cost": 3,
+      "agenda_points": 2
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "clearinghouse",
+    "name": "Clearinghouse",
+    "type": "asset",
+    "subtypes": [
+      "Hostile"
+    ],
+    "text": "You can advance this asset.\nWhen your turn begins, you may trash this asset to do 1 meat damage for each hosted advancement counter.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "cost": 0,
+      "trash_cost": 3,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ballista",
+    "name": "Ballista",
+    "type": "ice",
+    "subtypes": [
+      "Sentry",
+      "Destroyer"
+    ],
+    "text": "[subroutine] Trash 1 installed program or end the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "cost": 5,
+      "strength": 4,
+      "influence": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "pharos",
+    "name": "Pharos",
+    "type": "ice",
+    "subtypes": [
+      "Barrier"
+    ],
+    "text": "You can advance this ice. It gets +5 strength while there are 3 or more hosted advancement counters.\n[subroutine] Give the Runner 1 tag.\n[subroutine] End the run.\n[subroutine] End the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "cost": 7,
+      "strength": 5,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "government_subsidy",
+    "name": "Government Subsidy",
+    "type": "operation",
+    "subtypes": [
+      "Transaction"
+    ],
+    "text": "Gain 15[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "cost": 10,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "retribution",
+    "name": "Retribution",
+    "type": "operation",
+    "subtypes": [
+      "Gray Ops"
+    ],
+    "text": "Play only if the Runner is tagged.\nTrash 1 installed program or piece of hardware.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": false,
+      "cost": 1,
+      "influence": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "malapert_data_vault",
+    "name": "Malapert Data Vault",
+    "type": "upgrade",
+    "subtypes": [],
+    "text": "Whenever you score an agenda from the root of this server, you may search R&D for 1 non-agenda card and reveal it. (Shuffle R&D after searching it.) Add that card to HQ.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "weyland-consortium",
+      "unique": true,
+      "cost": 1,
+      "trash_cost": 4,
+      "influence": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "offworld_office",
+    "name": "Offworld Office",
+    "type": "agenda",
+    "subtypes": [
+      "Expansion"
+    ],
+    "text": "When you score this agenda, gain 7[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "advancement_cost": 4,
+      "agenda_points": 2,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "orbital_superiority",
+    "name": "Orbital Superiority",
+    "type": "agenda",
+    "subtypes": [
+      "Security"
+    ],
+    "text": "When you score this agenda, if the Runner is tagged, do 4 meat damage; otherwise, give the Runner 1 tag.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "advancement_cost": 4,
+      "agenda_points": 2,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "send_a_message",
+    "name": "Send a Message",
+    "type": "agenda",
+    "subtypes": [
+      "Security"
+    ],
+    "text": "When this agenda is scored or stolen, you may rez 1 installed piece of ice, ignoring all costs.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "advancement_cost": 5,
+      "agenda_points": 3,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "superconducting_hub",
+    "name": "Superconducting Hub",
+    "type": "agenda",
+    "subtypes": [
+      "Expansion"
+    ],
+    "text": "When you score this agenda, you may draw 2 cards.\nYou get +2 maximum hand size.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "advancement_cost": 3,
+      "agenda_points": 1,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "regolith_mining_license",
+    "name": "Regolith Mining License",
+    "type": "asset",
+    "subtypes": [],
+    "text": "When you rez this asset, load 15[credit] onto it. When it is empty, trash it.\n[click]: Take 3[credit] from this asset.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "cost": 2,
+      "trash_cost": 3,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "palisade",
+    "name": "Palisade",
+    "type": "ice",
+    "subtypes": [
+      "Barrier"
+    ],
+    "text": "While this ice is protecting a remote server, it gets +2 strength.\n[subroutine] End the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "cost": 3,
+      "strength": 2,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "tithe",
+    "name": "Tithe",
+    "type": "ice",
+    "subtypes": [
+      "Sentry",
+      "AP"
+    ],
+    "text": "[subroutine] Do 1 net damage.\n[subroutine] Gain 1[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "cost": 1,
+      "strength": 1,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "whitespace",
+    "name": "Whitespace",
+    "type": "ice",
+    "subtypes": [
+      "Code Gate"
+    ],
+    "text": "[subroutine] The Runner loses 3[credit].\n[subroutine] If the Runner has 6[credit] or less, end the run.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "cost": 2,
+      "strength": 0,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "hedge_fund",
+    "name": "Hedge Fund",
+    "type": "operation",
+    "subtypes": [
+      "Transaction"
+    ],
+    "text": "Gain 9[credit].",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "cost": 5,
+      "influence": 0
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "the_catalyst_convention_breaker",
+    "name": "The Catalyst: Convention Breaker",
+    "type": "identity",
+    "subtypes": [
+      "Natural"
+    ],
+    "text": "Starter game only.",
+    "keywords": [],
+    "attributes": {
+      "side": "runner",
+      "faction": "neutral-runner",
+      "unique": false,
+      "minimum_deck_size": 30,
+      "base_link": 0
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "the_syndicate_profit_over_principle",
+    "name": "The Syndicate: Profit over Principle",
+    "type": "identity",
+    "subtypes": [
+      "Megacorp"
+    ],
+    "text": "Starter game only.",
+    "keywords": [],
+    "attributes": {
+      "side": "corp",
+      "faction": "neutral-corp",
+      "unique": false,
+      "minimum_deck_size": 30
+    },
+    "deck_limit": 1
+  }
+]

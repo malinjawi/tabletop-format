@@ -1,0 +1,25 @@
+{
+  "id": "corp-weyland-fastadvance",
+  "name": "Building a Better Tomorrow (Weyland Consortium)",
+  "format_id": "standard",
+  "author": "tabletop-format fixture",
+  "cards": {
+    "weyland_consortium_built_to_last": 1,
+    "above_the_law": 1,
+    "orbital_superiority": 3,
+    "send_a_message": 3,
+    "superconducting_hub": 3,
+    "clearinghouse": 3,
+    "ballista": 3,
+    "pharos": 3,
+    "government_subsidy": 3,
+    "retribution": 3,
+    "malapert_data_vault": 3,
+    "regolith_mining_license": 3,
+    "palisade": 3,
+    "tithe": 3,
+    "hedge_fund": 3,
+    "diviner": 3
+  },
+  "notes": "Mono-Weyland + neutral agenda-and-ice shell, sample Corp deck for the netrunner-sg fixture. 44 rows total (1 identity + 43 deck cards) -- deliberately built to the REAL rule that minimum_deck_size (40 for this identity) excludes the identity, since this platform's deck schema has no dedicated identity slot (see WHAT-BROKE.md). Agenda points: 1x Above the Law (2) + 3x Orbital Superiority (6) + 3x Send a Message (9) + 3x Superconducting Hub (3) = 20 points from 10 agenda cards, clearing the 2-per-5-cards density rule (43 cards -> needs >=18). Splashes 3x Diviner (Jinteki, 2 influence each = 6 of 15 available) for code-gate coverage; every other card is in-faction or neutral (0 influence). Does not include Offworld Office, Luminal Transubstantiation, or Cleaver -- all three are BANNED as of restrictions/standard-2026-08.yaml."
+}

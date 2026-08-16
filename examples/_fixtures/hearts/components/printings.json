@@ -1,0 +1,366 @@
+[
+  {
+    "id": "p_clubs_2",
+    "card_id": "clubs_2",
+    "set_id": "standard-52",
+    "collector_number": "01",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_3",
+    "card_id": "clubs_3",
+    "set_id": "standard-52",
+    "collector_number": "02",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_4",
+    "card_id": "clubs_4",
+    "set_id": "standard-52",
+    "collector_number": "03",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_5",
+    "card_id": "clubs_5",
+    "set_id": "standard-52",
+    "collector_number": "04",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_6",
+    "card_id": "clubs_6",
+    "set_id": "standard-52",
+    "collector_number": "05",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_7",
+    "card_id": "clubs_7",
+    "set_id": "standard-52",
+    "collector_number": "06",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_8",
+    "card_id": "clubs_8",
+    "set_id": "standard-52",
+    "collector_number": "07",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_9",
+    "card_id": "clubs_9",
+    "set_id": "standard-52",
+    "collector_number": "08",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_10",
+    "card_id": "clubs_10",
+    "set_id": "standard-52",
+    "collector_number": "09",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_j",
+    "card_id": "clubs_j",
+    "set_id": "standard-52",
+    "collector_number": "10",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_q",
+    "card_id": "clubs_q",
+    "set_id": "standard-52",
+    "collector_number": "11",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_k",
+    "card_id": "clubs_k",
+    "set_id": "standard-52",
+    "collector_number": "12",
+    "quantity": 1
+  },
+  {
+    "id": "p_clubs_a",
+    "card_id": "clubs_a",
+    "set_id": "standard-52",
+    "collector_number": "13",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_2",
+    "card_id": "diamonds_2",
+    "set_id": "standard-52",
+    "collector_number": "14",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_3",
+    "card_id": "diamonds_3",
+    "set_id": "standard-52",
+    "collector_number": "15",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_4",
+    "card_id": "diamonds_4",
+    "set_id": "standard-52",
+    "collector_number": "16",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_5",
+    "card_id": "diamonds_5",
+    "set_id": "standard-52",
+    "collector_number": "17",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_6",
+    "card_id": "diamonds_6",
+    "set_id": "standard-52",
+    "collector_number": "18",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_7",
+    "card_id": "diamonds_7",
+    "set_id": "standard-52",
+    "collector_number": "19",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_8",
+    "card_id": "diamonds_8",
+    "set_id": "standard-52",
+    "collector_number": "20",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_9",
+    "card_id": "diamonds_9",
+    "set_id": "standard-52",
+    "collector_number": "21",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_10",
+    "card_id": "diamonds_10",
+    "set_id": "standard-52",
+    "collector_number": "22",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_j",
+    "card_id": "diamonds_j",
+    "set_id": "standard-52",
+    "collector_number": "23",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_q",
+    "card_id": "diamonds_q",
+    "set_id": "standard-52",
+    "collector_number": "24",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_k",
+    "card_id": "diamonds_k",
+    "set_id": "standard-52",
+    "collector_number": "25",
+    "quantity": 1
+  },
+  {
+    "id": "p_diamonds_a",
+    "card_id": "diamonds_a",
+    "set_id": "standard-52",
+    "collector_number": "26",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_2",
+    "card_id": "hearts_2",
+    "set_id": "standard-52",
+    "collector_number": "27",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_3",
+    "card_id": "hearts_3",
+    "set_id": "standard-52",
+    "collector_number": "28",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_4",
+    "card_id": "hearts_4",
+    "set_id": "standard-52",
+    "collector_number": "29",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_5",
+    "card_id": "hearts_5",
+    "set_id": "standard-52",
+    "collector_number": "30",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_6",
+    "card_id": "hearts_6",
+    "set_id": "standard-52",
+    "collector_number": "31",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_7",
+    "card_id": "hearts_7",
+    "set_id": "standard-52",
+    "collector_number": "32",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_8",
+    "card_id": "hearts_8",
+    "set_id": "standard-52",
+    "collector_number": "33",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_9",
+    "card_id": "hearts_9",
+    "set_id": "standard-52",
+    "collector_number": "34",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_10",
+    "card_id": "hearts_10",
+    "set_id": "standard-52",
+    "collector_number": "35",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_j",
+    "card_id": "hearts_j",
+    "set_id": "standard-52",
+    "collector_number": "36",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_q",
+    "card_id": "hearts_q",
+    "set_id": "standard-52",
+    "collector_number": "37",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_k",
+    "card_id": "hearts_k",
+    "set_id": "standard-52",
+    "collector_number": "38",
+    "quantity": 1
+  },
+  {
+    "id": "p_hearts_a",
+    "card_id": "hearts_a",
+    "set_id": "standard-52",
+    "collector_number": "39",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_2",
+    "card_id": "spades_2",
+    "set_id": "standard-52",
+    "collector_number": "40",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_3",
+    "card_id": "spades_3",
+    "set_id": "standard-52",
+    "collector_number": "41",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_4",
+    "card_id": "spades_4",
+    "set_id": "standard-52",
+    "collector_number": "42",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_5",
+    "card_id": "spades_5",
+    "set_id": "standard-52",
+    "collector_number": "43",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_6",
+    "card_id": "spades_6",
+    "set_id": "standard-52",
+    "collector_number": "44",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_7",
+    "card_id": "spades_7",
+    "set_id": "standard-52",
+    "collector_number": "45",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_8",
+    "card_id": "spades_8",
+    "set_id": "standard-52",
+    "collector_number": "46",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_9",
+    "card_id": "spades_9",
+    "set_id": "standard-52",
+    "collector_number": "47",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_10",
+    "card_id": "spades_10",
+    "set_id": "standard-52",
+    "collector_number": "48",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_j",
+    "card_id": "spades_j",
+    "set_id": "standard-52",
+    "collector_number": "49",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_q",
+    "card_id": "spades_q",
+    "set_id": "standard-52",
+    "collector_number": "50",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_k",
+    "card_id": "spades_k",
+    "set_id": "standard-52",
+    "collector_number": "51",
+    "quantity": 1
+  },
+  {
+    "id": "p_spades_a",
+    "card_id": "spades_a",
+    "set_id": "standard-52",
+    "collector_number": "52",
+    "quantity": 1
+  }
+]

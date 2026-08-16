@@ -1,0 +1,13 @@
+# Single set: a hand-picked SUBSET of Hearthstone's real Classic set (which
+# has ~240 cards) — not a full reproduction. See README.md / WHAT-BROKE.md.
+- id: classic
+  name: Classic
+  position: 1
+  release_date: "2021-08-03"
+  size: 45
+  description: >
+    ~45 iconic cards spread across all nine classes and Neutral, hand
+    transcribed from public game knowledge as a format-conformance fixture.
+    Chosen for mechanical variety: minions/spells/weapons; Taunt, Charge,
+    Battlecry, Deathrattle, Freeze, Windfury, Divine Shield, Combo,
+    Overload, Spell Damage; Free through Legendary rarity.

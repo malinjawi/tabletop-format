@@ -1,0 +1,25 @@
+{
+  "id": "classic-control-mage",
+  "name": "Classic Control Mage",
+  "format_id": "standard",
+  "author": "fixture",
+  "cards": {
+    "fireball": 2,
+    "frostbolt": 2,
+    "arcane_intellect": 2,
+    "polymorph": 2,
+    "water_elemental": 2,
+    "flamestrike": 2,
+    "arcane_shot": 2,
+    "wisp": 2,
+    "argent_squire": 2,
+    "dark_iron_dwarf": 2,
+    "senjin_shieldmasta": 2,
+    "chillwind_yeti": 2,
+    "azure_drake": 2,
+    "boulderfist_ogre": 2,
+    "ragnaros_the_firelord": 1,
+    "cairne_bloodhoof": 1
+  },
+  "notes": "Sample 30-card Mage list built from this fixture's pool: Frostbolt/Fireball/Flamestrike/Arcane Shot for removal, Arcane Intellect for cards, neutral curve fillers, closed out by Ragnaros the Firelord and Cairne Bloodhoof."
+}

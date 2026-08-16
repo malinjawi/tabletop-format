@@ -1,0 +1,11 @@
+# One set: the standard 52-card deck. Hearts has no expansions, no
+# boosters, no alternate printings — this file exists because the format
+# requires at least one set for printings.json to reference.
+- id: standard-52
+  name: Standard 52-Card Deck
+  position: 1
+  size: 52
+  description: >
+    The single standard French-suited 52-card deck (13 ranks x 4 suits, no
+    jokers) used to play Hearts. No cycle, no release date: a folk game
+    predates the concept of a "set release."
