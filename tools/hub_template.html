@@ -1,6 +1,8 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>Forge — where games live</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"><style>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
 :root{--h:#1c2128;--bd:#d0d7de;--bg:#f6f8fa;--fg:#1f2328;--mut:#656d76;--acc:#8250df;--grn:#1a7f37;--red:#cf222e;--blu:#0969da;--org:#bc4c00}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--fg);background:#fff;font-size:14px;line-height:1.5}
@@ -535,6 +537,255 @@ ${pageHtml}
   win.document.open(); win.document.write(doc); win.document.close();
 }
 
+
+/* ================= SHARED CLIENT RULEBOOK RENDERER =================
+ * rulebookHtml(g) -> HTML string. Client-side compile of g.rules_md (the
+ * SAME raw markdown embedded per game that rulesEdit()'s textarea edits
+ * and commits via PUT /artifact) into a styled, formatted BOOKLET: a
+ * cover header (title, "Official Rules", license badge, edition), an
+ * auto-generated table of contents built from ## headings (anchor
+ * links), and the compiled body -- serif (Lora) running text, bold
+ * condensed section headings with an accent rule under each, styled
+ * lists/tables, blockquote ("> ...") callouts rendered as NOTE boxes,
+ * and [sym] tokens rendered as the same glyph chips cardFrame() uses on
+ * cards (cfSym() / .cf-sym) -- a symbol reads identically on a card and
+ * in the rulebook that explains it.
+ *
+ * This is a small real markdown compiler -- headings, bold/italic
+ * (** and __ / * and _), inline `code`, unordered/ordered lists,
+ * tables, blockquotes, and paragraphs -- extending the same
+ * line-by-line approach already used by md_to_html() (tools/build_hub.py,
+ * the build-time renderer behind g.rules_html) and window._mdPrev (the
+ * rules-editor's split live preview), rather than a third, unrelated
+ * implementation.
+ *
+ * rules.md remains the single source of truth: this only ever READS
+ * g.rules_md and never mutates it. Editing (rulesEdit()/rulesSave(),
+ * above) is completely unchanged and still commits plain markdown --
+ * the compiled book is only ever the DISPLAY. */
+const RB_FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">`;
+const RB_CSS = `
+.rb-book{--rb-ink:#232936;font-family:'Lora',Georgia,'Times New Roman',serif;color:#242423;line-height:1.68;max-width:900px;margin:0 auto}
+.rb-cover{text-align:center;padding:6px 10px 20px;border-bottom:3px solid var(--rb-acc,#232936);margin-bottom:22px}
+.rb-kicker{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:700;letter-spacing:.24em;text-transform:uppercase;font-size:12px;color:var(--rb-acc,#232936);margin-bottom:6px}
+.rb-title{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:800;font-size:34px;letter-spacing:.005em;margin:0 0 12px;color:#171a20;line-height:1.15}
+.rb-covermeta{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+.rb-edition{font-size:12px;color:var(--mut,#656d76);border:1px solid var(--bd,#d0d7de);border-radius:20px;padding:1px 10px}
+.rb-official{border:1px solid var(--rb-acc,#232936);border-radius:8px;padding:10px 14px;margin:0 0 22px;background:rgba(0,0,0,.025)}
+.rb-official-h{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:700;letter-spacing:.09em;text-transform:uppercase;font-size:11.5px;color:var(--rb-acc,#232936);margin-bottom:6px}
+.rb-official-list{display:flex;flex-direction:column;gap:4px}
+.rb-official-link{display:inline-block;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--blu,#0969da)}
+.rb-toc{border:1px solid #e3e6ea;border-radius:8px;padding:14px 20px;margin:0 0 26px;background:#fbfbfa}
+.rb-toc-h{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:var(--rb-acc,#232936);margin-bottom:8px}
+.rb-toc ul{list-style:none;margin:0;padding:0;columns:2;column-gap:26px}
+.rb-toc li{break-inside:avoid;margin:3px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+.rb-toc a{color:#1f2328;font-size:13.5px;border-bottom:1px dotted transparent}
+.rb-toc a:hover{color:var(--rb-acc,#232936);border-bottom-color:currentColor;text-decoration:none}
+.rb-body{font-size:15px}
+.rb-body h1,.rb-body h2,.rb-body h3,.rb-body h4{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:800;letter-spacing:.01em;color:#171a20;column-span:all;break-after:avoid;page-break-after:avoid}
+.rb-body h1{font-size:25px;margin:8px 0 14px;padding-bottom:8px;border-bottom:3px solid var(--rb-acc,#232936)}
+.rb-body h2{font-size:21px;margin:32px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--rb-acc,#232936);color:var(--rb-acc,#232936)}
+.rb-body h2:first-child{margin-top:8px}
+.rb-body h3{font-size:16px;margin:20px 0 8px;padding-left:10px;border-left:4px solid var(--rb-acc,#232936)}
+.rb-body h4{font-size:13px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.06em;color:#4a4f57}
+.rb-body p{margin:0 0 12px}
+.rb-body ul,.rb-body ol{margin:0 0 14px;padding-left:22px;break-inside:avoid}
+.rb-body li{margin:4px 0}
+.rb-body li::marker{color:var(--rb-acc,#232936);font-weight:700}
+.rb-body table{width:100%;border-collapse:collapse;margin:4px 0 16px;font-size:13.5px;break-inside:avoid}
+.rb-body th{background:var(--rb-acc,#232936);color:#fff;text-align:left;padding:6px 9px;font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:700;letter-spacing:.02em}
+.rb-body td{padding:6px 9px;border-bottom:1px solid #e3e6ea}
+.rb-body tr:nth-child(even) td{background:rgba(0,0,0,.025)}
+.rb-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#f0f2f5;border-radius:4px;padding:1px 5px}
+.rb-body hr{border:none;border-top:1px solid #e3e6ea;margin:20px 0}
+.rb-note{border-left:4px solid var(--rb-acc,#232936);background:rgba(0,0,0,.03);border-radius:0 8px 8px 0;padding:10px 14px;margin:0 0 16px;break-inside:avoid;page-break-inside:avoid}
+.rb-note-h{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:11px;color:var(--rb-acc,#232936);margin-bottom:4px}
+.rb-note p{margin:0 0 6px;font-size:14px}
+.rb-note p:last-child{margin-bottom:0}
+@media(min-width:860px){.rb-body{columns:2;column-gap:34px;column-rule:1px solid #ececec}}
+@media(max-width:520px){.rb-toc ul{columns:1}}
+`;
+document.head.insertAdjacentHTML("beforeend", RB_FONTS + `<style>${RB_CSS}</style>`);
+
+// Accent = first type_colors fg, else first faction_colors fg, else the
+// #232936 default -- but skip candidates too light to read as text/rules
+// on the rulebook's white page (e.g. CAH's "black" card type is fg:#fff,
+// meant for white-on-black card chrome, not a heading color on paper).
+function rbUsableAccent(hex){
+  const m=/^#([0-9a-fA-F]{6})$/.exec(hex||"");
+  if(!m) return false;
+  const n=parseInt(m[1],16), r=(n>>16)&255, gg=(n>>8)&255, b=n&255;
+  return (0.299*r+0.587*gg+0.114*b)/255 < 0.78;
+}
+function rbAccent(g){
+  const cands=[
+    ...Object.keys(g.type_colors||{}).map(k=>(g.type_colors[k]||{}).fg),
+    ...Object.keys(g.faction_colors||{}).map(k=>(g.faction_colors[k]||{}).fg),
+  ];
+  return cands.find(rbUsableAccent) || "#232936";
+}
+function rbSlugify(s){
+  return (s||"").toString().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "section";
+}
+// Inline markdown -> HTML. Code spans are pulled out FIRST into a
+// placeholder (protected from every rule below), so `snake_case_ids`
+// littered through this project's rules text never get mangled by the
+// *italic*/_italic_ regexes -- then bold/italic, then [sym] tokens
+// render as the same glyph chips cardFrame() puts on cards (cfSym()).
+function rbInline(g, s){
+  const sym = cfSym(g);
+  const stash = [];
+  let raw = (s??"").toString().replace(/`([^`]+?)`/g, (m,c)=>{ stash.push(c); return " "+(stash.length-1)+" "; });
+  let out = esc(raw);
+  out = out.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/__(.+?)__/g, "<strong>$1</strong>");
+  out = out.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  out = out.replace(/(^|\s)_([^\s_](?:[^_]*[^\s_])?)_(?=\s|$)/g, "$1<em>$2</em>");
+  out = out.replace(/\[([a-z0-9_]+)\]/gi, (m,k)=> sym[k] ? `<span class="cf-sym" title="${esc(k)}">${esc(sym[k])}</span>` : m);
+  out = out.replace(/ (\d+) /g, (m,idx)=>`<code>${esc(stash[+idx])}</code>`);
+  return out;
+}
+// Block-level compile: headings (anchor ids; ## also feeds the TOC),
+// "> " runs -> NOTE boxes, pipe tables, -/* lists, 1. lists, hr, and
+// paragraphs (contiguous plain lines join into one <p>, unlike the
+// line-per-<p> of md_to_html()/_mdPrev -- an improvement, since these
+// rulebooks are hand-wrapped prose spanning several source lines).
+function rbCompile(g, md){
+  const lines = (md||"").replace(/\r\n?/g,"\n").split("\n");
+  const toc = [], usedIds = new Set(), out = [];
+  const mkId = (text)=>{ let base="rb-"+rbSlugify(g.slug)+"-"+rbSlugify(text), id=base, n=2;
+    while(usedIds.has(id)) id=base+"-"+(n++); usedIds.add(id); return id; };
+  const isHeading = l => /^#{1,6}\s+/.test(l);
+  const isQuote = l => /^>\s?/.test(l);
+  const isUl = l => /^\s*[-*]\s+/.test(l);
+  const isOl = l => /^\s*\d+\.\s+/.test(l);
+  const isHr = l => /^-{3,}$/.test(l.trim());
+  const isTableSep = l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+  const splitRow = l => l.trim().replace(/^\|/,"").replace(/\|$/,"").split("|").map(c=>c.trim());
+  let i=0, inUl=false, inOl=false;
+  const closeLists=()=>{ if(inUl){out.push("</ul>");inUl=false;} if(inOl){out.push("</ol>");inOl=false;} };
+  while(i<lines.length){
+    const line = lines[i].replace(/\s+$/,"");
+    if(line.trim()===""){ closeLists(); i++; continue; }
+    const hm = /^(#{1,6})\s+(.*?)\s*#*$/.exec(line);
+    if(hm){
+      closeLists();
+      const level=hm[1].length, text=hm[2].trim(), id=mkId(text);
+      if(level===2) toc.push({id, text});
+      out.push(`<h${level} id="${id}">${rbInline(g,text)}</h${level}>`);
+      i++; continue;
+    }
+    if(isQuote(line)){
+      closeLists();
+      const qlines=[];
+      while(i<lines.length && isQuote(lines[i])){ qlines.push(lines[i].replace(/^>\s?/,"")); i++; }
+      const paras=[]; let cur=[];
+      for(const l of qlines){ if(l.trim()===""){ if(cur.length){paras.push(cur.join(" "));cur=[];} } else cur.push(l); }
+      if(cur.length) paras.push(cur.join(" "));
+      out.push(`<div class="rb-note"><div class="rb-note-h">Note</div>${paras.map(p=>`<p>${rbInline(g,p)}</p>`).join("")}</div>`);
+      continue;
+    }
+    if(line.includes("|") && i+1<lines.length && isTableSep(lines[i+1])){
+      closeLists();
+      const header = splitRow(line); i+=2;
+      const rows=[];
+      while(i<lines.length && lines[i].trim()!=="" && lines[i].includes("|")){ rows.push(splitRow(lines[i])); i++; }
+      out.push(`<table><thead><tr>${header.map(h=>`<th>${rbInline(g,h)}</th>`).join("")}</tr></thead><tbody>${
+        rows.map(r=>`<tr>${r.map(c=>`<td>${rbInline(g,c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    if(isUl(line)){
+      if(inOl){out.push("</ol>");inOl=false;}
+      if(!inUl){out.push("<ul>");inUl=true;}
+      out.push(`<li>${rbInline(g, line.replace(/^\s*[-*]\s+/,""))}</li>`);
+      i++; continue;
+    }
+    if(isOl(line)){
+      if(inUl){out.push("</ul>");inUl=false;}
+      if(!inOl){out.push("<ol>");inOl=true;}
+      out.push(`<li>${rbInline(g, line.replace(/^\s*\d+\.\s+/,""))}</li>`);
+      i++; continue;
+    }
+    if(isHr(line)){ closeLists(); out.push("<hr>"); i++; continue; }
+    closeLists();
+    const para=[line]; i++;
+    while(i<lines.length && lines[i].trim()!=="" && !isHeading(lines[i]) && !isQuote(lines[i]) && !isUl(lines[i]) && !isOl(lines[i]) && !isHr(lines[i])
+          && !(lines[i].includes("|") && i+1<lines.length && isTableSep(lines[i+1]))){
+      para.push(lines[i]); i++;
+    }
+    out.push(`<p>${rbInline(g, para.join(" "))}</p>`);
+  }
+  closeLists();
+  return {html: out.join("\n"), toc};
+}
+function rbOfficialDocs(g){
+  const docs=(g.official_docs||[]).filter(d=>d&&d.url);
+  if(!docs.length) return "";
+  return `<div class="rb-official"><div class="rb-official-h">Official documents</div><div class="rb-official-list">${
+    docs.map(d=>`<a class="rb-official-link" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">⇲ ${esc(d.name||d.url)}</a>`).join("")
+  }</div></div>`;
+}
+function rulebookHtml(g){
+  const acc = rbAccent(g);
+  const {html, toc} = rbCompile(g, g.rules_md||"");
+  const tocHtml = toc.length ? `<nav class="rb-toc"><div class="rb-toc-h">Contents</div><ul>${
+    toc.map(t=>`<li><a href="#${t.id}">${rbInline(g,t.text)}</a></li>`).join("")}</ul></nav>` : "";
+  const bodyHtml = html || `<p style="color:var(--mut)">No rulebook yet — <code>rules/rules.md</code> diffs like everything else.</p>`;
+  return `<article class="rb-book" style="--rb-acc:${esc(acc)}">
+    <header class="rb-cover">
+      <div class="rb-kicker">Official Rules</div>
+      <h1 class="rb-title">${esc(g.title)}</h1>
+      <div class="rb-covermeta">
+        <span class="badge lic">${esc(g.license||"?")}</span>
+        ${g.version?`<span class="rb-edition">Edition · v${esc(g.version)}</span>`:""}
+      </div>
+    </header>
+    ${rbOfficialDocs(g)}
+    ${tocHtml}
+    <div class="rb-body">${bodyHtml}</div>
+  </article>`;
+}
+/* printRules(slug) -- true print rulebook: same rulebookHtml() (so the
+ * printed booklet and the Rules-tab booklet can never drift apart from
+ * each other), opened standalone like printSheet(), with A4 print CSS:
+ * two columns, headings forced not to break across a page/column, and
+ * a repeating page footer (position:fixed repeats per printed page in
+ * Chromium-based browsers, the same engine "Save as PDF" uses). */
+function printRules(slug){
+  const g = G(slug);
+  if(!g){ toast("No such game."); return; }
+  const win = window.open("", "_blank", "width=980,height=1040");
+  if(!win){ toast("Pop-up blocked — allow pop-ups for this site to print the rulebook."); return; }
+  const doc = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>${esc(g.title)} — official rules</title>
+${RB_FONTS}
+<style>
+${RB_CSS}
+*{box-sizing:border-box}
+html,body{margin:0;background:#e9ebee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f2328}
+@page{size:A4;margin:14mm}
+.rp-toolbar{max-width:900px;margin:14px auto 0;padding:0 4px;display:flex;gap:10px}
+.rp-toolbar button{font:inherit;font-size:13px;font-weight:600;padding:7px 16px;border:1px solid #8a8f98;border-radius:6px;background:#fff;cursor:pointer}
+.rp-toolbar button:hover{background:#f0f1f3}
+.rp-page{max-width:900px;margin:16px auto 60px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25);padding:22px 26px 34px}
+.rb-print-footer{position:fixed;left:0;right:0;bottom:0;text-align:center;font-size:8pt;color:#888;padding:3mm 0 2mm;border-top:.5pt solid #ccc;background:#fff}
+@media print{
+  html,body{background:#fff}
+  .rp-toolbar{display:none}
+  .rp-page{box-shadow:none;margin:0;padding:0;max-width:none}
+  .rb-body{column-count:2;column-gap:10mm}
+  .rb-book h1,.rb-book h2,.rb-book h3{break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid;column-span:all}
+  .rb-toc,.rb-note,table,ul,ol{break-inside:avoid;page-break-inside:avoid}
+}
+</style></head>
+<body>
+<div class="rp-toolbar"><button onclick="window.print()">🖨 Print</button><button onclick="window.close()">Close</button></div>
+<div class="rp-page">${rulebookHtml(g)}</div>
+<div class="rb-print-footer">generated from rules.md — ${esc(g.title)} — Forge</div>
+</body></html>`;
+  win.document.open(); win.document.write(doc); win.document.close();
+}
+
 /* ---------- router ---------- */
 function go(hash){ location.hash = hash; }
 window.onhashchange = render;
@@ -1022,12 +1273,12 @@ function cardModal(slug,cid){
 
 function rules(g, mode){
   if(mode==="edit" && LIVE) return rulesEdit(g);
-  const syms = {spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"};
-  let body = g.rules_html || "<div class='emptystate'>No rulebook yet — <code>rules/rules.md</code> diffs like everything else.</div>";
-  body = body.replace(/\[([a-z0-9_]+)\]/g,(m,k)=>syms[k]?`<b>${syms[k]}</b>`:m);
   $("#pane").innerHTML = `<div class="two"><div>
-    <div class="box"><div class="bh">📖 rules/rules.md <span style="color:var(--mut);font-weight:400">· prose that diffs — every errata is a commit</span><button class="btn" style="float:right;margin-top:-4px" onclick="go('g/${g.slug}/rules/edit')">✎ Edit rules</button></div>
-    <div class="bb" style="max-width:720px">${body}</div></div>
+    <div class="box"><div class="bh">📖 Rules <span style="color:var(--mut);font-weight:400">· compiled from <code>rules/rules.md</code> — prose that diffs, every errata is a commit</span>
+      <button class="btn" style="float:right;margin-top:-4px" onclick="go('g/${g.slug}/rules/edit')">✎ Edit rules</button>
+      <button class="btn" style="float:right;margin-top:-4px;margin-right:8px" onclick="printRules('${g.slug}')" title="Print a formatted rulebook — A4, two columns">🖨 Print rulebook</button>
+    </div>
+    <div class="bb">${rulebookHtml(g)}</div></div>
   </div><div class="side">
     <div class="box"><div class="bh">Components</div><div class="bb">
       ${g.tokens.length?g.tokens.map(t=>`<div class="kv" style="margin:8px 0"><b>${esc(t.name)}</b>
@@ -1042,7 +1293,6 @@ function rules(g, mode){
     </div></div>
   </div></div>`;
 }
-
 function playtests(g){
   if(!g.playtests.length){$("#pane").innerHTML="<div class='emptystate'>No sessions logged.<br><span style='font-size:13px'>playtests/*.json — feedback pinned to the exact version tested.</span></div>";if(typeof LIVE!=="undefined"&&LIVE)liveAnalytics(g.slug);return;}
   // insights: cost curve + most-flagged

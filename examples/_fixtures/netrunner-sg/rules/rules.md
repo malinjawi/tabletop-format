@@ -31,6 +31,10 @@ faction, starting resources, and deckbuilding limits.
   (deck), the Runner loses immediately. The Corp does **not** lose this way —
   a mandatory draw from an empty R&D simply does nothing.
 
+> Agenda points work the same whether the Corp scores an agenda or the
+> Runner steals it — both add straight to that player's own total. There is
+> no bonus, penalty, or "stolen points are worth less" rule for either side.
+
 ## 3. Zones
 
 | Corp                | Runner            | Contents |

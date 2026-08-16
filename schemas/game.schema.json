@@ -141,6 +141,19 @@
       "type": "string",
       "enum": ["cah", "playing-card"],
       "description": "Selects an exact-look physical card template in the renderer (cardFrame in tools/hub_template.html) instead of the generic data-driven frame -- e.g. a real Cards Against Humanity card or a real playing card, pixel-faithful down to corner indices/pip layout. Optional; omit to use the generic type_colors/faction_colors frame."
+    },
+    "official_docs": {
+      "type": "array",
+      "description": "Optional links to official rulebook / print-and-play documents hosted elsewhere (e.g. a publisher's PDF). Rendered as a small 'Official documents' links box at the top of the Rules tab (rulebookHtml in tools/hub_template.html), and in the printed rulebook, when present. Additive/optional -- omit entirely for games with no such links; do not fabricate URLs that are not actually documented for the game.",
+      "items": {
+        "type": "object",
+        "required": ["name", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" }
+        }
+      }
     }
   }
 }

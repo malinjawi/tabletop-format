@@ -50,6 +50,11 @@ There's no fixed end. The traditional target is Awesome Points equal to
 the number of players at the table, but most groups just play until the
 snacks or the will to live run out, whichever comes first.
 
+> Because the Czar never submits an answer in their own round, everyone
+> gets an equal number of judged rounds only if the player count evenly
+> divides the number of rounds played — a house rule to track if your table
+> cares about exact fairness.
+
 ## House rules worth knowing
 
 - **Rando Cardrissian**: with a small group, deal a hand to an imaginary

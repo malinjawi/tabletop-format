@@ -40,6 +40,10 @@ Turns alternate. On your turn, in order:
 Whenever one of your cards enters the ash pile during your own turn, you may
 take 1 [ash] token from the pool (max 3 held). Some cards spend or count [ash].
 
+> The ash *pile* (where spent cards go) and the [ash] *token* pool you hold
+> are different things sharing a name — the pile has no limit, only the
+> token pool is capped at 3.
+
 ## Extinguishing
 
 A flame at 0 is out — that player loses immediately. Effects that prevent
