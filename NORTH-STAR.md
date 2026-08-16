@@ -1,0 +1,31 @@
+# NORTH STAR — the discipline (written 2026-08, at the founder's direction)
+
+## The rule
+No new features. No new pages. No new games. **One vertical slice at a time, finished to
+flawless, before anything else is touched.** "Finished" means a stranger can walk the slice
+without hitting a single rough edge — no dead buttons, no placeholder text, no layout breaks,
+no unstyled states, no surprise alerts, mobile-sane, loading/empty/error states designed.
+
+## Slice 1 (current): THE CARD LOOP on one real game (CAH — license-clean)
+A visitor can, with zero instruction:
+1. Land on the game page and understand it in 5 seconds.
+2. Browse cards that look exactly like the physical cards. Fast, clean grid.
+3. Open a card → see it large → click Edit → change text → the REAL card updates as they type.
+4. Save: signed in w/ access → commit; signed in w/o access → propose (PR) — both flows
+   smooth, explained, undoable. Signed out → clear, kind prompt to sign in (no alert()s).
+5. See the PR as a visual card diff (before → after), comment, merge.
+6. After merge: grid, modal, print sheet all show the new card. History shows who/when/what.
+7. Print: the sheet that comes out matches what they saw. Exactly.
+
+Definition of done: someone unfamiliar records themselves doing 1–7 without confusion;
+every state (empty/loading/error/unauthorized) is intentional; zero browser alert()/prompt();
+consistent spacing/typography; works at laptop + phone widths.
+
+## Then, in order (do not start early):
+Slice 2: sign-in/identity + onboarding (first-run experience).
+Slice 3: host-a-game from CSV/Sheet — the creator's first 10 minutes.
+Slice 4: the jam loop. Slice 5: releases + print/PnP distribution.
+
+## How to work
+Fix-list per slice lives in a GitHub-style issue doc in docs/slices/. Walk the slice in a
+browser FIRST, list every flaw, fix top-to-bottom, re-walk, repeat until clean. Only then move on.
