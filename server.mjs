@@ -538,13 +538,22 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
   const base = JSON.parse(pr.base), proposed = JSON.parse(pr.proposed);
   const current = await cardsOf(slug);
   const { conflicts } = mergeCards(base, proposed, current);
+  const changes = diffCards(base, proposed);
+  // visual diff payload: ONLY the cards the diff actually touches (by id), so the
+  // hub can render cardFrame(before) -> cardFrame(after) per card without shipping
+  // the whole game's card pool over the wire.
+  const changedIds = [...new Set(changes.map((c) => c.card))];
+  const byId = (arr) => Object.fromEntries(arr.map((c) => [c.id, c]));
+  const B = byId(base), P = byId(proposed);
+  const before_cards = changedIds.map((id) => B[id]).filter(Boolean);
+  const after_cards = changedIds.map((id) => P[id]).filter(Boolean);
   ctx.send(200, { id: pr.id, to: pr.to_slug, from: pr.from_slug, title: pr.title, body: pr.body,
     author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
-    changes: diffCards(base, proposed),
+    changes, before_cards, after_cards,
     stale: diffCards(base, current).length > 0, conflicts,
     reviews: await q.reviewsFor(db, pr.id),
     comments: await q.commentsFor(db, "pr", pr.id) });
-}, "PR detail: semantic diff + live staleness/conflict check + discussion");
+}, "PR detail: semantic diff + before/after cards for the visual diff + live staleness/conflict check + discussion");
 gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;

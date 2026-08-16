@@ -123,6 +123,19 @@
           "bg": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
         }
       }
+    },
+    "faction_colors": {
+      "type": "object",
+      "description": "Per-faction render colors for asymmetric/faction games (e.g. Netrunner) — design data, not tool code. Keys are values of a card's attributes.faction; renderers prefer this over type_colors when a card carries a faction, and fall back to type_colors, then a neutral palette, for undeclared factions.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["fg", "bg"],
+        "additionalProperties": false,
+        "properties": {
+          "fg": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+          "bg": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+        }
+      }
     }
   }
 }

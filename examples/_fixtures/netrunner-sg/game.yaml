@@ -126,3 +126,17 @@ type_colors:
   hardware:  { fg: "#0d47a1", bg: "#c9dcf5" }
   resource:  { fg: "#8a6d00", bg: "#f5e6a8" }
   event:     { fg: "#b71c1c", bg: "#f5c9c9" }
+# Faction colors drive the client card renderer's accent (cardFrame in
+# tools/hub_template.html): a card's attributes.faction takes priority over
+# type_colors so runner/corp cards read by faction first, the way the real
+# game does. bg is a pale tint of each fg, matching the type_colors palette.
+faction_colors:
+  anarch:              { fg: "#ff5c1c", bg: "#ffe7dd" }
+  criminal:            { fg: "#2f6fd0", bg: "#e0e9f8" }
+  shaper:              { fg: "#35b26b", bg: "#e1f3e9" }
+  haas-bioroid:        { fg: "#7a5cc0", bg: "#ebe7f6" }
+  jinteki:             { fg: "#c8393f", bg: "#f7e1e2" }
+  nbn:                 { fg: "#e0a71f", bg: "#faf2dd" }
+  weyland-consortium:  { fg: "#2e6b5e", bg: "#e0e9e7" }
+  neutral-corp:        { fg: "#8a8f98", bg: "#edeef0" }
+  neutral-runner:      { fg: "#8a8f98", bg: "#edeef0" }

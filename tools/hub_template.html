@@ -166,6 +166,25 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .cmt-h{font-size:13px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
 .cmt-b{font-size:14px;white-space:pre-wrap;line-height:1.5}
 .av.sm{width:20px;height:20px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#6e40c9;color:#fff}
+/* ---- shared client card renderer (cardFrame): cards render FROM DATA, everywhere ---- */
+.cf-card{position:relative;width:230px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--bd);box-shadow:0 3px 12px rgba(0,0,0,.14);font-size:12px;display:flex;flex-direction:column}
+.cf-card.cf-nr{border-left:8px solid var(--cf-fg,#8a8f98)}
+.cf-card.cf-sm{width:120px;font-size:10px}
+.cf-card.cf-sm .cf-name{font-size:11px}
+.cf-card.cf-sm .cf-hd{padding:5px 7px}
+.cf-hd{display:flex;align-items:center;gap:6px;background:var(--cf-bg,#eceff2);color:var(--cf-fg,#334);padding:7px 9px}
+.cf-name{flex:1;font-weight:700;font-size:13px;line-height:1.2;overflow-wrap:anywhere}
+.cf-badge{flex:none;min-width:22px;height:22px;padding:0 4px;border-radius:50%;background:var(--cf-fg,#334);color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.cf-nrrow{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 9px;background:rgba(0,0,0,.04);flex-wrap:wrap}
+.cf-pips{letter-spacing:1px;font-size:11px;color:var(--cf-fg,#334)}
+.cf-nrnum{font-weight:800;font-size:13px;color:var(--cf-fg,#334);border-radius:5px;padding:0 3px}
+.cf-tl{padding:4px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-fg,#556);background:rgba(0,0,0,.03);border-top:1px solid rgba(0,0,0,.05);border-bottom:1px solid rgba(0,0,0,.05)}
+.cf-tx{padding:8px 9px;font-size:11.5px;line-height:1.42;color:#2a2e33;white-space:pre-wrap;flex:1}
+.cf-sym{display:inline-block;min-width:14px;padding:0 4px;margin:0 1px;border-radius:4px;background:rgba(0,0,0,.12);font-size:10px;line-height:16px;text-align:center;vertical-align:-3px;font-weight:700}
+.cf-ft{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border-top:1px solid rgba(0,0,0,.07);background:#fafbfc}
+.cf-ab{border:1px solid var(--bd);border-radius:5px;padding:1px 6px;font-size:10px;color:#3a3f47;background:#fff;white-space:nowrap}
+.cf-str{position:absolute;left:7px;bottom:7px;min-width:24px;height:24px;padding:0 3px;border-radius:6px;background:var(--cf-fg,#334);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.cf-hl{outline:2px solid var(--grn);outline-offset:1px}
 </style></head><body>
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
@@ -287,6 +306,54 @@ refreshLive();
 const $ = s => document.querySelector(s);
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
 const G = slug => DATA.games.find(g=>g.slug===slug);
+
+/* ================= SHARED CLIENT CARD RENDERER =================
+ * cardFrame(g, c, opts) -> HTML string. A card rendered FROM DATA as a
+ * plain styled div (no canvas, no iframe) — used by the card modal, the
+ * live card editor preview, and the PR visual diff, so "what the card
+ * looks like" is always one function away from "what the data says".
+ * Every numeric attribute declared in g.schema (attribute_definitions)
+ * gets a badge; nothing is hardcoded to cost/power.
+ * opts: {w:number (card width px, default 230; try 120-150 for "small"),
+ *        highlight:Set|string[] (attribute keys to outline green — PR diff)} */
+function cfSym(g){return (g.symbols||[]).reduce((m,s)=>(m[s.key]=s.glyph||("["+s.key+"]"),m),{});}
+function cfRich(g,t){const sym=cfSym(g);
+  return esc(t).replace(/\[([a-z0-9_]+)\]/gi,(m,k)=>`<span class="cf-sym">${esc(sym[k]||k)}</span>`);}
+function cfColor(g,c){
+  const fac=(c.attributes||{}).faction;
+  if(fac!=null && g.faction_colors && g.faction_colors[fac]) return g.faction_colors[fac];
+  return (g.type_colors||{})[c.type] || {fg:"#3a3f47",bg:"#e8eaed"};
+}
+function cardFrame(g, c, opts){
+  opts=opts||{};
+  const w=opts.w||230, small=w<180;
+  const at=c.attributes||{}, defs=g.schema||g.attribute_definitions||[];
+  const col=cfColor(g,c), nr=at.faction!=null;
+  const hl=opts.highlight instanceof Set?opts.highlight:new Set(opts.highlight||[]);
+  const used=new Set(["cost"]);
+  const ab=(label,val,key)=>`<span class="cf-ab${hl.has(key)?' cf-hl':''}">${esc(label)}: ${esc(val)}</span>`;
+  let nrRow="";
+  if(nr && at.influence!=null){ used.add("influence");
+    nrRow+=`<div class="cf-nrrow"><span class="cf-pips${hl.has('influence')?' cf-hl':''}" title="influence ${esc(at.influence)}">${"●".repeat(Math.max(0,Math.min(Number(at.influence)||0,10)))}</span></div>`; }
+  if(nr && c.type==="agenda"){ used.add("advancement_cost"); used.add("agenda_points");
+    nrRow+=`<div class="cf-nrrow"><span class="cf-nrnum${hl.has('advancement_cost')?' cf-hl':''}" title="advancement requirement">${esc(at.advancement_cost??"?")}</span><span class="cf-nrnum${hl.has('agenda_points')?' cf-hl':''}" title="agenda points">${esc(at.agenda_points??"?")}⬡ pts</span></div>`;
+  } else if(nr && c.type==="identity"){ used.add("minimum_deck_size"); used.add("influence_limit");
+    nrRow+=`<div class="cf-nrrow"><span class="cf-nrnum${hl.has('minimum_deck_size')?' cf-hl':''}" title="minimum deck size">${esc(at.minimum_deck_size??"?")} cards</span><span class="cf-nrnum${hl.has('influence_limit')?' cf-hl':''}" title="influence limit">inf ${esc(at.influence_limit??"—")}</span></div>`;
+  }
+  const strengthEl=(nr && c.type==="ice" && at.strength!=null)
+    ? (used.add("strength"), `<span class="cf-str${hl.has('strength')?' cf-hl':''}" title="strength">${esc(at.strength)}</span>`) : "";
+  const footer=defs.filter(d=>(d.type==="integer"||d.type==="number")&&!used.has(d.key)&&at[d.key]!=null)
+    .map(d=>ab(d.name||d.key, at[d.key], d.key)).join("");
+  const sub=(c.subtypes||[]).join(" · ");
+  return `<div class="cf-card${nr?' cf-nr':''}${small?' cf-sm':''}" style="width:${w}px;--cf-fg:${col.fg};--cf-bg:${col.bg}">
+    <div class="cf-hd"><span class="cf-name">${esc(c.name||"Untitled")}</span>${at.cost!=null?`<span class="cf-badge${hl.has('cost')?' cf-hl':''}" title="cost">${esc(at.cost)}</span>`:""}</div>
+    ${nrRow}
+    <div class="cf-tl">${esc(c.type||"card")}${sub?" · "+esc(sub):""}</div>
+    ${small?"":`<div class="cf-tx">${cfRich(g,c.text||"")}</div>`}
+    ${footer?`<div class="cf-ft">${footer}</div>`:""}
+    ${strengthEl}
+  </div>`;
+}
 
 /* ---------- router ---------- */
 function go(hash){ location.hash = hash; }
@@ -497,8 +564,6 @@ function exportMenu(slug){
 /* ================= IN-HUB CARD EDITOR (live preview + commit/propose) ================= */
 let ED=null; // {slug, cards, orig, sel, access, dirty:Set}
 function edToken(){return localStorage.forge_token?{Authorization:"Bearer "+localStorage.forge_token}:{};}
-function edSym(g){return (g.symbols||[]).reduce((m,s)=>(m[s.key]=s.glyph||("["+s.key+"]"),m),{});}
-function edColors(g,type){const c=(g.type_colors||{})[type]; return c||{fg:"#334",bg:"#eef1f4"};}
 
 /* ---------- CARD EDITOR, embedded in the game page (a mode of the Cards tab) ---------- */
 async function cardsEdit(g){
@@ -523,7 +588,7 @@ async function cardsEdit(g){
       <div class="edform" id="ed-fields"></div>
       <div class="edprev">
         <div id="ed-scan"></div>
-        <iframe id="ed-preview" title="Live themed card preview" style="width:280px;height:392px;border:0;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.18)"></iframe>
+        <div id="ed-preview" title="Live card preview — re-renders from data on every keystroke"></div>
         <div class="edcommit">
           <div class="msg" id="ed-msg"></div>
           <div style="display:flex;gap:8px">
@@ -695,48 +760,18 @@ function edDelete(){
   ED.cards=ED.cards.filter(x=>x.id!==c.id); edRefreshDirty();
   edSelect(ED.cards[0]?.id); edBar();
 }
-/* ---- the money shot: draw the card face live on a canvas ---- */
-const ED_PREVIEW_CSS=`html,body{margin:0;height:100%}body{font-family:Inter,-apple-system,sans-serif;padding:2px;background:transparent}
-.card{height:calc(100% - 4px);border-radius:16px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(150deg,color-mix(in srgb,var(--fg) 55%,#fff),var(--fg) 70%);box-shadow:0 6px 18px rgba(0,0,0,.25)}
-.pb{display:flex;align-items:center;gap:6px;background:linear-gradient(var(--fg),color-mix(in srgb,var(--fg) 78%,#000));border-radius:9px 9px 0 0;padding:8px 11px}
-.pn{flex:1;font:700 16px/1.05 Cinzel,serif;color:#fdf3e3;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-.pc2{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:800 14px Inter;color:#5a3d0c;background:radial-gradient(circle at 35% 30%,#fff6e6,#f2d089 45%,#b98a2e)}
-.pa{flex:1;min-height:60px;display:grid;place-items:center;overflow:hidden;border-left:4px solid var(--fg);border-right:4px solid var(--fg);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--bg) 78%,#fff),var(--bg))}
-.pa img{width:100%;height:100%;object-fit:cover}.pa .mk{font-size:50px;color:rgba(255,255,255,.32)}
-.ptl{font:700 10px/1 Cinzel,serif;letter-spacing:.08em;text-transform:uppercase;color:#fdf3e3;background:color-mix(in srgb,var(--fg) 82%,#000);padding:5px 11px}
-.ptx{flex:1.4;margin:0 3px 3px;padding:9px 11px;background:linear-gradient(#fbf1de,#f3e3c6);border:1px solid color-mix(in srgb,var(--fg) 45%,#c9a878);border-top:none;border-radius:0 0 9px 9px;font:400 13.5px/1.35 "EB Garamond",serif;color:#3a2c1a;overflow:auto}
-.psy{display:inline-block;min-width:16px;height:16px;line-height:16px;text-align:center;color:#fff;border-radius:5px;font-size:10px;background:#c8791a;vertical-align:-2px}
-.pf{display:flex;justify-content:space-between;align-items:center;padding:5px 10px 2px}
-.pkw{font:700 9px Inter;letter-spacing:.05em;text-transform:uppercase;color:#fbe6c9}
-.ppw{min-width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font:800 15px Inter;color:#fff;background:color-mix(in srgb,var(--fg) 88%,#000)}`;
-function edPreviewShell(){return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet"><style>${ED_PREVIEW_CSS}</style></head><body><div class="card" id="pc"></div></body></html>`;}
+/* ---- the money shot: the live card preview is cardFrame(g, edCard()) ----
+ * Same renderer the card modal and the PR diff use — no iframe shell to
+ * boot, no canvas to draw: edSet() just calls this again on every keystroke. */
 function edPreview(){
   const scanHost=document.getElementById("ed-scan");
   if(scanHost){
     const gs=G(ED.slug), cs=edCard(), scan=cs&&gs.scans&&gs.scans[cs.id];
-    scanHost.innerHTML=scan?`<div style="text-align:center;margin-bottom:10px"><img src="${scan}" loading="lazy" style="width:120px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)"><div style="font-size:11px;color:var(--mut);margin-top:4px;max-width:150px">original print — your edits update the live preview</div></div>`:"";
+    scanHost.innerHTML=scan?`<div style="text-align:center;margin-bottom:10px"><img src="${scan}" loading="lazy" style="width:120px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)"><div style="font-size:11px;color:var(--mut);margin-top:4px;max-width:150px">original print — reference. Your edits update the live preview below.</div></div>`:"";
   }
   const host=document.getElementById("ed-preview"); if(!host) return;
-  const d=host.contentDocument;
-  if(!d||!d.getElementById("pc")){ host.srcdoc=edPreviewShell(); host.addEventListener("load",edPreview,{once:true}); return; }
-  const g=G(ED.slug), c=edCard(); const pc=d.getElementById("pc");
-  if(!c){ pc.innerHTML=""; return; }
-  const col=edColors(g,c.type), sym=edSym(g);
-  d.body.style.setProperty("--fg",col.fg); d.body.style.setProperty("--bg",col.bg);
-  const at=c.attributes||{}, defs=g.schema||[];
-  const costKey=(defs.find(x=>/cost/i.test(x.key))||defs[0]||{}).key;
-  const powerKey=(defs.find(x=>/power|atk|attack|str|def/i.test(x.key))||{}).key;
-  const cost=(costKey&&at[costKey]!=null)?at[costKey]:null;
-  const power=(powerKey&&at[powerKey]!=null)?at[powerKey]:null;
-  const e=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
-  const rich=t=>e(t).replace(/\[([a-z0-9_]+)\]/gi,(m,k)=>`<span class="psy">${e(sym[k]||k)}</span>`);
-  const sub=(c.subtypes||[]).join(" · ");
-  const img=g.images&&g.images[c.id];
-  pc.innerHTML=`<div class="pb"><span class="pn">${e(c.name||"Untitled")}</span>${cost!=null?`<span class="pc2">${e(cost)}</span>`:""}</div>`+
-    `<div class="pa">${img?`<img src="${img}">`:`<span class="mk">✦</span>`}</div>`+
-    `<div class="ptl">${e(c.type||"card")}${sub?" · "+e(sub):""}</div>`+
-    `<div class="ptx">${rich(c.text||"")}</div>`+
-    `<div class="pf"><span class="pkw">${e((c.keywords||[]).join(" · "))}</span>${power!=null?`<span class="ppw">${e(power)}</span>`:""}</div>`;
+  const g=G(ED.slug), c=edCard();
+  host.innerHTML=c?cardFrame(g,c,{w:280}):"<div style='color:var(--mut);font-size:13px;text-align:center;padding:40px 10px'>Select a card, or add a new one.</div>";
 }
 function edSummary(){ // mirror carddiff.summarize titles
   const changed=[],added=[],removed=[];
@@ -787,8 +822,10 @@ function cardModal(slug,cid){
   for(const h of g.history) for(const ch of h.changes)
     if(ch.card===cid&&ch.kind==="changed") hist.push({...ch,date:h.date,author:h.author,sha:h.sha});
   $("#mbody").innerHTML=`
-    ${g.images[cid]?`<img src="${g.images[cid]}">`:""}
-    ${g.scans&&g.scans[cid]?`<div style="display:flex;flex-direction:column;align-items:center;gap:5px"><img src="${g.scans[cid]}" loading="lazy" style="width:auto;max-width:300px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.3)"><span style="font-size:11px;color:var(--mut)">printed card · NetrunnerDB</span></div>`:""}
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex:none">
+      ${cardFrame(g,c,{w:230})}
+      ${g.scans&&g.scans[cid]?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><img src="${g.scans[cid]}" loading="lazy" style="width:110px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25)"><span style="font-size:10px;color:var(--mut);text-align:center">original print — reference</span></div>`:""}
+    </div>
     <div style="flex:1">
       <h2>${esc(c.name)}${LIVE?` <button class="btn" style="font-size:13px;vertical-align:middle" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit</button>`:``}</h2>
       <div class="kv"><b>Type</b>${esc(c.type)}${c.subtypes&&c.subtypes.length?" · "+esc(c.subtypes.join(", ")):""}</div>
@@ -1047,9 +1084,33 @@ async function liveSuggestions(g){
       <div class="prbody" id="prb-${pr.id}"><button class="btn" onclick="prDetail('${g.slug}','${pr.id}')">View card changes</button></div>
     </div>`).join("");
 }
+// visual PR diff: cardFrame(before) -> cardFrame(after) per touched card, using
+// the small (before_cards/after_cards) payload the PR-detail route now sends.
+// Changed numeric attributes get a green outline on the AFTER card.
+function prVisualDiff(g,pr){
+  const before=Object.fromEntries((pr.before_cards||[]).map(c=>[c.id,c]));
+  const after=Object.fromEntries((pr.after_cards||[]).map(c=>[c.id,c]));
+  if(!g||(!pr.before_cards&&!pr.after_cards))return"";
+  const byCard={};
+  for(const ch of (pr.changes||[])){
+    const e=byCard[ch.card]||(byCard[ch.card]={kind:ch.kind,attrs:new Set()});
+    e.kind=ch.kind;
+    if(ch.kind==="changed"&&String(ch.field).startsWith("attributes."))e.attrs.add(ch.field.slice(11));
+  }
+  const ids=[...new Set((pr.changes||[]).map(c=>c.card))];
+  const cells=ids.map(cid=>{
+    const info=byCard[cid]||{kind:"changed",attrs:new Set()}, b=before[cid], a=after[cid];
+    if(info.kind==="added"&&a) return `<div class="prcard"><div style="text-align:center">${cardFrame(g,a,{w:150})}<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">+ added</div></div></div>`;
+    if(info.kind==="removed"&&b) return `<div class="prcard"><div style="text-align:center;opacity:.5;filter:grayscale(.6)">${cardFrame(g,b,{w:150})}<div style="font-size:11px;color:var(--red);margin-top:4px;font-weight:600">− removed</div></div></div>`;
+    if(b&&a) return `<div class="prcard"><div>${cardFrame(g,b,{w:150})}</div><div class="arrow">→</div><div>${cardFrame(g,a,{w:150,highlight:info.attrs})}</div></div>`;
+    return "";
+  }).join("");
+  return cells?`<div style="margin-bottom:6px">${cells}</div>`:"";
+}
 async function prDetail(slug,id){
   const pr=await (await fetch(`/api/games/${slug}/prs/${id}`)).json();
   const box=$(`#prb-${id}`);
+  const visualDiff=prVisualDiff(G(slug),pr);
   const conflictNote=pr.conflicts&&pr.conflicts.length
     ?`<div class="chg" style="color:#b35900"><b>⚠ conflicts:</b> both sides changed ${pr.conflicts.map(esc).join(", ")} — resolve in the fork first</div>`:"";
   const revs=pr.reviews||[];
@@ -1063,7 +1124,7 @@ async function prDetail(slug,id){
   const discussion=`<div style="margin-top:14px"><div class="mut" style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Discussion</div>${commentThread(pr.comments)}
     ${ME?`<textarea id="prc-${id}" placeholder="Leave a review comment…" style="width:100%;min-height:56px;margin-top:8px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></textarea>
       <div style="margin-top:6px"><button class="btn" onclick="commentPr('${slug}','${id}')">Comment</button></div>`:``}</div>`;
-  box.innerHTML=(pr.changes||[]).map(chgHtml).join("")+conflictNote+reviewRow+discussion+actions;
+  box.innerHTML=visualDiff+(pr.changes||[]).map(chgHtml).join("")+conflictNote+reviewRow+discussion+actions;
 }
 async function commentPr(slug,id){
   const el=$(`#prc-${id}`); const body=(el.value||"").trim(); if(!body)return;
