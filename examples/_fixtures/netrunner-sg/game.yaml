@@ -15,6 +15,7 @@ title: "Netrunner: System Gateway"
 # convenience only -- do not copy this hot-linking pattern into a real/production game.
 license: Proprietary
 version: "0.1.0"
+book_style: classic
 description: >
   Test fixture: a faithful port of the 77-card System Gateway set for the
   asymmetric Corp-vs-Runner cyberpunk card game, used to stress-test the

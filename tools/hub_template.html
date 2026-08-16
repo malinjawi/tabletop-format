@@ -604,6 +604,54 @@ const RB_CSS = `
 .rb-note p:last-child{margin-bottom:0}
 @media(min-width:860px){.rb-body{columns:2;column-gap:34px;column-rule:1px solid #ececec}}
 @media(max-width:520px){.rb-toc ul{columns:1}}
+.rb-body h1,.rb-body h2,.rb-body h3,.rb-body h4{clear:both}
+.rb-body::after{content:"";display:block;clear:both}
+/* -- figures: ![caption](path) plain = full column width; ![caption|left](path) /
+ * |right float at max-width 45% with prose wrapping around them (magazine-style
+ * rulebook layout). Path resolves against g.rules_assets (embedded by build_hub.py
+ * from the game's assets/ dir) -- see rbFigure(). */
+.rb-fig{margin:6px 0 18px;break-inside:avoid;page-break-inside:avoid}
+.rb-fig img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid #e3e6ea;background:#f0f2f5}
+.rb-fig-left,.rb-fig-right{max-width:45%}
+.rb-fig-left{float:left;margin:4px 18px 12px 0}
+.rb-fig-right{float:right;margin:4px 0 12px 18px}
+.rb-fig figcaption{font-family:'Lora',Georgia,'Times New Roman',serif;font-style:italic;font-size:12.5px;line-height:1.4;color:var(--mut,#656d76);margin-top:6px;text-align:center}
+@media(max-width:520px){.rb-fig-left,.rb-fig-right{float:none;max-width:100%;margin:6px 0 16px}}
+/* -- ::: example ... ::: -- an "EXAMPLE OF PLAY" callout: tinted parchment bg,
+ * accent border, italic serif body (distinct from the plain NOTE blockquote). */
+.rb-example{border:1px solid var(--rb-acc,#232936);border-left-width:4px;border-radius:0 8px 8px 0;background:#f8f3e6;padding:11px 16px;margin:6px 0 18px;break-inside:avoid;page-break-inside:avoid}
+.rb-example-h{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:11.5px;color:var(--rb-acc,#232936);margin-bottom:6px}
+.rb-example-sub{text-transform:none;letter-spacing:0;font-weight:600;color:#4a4f57}
+.rb-example-body{font-family:'Lora',Georgia,'Times New Roman',serif;font-style:italic;font-size:14.5px}
+.rb-example-body p{margin:0 0 8px}
+.rb-example-body p:last-child{margin-bottom:0}
+/* -- ::: sidebar Title ... ::: -- a boxed aside (rules asides, designer notes):
+ * full border + accent top bar, upright (non-italic) so it reads as reference
+ * material rather than narrated play. */
+.rb-sidebar{border:1px solid #e3e6ea;border-top:4px solid var(--rb-acc,#232936);border-radius:8px;background:#fbfbfa;padding:11px 16px;margin:6px 0 18px;break-inside:avoid;page-break-inside:avoid}
+.rb-sidebar-h{font-family:'Barlow Condensed',-apple-system,'Segoe UI',sans-serif;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12.5px;color:var(--rb-acc,#232936);margin-bottom:6px}
+.rb-sidebar-body{font-size:14px}
+.rb-sidebar-body p{margin:0 0 8px}
+.rb-sidebar-body p:last-child{margin-bottom:0}
+/* -- book_style: optional per-game cover/heading/accent treatment (default,
+ * i.e. no rb-style-* class present = "modern", today's look, unchanged). */
+.rb-style-classic .rb-cover{border-top:3px double var(--rb-acc,#232936);border-bottom:1px solid var(--rb-acc,#232936);padding-top:18px}
+.rb-style-classic .rb-kicker{font-family:'Lora',Georgia,'Times New Roman',serif;font-style:italic;font-weight:600;letter-spacing:.05em;text-transform:none;font-size:13.5px}
+.rb-style-classic .rb-title{font-family:'Lora',Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:0}
+.rb-style-classic .rb-body h2{font-family:'Lora',Georgia,'Times New Roman',serif;font-weight:700;font-style:italic;color:#171a20;border-bottom:1px solid var(--rb-acc,#232936)}
+.rb-style-classic .rb-body h3{font-family:'Lora',Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;border-left-width:2px}
+.rb-style-classic .rb-body th{background:transparent;color:var(--rb-acc,#232936);border-top:1px solid var(--rb-acc,#232936);border-bottom:2px solid var(--rb-acc,#232936)}
+.rb-style-classic .rb-example{background:#f6f1e2}
+.rb-style-minimal{--rb-acc:#3a3f47 !important}
+.rb-style-minimal .rb-cover{border-bottom:1px solid #e3e6ea;padding-bottom:16px}
+.rb-style-minimal .rb-kicker{display:none}
+.rb-style-minimal .rb-title{font-size:27px}
+.rb-style-minimal .rb-official{background:transparent}
+.rb-style-minimal .rb-toc{background:transparent;border-color:#e3e6ea}
+.rb-style-minimal .rb-body h2{color:#171a20;border-bottom:1px solid #e3e6ea}
+.rb-style-minimal .rb-body h3{border-left:none;padding-left:0}
+.rb-style-minimal .rb-body th{background:#f3f4f6;color:#1f2328}
+.rb-style-minimal .rb-note,.rb-style-minimal .rb-example,.rb-style-minimal .rb-sidebar{background:#f8f9fa}
 `;
 document.head.insertAdjacentHTML("beforeend", RB_FONTS + `<style>${RB_CSS}</style>`);
 
@@ -645,6 +693,41 @@ function rbInline(g, s){
   out = out.replace(/ (\d+) /g, (m,idx)=>`<code>${esc(stash[+idx])}</code>`);
   return out;
 }
+// rbFigure(g, rawAlt, path) -> <figure> HTML for a block-level image line
+// (![caption](path) / ![caption|left](path) / ![caption|right](path)).
+// "|left" / "|right" in the alt text (not the path) selects a floated,
+// max-width:45% figure that prose wraps around; no suffix = a plain,
+// full-column-width figure. path resolves against g.rules_assets -- the
+// {markdown-path: data-URI} map build_hub.py embeds from the game's own
+// assets/ dir (see embed_rules_assets() in tools/build_hub.py) -- so a
+// self-contained hub.html still shows the image with no extra requests.
+// http(s)/data URLs pass through untouched; anything else neither embedded
+// nor absolute falls back to the raw path (best-effort under a live server).
+function rbFigure(g, rawAlt, path){
+  let caption = (rawAlt||"").toString(), align = "";
+  const am = /^(.*)\|\s*(left|right)\s*$/i.exec(caption);
+  if(am){ caption = am[1].trim(); align = am[2].toLowerCase(); }
+  const isAbs = /^([a-z][a-z0-9+.-]*:)?\/\//i.test(path) || /^data:/i.test(path);
+  const src = isAbs ? path : ((g.rules_assets || {})[path] || path);
+  const cls = align ? ` rb-fig-${align}` : "";
+  return `<figure class="rb-fig${cls}"><img src="${esc(src)}" alt="${esc(caption)}" loading="lazy">${
+    caption ? `<figcaption>${rbInline(g, caption)}</figcaption>` : ""}</figure>`;
+}
+// rbContainer(g, kind, titleRest, innerHtml) -> the two ::: fenced blocks.
+// "example": a fixed "EXAMPLE OF PLAY" label (kind-of-play callout, styled
+// as a tinted/italic aside -- see .rb-example in RB_CSS); any trailing text
+// after the word "example" on the opening fence line (::: example Turn 3)
+// renders as a small subtitle next to the label instead of being dropped.
+// "sidebar": the rest of the opening fence line IS the box's own title
+// (::: sidebar Designer note -> "Designer note"); falls back to "Sidebar".
+function rbContainer(g, kind, titleRest, innerHtml){
+  if(kind==="example"){
+    const sub = titleRest ? ` <span class="rb-example-sub">— ${rbInline(g,titleRest)}</span>` : "";
+    return `<div class="rb-example"><div class="rb-example-h">Example of Play${sub}</div><div class="rb-example-body">${innerHtml||""}</div></div>`;
+  }
+  const title = titleRest || "Sidebar";
+  return `<aside class="rb-sidebar"><div class="rb-sidebar-h">${rbInline(g,title)}</div><div class="rb-sidebar-body">${innerHtml||""}</div></aside>`;
+}
 // Block-level compile: headings (anchor ids; ## also feeds the TOC),
 // "> " runs -> NOTE boxes, pipe tables, -/* lists, 1. lists, hr, and
 // paragraphs (contiguous plain lines join into one <p>, unlike the
@@ -652,7 +735,7 @@ function rbInline(g, s){
 // rulebooks are hand-wrapped prose spanning several source lines).
 function rbCompile(g, md){
   const lines = (md||"").replace(/\r\n?/g,"\n").split("\n");
-  const toc = [], usedIds = new Set(), out = [];
+  const toc = [], usedIds = new Set();
   const mkId = (text)=>{ let base="rb-"+rbSlugify(g.slug)+"-"+rbSlugify(text), id=base, n=2;
     while(usedIds.has(id)) id=base+"-"+(n++); usedIds.add(id); return id; };
   const isHeading = l => /^#{1,6}\s+/.test(l);
@@ -660,63 +743,93 @@ function rbCompile(g, md){
   const isUl = l => /^\s*[-*]\s+/.test(l);
   const isOl = l => /^\s*\d+\.\s+/.test(l);
   const isHr = l => /^-{3,}$/.test(l.trim());
+  const isFence = l => /^:::\s*(example|sidebar)\b/i.test(l.trim());
+  const isFenceEnd = l => /^:::\s*$/.test(l.trim());
+  const isImg = l => /^!\[[^\]]*\]\([^)\s]+\)\s*$/.test(l.trim());
   const isTableSep = l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
   const splitRow = l => l.trim().replace(/^\|/,"").replace(/\|$/,"").split("|").map(c=>c.trim());
-  let i=0, inUl=false, inOl=false;
-  const closeLists=()=>{ if(inUl){out.push("</ul>");inUl=false;} if(inOl){out.push("</ol>");inOl=false;} };
-  while(i<lines.length){
-    const line = lines[i].replace(/\s+$/,"");
-    if(line.trim()===""){ closeLists(); i++; continue; }
-    const hm = /^(#{1,6})\s+(.*?)\s*#*$/.exec(line);
-    if(hm){
+  // compileBlock() runs the full block-level dispatch over an ARBITRARY lines
+  // array -- called once for the whole document, and recursively for the
+  // lines captured inside a ::: example / ::: sidebar fence, so nested
+  // paragraphs/lists/tables/images inside a fence get the exact same
+  // compiler as the top level (no second, weaker implementation).
+  function compileBlock(blockLines){
+    const out = [];
+    let i=0, inUl=false, inOl=false;
+    const closeLists=()=>{ if(inUl){out.push("</ul>");inUl=false;} if(inOl){out.push("</ol>");inOl=false;} };
+    while(i<blockLines.length){
+      const line = blockLines[i].replace(/\s+$/,"");
+      if(line.trim()===""){ closeLists(); i++; continue; }
+      const hm = /^(#{1,6})\s+(.*?)\s*#*$/.exec(line);
+      if(hm){
+        closeLists();
+        const level=hm[1].length, text=hm[2].trim(), id=mkId(text);
+        if(level===2) toc.push({id, text});
+        out.push(`<h${level} id="${id}">${rbInline(g,text)}</h${level}>`);
+        i++; continue;
+      }
+      if(isFence(line)){
+        closeLists();
+        const fm = /^:::\s*(example|sidebar)\b\s*(.*)$/i.exec(line.trim());
+        const kind = fm[1].toLowerCase(), titleRest = fm[2].trim();
+        i++;
+        const inner=[];
+        while(i<blockLines.length && !isFenceEnd(blockLines[i])){ inner.push(blockLines[i]); i++; }
+        if(i<blockLines.length) i++; // consume closing ':::'
+        out.push(rbContainer(g, kind, titleRest, compileBlock(inner)));
+        continue;
+      }
+      if(isImg(line)){
+        closeLists();
+        const im = /^!\[([^\]]*)\]\(([^)\s]+)\)/.exec(line.trim());
+        out.push(rbFigure(g, im[1], im[2]));
+        i++; continue;
+      }
+      if(isQuote(line)){
+        closeLists();
+        const qlines=[];
+        while(i<blockLines.length && isQuote(blockLines[i])){ qlines.push(blockLines[i].replace(/^>\s?/,"")); i++; }
+        const paras=[]; let cur=[];
+        for(const l of qlines){ if(l.trim()===""){ if(cur.length){paras.push(cur.join(" "));cur=[];} } else cur.push(l); }
+        if(cur.length) paras.push(cur.join(" "));
+        out.push(`<div class="rb-note"><div class="rb-note-h">Note</div>${paras.map(p=>`<p>${rbInline(g,p)}</p>`).join("")}</div>`);
+        continue;
+      }
+      if(line.includes("|") && i+1<blockLines.length && isTableSep(blockLines[i+1])){
+        closeLists();
+        const header = splitRow(line); i+=2;
+        const rows=[];
+        while(i<blockLines.length && blockLines[i].trim()!=="" && blockLines[i].includes("|")){ rows.push(splitRow(blockLines[i])); i++; }
+        out.push(`<table><thead><tr>${header.map(h=>`<th>${rbInline(g,h)}</th>`).join("")}</tr></thead><tbody>${
+          rows.map(r=>`<tr>${r.map(c=>`<td>${rbInline(g,c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+        continue;
+      }
+      if(isUl(line)){
+        if(inOl){out.push("</ol>");inOl=false;}
+        if(!inUl){out.push("<ul>");inUl=true;}
+        out.push(`<li>${rbInline(g, line.replace(/^\s*[-*]\s+/,""))}</li>`);
+        i++; continue;
+      }
+      if(isOl(line)){
+        if(inUl){out.push("</ul>");inUl=false;}
+        if(!inOl){out.push("<ol>");inOl=true;}
+        out.push(`<li>${rbInline(g, line.replace(/^\s*\d+\.\s+/,""))}</li>`);
+        i++; continue;
+      }
+      if(isHr(line)){ closeLists(); out.push("<hr>"); i++; continue; }
       closeLists();
-      const level=hm[1].length, text=hm[2].trim(), id=mkId(text);
-      if(level===2) toc.push({id, text});
-      out.push(`<h${level} id="${id}">${rbInline(g,text)}</h${level}>`);
-      i++; continue;
+      const para=[line]; i++;
+      while(i<blockLines.length && blockLines[i].trim()!=="" && !isHeading(blockLines[i]) && !isQuote(blockLines[i]) && !isUl(blockLines[i]) && !isOl(blockLines[i]) && !isHr(blockLines[i]) && !isFence(blockLines[i]) && !isImg(blockLines[i])
+            && !(blockLines[i].includes("|") && i+1<blockLines.length && isTableSep(blockLines[i+1]))){
+        para.push(blockLines[i]); i++;
+      }
+      out.push(`<p>${rbInline(g, para.join(" "))}</p>`);
     }
-    if(isQuote(line)){
-      closeLists();
-      const qlines=[];
-      while(i<lines.length && isQuote(lines[i])){ qlines.push(lines[i].replace(/^>\s?/,"")); i++; }
-      const paras=[]; let cur=[];
-      for(const l of qlines){ if(l.trim()===""){ if(cur.length){paras.push(cur.join(" "));cur=[];} } else cur.push(l); }
-      if(cur.length) paras.push(cur.join(" "));
-      out.push(`<div class="rb-note"><div class="rb-note-h">Note</div>${paras.map(p=>`<p>${rbInline(g,p)}</p>`).join("")}</div>`);
-      continue;
-    }
-    if(line.includes("|") && i+1<lines.length && isTableSep(lines[i+1])){
-      closeLists();
-      const header = splitRow(line); i+=2;
-      const rows=[];
-      while(i<lines.length && lines[i].trim()!=="" && lines[i].includes("|")){ rows.push(splitRow(lines[i])); i++; }
-      out.push(`<table><thead><tr>${header.map(h=>`<th>${rbInline(g,h)}</th>`).join("")}</tr></thead><tbody>${
-        rows.map(r=>`<tr>${r.map(c=>`<td>${rbInline(g,c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
-      continue;
-    }
-    if(isUl(line)){
-      if(inOl){out.push("</ol>");inOl=false;}
-      if(!inUl){out.push("<ul>");inUl=true;}
-      out.push(`<li>${rbInline(g, line.replace(/^\s*[-*]\s+/,""))}</li>`);
-      i++; continue;
-    }
-    if(isOl(line)){
-      if(inUl){out.push("</ul>");inUl=false;}
-      if(!inOl){out.push("<ol>");inOl=true;}
-      out.push(`<li>${rbInline(g, line.replace(/^\s*\d+\.\s+/,""))}</li>`);
-      i++; continue;
-    }
-    if(isHr(line)){ closeLists(); out.push("<hr>"); i++; continue; }
     closeLists();
-    const para=[line]; i++;
-    while(i<lines.length && lines[i].trim()!=="" && !isHeading(lines[i]) && !isQuote(lines[i]) && !isUl(lines[i]) && !isOl(lines[i]) && !isHr(lines[i])
-          && !(lines[i].includes("|") && i+1<lines.length && isTableSep(lines[i+1]))){
-      para.push(lines[i]); i++;
-    }
-    out.push(`<p>${rbInline(g, para.join(" "))}</p>`);
+    return out.join("\n");
   }
-  closeLists();
-  return {html: out.join("\n"), toc};
+  const html = compileBlock(lines);
+  return {html, toc};
 }
 function rbOfficialDocs(g){
   const docs=(g.official_docs||[]).filter(d=>d&&d.url);
@@ -725,13 +838,19 @@ function rbOfficialDocs(g){
     docs.map(d=>`<a class="rb-official-link" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">⇲ ${esc(d.name||d.url)}</a>`).join("")
   }</div></div>`;
 }
+const RB_BOOK_STYLES = ["classic","modern","minimal"];
 function rulebookHtml(g){
   const acc = rbAccent(g);
+  // book_style (optional game.yaml field, schemas/game.schema.json): controls
+  // cover treatment + heading style + accent usage via an .rb-style-<name>
+  // modifier class (RB_CSS above) layered over the "modern" baseline, which
+  // stays classless so today's look is pixel-identical when unset.
+  const style = RB_BOOK_STYLES.includes(g.book_style) ? g.book_style : "modern";
   const {html, toc} = rbCompile(g, g.rules_md||"");
   const tocHtml = toc.length ? `<nav class="rb-toc"><div class="rb-toc-h">Contents</div><ul>${
     toc.map(t=>`<li><a href="#${t.id}">${rbInline(g,t.text)}</a></li>`).join("")}</ul></nav>` : "";
   const bodyHtml = html || `<p style="color:var(--mut)">No rulebook yet — <code>rules/rules.md</code> diffs like everything else.</p>`;
-  return `<article class="rb-book" style="--rb-acc:${esc(acc)}">
+  return `<article class="rb-book${style!=="modern"?` rb-style-${style}`:""}" style="--rb-acc:${esc(acc)}">
     <header class="rb-cover">
       <div class="rb-kicker">Official Rules</div>
       <h1 class="rb-title">${esc(g.title)}</h1>
@@ -745,12 +864,36 @@ function rulebookHtml(g){
     <div class="rb-body">${bodyHtml}</div>
   </article>`;
 }
+// CSS-string escape (NOT the HTML esc() above) -- for interpolating g.title
+// into a CSS `content: "..."` value (@bottom-center page-number footer,
+// below). Only backslash/quote matter inside a CSS string literal.
+function rbCssStr(s){ return (s??"").toString().replace(/\\/g,"\\\\").replace(/"/g,'\\"'); }
 /* printRules(slug) -- true print rulebook: same rulebookHtml() (so the
  * printed booklet and the Rules-tab booklet can never drift apart from
- * each other), opened standalone like printSheet(), with A4 print CSS:
- * two columns, headings forced not to break across a page/column, and
- * a repeating page footer (position:fixed repeats per printed page in
- * Chromium-based browsers, the same engine "Save as PDF" uses). */
+ * each other), opened standalone like printSheet().
+ *
+ * Pagination has two layers, and the second is allowed to fail silently:
+ *   1. Plain @page/@media print CSS (unchanged from before) -- A4, two
+ *      columns, break-avoid on headings/tables/etc, a position:fixed
+ *      footer. This is what runs the print/"Save as PDF" dialog gets if
+ *      nothing else loads: it always works, offline included.
+ *   2. Paged.js (loaded from cdnjs at print-time, real network request)
+ *      layered on top for TRUE pagination -- actual per-page boxes, a
+ *      running header (the current H2, via CSS `string-set`/`string()`,
+ *      a real GCPM feature Paged.js polyfills) and a footer reading
+ *      "<game> — page N" (CSS `counter(page)` in an `@bottom-center`
+ *      page-margin box) instead of the old fixed-position approximation.
+ *      If cdnjs is unreachable the <script> tag just never executes --
+ *      no `window.Paged*` global appears, nothing calls into it, and
+ *      layer 1's CSS is exactly what prints. The one bit of JS we run
+ *      ourselves (window.PagedConfig.before, a hook Paged.js's own
+ *      polyfill README documents) only fires if Paged.js DID load, and
+ *      only removes the now-redundant fixed footer so it doesn't double
+ *      up with Paged.js's own page-margin footer; it's wrapped in
+ *      try/catch so even a broken removal can't take the page down.
+ *      TOC page numbers (CSS target-counter()) are the natural next
+ *      step here but are inconsistently supported across Paged.js
+ *      versions/engines -- skipped rather than shipped flaky. */
 function printRules(slug){
   const g = G(slug);
   if(!g){ toast("No such game."); return; }
@@ -763,7 +906,14 @@ ${RB_FONTS}
 ${RB_CSS}
 *{box-sizing:border-box}
 html,body{margin:0;background:#e9ebee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f2328}
-@page{size:A4;margin:14mm}
+/* running header = current H2 (GCPM named string, polyfilled by Paged.js;
+   inert elsewhere -- unsupported string-set is simply ignored) */
+.rb-body h2{string-set:rbrun content()}
+@page{
+  size:A4;margin:14mm;
+  @top-center{content:string(rbrun);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:8pt;letter-spacing:.05em;text-transform:uppercase;color:#8a8f98}
+  @bottom-center{content:"${rbCssStr(g.title)} — page " counter(page);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:8pt;color:#8a8f98}
+}
 .rp-toolbar{max-width:900px;margin:14px auto 0;padding:0 4px;display:flex;gap:10px}
 .rp-toolbar button{font:inherit;font-size:13px;font-weight:600;padding:7px 16px;border:1px solid #8a8f98;border-radius:6px;background:#fff;cursor:pointer}
 .rp-toolbar button:hover{background:#f0f1f3}
@@ -777,7 +927,18 @@ html,body{margin:0;background:#e9ebee;font-family:-apple-system,BlinkMacSystemFo
   .rb-book h1,.rb-book h2,.rb-book h3{break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid;column-span:all}
   .rb-toc,.rb-note,table,ul,ol{break-inside:avoid;page-break-inside:avoid}
 }
-</style></head>
+</style>
+<script>
+// Paged.js reads this before it starts (documented 'before' hook -- see
+// https://www.npmjs.com/package/pagedjs). Only runs if the polyfill below
+// actually loaded, so it can only ever ADD behavior on top of a working
+// page, never remove the plain-CSS fallback's ability to print.
+window.PagedConfig = {
+  before: () => { try{ document.querySelectorAll(".rb-print-footer").forEach(el=>el.remove()); }catch(e){} }
+};
+<\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pagedjs/0.4.3/paged.polyfill.min.js" onerror="console.warn('Paged.js unavailable (offline?) — printing with the built-in @page CSS instead.')"><\/script>
+</head>
 <body>
 <div class="rp-toolbar"><button onclick="window.print()">🖨 Print</button><button onclick="window.close()">Close</button></div>
 <div class="rp-page">${rulebookHtml(g)}</div>

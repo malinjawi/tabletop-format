@@ -68,3 +68,37 @@ wargame/18xx pilot community. Show a BSData contributor the demo at Gate 1
 [TTPG schemas](https://github.com/plasticity-studios/tabletop-playground-schemas) ·
 [HexJSON](https://open-innovations.org/projects/hexmaps/hexjson) ·
 [BGA material/states](http://en.boardgamearena.com/doc/Game_material_description:_material.inc.php)
+
+## Rulebooks & InDesign
+
+The book engine (`rulebookHtml`/`rbCompile` in `tools/hub_template.html`, plus
+Paged.js pagination for print) renders `rules.md` directly to a formatted
+booklet on-screen and on paper. That's the whole rendering story, and it stays
+that way — IDML doesn't change it, it only bridges the edges:
+
+- **Import IDML content, never render it.** A future `import-idml.mjs`
+  (symmetric with the existing `import-nrdb.mjs` / `import-tts.mjs`) would
+  read an `.idml` package's `Stories/*.xml` for TEXT and enough structure
+  (paragraph styles as a heading-level hint) to write a `rules.md` — a
+  one-time migration for a studio bringing an existing InDesign rulebook
+  *into* the format. It would never parse or reproduce IDML's spread/frame
+  layout XML; that's real page layout, the same Bucket 3 ("code-like,
+  permanently out of scope") logic as rules engines above, for the same
+  reason — a deep, ongoing maintenance burden for a feature `rules.md` +
+  the book engine already cover for every game in this repo.
+- **Export structured content, not a fake layout.** The reverse direction is
+  one-way for the same reason: a `rules.md` → IDML/ICML export would hand a
+  layout artist plain structured content — headings, paragraphs, lists, the
+  `::: example` / `::: sidebar` / image blocks above as tagged text — to
+  place with their own house style, not a facsimile of InDesign's own
+  layout engine.
+- **No Adobe runtime, ever.** Nothing in this repo executes, embeds, or
+  shells out to InDesign, the Adobe SDK, ExtendScript, or any Creative Cloud
+  service. IDML/ICML are plain XML-in-zip interchange formats Adobe
+  publishes openly; reading/writing them is a data transform like any other
+  importer/exporter in `tools/`, not an integration with Adobe's product.
+
+`rules.md` stays the one diffable, engine-rendered source for every
+screen/print rulebook this platform produces itself. InDesign is a
+content-bridge partner at the edges, never a dependency.
+

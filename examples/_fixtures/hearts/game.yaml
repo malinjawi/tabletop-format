@@ -13,6 +13,7 @@ description: >
   default. See WHAT-BROKE.md for where that assumption showed.
 license: CC0-1.0
 card_style: playing-card
+book_style: minimal
 genre: trick-taking
 tags: [cards, trick-taking, trump-less, public-domain, classic, 4-player, fixture]
 authors:

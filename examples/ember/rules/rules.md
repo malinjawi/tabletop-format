@@ -35,6 +35,22 @@ Turns alternate. On your turn, in order:
    the loser's flame drops by the difference. Committed cards go to the ash pile.
 4. **Dusk** — if you hold more than 5 cards, discard down to 5.
 
+::: example A full turn, start to finish
+You begin your turn with 3 [spark] and a flame of 4.
+
+1. **Dawn** — draw a card and gain 1 [spark] (now 4 [spark]).
+2. **Act** — play a figure costing 2 [spark] (2 left), then play an ember
+   costing 1 [spark] (1 left). The ember resolves its effect and goes to
+   the ash pile — you take 1 [ash] token from the pool.
+3. **Clash** — you commit a card face down; your rival commits one too.
+   Revealed: yours is power 3, theirs is power 2. Their flame drops by 1.
+   Both cards go to the ash pile; yours going to ash on your own turn earns
+   you another [ash] token, if you're under the 3-token cap.
+4. **Dusk** — your hand is under the 5-card limit, so nothing is discarded.
+
+Turn passes to your rival.
+:::
+
 ## Ash
 
 Whenever one of your cards enters the ash pile during your own turn, you may

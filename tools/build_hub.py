@@ -9,7 +9,7 @@ Generates a self-contained SPA from REAL repo data:
   before/after card art) | Releases (tags) | Banlist | Decks (live legality).
 Everything is baked at build time from git + format data. No server.
 """
-import base64, html, json, subprocess, sys, tempfile
+import base64, html, json, mimetypes, re, subprocess, sys, tempfile
 from pathlib import Path
 import yaml
 
@@ -43,6 +43,42 @@ def sh(args, cwd=ROOT, ok_fail=False):
     return r.stdout.strip() if not r.returncode else None
 
 def b64(p): return "data:image/png;base64," + base64.b64encode(Path(p).read_bytes()).decode()
+
+# rules.md images ("BOOK ENGINE" -- tools/hub_template.html rbCompile()):
+# ![caption](path) / ![caption|left](path) resolve `path` against the
+# game's OWN assets/ dir (the same convention printings.json "art"/"back"
+# and game.yaml symbol "asset" fields already use) and get embedded as
+# base64 data URIs, exactly like card faces/scans above -- so a built
+# hub.html (or the print rulebook window) needs zero extra network
+# requests to show a rules diagram. Capped per-file so one huge scan
+# doesn't bloat every game's page load; oversized/missing/external
+# (http(s)/data:) references are left as plain paths -- rbFigure() in
+# hub_template.html falls back to the raw path if no embed exists for it.
+RULES_IMG_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+RULES_ASSET_MAX_BYTES = 300 * 1024
+
+def embed_rules_assets(gd, rules_md):
+    out = {}
+    for path in RULES_IMG_RE.findall(rules_md or ""):
+        if path in out or re.match(r"^([a-zA-Z][a-zA-Z0-9+.-]*:)?//", path) or path.startswith("data:"):
+            continue  # already embedded, or an external/absolute URL -- leave those to the browser
+        fp = gd / path
+        try:
+            resolved, base = fp.resolve(), gd.resolve()
+            resolved.relative_to(base)  # raises if path escapes the game dir (e.g. "../../etc")
+        except (OSError, ValueError):
+            continue
+        if not resolved.is_file():
+            print(f"  ! rules.md image not found, leaving as plain path: {path}", file=sys.stderr)
+            continue
+        size = resolved.stat().st_size
+        if size > RULES_ASSET_MAX_BYTES:
+            print(f"  ! rules.md image too big to embed ({size}B > {RULES_ASSET_MAX_BYTES}B cap), "
+                  f"leaving as plain path: {path}", file=sys.stderr)
+            continue
+        mime = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+        out[path] = f"data:{mime};base64,{base64.b64encode(resolved.read_bytes()).decode()}"
+    return out
 
 def load_dir(gd, d):
     p = gd / d
@@ -263,11 +299,13 @@ def build_game(gd):
         "type_colors": game.get("type_colors") or {},
         "faction_colors": game.get("faction_colors") or {},
         "card_style": game.get("card_style"),
+        "book_style": game.get("book_style"),
         "official_docs": game.get("official_docs") or [],
         "symbols": game.get("symbols") or [],
         "sets": sets_, "formats": formats, "restrictions": restrictions,
         "decks": deck_data, "history": history, "prs": prs, "releases": releases,
-        "rules_html": md_to_html(rules_md), "rules_md": rules_md, "rules_history": rules_history, "tokens": tokens,
+        "rules_html": md_to_html(rules_md), "rules_md": rules_md, "rules_assets": embed_rules_assets(gd, rules_md),
+        "rules_history": rules_history, "tokens": tokens,
         "playtests": playtests,
         "community": community, "design_html": design_md, "credit_roll": credit_roll,
         "updated": last_commit["date"] if last_commit else "",

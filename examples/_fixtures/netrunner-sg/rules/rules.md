@@ -48,6 +48,18 @@ Central servers are **HQ**, **R&D**, and **Archives** themselves (they can be
 protected by ice and have upgrades installed in their "root"). **Remote
 servers** are new servers the Corp creates by installing a card into them.
 
+::: sidebar Central vs. remote servers
+**Central servers** — HQ, R&D, and Archives — always exist and never go
+away; every game has exactly three, from turn 1 to game end. Ice and
+upgrades can be installed to protect or occupy them, but the server itself
+is permanent and cannot be "used up" or removed.
+
+**Remote servers** are created on demand: installing an agenda, asset, or
+upgrade "into a new remote" makes one right then. A Corp can have any
+number of remote servers open at once (including zero) — each is a
+separate target the Runner must run on individually.
+:::
+
 ## 4. Setup
 
 1. Each player picks one identity and builds a legal deck for it (§10).
@@ -74,6 +86,22 @@ servers** are new servers the Corp creates by installing a card into them.
 
 Both players may pass remaining clicks without using them; nothing carries
 over to the next turn.
+
+::: example A Corp turn, click by click
+It's the Corp's turn. The mandatory draw already happened automatically, so
+they start with 3 [click] and work through them in order:
+
+1. **[click] 1:** Play *Hedge Fund* from HQ, paying 5[credit] to gain
+   9[credit] — a net gain of 4[credit] for the click.
+2. **[click] 2:** Install a card from HQ face-down into a new remote
+   server. Installing only costs the click; rezzing it (if it needs to be
+   rezzed at all) is a separate cost, paid later.
+3. **[click] 3:** Advance the newly-installed card, paying 1[credit] to
+   place 1 advancement counter on it.
+
+All 3 clicks are spent, so the turn ends automatically. HQ is at 4 cards —
+under the 5-card maximum — so nothing is discarded.
+:::
 
 ## 6. Basic actions
 
@@ -119,6 +147,8 @@ for in credits (the printed cost) — which flips them face-up. Agendas are
 never rezzed; they are simply advanced and scored.
 
 ## 8. The run, step by step
+
+![The seven steps of a run, initiation through access, with the ice-encounter loop back to step 2 until no ice remains](assets/diagrams/run-structure.png)
 
 1. **Initiation:** Runner spends 1 [click], names a server.
 2. **Approach ice:** the Runner approaches the outermost *unpassed* ice on
