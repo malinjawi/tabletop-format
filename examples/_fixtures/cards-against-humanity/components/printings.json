@@ -1,0 +1,387 @@
+[
+  {
+    "id": "p_white_01",
+    "card_id": "white_01",
+    "set_id": "base",
+    "collector_number": "001",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_02",
+    "card_id": "white_02",
+    "set_id": "base",
+    "collector_number": "002",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_03",
+    "card_id": "white_03",
+    "set_id": "base",
+    "collector_number": "003",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_04",
+    "card_id": "white_04",
+    "set_id": "base",
+    "collector_number": "004",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_05",
+    "card_id": "white_05",
+    "set_id": "base",
+    "collector_number": "005",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_06",
+    "card_id": "white_06",
+    "set_id": "base",
+    "collector_number": "006",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_07",
+    "card_id": "white_07",
+    "set_id": "base",
+    "collector_number": "007",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_08",
+    "card_id": "white_08",
+    "set_id": "base",
+    "collector_number": "008",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_09",
+    "card_id": "white_09",
+    "set_id": "base",
+    "collector_number": "009",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_10",
+    "card_id": "white_10",
+    "set_id": "base",
+    "collector_number": "010",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_11",
+    "card_id": "white_11",
+    "set_id": "base",
+    "collector_number": "011",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_12",
+    "card_id": "white_12",
+    "set_id": "base",
+    "collector_number": "012",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_13",
+    "card_id": "white_13",
+    "set_id": "base",
+    "collector_number": "013",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_14",
+    "card_id": "white_14",
+    "set_id": "base",
+    "collector_number": "014",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_15",
+    "card_id": "white_15",
+    "set_id": "base",
+    "collector_number": "015",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_16",
+    "card_id": "white_16",
+    "set_id": "base",
+    "collector_number": "016",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_17",
+    "card_id": "white_17",
+    "set_id": "base",
+    "collector_number": "017",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_18",
+    "card_id": "white_18",
+    "set_id": "base",
+    "collector_number": "018",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_19",
+    "card_id": "white_19",
+    "set_id": "base",
+    "collector_number": "019",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_20",
+    "card_id": "white_20",
+    "set_id": "base",
+    "collector_number": "020",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_21",
+    "card_id": "white_21",
+    "set_id": "base",
+    "collector_number": "021",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_22",
+    "card_id": "white_22",
+    "set_id": "base",
+    "collector_number": "022",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_23",
+    "card_id": "white_23",
+    "set_id": "base",
+    "collector_number": "023",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_24",
+    "card_id": "white_24",
+    "set_id": "base",
+    "collector_number": "024",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_25",
+    "card_id": "white_25",
+    "set_id": "base",
+    "collector_number": "025",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_26",
+    "card_id": "white_26",
+    "set_id": "base",
+    "collector_number": "026",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_27",
+    "card_id": "white_27",
+    "set_id": "base",
+    "collector_number": "027",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_28",
+    "card_id": "white_28",
+    "set_id": "base",
+    "collector_number": "028",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_29",
+    "card_id": "white_29",
+    "set_id": "base",
+    "collector_number": "029",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_30",
+    "card_id": "white_30",
+    "set_id": "base",
+    "collector_number": "030",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_31",
+    "card_id": "white_31",
+    "set_id": "base",
+    "collector_number": "031",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_32",
+    "card_id": "white_32",
+    "set_id": "base",
+    "collector_number": "032",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_33",
+    "card_id": "white_33",
+    "set_id": "base",
+    "collector_number": "033",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_34",
+    "card_id": "white_34",
+    "set_id": "base",
+    "collector_number": "034",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_35",
+    "card_id": "white_35",
+    "set_id": "base",
+    "collector_number": "035",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_36",
+    "card_id": "white_36",
+    "set_id": "base",
+    "collector_number": "036",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_37",
+    "card_id": "white_37",
+    "set_id": "base",
+    "collector_number": "037",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_38",
+    "card_id": "white_38",
+    "set_id": "base",
+    "collector_number": "038",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_39",
+    "card_id": "white_39",
+    "set_id": "base",
+    "collector_number": "039",
+    "quantity": 1
+  },
+  {
+    "id": "p_white_40",
+    "card_id": "white_40",
+    "set_id": "base",
+    "collector_number": "040",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_01",
+    "card_id": "black_01",
+    "set_id": "base",
+    "collector_number": "041",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_02",
+    "card_id": "black_02",
+    "set_id": "base",
+    "collector_number": "042",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_03",
+    "card_id": "black_03",
+    "set_id": "base",
+    "collector_number": "043",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_04",
+    "card_id": "black_04",
+    "set_id": "base",
+    "collector_number": "044",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_05",
+    "card_id": "black_05",
+    "set_id": "base",
+    "collector_number": "045",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_06",
+    "card_id": "black_06",
+    "set_id": "base",
+    "collector_number": "046",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_07",
+    "card_id": "black_07",
+    "set_id": "base",
+    "collector_number": "047",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_08",
+    "card_id": "black_08",
+    "set_id": "base",
+    "collector_number": "048",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_09",
+    "card_id": "black_09",
+    "set_id": "base",
+    "collector_number": "049",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_10",
+    "card_id": "black_10",
+    "set_id": "base",
+    "collector_number": "050",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_11",
+    "card_id": "black_11",
+    "set_id": "base",
+    "collector_number": "051",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_12",
+    "card_id": "black_12",
+    "set_id": "base",
+    "collector_number": "052",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_13",
+    "card_id": "black_13",
+    "set_id": "base",
+    "collector_number": "053",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_14",
+    "card_id": "black_14",
+    "set_id": "base",
+    "collector_number": "054",
+    "quantity": 1
+  },
+  {
+    "id": "p_black_15",
+    "card_id": "black_15",
+    "set_id": "base",
+    "collector_number": "055",
+    "quantity": 1
+  }
+]

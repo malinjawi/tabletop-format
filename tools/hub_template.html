@@ -167,24 +167,11 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 .cmt-b{font-size:14px;white-space:pre-wrap;line-height:1.5}
 .av.sm{width:20px;height:20px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#6e40c9;color:#fff}
 /* ---- shared client card renderer (cardFrame): cards render FROM DATA, everywhere ---- */
-.cf-card{position:relative;width:230px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--bd);box-shadow:0 3px 12px rgba(0,0,0,.14);font-size:12px;display:flex;flex-direction:column}
-.cf-card.cf-nr{border-left:8px solid var(--cf-fg,#8a8f98)}
-.cf-card.cf-sm{width:120px;font-size:10px}
-.cf-card.cf-sm .cf-name{font-size:11px}
-.cf-card.cf-sm .cf-hd{padding:5px 7px}
-.cf-hd{display:flex;align-items:center;gap:6px;background:var(--cf-bg,#eceff2);color:var(--cf-fg,#334);padding:7px 9px}
-.cf-name{flex:1;font-weight:700;font-size:13px;line-height:1.2;overflow-wrap:anywhere}
-.cf-badge{flex:none;min-width:22px;height:22px;padding:0 4px;border-radius:50%;background:var(--cf-fg,#334);color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
-.cf-nrrow{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 9px;background:rgba(0,0,0,.04);flex-wrap:wrap}
-.cf-pips{letter-spacing:1px;font-size:11px;color:var(--cf-fg,#334)}
-.cf-nrnum{font-weight:800;font-size:13px;color:var(--cf-fg,#334);border-radius:5px;padding:0 3px}
-.cf-tl{padding:4px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-fg,#556);background:rgba(0,0,0,.03);border-top:1px solid rgba(0,0,0,.05);border-bottom:1px solid rgba(0,0,0,.05)}
-.cf-tx{padding:8px 9px;font-size:11.5px;line-height:1.42;color:#2a2e33;white-space:pre-wrap;flex:1}
-.cf-sym{display:inline-block;min-width:14px;padding:0 4px;margin:0 1px;border-radius:4px;background:rgba(0,0,0,.12);font-size:10px;line-height:16px;text-align:center;vertical-align:-3px;font-weight:700}
-.cf-ft{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border-top:1px solid rgba(0,0,0,.07);background:#fafbfc}
-.cf-ab{border:1px solid var(--bd);border-radius:5px;padding:1px 6px;font-size:10px;color:#3a3f47;background:#fff;white-space:nowrap}
-.cf-str{position:absolute;left:7px;bottom:7px;min-width:24px;height:24px;padding:0 3px;border-radius:6px;background:var(--cf-fg,#334);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-.cf-hl{outline:2px solid var(--grn);outline-offset:1px}
+/* .cf-* card-renderer CSS lives in the CF_CSS JS constant (see the
+   "shared client card renderer" section in the page script) and is
+   injected into this document's head at load time -- and into the
+   print-sheet window -- from that one string, so the editor/modal/
+   PR-diff card and the printed card can never drift out of sync. */
 </style></head><body>
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span style="opacity:.5;font-weight:400;font-size:12px">· where games live · prototype</span></a>
@@ -310,12 +297,66 @@ const G = slug => DATA.games.find(g=>g.slug===slug);
 /* ================= SHARED CLIENT CARD RENDERER =================
  * cardFrame(g, c, opts) -> HTML string. A card rendered FROM DATA as a
  * plain styled div (no canvas, no iframe) — used by the card modal, the
- * live card editor preview, and the PR visual diff, so "what the card
- * looks like" is always one function away from "what the data says".
- * Every numeric attribute declared in g.schema (attribute_definitions)
- * gets a badge; nothing is hardcoded to cost/power.
- * opts: {w:number (card width px, default 230; try 120-150 for "small"),
- *        highlight:Set|string[] (attribute keys to outline green — PR diff)} */
+ * live card editor preview, the PR visual diff, AND the print sheet
+ * (printSheet(), below), so "what the card looks like" is always one
+ * function away from "what the data says" -- the card you edit IS the
+ * card that prints.
+ * opts: {w:number|string (card width; a plain number is px, same as
+ *          always -- try 120-150 for "small"; a CSS length string like
+ *          "63.5mm" renders at TRUE PHYSICAL SIZE, used by printSheet()),
+ *        highlight:Set|string[] (attribute keys to outline green — PR diff)}
+ *
+ * g.card_style selects an EXACT-LOOK physical template instead of the
+ * generic data-driven frame below: "cah" (Cards Against Humanity) or
+ * "playing-card" (standard French-suited card) — see cfCAH()/
+ * cfPlayingCard(). Anything else (or unset) falls through to the
+ * original generic/faction-aware frame. */
+
+/* .cf-* CSS -- ONE string, injected into this document's <head> below
+ * AND into the print-sheet window (printSheet()) so the on-screen card
+ * and the printed card are guaranteed to share the same stylesheet. */
+const CF_CSS = `
+.cf-card{position:relative;width:230px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--bd);box-shadow:0 3px 12px rgba(0,0,0,.14);font-size:12px;display:flex;flex-direction:column}
+.cf-card.cf-nr{border-left:8px solid var(--cf-fg,#8a8f98)}
+.cf-card.cf-sm{width:120px;font-size:10px}
+.cf-card.cf-sm .cf-name{font-size:11px}
+.cf-card.cf-sm .cf-hd{padding:5px 7px}
+.cf-hd{display:flex;align-items:center;gap:6px;background:var(--cf-bg,#eceff2);color:var(--cf-fg,#334);padding:7px 9px}
+.cf-name{flex:1;font-weight:700;font-size:13px;line-height:1.2;overflow-wrap:anywhere}
+.cf-badge{flex:none;min-width:22px;height:22px;padding:0 4px;border-radius:50%;background:var(--cf-fg,#334);color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.cf-nrrow{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 9px;background:rgba(0,0,0,.04);flex-wrap:wrap}
+.cf-pips{letter-spacing:1px;font-size:11px;color:var(--cf-fg,#334)}
+.cf-nrnum{font-weight:800;font-size:13px;color:var(--cf-fg,#334);border-radius:5px;padding:0 3px}
+.cf-tl{padding:4px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-fg,#556);background:rgba(0,0,0,.03);border-top:1px solid rgba(0,0,0,.05);border-bottom:1px solid rgba(0,0,0,.05)}
+.cf-tx{padding:8px 9px;font-size:11.5px;line-height:1.42;color:#2a2e33;white-space:pre-wrap;flex:1}
+.cf-sym{display:inline-block;min-width:14px;padding:0 4px;margin:0 1px;border-radius:4px;background:rgba(0,0,0,.12);font-size:10px;line-height:16px;text-align:center;vertical-align:-3px;font-weight:700}
+.cf-ft{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border-top:1px solid rgba(0,0,0,.07);background:#fafbfc}
+.cf-ab{border:1px solid var(--bd);border-radius:5px;padding:1px 6px;font-size:10px;color:#3a3f47;background:#fff;white-space:nowrap}
+.cf-str{position:absolute;left:7px;bottom:7px;min-width:24px;height:24px;padding:0 3px;border-radius:6px;background:var(--cf-fg,#334);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.cf-hl{outline:2px solid var(--grn);outline-offset:1px}
+.cf-card.cf-cah{border:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;box-shadow:0 3px 14px rgba(0,0,0,.28)}
+.cf-cah-tx{padding:8%;font-weight:800;line-height:1.25;flex:1;overflow-wrap:break-word;white-space:pre-wrap}
+.cf-cah-foot{position:absolute;left:8%;right:8%;bottom:6%;display:flex;align-items:center;gap:.35em;font-size:.47em;font-weight:700;letter-spacing:.02em;opacity:.92}
+.cf-cah-ico{flex:none;font-size:1.2em;line-height:1}
+.cf-cah-brand{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-cah-pick{position:absolute;right:6%;bottom:6%;background:#fff;color:#111;font-size:.6em;font-weight:800;border-radius:.3em;padding:.3em .6em;letter-spacing:.02em;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.cf-card.cf-pc{border:1px solid #ccc;background:#fff;font-family:Georgia,'Times New Roman',serif;color:#111}
+.cf-pc-idx{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;font-weight:700;color:var(--pc-color,#111)}
+.cf-pc-idx.cf-pc-tl{left:6%;top:5%}
+.cf-pc-idx.cf-pc-br{right:6%;bottom:5%}
+.cf-pc-idx.cf-pc-rot{transform:rotate(180deg)}
+.cf-pc-rank{font-size:1.5em}
+.cf-pc-suit{font-size:1.15em;margin-top:-.1em}
+.cf-pc-pips{position:absolute;inset:0}
+.cf-pc-pip{position:absolute;transform:translate(-50%,-50%);font-size:1.6em;color:var(--pc-color,#111);line-height:1}
+.cf-pc-pip.cf-pc-rot{transform:translate(-50%,-50%) rotate(180deg)}
+.cf-pc-ace{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:5.5em;color:var(--pc-color,#111)}
+.cf-pc-face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15em;color:var(--pc-color,#111)}
+.cf-pc-face-letter{font-size:3.4em;font-weight:700}
+.cf-pc-face-suit{font-size:1.8em}
+`;
+document.head.insertAdjacentHTML("beforeend", `<style>${CF_CSS}</style>`);
+
 function cfSym(g){return (g.symbols||[]).reduce((m,s)=>(m[s.key]=s.glyph||("["+s.key+"]"),m),{});}
 function cfRich(g,t){const sym=cfSym(g);
   return esc(t).replace(/\[([a-z0-9_]+)\]/gi,(m,k)=>`<span class="cf-sym">${esc(sym[k]||k)}</span>`);}
@@ -324,12 +365,95 @@ function cfColor(g,c){
   if(fac!=null && g.faction_colors && g.faction_colors[fac]) return g.faction_colors[fac];
   return (g.type_colors||{})[c.type] || {fg:"#3a3f47",bg:"#e8eaed"};
 }
+/* opts.w normalizer: a plain number is px (every existing call site).
+ * A CSS length string ("63.5mm") is used as-is for `width:` and also
+ * converted to a px-equivalent for internal em/% math -- mm/cm/in
+ * convert at the CSS-defined 96px = 1in = 25.4mm ratio, the same ratio
+ * print engines honor at 100% scale, so a px font-size inside an
+ * mm-wide card still prints at the right physical fraction of the card. */
+function cfLen(w){
+  if(typeof w==="number") return {css:w+"px", num:w};
+  const m=/^([\d.]+)\s*(px|mm|cm|in)?$/.exec(String(w||"").trim());
+  if(!m) return {css:"230px", num:230};
+  const n=parseFloat(m[1]), unit=m[2]||"px";
+  const num=unit==="mm"?n*96/25.4:unit==="cm"?n*96/2.54:unit==="in"?n*96:n;
+  return {css:String(w).trim(), num};
+}
+const CF_SUIT_GLYPH={hearts:"♥",diamonds:"♦",clubs:"♣",spades:"♠"};
+function cfSuitGlyph(g,suit){
+  const s=(suit||"").toLowerCase();
+  const sym=(g.symbols||[]).find(x=>x.key==="suit_"+s || (x.name||"").toLowerCase()===s);
+  return (sym&&sym.glyph) || CF_SUIT_GLYPH[s] || "?";
+}
+function cfSuitColor(suit){
+  const s=(suit||"").toLowerCase();
+  return (s==="hearts"||s==="diamonds") ? "#d40000" : "#111111";
+}
+// Standard playing-card pip layout, [x%,y%] per rank, card-relative.
+// Pips in the lower half (y>50) render rotated 180° so the card reads
+// correctly from either end -- the same convention real cards use.
+const CF_PIPS={
+  2:[[50,20],[50,80]],
+  3:[[50,15],[50,50],[50,85]],
+  4:[[25,20],[75,20],[25,80],[75,80]],
+  5:[[25,20],[75,20],[50,50],[25,80],[75,80]],
+  6:[[25,18],[75,18],[25,50],[75,50],[25,82],[75,82]],
+  7:[[25,15],[75,15],[50,32],[25,50],[75,50],[25,85],[75,85]],
+  8:[[25,15],[75,15],[50,32],[25,50],[75,50],[50,68],[25,85],[75,85]],
+  9:[[25,13],[75,13],[25,37],[75,37],[50,50],[25,63],[75,63],[25,87],[75,87]],
+  10:[[25,13],[75,13],[50,26],[25,37],[75,37],[25,63],[75,63],[50,74],[25,87],[75,87]],
+};
+/* ---- card_style:"cah" -- exact physical Cards Against Humanity look:
+ * pure black/white rounded card, heavy top-left text (blanks render as
+ * the literal "____" already in the data), footer wordmark, and a
+ * PICK-n badge on multi-pick black cards. ---- */
+function cfCAH(g,c,ctx){
+  const {wCss,w,hl}=ctx, at=c.attributes||{};
+  const col=(g.type_colors||{})[c.type] || (c.type==="black"?{fg:"#ffffff",bg:"#111111"}:{fg:"#111111",bg:"#ffffff"});
+  const base=15*(w/230);
+  const pick=at.pick;
+  const pickBadge=(c.type==="black" && Number(pick)>1)
+    ? `<div class="cf-cah-pick${hl.has('pick')?' cf-hl':''}">PICK ${esc(pick)}</div>` : "";
+  return `<div class="cf-card cf-cah" style="width:${wCss};aspect-ratio:63.5/88.9;border-radius:.8em;background:${col.bg};color:${col.fg};font-size:${base.toFixed(2)}px">
+    <div class="cf-cah-tx">${cfRich(g,c.text||c.name||"")}</div>
+    <div class="cf-cah-foot"><span class="cf-cah-ico">▪</span><span class="cf-cah-brand">Cards Against Humanity</span></div>
+    ${pickBadge}
+  </div>`;
+}
+/* ---- card_style:"playing-card" -- authentic French-suited playing
+ * card: corner indices (bottom-right rotated 180°), and a centered
+ * pip/face/ace layout driven by attributes.suit + attributes.rank. ---- */
+function cfPlayingCard(g,c,ctx){
+  const {wCss,w,hl}=ctx, at=c.attributes||{};
+  const suit=at.suit||"", rank=String(at.rank??"").toUpperCase();
+  const glyph=cfSuitGlyph(g,suit), color=cfSuitColor(suit);
+  const base=15*(w/230);
+  const idx=(cls,rot)=>`<div class="cf-pc-idx ${cls}${rot?' cf-pc-rot':''}"><div class="cf-pc-rank">${esc(rank)}</div><div class="cf-pc-suit">${esc(glyph)}</div></div>`;
+  let center;
+  if(rank==="A"){
+    center=`<div class="cf-pc-ace">${esc(glyph)}</div>`;
+  } else if(rank==="J"||rank==="Q"||rank==="K"){
+    center=`<div class="cf-pc-face"><div class="cf-pc-face-letter">${esc(rank)}</div><div class="cf-pc-face-suit">${esc(glyph)}</div></div>`;
+  } else {
+    const n=parseInt(rank,10)||Number(at.rank_value)||0;
+    const pos=CF_PIPS[n]||[];
+    center=`<div class="cf-pc-pips">${pos.map(([x,y])=>`<span class="cf-pc-pip${y>50?' cf-pc-rot':''}" style="left:${x}%;top:${y}%">${esc(glyph)}</span>`).join("")}</div>`;
+  }
+  const hlCard=hl.has('suit')||hl.has('rank')||hl.has('rank_value');
+  return `<div class="cf-card cf-pc${hlCard?' cf-hl':''}" style="width:${wCss};aspect-ratio:63.5/88.9;border-radius:.8em;font-size:${base.toFixed(2)}px;--pc-color:${color}">
+    ${idx('cf-pc-tl',false)}
+    ${center}
+    ${idx('cf-pc-br',true)}
+  </div>`;
+}
 function cardFrame(g, c, opts){
   opts=opts||{};
-  const w=opts.w||230, small=w<180;
+  const wi=cfLen(opts.w||230), w=wi.num, wCss=wi.css, small=w<180;
+  const hl=opts.highlight instanceof Set?opts.highlight:new Set(opts.highlight||[]);
+  if(g.card_style==="cah") return cfCAH(g,c,{w,wCss,small,hl});
+  if(g.card_style==="playing-card") return cfPlayingCard(g,c,{w,wCss,small,hl});
   const at=c.attributes||{}, defs=g.schema||g.attribute_definitions||[];
   const col=cfColor(g,c), nr=at.faction!=null;
-  const hl=opts.highlight instanceof Set?opts.highlight:new Set(opts.highlight||[]);
   const used=new Set(["cost"]);
   const ab=(label,val,key)=>`<span class="cf-ab${hl.has(key)?' cf-hl':''}">${esc(label)}: ${esc(val)}</span>`;
   let nrRow="";
@@ -345,7 +469,7 @@ function cardFrame(g, c, opts){
   const footer=defs.filter(d=>(d.type==="integer"||d.type==="number")&&!used.has(d.key)&&at[d.key]!=null)
     .map(d=>ab(d.name||d.key, at[d.key], d.key)).join("");
   const sub=(c.subtypes||[]).join(" · ");
-  return `<div class="cf-card${nr?' cf-nr':''}${small?' cf-sm':''}" style="width:${w}px;--cf-fg:${col.fg};--cf-bg:${col.bg}">
+  return `<div class="cf-card${nr?' cf-nr':''}${small?' cf-sm':''}" style="width:${wCss};--cf-fg:${col.fg};--cf-bg:${col.bg}">
     <div class="cf-hd"><span class="cf-name">${esc(c.name||"Untitled")}</span>${at.cost!=null?`<span class="cf-badge${hl.has('cost')?' cf-hl':''}" title="cost">${esc(at.cost)}</span>`:""}</div>
     ${nrRow}
     <div class="cf-tl">${esc(c.type||"card")}${sub?" · "+esc(sub):""}</div>
@@ -353,6 +477,63 @@ function cardFrame(g, c, opts){
     ${footer?`<div class="cf-ft">${footer}</div>`:""}
     ${strengthEl}
   </div>`;
+}
+
+/* ================= PRINT SHEET =================
+ * printSheet(slug) -- the "not a preview" proof: opens a standalone
+ * window and renders EVERY card in the game through the exact same
+ * cardFrame() used by the editor/modal/PR-diff, at TRUE PHYSICAL SIZE
+ * (63.5mm x 88.9mm -- standard poker/trading-card trim size), laid out
+ * 3x3 per page with 5mm gaps and light cut lines. Same CF_CSS string as
+ * the hub page, so there is no second "print renderer" to drift out of
+ * sync -- what you edit is literally what prints. Works for every
+ * card_style (cah, playing-card, and the generic/faction frame) because
+ * cardFrame() itself dispatches on g.card_style; this function just asks
+ * for the cards at a millimeter width instead of a pixel one. */
+function printSheet(slug){
+  const g = G(slug);
+  if(!g){ toast("No such game."); return; }
+  const win = window.open("", "_blank", "width=980,height=1040");
+  if(!win){ toast("Pop-up blocked — allow pop-ups for this site to print cards."); return; }
+  const cards = g.cards||[];
+  const CARD_W_MM = 63.5, CARD_H_MM = 88.9, GAP_MM = 5, MARGIN_MM = 10, PER_PAGE = 9;
+  const pageW = (MARGIN_MM*2 + CARD_W_MM*3 + GAP_MM*2).toFixed(1);
+  const pageH = (MARGIN_MM*2 + CARD_H_MM*3 + GAP_MM*2).toFixed(1);
+  const pages = [];
+  for(let i=0;i<cards.length;i+=PER_PAGE) pages.push(cards.slice(i,i+PER_PAGE));
+  if(!pages.length) pages.push([]);
+  const pageHtml = pages.map(pageCards => `<div class="ps-page">${
+    pageCards.map(c => `<div class="ps-card">${cardFrame(g, c, {w:`${CARD_W_MM}mm`})}</div>`).join("")
+  }</div>`).join("");
+  const doc = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>${esc(g.title)} — print sheet</title>
+<style>
+${CF_CSS}
+*{box-sizing:border-box}
+html,body{margin:0;background:#e9ebee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f2328}
+@page{size:${pageW}mm ${pageH}mm;margin:${MARGIN_MM}mm}
+.ps-note{max-width:${pageW}mm;margin:14px auto 0;padding:0 4px;font-size:13px;line-height:1.5;color:#444}
+.ps-note b{color:#111}
+.ps-toolbar{max-width:${pageW}mm;margin:10px auto 16px;padding:0 4px;display:flex;gap:10px}
+.ps-toolbar button{font:inherit;font-size:13px;font-weight:600;padding:7px 16px;border:1px solid #8a8f98;border-radius:6px;background:#fff;cursor:pointer}
+.ps-toolbar button:hover{background:#f0f1f3}
+.ps-page{width:${pageW}mm;min-height:${pageH}mm;margin:0 auto 24px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25);padding:${MARGIN_MM}mm;display:grid;grid-template-columns:repeat(3,${CARD_W_MM}mm);grid-auto-rows:${CARD_H_MM}mm;gap:${GAP_MM}mm;justify-content:start}
+.ps-card{position:relative;width:${CARD_W_MM}mm;height:${CARD_H_MM}mm;overflow:hidden;outline:.5pt dashed #b7bcc4;outline-offset:1.5mm}
+.ps-card .cf-card{width:100%;height:100%}
+@media print{
+  html,body{background:#fff}
+  .ps-note,.ps-toolbar{display:none}
+  .ps-page{box-shadow:none;margin:0;break-after:page;page-break-after:always}
+  .ps-page:last-child{break-after:auto;page-break-after:auto}
+  .ps-card{outline-color:#ccc}
+}
+</style></head>
+<body>
+<div class="ps-note"><b>${esc(g.title)}</b> — ${cards.length} card${cards.length===1?"":"s"}, ${pages.length} page${pages.length===1?"":"s"} at true size (${CARD_W_MM}mm × ${CARD_H_MM}mm / 2.5in × 3.5in per card). <b>Print at 100% scale</b> — turn off "fit to page" / "shrink to fit" in the print dialog, or choose "Save as PDF" for an exact-size file. Light dashed lines mark cut edges, not ink.</div>
+<div class="ps-toolbar"><button onclick="window.print()">🖨 Print</button><button onclick="window.close()">Close</button></div>
+${pageHtml}
+</body></html>`;
+  win.document.open(); win.document.write(doc); win.document.close();
 }
 
 /* ---------- router ---------- */
@@ -444,6 +625,7 @@ function repoPage(g, tab, mode){
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
         <button class="btn" onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Club asset pack (open-source 3D table)\\n· Tabletop Simulator mod\\n· Print-and-play PDF (300dpi, crop marks)')">⤓ Export</button>
+        <button class="btn" onclick="printSheet('${g.slug}')" title="Every card at true physical size (63.5×88.9mm), ready to print">🖨 Print cards</button>
         ${EDITABLE_TABS.includes(tab)?`<button class="btn primary" onclick="go('g/${g.slug}/${tab}/edit')">✎ Edit ${tab}</button>`:``}
       </div>
     </div>

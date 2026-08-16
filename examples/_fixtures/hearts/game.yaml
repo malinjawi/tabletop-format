@@ -12,6 +12,7 @@ description: >
   format's other examples (Ember, Harbor Nine, Netrunner) assume by
   default. See WHAT-BROKE.md for where that assumption showed.
 license: CC0-1.0
+card_style: playing-card
 genre: trick-taking
 tags: [cards, trick-taking, trump-less, public-domain, classic, 4-player, fixture]
 authors:

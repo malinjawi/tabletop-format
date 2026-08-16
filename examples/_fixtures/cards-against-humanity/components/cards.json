@@ -1,0 +1,432 @@
+[
+  {
+    "id": "white_01",
+    "name": "Being on fire.",
+    "type": "white",
+    "text": "Being on fire.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_02",
+    "name": "Racism.",
+    "type": "white",
+    "text": "Racism.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_03",
+    "name": "Auschwitz.",
+    "type": "white",
+    "text": "Auschwitz.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_04",
+    "name": "Classy hookers.",
+    "type": "white",
+    "text": "Classy hookers.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_05",
+    "name": "Old-people smell.",
+    "type": "white",
+    "text": "Old-people smell.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_06",
+    "name": "A windmill full of corpses.",
+    "type": "white",
+    "text": "A windmill full of corpses.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_07",
+    "name": "A mopey zoo lion.",
+    "type": "white",
+    "text": "A mopey zoo lion.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_08",
+    "name": "Not reciprocating oral sex.",
+    "type": "white",
+    "text": "Not reciprocating oral sex.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_09",
+    "name": "A middle-aged man on roller skates.",
+    "type": "white",
+    "text": "A middle-aged man on roller skates.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_10",
+    "name": "Passable transvestites.",
+    "type": "white",
+    "text": "Passable transvestites.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_11",
+    "name": "Genghis Khan.",
+    "type": "white",
+    "text": "Genghis Khan.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_12",
+    "name": "Poor people.",
+    "type": "white",
+    "text": "Poor people.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_13",
+    "name": "Getting so angry that you pop a boner.",
+    "type": "white",
+    "text": "Getting so angry that you pop a boner.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_14",
+    "name": "Sexting.",
+    "type": "white",
+    "text": "Sexting.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_15",
+    "name": "Being fabulously wealthy.",
+    "type": "white",
+    "text": "Being fabulously wealthy.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_16",
+    "name": "The Great Depression.",
+    "type": "white",
+    "text": "The Great Depression.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_17",
+    "name": "A sassy black woman.",
+    "type": "white",
+    "text": "A sassy black woman.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_18",
+    "name": "White people.",
+    "type": "white",
+    "text": "White people.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_19",
+    "name": "Puberty.",
+    "type": "white",
+    "text": "Puberty.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_20",
+    "name": "My humps.",
+    "type": "white",
+    "text": "My humps.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_21",
+    "name": "Winning the lottery.",
+    "type": "white",
+    "text": "Winning the lottery.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_22",
+    "name": "Coat hanger abortions.",
+    "type": "white",
+    "text": "Coat hanger abortions.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_23",
+    "name": "Powerful thighs.",
+    "type": "white",
+    "text": "Powerful thighs.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_24",
+    "name": "Full frontal nudity.",
+    "type": "white",
+    "text": "Full frontal nudity.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_25",
+    "name": "Roofies.",
+    "type": "white",
+    "text": "Roofies.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_26",
+    "name": "Frequent, incurable diarrhea.",
+    "type": "white",
+    "text": "Frequent, incurable diarrhea.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_27",
+    "name": "A tiny horse.",
+    "type": "white",
+    "text": "A tiny horse.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_28",
+    "name": "Ethnic cleansing.",
+    "type": "white",
+    "text": "Ethnic cleansing.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_29",
+    "name": "Republicans.",
+    "type": "white",
+    "text": "Republicans.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_30",
+    "name": "World peace.",
+    "type": "white",
+    "text": "World peace.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_31",
+    "name": "Necrophilia.",
+    "type": "white",
+    "text": "Necrophilia.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_32",
+    "name": "Sweet, sweet vengeance.",
+    "type": "white",
+    "text": "Sweet, sweet vengeance.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_33",
+    "name": "A really cool hat.",
+    "type": "white",
+    "text": "A really cool hat.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_34",
+    "name": "Grave robbing.",
+    "type": "white",
+    "text": "Grave robbing.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_35",
+    "name": "Dead parents.",
+    "type": "white",
+    "text": "Dead parents.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_36",
+    "name": "Homeless people.",
+    "type": "white",
+    "text": "Homeless people.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_37",
+    "name": "Amputees.",
+    "type": "white",
+    "text": "Amputees.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_38",
+    "name": "Science.",
+    "type": "white",
+    "text": "Science.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_39",
+    "name": "Emotions.",
+    "type": "white",
+    "text": "Emotions.",
+    "deck_limit": 1
+  },
+  {
+    "id": "white_40",
+    "name": "Y2K.",
+    "type": "white",
+    "text": "Y2K.",
+    "deck_limit": 1
+  },
+  {
+    "id": "black_01",
+    "name": "Why can't I sleep at night?",
+    "type": "black",
+    "text": "Why can't I sleep at night?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_02",
+    "name": "What's that smell?",
+    "type": "black",
+    "text": "What's that smell?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_03",
+    "name": "What ended my last relationship?",
+    "type": "black",
+    "text": "What ended my last relationship?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_04",
+    "name": "What's the next Happy Meal toy?",
+    "type": "black",
+    "text": "What's the next Happy Meal toy?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_05",
+    "name": "What's a girl gotta do to get some ____ around here?",
+    "type": "black",
+    "text": "What's a girl gotta do to get some ____ around here?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_06",
+    "name": "In Michael Jackson's final moments, he thought about ____.",
+    "type": "black",
+    "text": "In Michael Jackson's final moments, he thought about ____.",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_07",
+    "name": "TSA guidelines now require ____ before boarding.",
+    "type": "black",
+    "text": "TSA guidelines now require ____ before boarding.",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_08",
+    "name": "What is Batman's guilty pleasure?",
+    "type": "black",
+    "text": "What is Batman's guilty pleasure?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_09",
+    "name": "What did I bring back from Mexico?",
+    "type": "black",
+    "text": "What did I bring back from Mexico?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_10",
+    "name": "____. That's how I want to die.",
+    "type": "black",
+    "text": "____. That's how I want to die.",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_11",
+    "name": "During sex, I like to think about ____.",
+    "type": "black",
+    "text": "During sex, I like to think about ____.",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_12",
+    "name": "Life for American Indians was forever changed when the...",
+    "type": "black",
+    "text": "Life for American Indians was forever changed when the White Man introduced them to ____.",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_13",
+    "name": "What don't you want to find in your Chinese food?",
+    "type": "black",
+    "text": "What don't you want to find in your Chinese food?",
+    "attributes": {
+      "pick": 1
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_14",
+    "name": "When I am president of the United States, I will create...",
+    "type": "black",
+    "text": "When I am president of the United States, I will create the Department of ____ to deal once and for all with the problem of ____.",
+    "attributes": {
+      "pick": 2
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "black_15",
+    "name": "Alternative medicine is now embracing the curative...",
+    "type": "black",
+    "text": "Alternative medicine is now embracing the curative powers of ____ and ____.",
+    "attributes": {
+      "pick": 2
+    },
+    "deck_limit": 1
+  }
+]

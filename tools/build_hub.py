@@ -262,6 +262,7 @@ def build_game(gd):
         "schema": game.get("attribute_definitions") or [],
         "type_colors": game.get("type_colors") or {},
         "faction_colors": game.get("faction_colors") or {},
+        "card_style": game.get("card_style"),
         "symbols": game.get("symbols") or [],
         "sets": sets_, "formats": formats, "restrictions": restrictions,
         "decks": deck_data, "history": history, "prs": prs, "releases": releases,

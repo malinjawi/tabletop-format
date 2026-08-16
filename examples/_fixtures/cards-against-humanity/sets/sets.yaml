@@ -1,0 +1,12 @@
+# One set: this fixture's ~55-card subset of the real Base Set. No
+# cycles, no expansions modeled — printings.json needs at least one
+# set to reference, same convention as the hearts fixture.
+- id: base
+  name: Base Set (fixture subset)
+  position: 1
+  size: 55
+  description: >
+    40 White Cards + 15 Black Cards hand-authored from public knowledge
+    of Cards Against Humanity's widely-published Base Set. A taste of
+    the real ~500 White / ~90 Black card box, not the complete set —
+    see README.md for scope and provenance.

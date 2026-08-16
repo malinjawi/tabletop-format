@@ -1,0 +1,57 @@
+format_version: "0.1.0"
+id: cards-against-humanity
+title: "Cards Against Humanity"
+version: "1.0.0"
+# This fixture is legitimately shareable: Cards Against Humanity LLC
+# releases the game's design and text under Creative Commons
+# BY-NC-SA 2.0 (see README.md for the exact grant, the fetch attempt,
+# and the knowledge-authored fallback this ~55-card subset came from).
+# Unlike the netrunner-sg / hearthstone-classic fixtures next to it,
+# this one carries no "do not publish" restriction — non-commercial
+# sharing with attribution is exactly what the rights holder permits.
+license: CC-BY-NC-SA-2.0
+card_style: cah
+description: >
+  The party game for horrible people: a Card Czar reads a black prompt
+  card aloud, everyone else answers with their funniest white card(s),
+  and the Czar picks a winner. This fixture ships a ~55-card taste of
+  the real Base Set (40 White, 15 Black — 2 of the Black cards PICK 2) —
+  enough to play a short real hand and to exercise the platform's "cah"
+  exact-look card renderer and true-size print sheet end to end.
+genre: party
+tags: [cards, party, fill-in-the-blank, adult-humor, comedy, fixture, nsfw]
+authors:
+  - name: Cards Against Humanity LLC
+    role: original design
+  - name: The Format Project
+    role: fixture adaptation
+players:
+  min: 4
+  max: 20
+playtime_minutes:
+  min: 30
+  max: 90
+default_provenance:
+  source: human
+  creator: >
+    Original design, card names, and text: Cards Against Humanity LLC.
+    This fixture's subset was hand-authored from public knowledge of the
+    widely-published Base Set — see README.md for the fetch attempt and
+    fallback rationale, and for why (unlike this repo's other real-game
+    fixtures) that fallback text can legitimately be shipped here.
+  notes: >
+    © Cards Against Humanity LLC, CC BY-NC-SA 2.0 — design and text used
+    under license. Non-commercial use with attribution; share-alike.
+attribute_definitions:
+  - key: pick
+    name: Pick
+    type: integer
+    required: false
+    description: >
+      Number of white cards each player submits in answer to this black
+      card. Almost all Black Cards are pick 1; a PICK 2 card asks for
+      two white cards, read together in the order they were played.
+      Only present on black cards — white cards carry no attributes.
+type_colors:
+  black: { fg: "#ffffff", bg: "#111111" }
+  white: { fg: "#111111", bg: "#ffffff" }
