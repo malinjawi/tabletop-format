@@ -15,10 +15,27 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
+FIXTURES_DIR = "_fixtures"
+
 def discover_games(base=None):
-    """Any directory with a game.yaml is a game — no hard-coded list."""
+    """Any directory with a game.yaml is a game — no hard-coded list.
+
+    Scans direct children of `base`, plus one nested level under FIXTURES_DIR
+    (examples/_fixtures/<slug>/game.yaml) — the ported real-game test fixtures
+    (Netrunner SG, Hearthstone, Hearts) that were previously invisible to the
+    live server/hub (only the static showcase build knew about them).
+    """
     base = Path(base) if base else ROOT / "examples"
-    return sorted(p.parent for p in base.glob("*/game.yaml"))
+    games = set(base.glob("*/game.yaml"))
+    fixtures = base / FIXTURES_DIR
+    if fixtures.is_dir():
+        for child in sorted(fixtures.iterdir()):
+            if not child.is_dir() or child.name.startswith("."):
+                continue  # skip files (e.g. PHASE1-REPORT.md) and dotdirs
+            gy = child / "game.yaml"
+            if gy.exists():
+                games.add(gy)
+    return sorted(p.parent for p in games)
 
 def sh(args, cwd=ROOT, ok_fail=False):
     r = subprocess.run(args, cwd=cwd, capture_output=True, text=True)

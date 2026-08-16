@@ -37,15 +37,37 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
   const git = (a, opts = {}) =>
     execFileSync("git", ["-C", root, ...a], { encoding: "utf8", ...opts }).trimEnd();
   const QUIET = { stdio: ["pipe", "pipe", "ignore"] };
-  const rel = (slug) => `${gamesDir.replace(root + "/", "")}/${slug}`;
-  const abs = (slug) => join(gamesDir, slug);
+  // Discovery scans DIRECT children of gamesDir, plus ONE nested level under
+  // FIXTURES_DIR (examples/_fixtures/<slug>/game.yaml) — the ported real-game test
+  // fixtures (Netrunner SG, Hearthstone, Hearts). Slugs are always the basename.
+  // `abs`/`rel` are the ONE shared path helper every method below routes through
+  // (has/readFile/writeFiles/history/fileAt/materialize/...), so patching them here
+  // is enough to make fixture games work everywhere, not just in list().
+  const FIXTURES_DIR = "_fixtures";
+  const hasGameYaml = (dir) => existsSync(join(dir, "game.yaml"));
+  /** slug -> absolute directory. Direct child wins; falls back to _fixtures/<slug>;
+   *  falls back to the (nonexistent) direct-child path otherwise, so creating a
+   *  brand-new game (createGame/fork) still lands as a normal top-level game. */
+  const abs = (slug) => {
+    const top = join(gamesDir, slug);
+    if (hasGameYaml(top)) return top;
+    const fixture = join(gamesDir, FIXTURES_DIR, slug);
+    if (hasGameYaml(fixture)) return fixture;
+    return top;
+  };
+  const rel = (slug) => abs(slug).replace(root + "/", "");
   const okSlug = (s) => /^[a-z0-9][a-z0-9-]*$/.test(s);
 
   const store = {
     kind: "local",
 
     list() {
-      return readdirSync(gamesDir).filter(d => existsSync(join(gamesDir, d, "game.yaml")));
+      const top = readdirSync(gamesDir).filter(d => hasGameYaml(join(gamesDir, d)));
+      const fixturesDir = join(gamesDir, FIXTURES_DIR);
+      const nested = existsSync(fixturesDir)
+        ? readdirSync(fixturesDir).filter(d => hasGameYaml(join(fixturesDir, d)))
+        : [];
+      return [...top, ...nested]; // slugs = basename either way
     },
     has(slug) { return okSlug(slug) && store.list().includes(slug); },
     dir(slug) { return store.has(slug) ? abs(slug) : null; },
