@@ -32,7 +32,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .gcard{border:1px solid var(--bd);border-radius:10px;padding:16px 18px;transition:box-shadow .15s}
 .gcard:hover{box-shadow:0 3px 14px rgba(0,0,0,.1)}
 .gcard h3{margin:0 0 4px;font-size:16px}.gcard .desc{color:var(--mut);font-size:13px;min-height:38px}
-.gcard .thumbs{display:flex;gap:6px;margin:10px 0}.gcard .thumbs img{width:52px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.gcard .thumbs{display:flex;gap:6px;margin:10px 0;max-height:130px;overflow:hidden;align-items:flex-start}.gcard .thumbs .cf-card{flex:none}
 .gcard .meta{display:flex;gap:14px;color:var(--mut);font-size:12px;margin-top:8px;align-items:center}
 /* repo header */
 .repohead{padding:18px 0 0;border-bottom:1px solid var(--bd)}
@@ -565,7 +565,7 @@ function explorePage(filter){
     <div class="gcard">
       <h3><a onclick="go('g/${g.slug}')">${esc(g.title)}</a> <span class="badge lic">${esc(g.license)}</span></h3>
       <div class="desc">${esc(g.description).slice(0,120)}</div>
-      <div class="thumbs">${g.cards.slice(0,5).map(c=>g.images[c.id]?`<img src="${g.images[c.id]}">`:"").join("")}</div>
+      <div class="thumbs">${g.cards.slice(0,4).map(c=>cardFrame(g,c,{w:92})).join("")}</div>
       <div class="meta">
         ${starBtn(g.slug)}
         <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} PR${g.prs.length===1?"":"s"}</span>
