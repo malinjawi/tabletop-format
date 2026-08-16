@@ -1199,7 +1199,10 @@ async function cardsEdit(g){
   edRenderList(); edSelect(ED.sel);
 }
 async function openEditor(slug, cid){
-  if(!LIVE){alert("The editor runs on the platform server (node server.mjs).");return;}
+  // Entering edit mode is client-side (cardsEdit renders from in-page DATA and
+  // degrades gracefully offline); only edCommit() is server-gated. Do NOT
+  // early-return on !LIVE here -- that used to kill editing in the static
+  // showcase build entirely.
   window._edSel=cid||null; go(`g/${slug}/cards/edit`);
 }
 async function openEditor_UNUSED(slug, cid){
