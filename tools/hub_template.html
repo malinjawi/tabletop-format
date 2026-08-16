@@ -58,9 +58,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .filterbar input,.filterbar select{border:1px solid var(--bd);border-radius:6px;padding:6px 12px;font-size:13px;background:var(--bg)}
 .filterbar input{flex:1;min-width:200px}
 .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
-.ctile{cursor:pointer;transition:transform .12s}.ctile:hover{transform:translateY(-3px)}
-.ctile img{width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.ctile .cn{font-size:12px;color:var(--mut);text-align:center;margin-top:4px}
+.ctile{cursor:pointer;transition:transform .12s;display:flex;flex-direction:column;align-items:center}.ctile:hover{transform:translateY(-3px)}
+.ctile .cn{font-size:12px;color:var(--mut);text-align:center;margin-top:4px;width:100%}
 /* history */
 .commit{display:flex;gap:14px;padding:14px 16px;border:1px solid var(--bd);border-radius:8px;margin-bottom:10px;cursor:pointer}
 .commit:hover{background:var(--bg)}
@@ -723,7 +722,7 @@ function filterCards(slug){
   const list=g.cards.filter(c=>(!t||c.type===t)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
   $("#cgrid").innerHTML=list.map(c=>`
     <div class="ctile" onclick="cardModal('${slug}','${c.id}')">
-      ${g.scans&&g.scans[c.id]?`<img src="${g.scans[c.id]}" loading="lazy">`:g.images[c.id]?`<img src="${g.images[c.id]}">`:`<div style="border:1px solid var(--bd);border-radius:8px;padding:30px 8px;text-align:center;color:var(--mut)">${esc(c.name)}</div>`}
+      ${cardFrame(g,c,{w:150})}
       <div class="cn">${esc(c.name)}</div>
     </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
 }
@@ -1006,10 +1005,11 @@ function cardModal(slug,cid){
   $("#mbody").innerHTML=`
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex:none">
       ${cardFrame(g,c,{w:230})}
+      <button class="btn primary" style="width:100%;justify-content:center" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit this card</button>
       ${g.scans&&g.scans[cid]?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><img src="${g.scans[cid]}" loading="lazy" style="width:110px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25)"><span style="font-size:10px;color:var(--mut);text-align:center">original print — reference</span></div>`:""}
     </div>
     <div style="flex:1">
-      <h2>${esc(c.name)}${LIVE?` <button class="btn" style="font-size:13px;vertical-align:middle" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit</button>`:``}</h2>
+      <h2>${esc(c.name)}</h2>
       <div class="kv"><b>Type</b>${esc(c.type)}${c.subtypes&&c.subtypes.length?" · "+esc(c.subtypes.join(", ")):""}</div>
       ${Object.entries(c.attributes||{}).map(([k,v])=>`<div class="kv"><b>${esc(k)}</b>${esc(v)}</div>`).join("")}
       ${c.deck_limit!=null?`<div class="kv"><b>Deck limit</b>${c.deck_limit}</div>`:""}
