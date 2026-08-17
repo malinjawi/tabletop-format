@@ -43,3 +43,18 @@ Slice 4: the jam loop. Slice 5: releases + print/PnP distribution.
 ## How to work
 Fix-list per slice lives in a GitHub-style issue doc in docs/slices/. Walk the slice in a
 browser FIRST, list every flaw, fix top-to-bottom, re-walk, repeat until clean. Only then move on.
+
+## Adoption doctrine (founder, 2026-08): one ladder, three audiences
+1. **Players** (the wedge): contributing must feel as easy as commenting — see a card, change a
+   number, propose. No jargon, no git exposed. Slice 1 + the founder's own first-game test.
+2. **Designers** (the middle): the platform must feel FAMILIAR, not foreign — meet them in
+   their tools: Sheets/CSV sync (built), nanDECK/TTS/Screentop bridges (built), IDML *content*
+   import for rulebooks (planned), exports to everything they already use. Their workflow
+   ports in; nothing is forced out.
+3. **Publishers** (FFG, CGE, …): come LAST and bottom-up — the GitHub path. Publishers adopt
+   where the games, talent, and playtest data already live (like they scout Kickstarter/itch
+   today). Sell them nothing until communities prove the loop; then their needs are private
+   repos, IP/role controls, scouting dashboards, licensing rails (fork-royalty = licensing
+   infrastructure). Never chase enterprise deals before network proof.
+The same substrate serves all three; only the SURFACE changes per audience. Simplicity for
+players is priority #1 because it is the only rung that generates the other two.
