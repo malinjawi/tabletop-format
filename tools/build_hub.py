@@ -193,6 +193,12 @@ def build_game(gd):
     game = yaml.safe_load((gd / "game.yaml").read_text())
     cards = json.loads((gd / "components/cards.json").read_text())
     printings = json.loads((gd / "components/printings.json").read_text())
+    # layout: OPTIONAL declarative print-true card layout (templates/layout.yaml,
+    # schemas/layout.schema.json) -- read straight through to the client payload
+    # as plain data; layoutCard() (tools/hub_template.html) is what interprets
+    # it. Absent for most games today -- they keep rendering via cardFrame().
+    layout_path = gd / "templates" / "layout.yaml"
+    layout = yaml.safe_load(layout_path.read_text()) if layout_path.exists() else None
     sets_ = load_dir(gd, "sets"); formats = load_dir(gd, "formats")
     restrictions = load_dir(gd, "restrictions"); decks = load_dir(gd, "decks")
     faces = gd / "exports" / "faces"
@@ -294,7 +300,8 @@ def build_game(gd):
         "provenance": (game.get("default_provenance") or {}).get("source", "?"),
         "authors": [a.get("name") for a in (game.get("authors") or [])],
         "attribution": game.get("attribution"),
-        "cards": cards, "images": images, "scans": scans,
+        "cards": cards, "printings": printings, "images": images, "scans": scans,
+        "layout": layout,
         "schema": game.get("attribute_definitions") or [],
         "type_colors": game.get("type_colors") or {},
         "faction_colors": game.get("faction_colors") or {},

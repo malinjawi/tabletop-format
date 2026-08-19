@@ -75,6 +75,8 @@ playtests = load_dir("playtests")
 for i, s in enumerate(playtests): check("playtest", s, f"playtests[{i}] ({s.get('id','?')})")
 community = load("community.yaml")
 if community is not None: check("community", community, "community.yaml")
+layout = load("templates/layout.yaml")
+if layout is not None: check("layout", layout, "templates/layout.yaml")
 
 # Pass 2
 def dupes(arr, label):

@@ -480,36 +480,342 @@ function cardFrame(g, c, opts){
   </div>`;
 }
 
+/* ================= LAYOUT ENGINE (print-true card layout spec) =================
+ * layoutCard(g, c, printing, opts) -> HTML string. The missing middle layer
+ * between raw card DATA and a finished PRINT-READY card: an optional
+ * per-game templates/layout.yaml (schemas/layout.schema.json; g.layout
+ * here, baked in by build_hub.py) declares every visual region of the
+ * physical card -- frame/background rects, the art window, title, type
+ * line, cost/stat badges, a rules-text box with [symbol] chips and
+ * autoshrink-to-fit -- positioned in real MILLIMETERS. This one function
+ * turns {card, printing, layout} into the actual card, and is what the
+ * cards grid, the card modal, the live card editor preview (re-rendered
+ * on every keystroke via edPreview()), the PR visual diff, and the
+ * true-physical-size print sheet all call -- so editing a card's data
+ * reformats the SAME card that prints. Games without templates/layout.yaml
+ * fall straight through to the original data-driven cardFrame() below.
+ *
+ * Rendering strategy: an unscaled inner box (.lay-card) is sized to the
+ * card's real w_mm x h_mm, and every region inside it is positioned with
+ * literal `mm`/`pt` CSS units -- i.e. the DOM this function returns is
+ * ALWAYS print-true. An outer wrapper (.lay-wrap) is sized to whatever
+ * pixel/mm width the call site asked for (opts.w, same convention as
+ * cardFrame) and the inner box is shrunk to fit via a single CSS
+ * `transform:scale()` -- so a 150px grid tile and a 63.5mm print-sheet
+ * cell render the exact same markup, just scaled, and every position/
+ * font-size scales together with zero separate "preview vs print" math.
+ *
+ * printing may be null (no printing on record for this card yet) --
+ * every region gracefully no-ops (image regions fall back to a tinted
+ * placeholder + artist credit, see layRegionImage()). */
+
+function cfPrinting(g, c){
+  if(!g || !c) return null;
+  const list = g.printings || [];
+  return list.find(p => p && p.card_id === c.id) || null;
+}
+
+const LAY_CSS = `
+.lay-wrap{position:relative;overflow:hidden;background:#fff}
+.lay-card{position:absolute;top:0;left:0;transform-origin:top left;box-sizing:border-box;overflow:hidden}
+.lay-region{position:absolute;box-sizing:border-box}
+.lay-text{display:flex;align-items:center;overflow:hidden;line-height:1.15;overflow-wrap:anywhere}
+.lay-text.lay-va-top{align-items:flex-start}.lay-text.lay-va-bottom{align-items:flex-end}
+.lay-text.lay-al-center{justify-content:center;text-align:center}
+.lay-text.lay-al-right{justify-content:flex-end;text-align:right}
+.lay-text.lay-al-left{justify-content:flex-start;text-align:left}
+.lay-rich{overflow:hidden;white-space:pre-wrap;line-height:1.3;text-align:left}
+.lay-badge{display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;text-align:center}
+.lay-image{overflow:hidden}
+.lay-image .lay-art-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.4em;color:rgba(255,255,255,.92);text-align:center;padding:6%}
+.lay-image .lay-art-ph-ico{font-size:2.4em;opacity:.6;line-height:1}
+.lay-image .lay-art-ph-credit{font-size:.6em;line-height:1.3;opacity:.9}
+.lay-image img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;margin:0!important;border-radius:0!important;box-shadow:none!important}
+.lay-image.lay-fit-cover img{object-fit:cover!important}
+.lay-image.lay-fit-contain img{object-fit:contain!important}
+.lay-credit{position:absolute;left:0;right:0;bottom:0;padding:.3em .6em;font-size:.6em;line-height:1.25;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7));text-align:right}
+.lay-row{display:flex;align-items:stretch}
+.lay-cell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center}
+.lay-cell-label{font-size:.6em;letter-spacing:.06em;text-transform:uppercase;opacity:.7}
+.lay-cell-val{font-weight:800}
+.lay-rect{pointer-events:none}
+.lay-sym{display:inline-block;min-width:1.1em;padding:0 .3em;margin:0 .1em;border-radius:.3em;background:rgba(0,0,0,.12);font-size:.86em;line-height:1.5em;text-align:center;vertical-align:-.2em;font-weight:700}
+`;
+document.head.insertAdjacentHTML("beforeend", `<style>${LAY_CSS}</style>`);
+
+// Best-effort Google Fonts loader for layout.fonts[].family -- idempotent
+// across every game/card rendered in a session. Every font use below also
+// carries a generic serif fallback, so an offline build/print still works.
+const LAY_FONTS_LOADED = new Set();
+function layEnsureFonts(g){
+  const fonts = (g && g.layout && g.layout.fonts) || [];
+  const need = fonts.filter(f => f && f.family && !LAY_FONTS_LOADED.has(f.family));
+  if(!need.length) return;
+  need.forEach(f => LAY_FONTS_LOADED.add(f.family));
+  try{
+    const q = need.map(f => `family=${encodeURIComponent(f.family).replace(/%20/g,"+")}:wght@${f.weight||400}`).join("&");
+    document.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${q}&display=swap">`);
+  }catch(e){}
+}
+
+/* ---- src/show_if path resolution -- dot paths against {card, printing, g,
+ * attributes}. "card."/"printing."/"g." prefixes pick the root explicitly;
+ * a bare path ("attributes.faction", "name") tries card first, then
+ * printing -- covers both styles used in a layout.yaml (region src usually
+ * writes "card.attributes.cost"; palette.by is commonly just
+ * "attributes.faction"). ---- */
+function layDig(obj, path){
+  if(obj==null || !path) return undefined;
+  let v = obj;
+  for(const part of String(path).split(".")){
+    if(v==null) return undefined;
+    v = v[part];
+  }
+  return v;
+}
+function layResolve(ctx, path){
+  if(path==null) return undefined;
+  const p = String(path).trim();
+  if(p.startsWith("card.")) return layDig(ctx.card, p.slice(5));
+  if(p.startsWith("printing.")) return layDig(ctx.printing, p.slice(9));
+  if(p.startsWith("g.")) return layDig(ctx.g, p.slice(2));
+  if(p==="card") return ctx.card;
+  if(p==="printing") return ctx.printing;
+  const viaCard = layDig(ctx.card, p);
+  return viaCard!==undefined ? viaCard : layDig(ctx.printing, p);
+}
+function layStringify(v){
+  if(v==null) return "";
+  if(Array.isArray(v)) return v.join(", ");
+  return String(v);
+}
+function layTemplateStr(ctx, s){
+  return String(s).replace(/\{([^{}]+)\}/g, (m,p) => layStringify(layResolve(ctx, p.trim())));
+}
+// A region's displayed value: literal `text` wins if present, else `src` --
+// resolved as a template if it contains "{...}", otherwise a plain path.
+function layValue(ctx, r){
+  if(r.text!=null) return r.text;
+  if(r.src==null) return "";
+  const s = String(r.src);
+  return s.indexOf("{")!==-1 ? layTemplateStr(ctx, s) : layStringify(layResolve(ctx, s));
+}
+// show_if: bare path (truthy), "!path" (negated), or "path == value" / "path != value".
+function layCond(ctx, cond){
+  if(cond==null || cond==="") return true;
+  const s = String(cond).trim();
+  const m = /^(.+?)\s*(==|!=)\s*(.+)$/.exec(s);
+  if(m){
+    const left = layStringify(layResolve(ctx, m[1].trim()));
+    let right = m[3].trim();
+    if((right[0]==='"' && right.slice(-1)==='"') || (right[0]==="'" && right.slice(-1)==="'")) right = right.slice(1,-1);
+    const eq = left===right;
+    return m[2]==="==" ? eq : !eq;
+  }
+  let neg=false, path=s;
+  if(path.startsWith("!")){ neg=true; path=path.slice(1).trim(); }
+  const v = layResolve(ctx, path);
+  const truthy = !(v==null || v==="" || v===false || (Array.isArray(v) && !v.length));
+  return neg ? !truthy : truthy;
+}
+// Maps a region's src/text path back to a bare attribute key ("attributes.cost" ->
+// "cost") so PR-diff highlighting (opts.highlight) reaches layout-rendered cards too.
+function layAttrKey(path){
+  const m = /^(?:card\.)?attributes\.([a-zA-Z0-9_]+)$/.exec(String(path||"").trim());
+  return m ? m[1] : null;
+}
+function layHlClass(hl, r){
+  const key = layAttrKey(r.src) || layAttrKey(r.text);
+  return (key && hl.has(key)) ? " cf-hl" : "";
+}
+function layPalette(g, ctx){
+  const pal = g.layout && g.layout.palette;
+  if(!pal) return null;
+  const v = layResolve(ctx, pal.by);
+  const key = v==null ? null : String(v);
+  return (key!=null && pal.map && pal.map[key]) || pal.default || null;
+}
+// A color field: a literal hex string, or the literal value "palette" to
+// resolve via the top-level palette (data-driven color, e.g. faction frames).
+function layColor(g, ctx, val, fallback){
+  if(val==null) return fallback!=null ? fallback : null;
+  if(val==="palette") return layPalette(g, ctx) || fallback || "#444";
+  return val;
+}
+function layFont(g, id){
+  const f = ((g.layout && g.layout.fonts) || []).find(x => x.id===id);
+  if(!f) return {family:"inherit", weight:400, style:"normal"};
+  return {family:f.family, weight:f.weight||400, style:f.style||"normal"};
+}
+function layFontCss(g, id){
+  if(!id) return "";
+  const f = layFont(g, id);
+  return `font-family:"${f.family}",Georgia,'Times New Roman',serif;font-weight:${f.weight};font-style:${f.style};`;
+}
+// Pure-heuristic autoshrink (no DOM measurement -- this renderer is a plain
+// string builder, called identically in-browser and in the node smoke
+// test): estimate wrapped line count from average character width at a
+// given point size, step size_pt down until the estimate fits the box.
+function layEstLines(text, boxWmm, fontPt){
+  const fontMm = fontPt*0.3528, avgCharW = Math.max(0.6, fontMm*0.52);
+  const perLine = Math.max(4, Math.floor(boxWmm/avgCharW));
+  let lines = 0;
+  String(text||"").split("\n").forEach(p => { lines += Math.max(1, Math.ceil((p.length||1)/perLine)); });
+  return lines;
+}
+function layAutoshrinkPt(text, boxWmm, boxHmm, startPt, minPt){
+  minPt = minPt || Math.max(5, startPt-4);
+  for(let pt=startPt; pt>minPt; pt-=0.5){
+    const lineHmm = pt*0.3528*1.3;
+    if(layEstLines(text, boxWmm, pt)*lineHmm <= boxHmm) return pt;
+  }
+  return minPt;
+}
+function layRichInline(g, text){
+  const sym = cfSym(g);
+  return esc(text).replace(/\[([a-z0-9_]+)\]/gi, (m,k) => sym[k] ? `<span class="lay-sym">${esc(sym[k])}</span>` : m);
+}
+function layPosCss(r){
+  if(r.type==="badge" && r.d!=null) return `left:${r.x}mm;top:${r.y}mm;width:${r.d}mm;height:${r.d}mm;`;
+  return `left:${r.x}mm;top:${r.y}mm;width:${r.w}mm;height:${r.h}mm;`;
+}
+
+function layRegionText(g, ctx, r, hl){
+  const val = layValue(ctx, r);
+  const color = layColor(g, ctx, r.color, "#222");
+  const bg = r.bg!=null ? layColor(g, ctx, r.bg, "transparent") : "";
+  const alCls = " lay-al-"+(r.align||"left"), vaCls = " lay-va-"+(r.valign||"middle");
+  const style = `${layPosCss(r)}${layFontCss(g,r.font)}font-size:${r.size_pt||10}pt;color:${color};${bg?`background:${bg};`:""}${r.uppercase?"text-transform:uppercase;":""}`;
+  return `<div class="lay-region lay-text${alCls}${vaCls}${layHlClass(hl,r)}" style="${style}">${esc(val)}</div>`;
+}
+function layRegionRich(g, ctx, r, hl){
+  const raw = layValue(ctx, r);
+  const html = r.symbols ? layRichInline(g, raw) : esc(raw);
+  const color = layColor(g, ctx, r.color, "#222");
+  const bg = r.bg!=null ? layColor(g, ctx, r.bg, "transparent") : "";
+  let pt = r.size_pt || 8;
+  if(r.autoshrink) pt = layAutoshrinkPt(raw, r.w, r.h, pt, r.min_size_pt);
+  const style = `${layPosCss(r)}${layFontCss(g,r.font)}font-size:${pt}pt;color:${color};${bg?`background:${bg};`:""}`;
+  return `<div class="lay-region lay-rich${layHlClass(hl,r)}" style="${style}">${html}</div>`;
+}
+// image: printing/card artwork. Always paints a tinted (palette-aware)
+// placeholder + credit UNDER the <img> -- if src resolves to nothing, OR
+// the browser fails to load it (onerror), the placeholder shows through.
+// This is the honest answer for Arcmage: art_url is real (see
+// examples/arcmage/README.md for what was and wasn't verified), but the
+// card never goes visually blank if an art asset is unreachable.
+function layRegionImage(g, ctx, r, hl){
+  const url = layValue(ctx, r);
+  const credit = r.credit ? layStringify(layResolve(ctx, r.credit)) : "";
+  const tint = (r.bg!=null ? layColor(g, ctx, r.bg, null) : null) || layPalette(g, ctx) || "#4a4f57";
+  const style = `${layPosCss(r)}${r.opacity!=null?`opacity:${r.opacity};`:""}background:${tint};`;
+  const ph = `<div class="lay-art-ph"><span class="lay-art-ph-ico">🖼</span>${credit?`<span class="lay-art-ph-credit">Art: ${esc(credit)}</span>`:""}</div>`;
+  const img = url ? `<img src="${esc(url)}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+  const creditStrip = (url && credit) ? `<div class="lay-credit">${esc(credit)}</div>` : "";
+  return `<div class="lay-region lay-image lay-fit-${r.fit||"cover"}${layHlClass(hl,r)}" style="${style}">${ph}${img}${creditStrip}</div>`;
+}
+function layRegionBadge(g, ctx, r, hl){
+  const val = layValue(ctx, r);
+  const bg = layColor(g, ctx, r.bg, "#333");
+  const color = layColor(g, ctx, r.color, "#fff");
+  const shapeCss = r.shape==="square" ? `border-radius:${Math.max(0,(r.d||r.w||0)*0.18).toFixed(2)}mm;` : `border-radius:50%;`;
+  const style = `${layPosCss(r)}${layFontCss(g,r.font)}font-size:${r.size_pt||11}pt;background:${bg};color:${color};${shapeCss}`;
+  return `<div class="lay-region lay-badge${layHlClass(hl,r)}" style="${style}">${esc(val)}</div>`;
+}
+function layRegionRow(g, ctx, r, hl){
+  const cells = (r.of||[]).filter(cell => layCond(ctx, cell.show_if));
+  if(!cells.length) return "";
+  const style = `${layPosCss(r)}gap:${r.gap_mm!=null?r.gap_mm:1}mm;`;
+  const cellsHtml = cells.map(cell => {
+    const val = layStringify(layResolve(ctx, cell.key));
+    const color = cell.color ? layColor(g, ctx, cell.color, "#222") : "";
+    const key = layAttrKey(cell.key);
+    const hlCls = (key && hl.has(key)) ? " cf-hl" : "";
+    return `<div class="lay-cell${hlCls}" style="${layFontCss(g,cell.font)}${color?`color:${color};`:""}${cell.size_pt?`font-size:${cell.size_pt}pt;`:""}">${cell.label?`<div class="lay-cell-label">${esc(cell.label)}</div>`:""}<div class="lay-cell-val">${esc(val)}</div></div>`;
+  }).join("");
+  return `<div class="lay-region lay-row${layHlClass(hl,{src:null})}" style="${style}">${cellsHtml}</div>`;
+}
+function layRegionRect(g, ctx, r){
+  const fill = r.fill!=null ? (r.fill==="none" ? "none" : layColor(g, ctx, r.fill, "transparent")) : "none";
+  const stroke = r.stroke!=null ? layColor(g, ctx, r.stroke, "transparent") : null;
+  const sw = r.stroke_w_mm!=null ? r.stroke_w_mm : 0.3;
+  const style = `${layPosCss(r)}background:${fill};${stroke?`border:${sw}mm solid ${stroke};`:""}${r.radius_mm?`border-radius:${r.radius_mm}mm;`:""}${r.opacity!=null?`opacity:${r.opacity};`:""}`;
+  return `<div class="lay-region lay-rect" style="${style}"></div>`;
+}
+
+function layoutCard(g, c, printing, opts){
+  opts = opts || {};
+  const layout = g && g.layout;
+  if(!g || !c || !layout || !Array.isArray(layout.regions) || !layout.regions.length){
+    return cardFrame(g, c, opts);
+  }
+  layEnsureFonts(g);
+  const hl = opts.highlight instanceof Set ? opts.highlight : new Set(opts.highlight||[]);
+  const cardSpec = layout.card || {};
+  const W = cardSpec.w_mm || 63.5, H = cardSpec.h_mm || 88.9;
+  const ctx = {card:c, printing:printing||{}, g, attributes:c.attributes||{}};
+  const wi = cfLen(opts.w || 230);
+  const scale = wi.num / cfLen(`${W}mm`).num;
+  const bg = layColor(g, ctx, cardSpec.bg, "#ffffff");
+  const rx = ((cardSpec.radius_mm||0)/W*100).toFixed(3), ry = ((cardSpec.radius_mm||0)/H*100).toFixed(3);
+  const regionsHtml = layout.regions
+    .filter(r => layCond(ctx, r.show_if))
+    .map(r => {
+      switch(r.type){
+        case "text": return layRegionText(g, ctx, r, hl);
+        case "richtext": return layRegionRich(g, ctx, r, hl);
+        case "image": return layRegionImage(g, ctx, r, hl);
+        case "badge": return layRegionBadge(g, ctx, r, hl);
+        case "row": return layRegionRow(g, ctx, r, hl);
+        case "rect": return layRegionRect(g, ctx, r);
+        default: return "";
+      }
+    }).join("");
+  return `<div class="lay-wrap cf-card" style="width:${wi.css};aspect-ratio:${W}/${H};border-radius:${rx}% / ${ry}%">
+    <div class="lay-card" style="width:${W}mm;height:${H}mm;transform:scale(${scale});background:${bg}">${regionsHtml}</div>
+  </div>`;
+}
+
 /* ================= PRINT SHEET =================
  * printSheet(slug) -- the "not a preview" proof: opens a standalone
  * window and renders EVERY card in the game through the exact same
- * cardFrame() used by the editor/modal/PR-diff, at TRUE PHYSICAL SIZE
- * (63.5mm x 88.9mm -- standard poker/trading-card trim size), laid out
- * 3x3 per page with 5mm gaps and light cut lines. Same CF_CSS string as
- * the hub page, so there is no second "print renderer" to drift out of
- * sync -- what you edit is literally what prints. Works for every
- * card_style (cah, playing-card, and the generic/faction frame) because
- * cardFrame() itself dispatches on g.card_style; this function just asks
- * for the cards at a millimeter width instead of a pixel one. */
+ * layoutCard() used by the grid/modal/editor/PR-diff, at TRUE PHYSICAL
+ * SIZE (the game's templates/layout.yaml card.w_mm x h_mm, or 63.5mm x
+ * 88.9mm -- standard poker/trading-card trim size -- for games with no
+ * layout spec), laid out 3x3 per page with 5mm gaps and light cut lines.
+ * Same CF_CSS/LAY_CSS strings as the hub page, so there is no second
+ * "print renderer" to drift out of sync -- what you edit is literally
+ * what prints. Works for every card_style (cah, playing-card, the
+ * generic/faction frame, AND a full layout.yaml spec) because
+ * layoutCard() itself dispatches on g.layout (falling back to
+ * cardFrame(), which dispatches on g.card_style); this function just
+ * asks for the cards at a millimeter width instead of a pixel one. */
 function printSheet(slug){
   const g = G(slug);
   if(!g){ toast("No such game."); return; }
   const win = window.open("", "_blank", "width=980,height=1040");
   if(!win){ toast("Pop-up blocked — allow pop-ups for this site to print cards."); return; }
   const cards = g.cards||[];
-  const CARD_W_MM = 63.5, CARD_H_MM = 88.9, GAP_MM = 5, MARGIN_MM = 10, PER_PAGE = 9;
+  const layCard = (g.layout && g.layout.card) || {};
+  const CARD_W_MM = layCard.w_mm || 63.5, CARD_H_MM = layCard.h_mm || 88.9, GAP_MM = 5, MARGIN_MM = 10, PER_PAGE = 9;
   const pageW = (MARGIN_MM*2 + CARD_W_MM*3 + GAP_MM*2).toFixed(1);
   const pageH = (MARGIN_MM*2 + CARD_H_MM*3 + GAP_MM*2).toFixed(1);
   const pages = [];
   for(let i=0;i<cards.length;i+=PER_PAGE) pages.push(cards.slice(i,i+PER_PAGE));
   if(!pages.length) pages.push([]);
   const pageHtml = pages.map(pageCards => `<div class="ps-page">${
-    pageCards.map(c => `<div class="ps-card">${cardFrame(g, c, {w:`${CARD_W_MM}mm`})}</div>`).join("")
+    pageCards.map(c => `<div class="ps-card">${layoutCard(g, c, cfPrinting(g,c), {w:`${CARD_W_MM}mm`})}</div>`).join("")
   }</div>`).join("");
+  const fonts = (g.layout && g.layout.fonts) || [];
+  const fontLink = fonts.length ? `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${
+    fonts.map(f=>`family=${encodeURIComponent(f.family).replace(/%20/g,"+")}:wght@${f.weight||400}`).join("&")
+  }&display=swap">` : "";
   const doc = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>${esc(g.title)} — print sheet</title>
+${fontLink}
 <style>
 ${CF_CSS}
+${LAY_CSS}
 *{box-sizing:border-box}
 html,body{margin:0;background:#e9ebee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f2328}
 @page{size:${pageW}mm ${pageH}mm;margin:${MARGIN_MM}mm}
@@ -521,6 +827,7 @@ html,body{margin:0;background:#e9ebee;font-family:-apple-system,BlinkMacSystemFo
 .ps-page{width:${pageW}mm;min-height:${pageH}mm;margin:0 auto 24px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25);padding:${MARGIN_MM}mm;display:grid;grid-template-columns:repeat(3,${CARD_W_MM}mm);grid-auto-rows:${CARD_H_MM}mm;gap:${GAP_MM}mm;justify-content:start}
 .ps-card{position:relative;width:${CARD_W_MM}mm;height:${CARD_H_MM}mm;overflow:hidden;outline:.5pt dashed #b7bcc4;outline-offset:1.5mm}
 .ps-card .cf-card{width:100%;height:100%}
+.ps-card .lay-wrap{width:100%!important;height:100%!important;aspect-ratio:auto!important}
 @media print{
   html,body{background:#fff}
   .ps-note,.ps-toolbar{display:none}
@@ -977,7 +1284,7 @@ function explorePage(filter){
     <div class="gcard">
       <h3><a onclick="go('g/${g.slug}')">${esc(g.title)}</a> <span class="badge lic">${esc(g.license)}</span></h3>
       <div class="desc">${esc(g.description).slice(0,120)}</div>
-      <div class="thumbs">${g.cards.slice(0,4).map(c=>cardFrame(g,c,{w:92})).join("")}</div>
+      <div class="thumbs">${g.cards.slice(0,4).map(c=>layoutCard(g,c,cfPrinting(g,c),{w:92})).join("")}</div>
       <div class="meta">
         ${starBtn(g.slug)}
         <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} PR${g.prs.length===1?"":"s"}</span>
@@ -1134,7 +1441,7 @@ function filterCards(slug){
   const list=g.cards.filter(c=>(!t||c.type===t)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
   $("#cgrid").innerHTML=list.map(c=>`
     <div class="ctile" onclick="cardModal('${slug}','${c.id}')">
-      ${cardFrame(g,c,{w:150})}
+      ${layoutCard(g,c,cfPrinting(g,c),{w:150})}
       <div class="cn">${esc(c.name)}</div>
     </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
 }
@@ -1356,9 +1663,12 @@ function edDelete(){
   ED.cards=ED.cards.filter(x=>x.id!==c.id); edRefreshDirty();
   edSelect(ED.cards[0]?.id); edBar();
 }
-/* ---- the money shot: the live card preview is cardFrame(g, edCard()) ----
- * Same renderer the card modal and the PR diff use — no iframe shell to
- * boot, no canvas to draw: edSet() just calls this again on every keystroke. */
+/* ---- the money shot: the live card preview is layoutCard(g, edCard(), printing) ----
+ * Same renderer the cards grid, card modal and PR diff use (layoutCard()
+ * itself falls back to the plain cardFrame() for games with no
+ * templates/layout.yaml) — no iframe shell to boot, no canvas to draw:
+ * edSet() just calls this again on every keystroke, so a game with a real
+ * layout spec re-renders the ACTUAL print-ready card as you type. */
 function edPreview(){
   const scanHost=document.getElementById("ed-scan");
   if(scanHost){
@@ -1367,7 +1677,7 @@ function edPreview(){
   }
   const host=document.getElementById("ed-preview"); if(!host) return;
   const g=G(ED.slug), c=edCard();
-  host.innerHTML=c?cardFrame(g,c,{w:280}):"<div style='color:var(--mut);font-size:13px;text-align:center;padding:40px 10px'>Select a card, or add a new one.</div>";
+  host.innerHTML=c?layoutCard(g,c,cfPrinting(g,c),{w:280}):"<div style='color:var(--mut);font-size:13px;text-align:center;padding:40px 10px'>Select a card, or add a new one.</div>";
 }
 function edSummary(){ // mirror carddiff.summarize titles
   const changed=[],added=[],removed=[];
@@ -1419,7 +1729,7 @@ function cardModal(slug,cid){
     if(ch.card===cid&&ch.kind==="changed") hist.push({...ch,date:h.date,author:h.author,sha:h.sha});
   $("#mbody").innerHTML=`
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex:none">
-      ${cardFrame(g,c,{w:230})}
+      ${layoutCard(g,c,cfPrinting(g,c),{w:230})}
       <button class="btn primary" style="width:100%;justify-content:center" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit this card</button>
       ${g.scans&&g.scans[cid]?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><img src="${g.scans[cid]}" loading="lazy" style="width:110px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25)"><span style="font-size:10px;color:var(--mut);text-align:center">original print — reference</span></div>`:""}
     </div>
@@ -1680,9 +1990,12 @@ async function liveSuggestions(g){
       <div class="prbody" id="prb-${pr.id}"><button class="btn" onclick="prDetail('${g.slug}','${pr.id}')">View card changes</button></div>
     </div>`).join("");
 }
-// visual PR diff: cardFrame(before) -> cardFrame(after) per touched card, using
-// the small (before_cards/after_cards) payload the PR-detail route now sends.
-// Changed numeric attributes get a green outline on the AFTER card.
+// visual PR diff: layoutCard(before) -> layoutCard(after) per touched card
+// (falls back to cardFrame() for games with no layout.yaml), using the
+// small (before_cards/after_cards) payload the PR-detail route now sends.
+// Changed numeric attributes get a green outline on the AFTER card --
+// layHlClass() maps a region's src/attribute path back to the highlighted
+// key so this works for layout-spec regions too, not just cardFrame().
 function prVisualDiff(g,pr){
   const before=Object.fromEntries((pr.before_cards||[]).map(c=>[c.id,c]));
   const after=Object.fromEntries((pr.after_cards||[]).map(c=>[c.id,c]));
@@ -1696,9 +2009,9 @@ function prVisualDiff(g,pr){
   const ids=[...new Set((pr.changes||[]).map(c=>c.card))];
   const cells=ids.map(cid=>{
     const info=byCard[cid]||{kind:"changed",attrs:new Set()}, b=before[cid], a=after[cid];
-    if(info.kind==="added"&&a) return `<div class="prcard"><div style="text-align:center">${cardFrame(g,a,{w:150})}<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">+ added</div></div></div>`;
-    if(info.kind==="removed"&&b) return `<div class="prcard"><div style="text-align:center;opacity:.5;filter:grayscale(.6)">${cardFrame(g,b,{w:150})}<div style="font-size:11px;color:var(--red);margin-top:4px;font-weight:600">− removed</div></div></div>`;
-    if(b&&a) return `<div class="prcard"><div>${cardFrame(g,b,{w:150})}</div><div class="arrow">→</div><div>${cardFrame(g,a,{w:150,highlight:info.attrs})}</div></div>`;
+    if(info.kind==="added"&&a) return `<div class="prcard"><div style="text-align:center">${layoutCard(g,a,cfPrinting(g,a),{w:150})}<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">+ added</div></div></div>`;
+    if(info.kind==="removed"&&b) return `<div class="prcard"><div style="text-align:center;opacity:.5;filter:grayscale(.6)">${layoutCard(g,b,cfPrinting(g,b),{w:150})}<div style="font-size:11px;color:var(--red);margin-top:4px;font-weight:600">− removed</div></div></div>`;
+    if(b&&a) return `<div class="prcard"><div>${layoutCard(g,b,cfPrinting(g,b),{w:150})}</div><div class="arrow">→</div><div>${layoutCard(g,a,cfPrinting(g,a),{w:150,highlight:info.attrs})}</div></div>`;
     return "";
   }).join("");
   return cells?`<div style="margin-bottom:6px">${cells}</div>`:"";

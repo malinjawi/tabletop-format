@@ -86,6 +86,8 @@ playtests.forEach((s, i) => checkSchema("playtest", s, `playtests[${i}] (${s?.id
 
 const community = load("community.yaml");
 if (community != null) checkSchema("community", community, "community.yaml");
+const layout = load("templates/layout.yaml");
+if (layout != null) checkSchema("layout", layout, "templates/layout.yaml");
 
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {

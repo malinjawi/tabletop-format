@@ -91,18 +91,75 @@ per the original art license for each card's art, per
 <https://creativecommons.org/licenses/by-sa/4.0/> and
 <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>.
 
-## Artwork: hot-linked, not downloaded
+## Card layout: this is a real, editable, print-ready card now
+
+`examples/arcmage/templates/layout.yaml` is a full card layout spec (see
+`docs/layout-engine.md` and `schemas/layout.schema.json`) — a
+faction-colored frame, a title bar, an art window, a type line, a rules
+text box with `[symbol]` chips and shrink-to-fit, and cost/loyalty badges,
+positioned in real millimeters at the true 63.5mm x 88.9mm trading-card
+trim size. `layoutCard()` (`tools/hub_template.html`) renders it — the
+cards grid, the card modal, the live card editor preview, the PR visual
+diff, and the true-size print sheet all draw the SAME spec. Before this,
+every card here rendered through the generic `cardFrame()` template like
+every other game; now editing a card's name/cost/text in the editor
+reformats the actual print-ready card, live, and `🖨 Print` on the Cards
+tab produces that same card at true size with cut lines.
+
+## Artwork: hot-linked, and now (probably) the RAW art layer, not the composed card
 
 `components/printings.json`'s `image` field points at
 `https://aminduna.arcmage.org/arcmage/Cards/{card-guid}/card.jpg` — the
-live Arcmage database's own rendered-card image for that exact card. This
-port hot-links those URLs and never downloaded or re-hosted the binary
-images themselves. Every card's GUID was recovered from the live API
+live Arcmage database's own fully-composed, rendered-card image (frame +
+art + text baked together) for that exact card. This port hot-links that
+URL and never downloaded or re-hosted the binary image itself; it's kept
+as the `original_print` reference shown alongside the live-rendered card
+everywhere in the hub. Every card's GUID was recovered from the live API
 responses fetched while building this port (either directly, for
 individually-fetched cards, or by position from the deck-listing JSON,
 where each card's own GUID reliably appears immediately after its
 `language` field — cross-checked against directly-fetched cards to confirm
 the pattern before trusting it for all 70).
+
+Every printing now **also** carries `art_url`, pointed at
+`https://aminduna.arcmage.org/api/Cards/{card-guid}/export?format=Art` —
+what `templates/layout.yaml`'s `art` region actually composites into the
+rendered card, instead of the composed image above. What's confirmed and
+what isn't:
+
+- **Confirmed**: fetching a card's full JSON record from the live API
+  (`https://aminduna.arcmage.org/api/Cards/{guid}`) returns an `artwork`
+  field with exactly this URL shape, distinctly named and separate from
+  the composed-card exports on the same record (`png`/`svg`/`jpeg`/`pdf`/
+  `webp`, `format=Png`/`format=Svg`/etc. — `jpeg` is the same URL as this
+  port's `image` field). The same record also exposes `backgroundPng`
+  (`format=BackgroundPng`, parameterized by `faction`+`type`, not by
+  card — clearly the reusable frame texture) and `overlaySvg`
+  (`format=OverlaySvg` — clearly the name/cost/text overlay). Put
+  together, this is strong structural evidence that Aminduna's own card
+  renderer is itself layered (art + frame + text overlay, composited into
+  the `png`/`jpeg`/etc. exports) exactly the way this platform's own
+  `layoutCard()` now is, and that `format=Art` is the dedicated raw-art
+  export. This pattern was checked against two different cards (Abduction,
+  Cutpurse Imp) and is consistent between them. The independent, official
+  `wtactics/art` GitHub repository (CC-BY-SA-4.0, linked from arcmage.org's
+  own site nav as "Artwork → Repository") further corroborates that raw,
+  uncomposed artwork is a real, separately-maintained asset category for
+  this project — organized by art-piece name rather than card GUID, which
+  is why this port uses the API's GUID-keyed `format=Art` URLs instead of
+  trying to fuzzy-match 70 card names against that repo's folder names.
+- **NOT confirmed**: this session's sandbox can fetch and render *text*
+  responses but not binary/image ones, so the actual pixels behind
+  `format=Art` were never visually compared against the composed card —
+  the case above is structural/circumstantial, from the API's own
+  self-description, not a pixel diff. `art_url` is wired in because the
+  evidence is real and specific, but every `image` region in
+  `layoutCard()` also always paints a tinted (faction-palette-colored)
+  placeholder with the artist's credit *underneath* the `<img>` tag, shown
+  automatically if the URL ever 404s or turns out to be something other
+  than expected — so a card never goes visually blank or silently shows
+  the wrong thing either way. If you can verify the pixels (or find they
+  match the composed card after all), please update this note.
 
 ## What was ported vs. what wasn't
 

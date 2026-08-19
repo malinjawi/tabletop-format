@@ -4,7 +4,11 @@
   "title": "Printing (physical appearance)",
   "description": "A specific physical/visual appearance of a Card in a Set: art, flavor, collector number, variant. Many printings may point at one card. Files: components/printings.json is an array of these.",
   "type": "object",
-  "required": ["id", "card_id", "set_id"],
+  "required": [
+    "id",
+    "card_id",
+    "set_id"
+  ],
   "additionalProperties": false,
   "properties": {
     "id": {
@@ -22,7 +26,7 @@
     },
     "collector_number": {
       "type": "string",
-      "description": "Human-readable position within the set ('042', '042a'). String, not integer — promo suffixes exist."
+      "description": "Human-readable position within the set ('042', '042a'). String, not integer \u2014 promo suffixes exist."
     },
     "quantity": {
       "type": "integer",
@@ -30,8 +34,12 @@
       "default": 1,
       "description": "Physical copies of this printing included in the set."
     },
-    "artist": { "type": "string" },
-    "flavor_text": { "type": "string" },
+    "artist": {
+      "type": "string"
+    },
+    "flavor_text": {
+      "type": "string"
+    },
     "art": {
       "type": "string",
       "description": "Relative path to face art asset (assets/...). Omit for template-only cards."
@@ -40,6 +48,11 @@
       "type": "string",
       "format": "uri",
       "description": "External card scan URL (shown as the authentic printed card)"
+    },
+    "art_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "External URL for the RAW ARTWORK layer alone (no frame/text/border) -- what templates/layout.yaml image regions composite into the actual print-ready card. Distinct from \"image\" (a full composed/rendered card, kept as the original_print reference shown alongside the live render). Omit if no separate art-only asset is known; layoutCard() falls back to a tinted placeholder + artist credit when this is absent or fails to load."
     },
     "back": {
       "type": "string",

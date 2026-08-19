@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/layout.schema.json",
+  "title": "Layout (print-true card layout spec)",
+  "description": "OPTIONAL per-game declarative card layout: templates/layout.yaml. Positions every visual element of a physical card in millimeters so ONE renderer (layoutCard() in tools/hub_template.html) can turn card + printing data into the actual print-ready card -- in the cards grid, the card modal, the live card editor preview (re-rendered on every keystroke), the PR visual diff, and the true-physical-size print sheet. A game with no templates/layout.yaml keeps using the generic data-driven cardFrame() -- this file is additive, never required.",
+  "type": "object",
+  "required": ["card", "regions"],
+  "additionalProperties": false,
+  "properties": {
+    "card": {
+      "type": "object",
+      "description": "Physical card dimensions, in millimeters. layoutCard() renders the TRIM box (w_mm x h_mm); printSheet() also reads this (falling back to 63.5x88.9 poker/trading-card size when a game has no layout.yaml) so the print grid matches the card's real size.",
+      "required": ["w_mm", "h_mm"],
+      "additionalProperties": false,
+      "properties": {
+        "w_mm": { "type": "number", "exclusiveMinimum": 0, "description": "Trim (finished) width." },
+        "h_mm": { "type": "number", "exclusiveMinimum": 0, "description": "Trim (finished) height." },
+        "bleed_mm": { "type": "number", "minimum": 0, "default": 0, "description": "Bleed allowance beyond trim. Documentation/export-planning only -- layoutCard() renders the trim box, it does not currently paint a separate bleed margin." },
+        "radius_mm": { "type": "number", "minimum": 0, "default": 0, "description": "Corner radius." },
+        "bg": { "type": "string", "description": "Card background: a hex color, or the literal string \"palette\" to resolve via the top-level palette (e.g. a faction-tinted card back)." }
+      }
+    },
+    "fonts": {
+      "type": "array",
+      "description": "Named font faces regions reference by id via their own \"font\" key. Loaded best-effort from Google Fonts by family name at render time; every use also carries a generic serif/sans-serif fallback stack, so an offline build still renders (with substitute fonts).",
+      "items": {
+        "type": "object",
+        "required": ["id", "family"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_]{1,32}$" },
+          "family": { "type": "string", "minLength": 1, "description": "CSS/Google Fonts family name, e.g. \"Cinzel\"." },
+          "weight": { "type": "integer", "minimum": 100, "maximum": 900, "default": 400 },
+          "style": { "type": "string", "enum": ["normal", "italic"], "default": "normal" }
+        }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "description": "Data-driven color lookup. Any region color/bg/fill/stroke field (and card.bg) may use the literal value \"palette\" to resolve through this -- e.g. a faction-colored frame without one region per faction.",
+      "required": ["by", "map"],
+      "additionalProperties": false,
+      "properties": {
+        "by": { "type": "string", "minLength": 1, "description": "Dot path naming the card field that selects a color, e.g. \"attributes.faction\" (bare paths resolve against the card first)." },
+        "map": { "type": "object", "description": "Resolved-value -> hex color.", "additionalProperties": { "type": "string" } },
+        "default": { "type": "string", "description": "Fallback color when the resolved value has no entry in map." }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Every visual element on the card, painted in array order (later regions draw on top of earlier ones) -- so put frame/background rects first, art next, then text/badges on top.",
+      "items": { "$ref": "#/$defs/region" }
+    }
+  },
+  "$defs": {
+    "condition": {
+      "type": "string",
+      "minLength": 1,
+      "description": "show_if condition, evaluated against the card/printing context: a bare dot path (truthy = shown, e.g. \"attributes.attack\"), \"!path\" (shown when falsy/absent), or \"path == value\" / \"path != value\" (string equality)."
+    },
+    "region": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Unique within the layout. Used for highlight-on-diff matching and debugging." },
+        "type": {
+          "type": "string",
+          "enum": ["text", "richtext", "image", "badge", "row", "rect"],
+          "description": "text: one line/short field. richtext: multi-line body text with [symbol] chips + optional autoshrink. image: printing/card artwork. badge: circular/square numeric chip (cost, etc). row: evenly-spaced inline cells (e.g. stat line). rect: undecorated frame/bar/divider -- no text, no data."
+        },
+        "x": { "type": "number", "description": "mm from card left edge." },
+        "y": { "type": "number", "description": "mm from card top edge." },
+        "w": { "type": "number", "exclusiveMinimum": 0, "description": "mm. Required for all types except badge (which uses d)." },
+        "h": { "type": "number", "exclusiveMinimum": 0, "description": "mm. Required for all types except badge (which uses d)." },
+        "d": { "type": "number", "exclusiveMinimum": 0, "description": "Diameter in mm -- badge only, alternative to w/h." },
+        "shape": { "type": "string", "enum": ["circle", "square"], "default": "circle", "description": "badge only." },
+        "src": { "type": "string", "description": "Dot path (\"card.name\", \"printing.art_url\", \"card.attributes.cost\") or a \"{path} literal {path}\" interpolation template. text/richtext/image/badge." },
+        "text": { "type": "string", "description": "Literal static text, used instead of resolving src (e.g. a fixed caption)." },
+        "credit": { "type": "string", "description": "Dot path for an artist/source credit caption overlaid on an image region, e.g. \"printing.artist\". Also shown on the tinted placeholder used when the image fails to load or src is empty." },
+        "fit": { "type": "string", "enum": ["cover", "contain"], "default": "cover", "description": "image only." },
+        "font": { "type": "string", "description": "References a fonts[].id." },
+        "size_pt": { "type": "number", "exclusiveMinimum": 0 },
+        "min_size_pt": { "type": "number", "exclusiveMinimum": 0, "description": "richtext autoshrink floor -- won't shrink smaller than this. Defaults to max(5, size_pt-4)." },
+        "align": { "type": "string", "enum": ["left", "center", "right"], "default": "left" },
+        "valign": { "type": "string", "enum": ["top", "middle", "bottom"], "default": "middle", "description": "text/badge only -- richtext is always top-aligned (reading text)." },
+        "color": { "type": "string", "description": "Hex color, or \"palette\"." },
+        "bg": { "type": "string", "description": "Hex color, or \"palette\"." },
+        "uppercase": { "type": "boolean", "default": false },
+        "symbols": { "type": "boolean", "default": false, "description": "richtext only -- parse [key] tokens (game.yaml symbols) into glyph chips, same convention and look as cardFrame()." },
+        "autoshrink": { "type": "boolean", "default": false, "description": "richtext only -- estimate wrapped line count and step size_pt down (to min_size_pt) until the text fits the box." },
+        "fill": { "type": "string", "description": "Hex color or \"palette\", or \"none\". rect only." },
+        "stroke": { "type": "string", "description": "Hex color or \"palette\". rect only." },
+        "stroke_w_mm": { "type": "number", "minimum": 0, "default": 0.3, "description": "rect only." },
+        "radius_mm": { "type": "number", "minimum": 0, "default": 0, "description": "rect only." },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+        "gap_mm": { "type": "number", "minimum": 0, "default": 1, "description": "row only -- spacing between cells." },
+        "of": {
+          "type": "array",
+          "description": "row only -- cells distributed evenly across the row's box.",
+          "items": {
+            "type": "object",
+            "required": ["key"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string", "minLength": 1, "description": "Dot path for this cell's value, e.g. \"attributes.loyalty\"." },
+              "label": { "type": "string", "description": "Static caption shown with the value." },
+              "font": { "type": "string" },
+              "size_pt": { "type": "number", "exclusiveMinimum": 0 },
+              "color": { "type": "string" },
+              "show_if": { "$ref": "#/$defs/condition" }
+            }
+          }
+        },
+        "show_if": { "$ref": "#/$defs/condition", "description": "Region (or row cell) is only drawn when this evaluates true -- e.g. a stat row that only appears on cards with attributes.attack." }
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+# Arcmage print-true card layout -- schemas/layout.schema.json
+#
+# This is the missing middle layer between card DATA (components/cards.json
+# + components/printings.json) and a finished, print-ready Arcmage card:
+# a faction-colored frame, a title bar, a real (or gracefully-placeholder)
+# art window, a type line, a rules-text box with [symbol] chips and
+# autoshrink-to-fit, and cost/loyalty badges -- at the real trim size of a
+# trading card, 63.5mm x 88.9mm. tools/hub_template.html's layoutCard()
+# renders this SAME spec in the cards grid, the card modal, the live card
+# editor preview (re-rendered on every keystroke), the PR visual diff, and
+# the true-size print sheet -- edit a card's name/cost/text in the editor
+# and this is the card that reformats, live, and the one that prints.
+#
+# Art: printing.art_url points at Arcmage's own live "Art" export
+# (https://aminduna.arcmage.org/api/Cards/{guid}/export?format=Art) --
+# structurally a DIFFERENT, distinctly-named endpoint from the composed
+# card renders (format=Png/Svg/Jpeg/Pdf; printing.image is the Jpeg one,
+# kept as the original_print reference shown alongside the live render).
+# See examples/arcmage/README.md's "Layout & artwork" section for exactly
+# what was and wasn't possible to verify about it. If art_url is ever
+# empty or fails to load, the art region below still renders -- as a
+# faction-tinted placeholder with the artist's credit -- never a blank box.
+
+card:
+  w_mm: 63.5
+  h_mm: 88.9
+  bleed_mm: 3
+  radius_mm: 2.8
+  bg: "#f7f1e3"
+
+fonts:
+  - { id: title, family: "Cinzel",       weight: 700 }
+  - { id: body,  family: "EB Garamond",  weight: 400 }
+
+# Same five faction colors game.yaml's own faction_colors already use for
+# the rulebook accent / generic cardFrame() border -- the layout-rendered
+# card and the rest of the hub read as the same faction identity.
+palette:
+  by: "attributes.faction"
+  map:
+    "Gaian":            "#2e7d32"
+    "Dark Legion":       "#1a1a1a"
+    "Red Banner":        "#b71c1c"
+    "House of Nobles":   "#1565c0"
+    "The Empire":        "#8a6d00"
+  default: "#4a4a4a"
+
+regions:
+  # -- frame: a colored full-bleed backing, inset by an off-white parchment
+  # body, reads as a ~1.6mm faction-colored border all the way around.
+  - { id: frame_bg, type: rect, x: 0,   y: 0,   w: 63.5, h: 88.9, fill: "palette", radius_mm: 2.8 }
+  - { id: body_bg,  type: rect, x: 1.6, y: 1.6, w: 60.3, h: 85.7, fill: "#f7f1e3", radius_mm: 2 }
+
+  # -- title bar + cost badge
+  - { id: title_bar, type: rect, x: 1.6, y: 1.6, w: 60.3, h: 8.2, fill: "palette", radius_mm: 1.6 }
+  - { id: title, type: text, src: "card.name", x: 3, y: 1.6, w: 47, h: 8.2,
+      font: title, size_pt: 10, align: left, valign: middle, color: "#ffffff" }
+  - { id: cost, type: badge, src: "card.attributes.cost", x: 52.0, y: 1.9, d: 7.6,
+      shape: circle, font: title, size_pt: 11, bg: "#1c1c1c", color: "#ffffff" }
+
+  # -- art window (raw artwork layer; see note above) + a thin faction-colored frame on top
+  - { id: art, type: image, src: "printing.art_url", credit: "printing.artist",
+      x: 4.5, y: 11.5, w: 54.5, h: 32, fit: cover }
+  - { id: art_frame, type: rect, x: 4.5, y: 11.5, w: 54.5, h: 32, fill: "none",
+      stroke: "palette", stroke_w_mm: 0.5 }
+
+  # -- type line: always shows the card type; the subtypes half only draws
+  # when a card actually has any (e.g. "Imp", "Undead") -- show_if in action
+  # on real data (Abduction has none, Cutpurse Imp has "Imp").
+  - { id: type_line, type: text, src: "card.type", x: 4.5, y: 44.6, w: 22, h: 5,
+      font: body, size_pt: 7.5, align: left, valign: middle, color: "#3a2f22", uppercase: true }
+  - { id: subtypes_line, type: text, src: "— {card.subtypes}", x: 26.5, y: 44.6, w: 32.5, h: 5,
+      font: body, size_pt: 7.5, align: left, valign: middle, color: "#6b5c46", uppercase: true,
+      show_if: "subtypes" }
+  - { id: type_rule, type: rect, x: 4.5, y: 50.0, w: 54.5, h: 0.3, fill: "palette", opacity: 0.55 }
+
+  # -- rules text: symbol chips ([spark] etc, per game.yaml symbols) + shrink-
+  # to-fit so a long rules text (Cutpurse Imp, Forgiving Vampire, ...) still
+  # reads at full box width instead of overflowing the card.
+  - { id: text, type: richtext, src: "card.text", x: 4.5, y: 51.2, w: 54.5, h: 24.5,
+      font: body, size_pt: 8, min_size_pt: 5.5, color: "#241d12", symbols: true, autoshrink: true }
+
+  # -- loyalty: Arcmage's single combat/defense number (see game.yaml's
+  # attribute_definitions note -- Arcmage prints one mark value, not split
+  # attack/defense). show_if guards it the same way a split attack/defense
+  # stat row would guard on attributes.attack in a game that has one.
+  - { id: loyalty, type: badge, src: "card.attributes.loyalty", x: 52.0, y: 76.7, d: 7.6,
+      shape: circle, font: title, size_pt: 11, bg: "#1c1c1c", color: "#ffffff",
+      show_if: "attributes.loyalty" }
+
+  - { id: faction_tag, type: text, src: "card.attributes.faction", x: 4.5, y: 78.5, w: 40, h: 6,
+      font: body, size_pt: 6, align: left, valign: bottom, color: "palette", uppercase: true,
+      show_if: "attributes.faction" }
+
+  # -- crisp outer edge on top of everything
+  - { id: edge, type: rect, x: 0, y: 0, w: 63.5, h: 88.9, fill: "none",
+      stroke: "#00000040", stroke_w_mm: 0.3, radius_mm: 2.8 }
