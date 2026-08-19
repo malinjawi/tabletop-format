@@ -1,0 +1,17 @@
+# Single set: a hand-picked, representative SUBSET of Duelyst's real card pool
+# (which spans a Core set plus many later expansions/monthly releases totaling
+# 500+ cards). Not a full reproduction — see README.md / WHAT-BROKE.md.
+- id: core
+  name: Core
+  position: 1
+  size: 118
+  description: >
+    118 cards spread across all 6 Duelyst factions (Lyonar, Songhai, Vetruvian,
+    Abyssian, Magmar, Vanar) plus Neutral, hand-selected from the game's Core
+    set and general knowledge of iconic released cards, transcribed from CC0
+    community data mirrors and the Duelyst Wiki as a format-conformance
+    fixture. Chosen for mechanical/type variety: 6 Generals (one per faction,
+    each with real Bloodbound/Bloodborn Spell text), 67 Minions, 40 Spells,
+    5 Artifacts; Basic through Legendary rarity; keywords spanning Zeal,
+    Celerity, Rush, Ranged, Flying, Frenzy, Provoke, Airdrop, Blast, Opening
+    Gambit, Dying Wish, Deathwatch, Grow, Rebirth, Backstab, Infiltrate.

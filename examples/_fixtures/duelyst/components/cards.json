@@ -1,0 +1,1920 @@
+[
+  {
+    "id": "argeon_highmayne",
+    "name": "Argeon Highmayne",
+    "type": "general",
+    "subtypes": [],
+    "text": "Bloodbound Spell: Give a friendly minion nearby your General +2 Attack.",
+    "keywords": [
+      "Bloodbound Spell"
+    ],
+    "attributes": {
+      "mana": 0,
+      "faction": "lyonar",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 25
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "silverguard_squire",
+    "name": "Silverguard Squire",
+    "type": "minion",
+    "subtypes": [],
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "lyonar",
+      "rarity": "Basic",
+      "attack": 1,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "windblade_adept",
+    "name": "Windblade Adept",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Zeal: Gains +2 Attack.",
+    "keywords": [
+      "Zeal"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "lyonar",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sunstone_templar",
+    "name": "Sunstone Templar",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever this minion attacks or counterattacks an enemy minion or General, dispel that enemy.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "lyonar",
+      "rarity": "Epic",
+      "attack": 1,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "second_sun",
+    "name": "Second Sun",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Zeal: Gains +8 Attack.",
+    "keywords": [
+      "Zeal"
+    ],
+    "attributes": {
+      "mana": 5,
+      "faction": "lyonar",
+      "rarity": "Rare",
+      "attack": 0,
+      "health": 8
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "lysian_brawler",
+    "name": "Lysian Brawler",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Celerity",
+    "keywords": [
+      "Celerity"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "lyonar",
+      "rarity": "Common",
+      "attack": 4,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "lightchaser",
+    "name": "Lightchaser",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever ANY minion or General is healed, this minion gains +1/+1.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "lyonar",
+      "rarity": "Common",
+      "attack": 3,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "grandmaster_z_ir",
+    "name": "Grandmaster Z'ir",
+    "type": "minion",
+    "subtypes": [],
+    "text": "When your General dies, Grandmaster Z'ir becomes your General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "faction": "lyonar",
+      "rarity": "Legendary",
+      "attack": 5,
+      "health": 12
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "azurite_lion",
+    "name": "Azurite Lion",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Celerity",
+    "keywords": [
+      "Celerity"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "lyonar",
+      "rarity": "Common",
+      "attack": 2,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sunriser",
+    "name": "Sunriser",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever ANY minion or General is healed, deal 2 damage to all nearby enemies.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "lyonar",
+      "rarity": "Epic",
+      "attack": 3,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "aegis_barrier",
+    "name": "Aegis Barrier",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Choose a friendly minion. It can't be targeted by enemy spells. Draw a card.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "lyonar",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "aerial_rift",
+    "name": "Aerial Rift",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give your minions Airdrop this turn. Draw a card.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "lyonar",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "auryn_nexus",
+    "name": "Auryn Nexus",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly minion +3 Health.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "lyonar",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "beam_shock",
+    "name": "Beam Shock",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Stun an enemy.",
+    "keywords": [],
+    "attributes": {
+      "mana": 0,
+      "faction": "lyonar",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "circle_of_life",
+    "name": "Circle of Life",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 5 damage to an enemy minion. Restore 5 Health to your General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "lyonar",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "decimate",
+    "name": "Decimate",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy ALL minions that are not nearby any General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "lyonar",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "divine_bond",
+    "name": "Divine Bond",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a minion +Attack equal to its Health.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "lyonar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "holy_immolation",
+    "name": "Holy Immolation",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Restore 4 Health to a friendly minion. Deal 4 damage to enemies around it.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "lyonar",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "arclyte_regalia",
+    "name": "Arclyte Regalia",
+    "type": "artifact",
+    "subtypes": [],
+    "text": "Your General gains +2 Attack. The first time your General takes damage each turn, prevent 2 of it.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "lyonar",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "kaleos_xaan",
+    "name": "Kaleos Xaan",
+    "type": "general",
+    "subtypes": [],
+    "text": "Bloodbound Spell: Teleport a friendly minion up to 2 spaces.",
+    "keywords": [
+      "Bloodbound Spell"
+    ],
+    "attributes": {
+      "mana": 0,
+      "faction": "songhai",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 25
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "heartseeker",
+    "name": "Heartseeker",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Ranged",
+    "keywords": [
+      "Ranged"
+    ],
+    "attributes": {
+      "mana": 1,
+      "faction": "songhai",
+      "rarity": "Common",
+      "attack": 1,
+      "health": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "widowmaker",
+    "name": "Widowmaker",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Ranged",
+    "keywords": [
+      "Ranged"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "songhai",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kaido_assassin",
+    "name": "Kaido Assassin",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Backstab: (1).",
+    "keywords": [
+      "Backstab"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "songhai",
+      "rarity": "Basic",
+      "attack": 3,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "jade_monk",
+    "name": "Jade Monk",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever this minion takes damage, deal 1 damage to a random enemy minion or General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "songhai",
+      "rarity": "Common",
+      "attack": 4,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "chakri_avatar",
+    "name": "Chakri Avatar",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "Whenever you cast a spell, this minion gains +1/+1.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "songhai",
+      "rarity": "Basic",
+      "attack": 1,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "celestial_phantom",
+    "name": "Celestial Phantom",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Destroy any minion damaged by this minion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "songhai",
+      "rarity": "Rare",
+      "attack": 1,
+      "health": 5
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "storm_kage",
+    "name": "Storm Kage",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever one of your spells deals damage, put a Kage Lightning in your action bar.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "faction": "songhai",
+      "rarity": "Legendary",
+      "attack": 5,
+      "health": 10
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "hamon_bladeseeker",
+    "name": "Hamon Bladeseeker",
+    "type": "minion",
+    "subtypes": [],
+    "text": "At the start of your turn, deal 2 damage to your General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "songhai",
+      "rarity": "Epic",
+      "attack": 8,
+      "health": 8
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ancestral_divination",
+    "name": "Ancestral Divination",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Draw a card for each friendly minion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "songhai",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "artifact_defiler",
+    "name": "Artifact Defiler",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy all artifacts on the enemy General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "songhai",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "deathstrike_seal",
+    "name": "Deathstrike Seal",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly minion, \"Destroy any minion damaged by this minion.\"",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "songhai",
+      "rarity": "Rare"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "eight_gates",
+    "name": "Eight Gates",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Spells you cast this turn that deal damage deal +2 damage.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "songhai",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "ghost_lightning",
+    "name": "Ghost Lightning",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 1 damage to all enemy minions.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "songhai",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "bloodrage_mask",
+    "name": "Bloodrage Mask",
+    "type": "artifact",
+    "subtypes": [],
+    "text": "Whenever you cast a spell, deal 1 damage to the enemy General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "songhai",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cyclone_mask",
+    "name": "Cyclone Mask",
+    "type": "artifact",
+    "subtypes": [],
+    "text": "Your General gains Ranged.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "songhai",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "zirix_starstrider",
+    "name": "Zirix Starstrider",
+    "type": "general",
+    "subtypes": [],
+    "text": "Bloodbound Spell: Summon a 2/2 Iron Dervish on a random space nearby your General.",
+    "keywords": [
+      "Bloodbound Spell"
+    ],
+    "attributes": {
+      "mana": 0,
+      "faction": "vetruvian",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 25
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "wind_shrike",
+    "name": "Wind Shrike",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Flying Dying Wish: Draw a card.",
+    "keywords": [
+      "Flying",
+      "Dying Wish"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "vetruvian",
+      "rarity": "Basic",
+      "attack": 4,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "starfire_scarab",
+    "name": "Starfire Scarab",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Blast",
+    "keywords": [
+      "Blast"
+    ],
+    "attributes": {
+      "mana": 5,
+      "faction": "vetruvian",
+      "rarity": "Common",
+      "attack": 4,
+      "health": 7
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sand_howler",
+    "name": "Sand Howler",
+    "type": "minion",
+    "subtypes": [
+      "Dervish"
+    ],
+    "text": "Cannot be targeted by enemy spells.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "vetruvian",
+      "rarity": "Rare",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "pyromancer",
+    "name": "Pyromancer",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Blast",
+    "keywords": [
+      "Blast"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "vetruvian",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "windstorm_obelysk",
+    "name": "Windstorm Obelysk",
+    "type": "minion",
+    "subtypes": [
+      "Structure"
+    ],
+    "text": "Summon Dervish Your Dervishes have +1 Health.",
+    "keywords": [
+      "Summon Dervish"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "vetruvian",
+      "rarity": "Common",
+      "attack": 0,
+      "health": 6
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "imperial_mechanyst",
+    "name": "Imperial Mechanyst",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Repair all of your artifacts to full durability.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "vetruvian",
+      "rarity": "Rare",
+      "attack": 2,
+      "health": 5
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "astral_phasing",
+    "name": "Astral Phasing",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly minion +5 Health and Flying.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "vetruvian",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "blindscorch",
+    "name": "Blindscorch",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Lower a minion's Attack to 0 until your next turn.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "vetruvian",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "blood_of_air",
+    "name": "Blood of Air",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Transform an enemy minion into a friendly Wind Dervish.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "vetruvian",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cosmic_flesh",
+    "name": "Cosmic Flesh",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly minion +1/+3 and Provoke.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "vetruvian",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dominate_will",
+    "name": "Dominate Will",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Take control of an enemy minion nearby your General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "faction": "vetruvian",
+      "rarity": "Rare"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "entropic_decay",
+    "name": "Entropic Decay",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy an enemy minion nearby your General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "vetruvian",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "auroras_tears",
+    "name": "Auroras Tears",
+    "type": "artifact",
+    "subtypes": [],
+    "text": "This turn, your General gains +2 Attack for every equipped artifact.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "vetruvian",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "lilithe_blightchaser",
+    "name": "Lilithe Blightchaser",
+    "type": "general",
+    "subtypes": [],
+    "text": "Bloodbound Spell: Summon 2 Wraithlings nearby your General.",
+    "keywords": [
+      "Bloodbound Spell"
+    ],
+    "attributes": {
+      "mana": 0,
+      "faction": "abyssian",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 25
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "abyssal_crawler",
+    "name": "Abyssal Crawler",
+    "type": "minion",
+    "subtypes": [],
+    "text": "At the end of your turn, turn a nearby space into Shadow Creep.",
+    "keywords": [
+      "Shadow Creep"
+    ],
+    "attributes": {
+      "mana": 1,
+      "faction": "abyssian",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "abyssal_juggernaut",
+    "name": "Abyssal Juggernaut",
+    "type": "minion",
+    "subtypes": [],
+    "text": "This minion has +1/+1 for each friendly Shadow Creep.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "abyssian",
+      "rarity": "Common",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "blood_siren",
+    "name": "Blood Siren",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Give a nearby enemy -2 attack this turn.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "abyssian",
+      "rarity": "Common",
+      "attack": 3,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "bloodtide_priestess",
+    "name": "Bloodtide Priestess",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Deathwatch: Summon a Wraithling on a random nearby space.",
+    "keywords": [
+      "Deathwatch"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "abyssian",
+      "rarity": "Rare",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "darkspine_elemental",
+    "name": "Darkspine Elemental",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Double the damage dealt by friendly Shadow Creep.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "abyssian",
+      "rarity": "Rare",
+      "attack": 1,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "nightsorrow_assassin",
+    "name": "Nightsorrow Assassin",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Rush",
+    "keywords": [
+      "Rush"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "abyssian",
+      "rarity": "Common",
+      "attack": 4,
+      "health": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "black_solus",
+    "name": "Black Solus",
+    "type": "minion",
+    "subtypes": [],
+    "text": "When you summon a Wraithling, this minion gains +2/+2.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "abyssian",
+      "rarity": "Epic",
+      "attack": 4,
+      "health": 7
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "breath_of_the_unborn",
+    "name": "Breath Of The Unborn",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 2 damage to all enemy minions. Fully heal all friendly minions.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "abyssian",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "consuming_rebirth",
+    "name": "Consuming Rebirth",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy a friendly minion. At the end of your turn, re-summon it on the same space and give it +1/+1.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "abyssian",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "daemonic_lure",
+    "name": "Daemonic Lure",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 1 damage to an enemy minion and teleport it anywhere.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "abyssian",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dark_seed",
+    "name": "Dark Seed",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 1 damage to the enemy General for each card in the opponent's action bar.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "abyssian",
+      "rarity": "Rare"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dark_transformation",
+    "name": "Dark Transformation",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy an enemy minion and summon a 1/1 Wraithling on that space.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "abyssian",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "darkfire_sacrifice",
+    "name": "Darkfire Sacrifice",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Destroy a friendly minion. Your next minion costs 2 less.",
+    "keywords": [],
+    "attributes": {
+      "mana": 0,
+      "faction": "abyssian",
+      "rarity": "Rare"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "vaath_the_immortal",
+    "name": "Vaath the Immortal",
+    "type": "general",
+    "subtypes": [],
+    "text": "Bloodbound Spell: Give your General +1 Attack.",
+    "keywords": [
+      "Bloodbound Spell"
+    ],
+    "attributes": {
+      "mana": 0,
+      "faction": "magmar",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 25
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "earth_walker",
+    "name": "Earth Walker",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Grow: +1/+1.",
+    "keywords": [
+      "Grow"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "magmar",
+      "rarity": "Basic",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "grimrock",
+    "name": "Grimrock",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Grow: +2/+2.",
+    "keywords": [
+      "Grow"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "magmar",
+      "rarity": "Common",
+      "attack": 3,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kolossus",
+    "name": "Kolossus",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Grow: +4/+4.",
+    "keywords": [
+      "Grow"
+    ],
+    "attributes": {
+      "mana": 5,
+      "faction": "magmar",
+      "rarity": "Common",
+      "attack": 1,
+      "health": 7
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "makantor_warbeast",
+    "name": "Makantor Warbeast",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Frenzy, Rush",
+    "keywords": [
+      "Frenzy",
+      "Rush"
+    ],
+    "attributes": {
+      "mana": 6,
+      "faction": "magmar",
+      "rarity": "Epic",
+      "attack": 4,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "phalanxar",
+    "name": "Phalanxar",
+    "type": "minion",
+    "subtypes": [],
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "magmar",
+      "rarity": "Basic",
+      "attack": 7,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "unstable_leviathan",
+    "name": "Unstable Leviathan",
+    "type": "minion",
+    "subtypes": [],
+    "text": "At the start of your turn, deal 4 damage to a random minion or General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "faction": "magmar",
+      "rarity": "Rare",
+      "attack": 11,
+      "health": 11
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kujata",
+    "name": "Kujata",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Your minions cost 1 less to summon and take 1 damage when summoned from your action bar.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "magmar",
+      "rarity": "Epic",
+      "attack": 2,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "young_silithar",
+    "name": "Young Silithar",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Rebirth",
+    "keywords": [
+      "Rebirth"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "magmar",
+      "rarity": "Common",
+      "attack": 2,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "veteran_silithar",
+    "name": "Veteran Silithar",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Rebirth",
+    "keywords": [
+      "Rebirth"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "magmar",
+      "rarity": "Common",
+      "attack": 4,
+      "health": 5
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "spirit_harvester",
+    "name": "Spirit Harvester",
+    "type": "minion",
+    "subtypes": [],
+    "text": "At the end of your turn, deal 2 damage to ALL other minions.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "magmar",
+      "rarity": "Rare",
+      "attack": 5,
+      "health": 5
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "earth_sister_taygete",
+    "name": "Earth Sister Taygete",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever this minion takes damage, deal that much damage to all nearby enemies.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "magmar",
+      "rarity": "Legendary",
+      "attack": 3,
+      "health": 4
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "amplification",
+    "name": "Amplification",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly damaged minion +2 Attack and +4 Health.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "magmar",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "bounded_lifeforce",
+    "name": "Bounded Lifeforce",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Your General becomes 10/10.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "faction": "magmar",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "chrysalis_burst",
+    "name": "Chrysalis Burst",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Summon a random Egg in 4 random spaces.",
+    "keywords": [],
+    "attributes": {
+      "mana": 6,
+      "faction": "magmar",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "dampening_wave",
+    "name": "Dampening Wave",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Choose an enemy minion. It can no longer counterattack.",
+    "keywords": [],
+    "attributes": {
+      "mana": 0,
+      "faction": "magmar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dance_of_dreams",
+    "name": "Dance of Dreams",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Whenever a friendly minion dies this turn, draw a card.",
+    "keywords": [],
+    "attributes": {
+      "mana": 1,
+      "faction": "magmar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "diretide_frenzy",
+    "name": "Diretide Frenzy",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly minion +1 Attack and Frenzy.",
+    "keywords": [
+      "Frenzy"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "magmar",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "egg_morph",
+    "name": "Egg Morph",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Turn a non-Egg minion into an Egg, or hatch an Egg.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "magmar",
+      "rarity": "Rare"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "adamantite_claws",
+    "name": "Adamantite Claws",
+    "type": "artifact",
+    "subtypes": [],
+    "text": "Your General gains +4 Attack.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "magmar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "faie_bloodwing",
+    "name": "Faie Bloodwing",
+    "type": "general",
+    "subtypes": [],
+    "text": "Bloodborn Spell: Deal 2 damage to all enemies in the enemy General's Column.",
+    "keywords": [
+      "Bloodborn Spell"
+    ],
+    "attributes": {
+      "mana": 0,
+      "faction": "vanar",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 25
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "fenrir_warmaster",
+    "name": "Fenrir Warmaster",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Dying Wish: Summon a 3/3 Ghost Wolf on this space.",
+    "keywords": [
+      "Dying Wish"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "vanar",
+      "rarity": "Basic",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "crystal_cloaker",
+    "name": "Crystal Cloaker",
+    "type": "minion",
+    "subtypes": [
+      "Vespyr"
+    ],
+    "text": "Infiltrate: Gains +2 Attack.",
+    "keywords": [
+      "Infiltrate"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "arctic_displacer",
+    "name": "Arctic Displacer",
+    "type": "minion",
+    "subtypes": [
+      "Vespyr"
+    ],
+    "text": "Airdrop",
+    "keywords": [
+      "Airdrop"
+    ],
+    "attributes": {
+      "mana": 5,
+      "faction": "vanar",
+      "rarity": "Basic",
+      "attack": 10,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "draugar_lord",
+    "name": "Draugar Lord",
+    "type": "minion",
+    "subtypes": [
+      "Vespyr"
+    ],
+    "text": "Dying Wish: Summon a 4/8 Ice Drake on this space.",
+    "keywords": [
+      "Dying Wish"
+    ],
+    "attributes": {
+      "mana": 6,
+      "faction": "vanar",
+      "rarity": "Epic",
+      "attack": 4,
+      "health": 8
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "borean_bear",
+    "name": "Borean Bear",
+    "type": "minion",
+    "subtypes": [
+      "Vespyr"
+    ],
+    "text": "Whenever you summon a Vespyr minion, this minion gains +1 Attack.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Common",
+      "attack": 1,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "razorback",
+    "name": "Razorback",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Your other non-Wall minions gain +2 Attack.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "vanar",
+      "rarity": "Rare",
+      "attack": 4,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "glacial_elemental",
+    "name": "Glacial Elemental",
+    "type": "minion",
+    "subtypes": [
+      "Vespyr"
+    ],
+    "text": "Whenever you summon a Vespyr minion, deal 2 damage to a random enemy minion.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "vanar",
+      "rarity": "Rare",
+      "attack": 2,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "crystal_wisp",
+    "name": "Crystal Wisp",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Dying Wish: Permanently gain 1 mana crystal.",
+    "keywords": [
+      "Dying Wish"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Basic",
+      "attack": 1,
+      "health": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "aspect_of_the_mountains",
+    "name": "Aspect of the Mountains",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Transform ANY minion into a 5/5 Seismic Elemental. Deal 5 damage to enemy minions around it.",
+    "keywords": [],
+    "attributes": {
+      "mana": 6,
+      "faction": "vanar",
+      "rarity": "Legendary"
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "aspect_of_the_ravager",
+    "name": "Aspect of the Ravager",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Transform ANY minion into a 3/3 Ravager with no abilities.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "aspect_of_the_wyrm",
+    "name": "Aspect of the Wyrm",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Transform ANY minion into a 4/4 Whyte Drake with Flying. Nearby friendly minions gain Flying.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "vanar",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "avalanche",
+    "name": "Avalanche",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Deal 4 damage to everything on your starting side of the battlefield and Stun them.",
+    "keywords": [],
+    "attributes": {
+      "mana": 4,
+      "faction": "vanar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "blazing_spines",
+    "name": "Blazing Spines",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Summon two joined 3/3 Walls that can attack.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "vanar",
+      "rarity": "Rare"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "bonechill_barrier",
+    "name": "Bonechill Barrier",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Summon three joined 0/2 Vespyr Walls. Minions that attack these walls are Stunned.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Common"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "boundless_courage",
+    "name": "Boundless Courage",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Give a friendly minion +2 Attack. It takes no damage this turn.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Epic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "chromatic_cold",
+    "name": "Chromatic Cold",
+    "type": "spell",
+    "subtypes": [],
+    "text": "Dispel a space. If there is an enemy on that space, deal it 1 damage.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "vanar",
+      "rarity": "Basic"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dragonlark",
+    "name": "Dragonlark",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Flying",
+    "keywords": [
+      "Flying"
+    ],
+    "attributes": {
+      "mana": 1,
+      "faction": "neutral",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 1
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "silvertongue_corsair",
+    "name": "Silvertongue Corsair",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Takes no damage from the enemy General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "neutral",
+      "rarity": "Rare",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "saberspine_tiger",
+    "name": "Saberspine Tiger",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Rush",
+    "keywords": [
+      "Rush"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "neutral",
+      "rarity": "Basic",
+      "attack": 3,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "fire_spitter",
+    "name": "Fire Spitter",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Ranged",
+    "keywords": [
+      "Ranged"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "neutral",
+      "rarity": "Basic",
+      "attack": 3,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ephemeral_shroud",
+    "name": "Ephemeral Shroud",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Dispel 1 nearby space.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 2,
+      "faction": "neutral",
+      "rarity": "Basic",
+      "attack": 2,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "brightmoss_golem",
+    "name": "Brightmoss Golem",
+    "type": "minion",
+    "subtypes": [
+      "Golem"
+    ],
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "neutral",
+      "rarity": "Basic",
+      "attack": 4,
+      "health": 9
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sun_seer",
+    "name": "Sun Seer",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "Whenever this minion deals damage, restore 2 Health to your General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 3,
+      "faction": "neutral",
+      "rarity": "Common",
+      "attack": 2,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "manaforger",
+    "name": "Manaforger",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "Your spells cost 1 less to cast.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "neutral",
+      "rarity": "Rare",
+      "attack": 1,
+      "health": 2
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "lightbender",
+    "name": "Lightbender",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "Opening Gambit: Dispel ALL spaces around it.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "neutral",
+      "rarity": "Rare",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "crossbones",
+    "name": "Crossbones",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Destroy an enemy minion with Ranged.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 3,
+      "faction": "neutral",
+      "rarity": "Rare",
+      "attack": 3,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sworn_defender",
+    "name": "Sworn Defender",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Whenever your General takes damage, restore this minion to full Health.",
+    "keywords": [],
+    "attributes": {
+      "mana": 5,
+      "faction": "neutral",
+      "rarity": "Epic",
+      "attack": 4,
+      "health": 7
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "pandora",
+    "name": "Pandora",
+    "type": "minion",
+    "subtypes": [],
+    "text": "At the end of your turn, summon a 3/3 Spirit Wolf with a random ability on a nearby space.",
+    "keywords": [],
+    "attributes": {
+      "mana": 7,
+      "faction": "neutral",
+      "rarity": "Legendary",
+      "attack": 3,
+      "health": 10
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "eclipse",
+    "name": "Eclipse",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "Whenever this minion takes damage, it deals that much damage to the enemy General.",
+    "keywords": [],
+    "attributes": {
+      "mana": 6,
+      "faction": "neutral",
+      "rarity": "Legendary",
+      "attack": 3,
+      "health": 7
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "aethermaster",
+    "name": "Aethermaster",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "You may replace an additional card each turn.",
+    "keywords": [],
+    "attributes": {
+      "mana": 2,
+      "faction": "neutral",
+      "rarity": "Epic",
+      "attack": 1,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "emerald_rejuvenator",
+    "name": "Emerald Rejuvenator",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Restore 4 Health to your General.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "neutral",
+      "rarity": "Rare",
+      "attack": 4,
+      "health": 4
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "swamp_entangler",
+    "name": "Swamp Entangler",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Provoke",
+    "keywords": [
+      "Provoke"
+    ],
+    "attributes": {
+      "mana": 1,
+      "faction": "neutral",
+      "rarity": "Common",
+      "attack": 0,
+      "health": 3
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "archon_spellbinder",
+    "name": "Archon Spellbinder",
+    "type": "minion",
+    "subtypes": [
+      "Arcanyst"
+    ],
+    "text": "Your opponent's spells cost 1 more to cast.",
+    "keywords": [],
+    "attributes": {
+      "mana": 6,
+      "faction": "neutral",
+      "rarity": "Legendary",
+      "attack": 7,
+      "health": 9
+    },
+    "deck_limit": 1
+  },
+  {
+    "id": "artifact_hunter",
+    "name": "Artifact Hunter",
+    "type": "minion",
+    "subtypes": [],
+    "text": "Opening Gambit: Draw a random artifact from your deck.",
+    "keywords": [
+      "Opening Gambit"
+    ],
+    "attributes": {
+      "mana": 4,
+      "faction": "neutral",
+      "rarity": "Epic",
+      "attack": 3,
+      "health": 5
+    },
+    "deck_limit": 3
+  }
+]

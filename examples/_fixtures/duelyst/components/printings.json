@@ -1,0 +1,1536 @@
+[
+  {
+    "id": "p_argeon_highmayne_core",
+    "card_id": "argeon_highmayne",
+    "set_id": "core",
+    "collector_number": "001",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_silverguard_squire_core",
+    "card_id": "silverguard_squire",
+    "set_id": "core",
+    "collector_number": "002",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_windblade_adept_core",
+    "card_id": "windblade_adept",
+    "set_id": "core",
+    "collector_number": "003",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_sunstone_templar_core",
+    "card_id": "sunstone_templar",
+    "set_id": "core",
+    "collector_number": "004",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_second_sun_core",
+    "card_id": "second_sun",
+    "set_id": "core",
+    "collector_number": "005",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_lysian_brawler_core",
+    "card_id": "lysian_brawler",
+    "set_id": "core",
+    "collector_number": "006",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_lightchaser_core",
+    "card_id": "lightchaser",
+    "set_id": "core",
+    "collector_number": "007",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_grandmaster_z_ir_core",
+    "card_id": "grandmaster_z_ir",
+    "set_id": "core",
+    "collector_number": "008",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_azurite_lion_core",
+    "card_id": "azurite_lion",
+    "set_id": "core",
+    "collector_number": "009",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_sunriser_core",
+    "card_id": "sunriser",
+    "set_id": "core",
+    "collector_number": "010",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_aegis_barrier_core",
+    "card_id": "aegis_barrier",
+    "set_id": "core",
+    "collector_number": "011",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_aerial_rift_core",
+    "card_id": "aerial_rift",
+    "set_id": "core",
+    "collector_number": "012",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_auryn_nexus_core",
+    "card_id": "auryn_nexus",
+    "set_id": "core",
+    "collector_number": "013",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_beam_shock_core",
+    "card_id": "beam_shock",
+    "set_id": "core",
+    "collector_number": "014",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_circle_of_life_core",
+    "card_id": "circle_of_life",
+    "set_id": "core",
+    "collector_number": "015",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_decimate_core",
+    "card_id": "decimate",
+    "set_id": "core",
+    "collector_number": "016",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_divine_bond_core",
+    "card_id": "divine_bond",
+    "set_id": "core",
+    "collector_number": "017",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_holy_immolation_core",
+    "card_id": "holy_immolation",
+    "set_id": "core",
+    "collector_number": "018",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_arclyte_regalia_core",
+    "card_id": "arclyte_regalia",
+    "set_id": "core",
+    "collector_number": "019",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_kaleos_xaan_core",
+    "card_id": "kaleos_xaan",
+    "set_id": "core",
+    "collector_number": "020",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_heartseeker_core",
+    "card_id": "heartseeker",
+    "set_id": "core",
+    "collector_number": "021",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_widowmaker_core",
+    "card_id": "widowmaker",
+    "set_id": "core",
+    "collector_number": "022",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_kaido_assassin_core",
+    "card_id": "kaido_assassin",
+    "set_id": "core",
+    "collector_number": "023",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_jade_monk_core",
+    "card_id": "jade_monk",
+    "set_id": "core",
+    "collector_number": "024",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_chakri_avatar_core",
+    "card_id": "chakri_avatar",
+    "set_id": "core",
+    "collector_number": "025",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_celestial_phantom_core",
+    "card_id": "celestial_phantom",
+    "set_id": "core",
+    "collector_number": "026",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_storm_kage_core",
+    "card_id": "storm_kage",
+    "set_id": "core",
+    "collector_number": "027",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_hamon_bladeseeker_core",
+    "card_id": "hamon_bladeseeker",
+    "set_id": "core",
+    "collector_number": "028",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_ancestral_divination_core",
+    "card_id": "ancestral_divination",
+    "set_id": "core",
+    "collector_number": "029",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_artifact_defiler_core",
+    "card_id": "artifact_defiler",
+    "set_id": "core",
+    "collector_number": "030",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_deathstrike_seal_core",
+    "card_id": "deathstrike_seal",
+    "set_id": "core",
+    "collector_number": "031",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_eight_gates_core",
+    "card_id": "eight_gates",
+    "set_id": "core",
+    "collector_number": "032",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_ghost_lightning_core",
+    "card_id": "ghost_lightning",
+    "set_id": "core",
+    "collector_number": "033",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_bloodrage_mask_core",
+    "card_id": "bloodrage_mask",
+    "set_id": "core",
+    "collector_number": "034",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_cyclone_mask_core",
+    "card_id": "cyclone_mask",
+    "set_id": "core",
+    "collector_number": "035",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_zirix_starstrider_core",
+    "card_id": "zirix_starstrider",
+    "set_id": "core",
+    "collector_number": "036",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_wind_shrike_core",
+    "card_id": "wind_shrike",
+    "set_id": "core",
+    "collector_number": "037",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_starfire_scarab_core",
+    "card_id": "starfire_scarab",
+    "set_id": "core",
+    "collector_number": "038",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_sand_howler_core",
+    "card_id": "sand_howler",
+    "set_id": "core",
+    "collector_number": "039",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_pyromancer_core",
+    "card_id": "pyromancer",
+    "set_id": "core",
+    "collector_number": "040",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_windstorm_obelysk_core",
+    "card_id": "windstorm_obelysk",
+    "set_id": "core",
+    "collector_number": "041",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_imperial_mechanyst_core",
+    "card_id": "imperial_mechanyst",
+    "set_id": "core",
+    "collector_number": "042",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_astral_phasing_core",
+    "card_id": "astral_phasing",
+    "set_id": "core",
+    "collector_number": "043",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_blindscorch_core",
+    "card_id": "blindscorch",
+    "set_id": "core",
+    "collector_number": "044",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_blood_of_air_core",
+    "card_id": "blood_of_air",
+    "set_id": "core",
+    "collector_number": "045",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_cosmic_flesh_core",
+    "card_id": "cosmic_flesh",
+    "set_id": "core",
+    "collector_number": "046",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_dominate_will_core",
+    "card_id": "dominate_will",
+    "set_id": "core",
+    "collector_number": "047",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_entropic_decay_core",
+    "card_id": "entropic_decay",
+    "set_id": "core",
+    "collector_number": "048",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_auroras_tears_core",
+    "card_id": "auroras_tears",
+    "set_id": "core",
+    "collector_number": "049",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_lilithe_blightchaser_core",
+    "card_id": "lilithe_blightchaser",
+    "set_id": "core",
+    "collector_number": "050",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_abyssal_crawler_core",
+    "card_id": "abyssal_crawler",
+    "set_id": "core",
+    "collector_number": "051",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_abyssal_juggernaut_core",
+    "card_id": "abyssal_juggernaut",
+    "set_id": "core",
+    "collector_number": "052",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_blood_siren_core",
+    "card_id": "blood_siren",
+    "set_id": "core",
+    "collector_number": "053",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_bloodtide_priestess_core",
+    "card_id": "bloodtide_priestess",
+    "set_id": "core",
+    "collector_number": "054",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_darkspine_elemental_core",
+    "card_id": "darkspine_elemental",
+    "set_id": "core",
+    "collector_number": "055",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_nightsorrow_assassin_core",
+    "card_id": "nightsorrow_assassin",
+    "set_id": "core",
+    "collector_number": "056",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_black_solus_core",
+    "card_id": "black_solus",
+    "set_id": "core",
+    "collector_number": "057",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_breath_of_the_unborn_core",
+    "card_id": "breath_of_the_unborn",
+    "set_id": "core",
+    "collector_number": "058",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_consuming_rebirth_core",
+    "card_id": "consuming_rebirth",
+    "set_id": "core",
+    "collector_number": "059",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_daemonic_lure_core",
+    "card_id": "daemonic_lure",
+    "set_id": "core",
+    "collector_number": "060",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_dark_seed_core",
+    "card_id": "dark_seed",
+    "set_id": "core",
+    "collector_number": "061",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_dark_transformation_core",
+    "card_id": "dark_transformation",
+    "set_id": "core",
+    "collector_number": "062",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_darkfire_sacrifice_core",
+    "card_id": "darkfire_sacrifice",
+    "set_id": "core",
+    "collector_number": "063",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_vaath_the_immortal_core",
+    "card_id": "vaath_the_immortal",
+    "set_id": "core",
+    "collector_number": "064",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_earth_walker_core",
+    "card_id": "earth_walker",
+    "set_id": "core",
+    "collector_number": "065",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_grimrock_core",
+    "card_id": "grimrock",
+    "set_id": "core",
+    "collector_number": "066",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_kolossus_core",
+    "card_id": "kolossus",
+    "set_id": "core",
+    "collector_number": "067",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_makantor_warbeast_core",
+    "card_id": "makantor_warbeast",
+    "set_id": "core",
+    "collector_number": "068",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_phalanxar_core",
+    "card_id": "phalanxar",
+    "set_id": "core",
+    "collector_number": "069",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_unstable_leviathan_core",
+    "card_id": "unstable_leviathan",
+    "set_id": "core",
+    "collector_number": "070",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_kujata_core",
+    "card_id": "kujata",
+    "set_id": "core",
+    "collector_number": "071",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_young_silithar_core",
+    "card_id": "young_silithar",
+    "set_id": "core",
+    "collector_number": "072",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_veteran_silithar_core",
+    "card_id": "veteran_silithar",
+    "set_id": "core",
+    "collector_number": "073",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_spirit_harvester_core",
+    "card_id": "spirit_harvester",
+    "set_id": "core",
+    "collector_number": "074",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_earth_sister_taygete_core",
+    "card_id": "earth_sister_taygete",
+    "set_id": "core",
+    "collector_number": "075",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_amplification_core",
+    "card_id": "amplification",
+    "set_id": "core",
+    "collector_number": "076",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_bounded_lifeforce_core",
+    "card_id": "bounded_lifeforce",
+    "set_id": "core",
+    "collector_number": "077",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_chrysalis_burst_core",
+    "card_id": "chrysalis_burst",
+    "set_id": "core",
+    "collector_number": "078",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_dampening_wave_core",
+    "card_id": "dampening_wave",
+    "set_id": "core",
+    "collector_number": "079",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_dance_of_dreams_core",
+    "card_id": "dance_of_dreams",
+    "set_id": "core",
+    "collector_number": "080",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_diretide_frenzy_core",
+    "card_id": "diretide_frenzy",
+    "set_id": "core",
+    "collector_number": "081",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_egg_morph_core",
+    "card_id": "egg_morph",
+    "set_id": "core",
+    "collector_number": "082",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_adamantite_claws_core",
+    "card_id": "adamantite_claws",
+    "set_id": "core",
+    "collector_number": "083",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_faie_bloodwing_core",
+    "card_id": "faie_bloodwing",
+    "set_id": "core",
+    "collector_number": "084",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_fenrir_warmaster_core",
+    "card_id": "fenrir_warmaster",
+    "set_id": "core",
+    "collector_number": "085",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_crystal_cloaker_core",
+    "card_id": "crystal_cloaker",
+    "set_id": "core",
+    "collector_number": "086",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_arctic_displacer_core",
+    "card_id": "arctic_displacer",
+    "set_id": "core",
+    "collector_number": "087",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_draugar_lord_core",
+    "card_id": "draugar_lord",
+    "set_id": "core",
+    "collector_number": "088",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_borean_bear_core",
+    "card_id": "borean_bear",
+    "set_id": "core",
+    "collector_number": "089",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_razorback_core",
+    "card_id": "razorback",
+    "set_id": "core",
+    "collector_number": "090",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_glacial_elemental_core",
+    "card_id": "glacial_elemental",
+    "set_id": "core",
+    "collector_number": "091",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_crystal_wisp_core",
+    "card_id": "crystal_wisp",
+    "set_id": "core",
+    "collector_number": "092",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_aspect_of_the_mountains_core",
+    "card_id": "aspect_of_the_mountains",
+    "set_id": "core",
+    "collector_number": "093",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_aspect_of_the_ravager_core",
+    "card_id": "aspect_of_the_ravager",
+    "set_id": "core",
+    "collector_number": "094",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_aspect_of_the_wyrm_core",
+    "card_id": "aspect_of_the_wyrm",
+    "set_id": "core",
+    "collector_number": "095",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_avalanche_core",
+    "card_id": "avalanche",
+    "set_id": "core",
+    "collector_number": "096",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_blazing_spines_core",
+    "card_id": "blazing_spines",
+    "set_id": "core",
+    "collector_number": "097",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_bonechill_barrier_core",
+    "card_id": "bonechill_barrier",
+    "set_id": "core",
+    "collector_number": "098",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_boundless_courage_core",
+    "card_id": "boundless_courage",
+    "set_id": "core",
+    "collector_number": "099",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_chromatic_cold_core",
+    "card_id": "chromatic_cold",
+    "set_id": "core",
+    "collector_number": "100",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_dragonlark_core",
+    "card_id": "dragonlark",
+    "set_id": "core",
+    "collector_number": "101",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_silvertongue_corsair_core",
+    "card_id": "silvertongue_corsair",
+    "set_id": "core",
+    "collector_number": "102",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_saberspine_tiger_core",
+    "card_id": "saberspine_tiger",
+    "set_id": "core",
+    "collector_number": "103",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_fire_spitter_core",
+    "card_id": "fire_spitter",
+    "set_id": "core",
+    "collector_number": "104",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_ephemeral_shroud_core",
+    "card_id": "ephemeral_shroud",
+    "set_id": "core",
+    "collector_number": "105",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_brightmoss_golem_core",
+    "card_id": "brightmoss_golem",
+    "set_id": "core",
+    "collector_number": "106",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_sun_seer_core",
+    "card_id": "sun_seer",
+    "set_id": "core",
+    "collector_number": "107",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_manaforger_core",
+    "card_id": "manaforger",
+    "set_id": "core",
+    "collector_number": "108",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_lightbender_core",
+    "card_id": "lightbender",
+    "set_id": "core",
+    "collector_number": "109",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_crossbones_core",
+    "card_id": "crossbones",
+    "set_id": "core",
+    "collector_number": "110",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_sworn_defender_core",
+    "card_id": "sworn_defender",
+    "set_id": "core",
+    "collector_number": "111",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_pandora_core",
+    "card_id": "pandora",
+    "set_id": "core",
+    "collector_number": "112",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_eclipse_core",
+    "card_id": "eclipse",
+    "set_id": "core",
+    "collector_number": "113",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_aethermaster_core",
+    "card_id": "aethermaster",
+    "set_id": "core",
+    "collector_number": "114",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_emerald_rejuvenator_core",
+    "card_id": "emerald_rejuvenator",
+    "set_id": "core",
+    "collector_number": "115",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_swamp_entangler_core",
+    "card_id": "swamp_entangler",
+    "set_id": "core",
+    "collector_number": "116",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_archon_spellbinder_core",
+    "card_id": "archon_spellbinder",
+    "set_id": "core",
+    "collector_number": "117",
+    "quantity": 1,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  },
+  {
+    "id": "p_artifact_hunter_core",
+    "card_id": "artifact_hunter",
+    "set_id": "core",
+    "collector_number": "118",
+    "quantity": 3,
+    "provenance": {
+      "source": "human",
+      "creator": "Counterplay Games (original design/data); this fixture's card text was transcribed from open-duelyst/duelyst-derived community data (willroberts/decklyst, creatures/duelyst) and the community-run Duelyst Wiki (Fandom), cross-checked against the CC0-licensed OpenDuelyst repository's own README/LICENSE/package.json for licensing. See README.md.",
+      "license": "CC0-1.0",
+      "source_url": "https://github.com/open-duelyst/duelyst"
+    }
+  }
+]

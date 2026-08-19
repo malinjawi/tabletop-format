@@ -1,0 +1,20 @@
+id: standard
+name: Standard (fixture)
+description: >
+  Fixture-only format: the legal pool is just this repo's single "core" set.
+  Real Duelyst decks are 40 cards (a General is not one of the 40 — it is
+  always in play, never drawn, and has no deck slot at all, closer to a
+  Netrunner identity than a Hearthstone hero). Max copies per non-Legendary
+  card and the singleton Legendary cap are enforced here via card.deck_limit
+  (3, or 1 for Legendary/General) rather than a deck-size formula — see
+  WHAT-BROKE.md for what this format's deck_rules cannot express (no
+  General field on deck.schema.json at all, mirroring Netrunner's identity
+  gap already documented in netrunner-sg/WHAT-BROKE.md #3).
+card_pool:
+  - core
+deck_rules:
+  min_size: 40
+  max_size: 40
+  notes: >
+    Counts non-General cards only, by real Duelyst convention. Nothing in
+    this platform's schema enforces that convention — see WHAT-BROKE.md.

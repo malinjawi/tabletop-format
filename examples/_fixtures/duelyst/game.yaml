@@ -1,0 +1,109 @@
+format_version: "0.1.0"
+id: duelyst
+title: "Duelyst"
+# LICENSE — verified directly against primary sources during this port (see README.md
+# for full citations, quotes, and URLs):
+#   - https://github.com/open-duelyst/duelyst/blob/main/LICENSE -> full text of the
+#     "Creative Commons Legal Code / CC0 1.0 Universal" license.
+#   - https://github.com/open-duelyst/duelyst/blob/main/README.md -> "OpenDuelyst is
+#     licensed under the Creative Commons Zero v1.0 Universal license."
+#   - https://github.com/open-duelyst/duelyst/blob/main/package.json -> "license": "CC0-1.0"
+# This is a SINGLE blanket LICENSE file at the repo root covering the entire
+# repository as committed by Counterplay Games on 2023-01-10 — code AND art/resource
+# assets together (the README's own example image, app/resources/ui/brand_duelyst.png,
+# is versioned under this same repo/license, and secondary reporting at the time
+# — PC Gamer, GameDeveloper.com, GamingOnLinux, the OpenGameArt.org community forum —
+# consistently describes "source code AND assets" / "art assets" as included). No
+# separate ASSETS-only license file or carve-out was found. CODE and ART are both CC0-1.0.
+# See README.md "License verification" section for the full record, including the one
+# open question (exact in-repo sprite/art file paths were not directly browsable in
+# this session — see docs/art-library.md).
+license: CC0-1.0
+version: "0.1.0"
+book_style: classic
+description: >
+  Test fixture: a representative ~118-card slice of Duelyst, Counterplay Games'
+  digital collectible-card / tactical-positioning hybrid (2016-2020), open-sourced
+  in full (engine code + assets) under CC0-1.0 on 2023-01-10 as "OpenDuelyst". Ported
+  here as a DATA-TIER fixture (card identity: name/faction/type/cost/stats/text/
+  rarity/keywords) to stress-test this platform's card-game schema against a real
+  digital CCG whose core loop is inseparable from a 5x9 positional battlefield —
+  see WHAT-BROKE.md for everything about Duelyst that a card-only format cannot
+  express (board, unit placement, generals-as-health-pool, the Replace mechanic).
+genre: tactical collectible card game
+tags: [fixture, test-only, digital-ccg, duelyst, positional-board, cc0]
+authors:
+  - name: Counterplay Games (original design, code, and art; open-sourced as OpenDuelyst)
+    role: design
+  - name: OpenDuelyst contributors / Duelyst Wiki (Fandom) community
+    role: data
+players:
+  min: 2
+  max: 2
+playtime_minutes:
+  min: 15
+  max: 30
+default_provenance:
+  source: human
+  creator: >
+    Counterplay Games (original card design, names, stats, and rules text,
+    released CC0-1.0). This fixture's ~118-card subset was transcribed from
+    CC0-covered community mirrors of the game's own card database
+    (willroberts/decklyst, creatures/duelyst — both derived from the live
+    Duelyst client's GameDataManager) and the community-maintained Duelyst
+    Wiki (Fandom) card tables, cross-checked against the official
+    open-duelyst/duelyst repository for licensing. See README.md.
+  notes: >
+    Data-tier fixture only — no board/positional state, no play-state engine.
+    Not hosted/published as a playable product. See WHAT-BROKE.md.
+attribute_definitions:
+  - key: mana
+    name: Mana
+    type: integer
+    required: true
+    description: Mana Crystals paid to play this card (Generals show 0 — they are never cast, only ever in play).
+  - key: attack
+    name: Attack
+    type: integer
+    description: Damage dealt in combat. Present on minions and Generals; absent on spells/artifacts.
+  - key: health
+    name: Health
+    type: integer
+    description: Damage this card can take before it dies. Present on minions and Generals (a General's Health IS that player's life total); absent on spells/artifacts.
+  - key: faction
+    name: Faction
+    type: string
+    required: true
+    description: One of the 6 Duelyst factions (lyonar, songhai, vetruvian, abyssian, magmar, vanar) or "neutral".
+  - key: rarity
+    name: Rarity
+    type: string
+    required: true
+    description: Basic, Common, Rare, Epic, or Legendary.
+symbols: []
+type_colors:
+  general:  { fg: "#7a1f1f", bg: "#f5dcdc" }
+  minion:   { fg: "#2c3e50", bg: "#dde4ea" }
+  spell:    { fg: "#4a2f7a", bg: "#e5dcf2" }
+  artifact: { fg: "#8a5a1f", bg: "#f2e6d2" }
+# Faction colors drive the client renderer's accent the same way netrunner-sg's do
+# (a card's attributes.faction takes priority over type_colors, per game.schema.json).
+# Loosely themed on each faction's real in-game color identity (solar gold Lyonar,
+# blood-crimson Songhai, desert-gold Vetruvian, shadow-violet Abyssian, primal-green
+# Magmar, glacial-blue Vanar) — original palette choices for this fixture, not a
+# reproduction of Counterplay's exact brand hex values (which were not verified).
+faction_colors:
+  lyonar:    { fg: "#8a6d1f", bg: "#f7efd6" }
+  songhai:   { fg: "#8c1f2b", bg: "#f6dde0" }
+  vetruvian: { fg: "#a3701f", bg: "#f5e6c8" }
+  abyssian:  { fg: "#5a2d82", bg: "#e8dcf2" }
+  magmar:    { fg: "#2f6b2f", bg: "#dcefda" }
+  vanar:     { fg: "#1f5f8a", bg: "#d9edf5" }
+  neutral:   { fg: "#55565c", bg: "#e6e6e8" }
+official_docs:
+  - name: "OpenDuelyst source repository (code + assets, CC0-1.0)"
+    url: "https://github.com/open-duelyst/duelyst"
+  - name: "OpenDuelyst LICENSE (CC0 1.0 Universal, full text)"
+    url: "https://github.com/open-duelyst/duelyst/blob/main/LICENSE"
+  - name: "Duelyst Wiki (Fandom, community-maintained card reference used for spell/artifact text in this fixture)"
+    url: "https://duelyst.fandom.com/wiki/Core"
