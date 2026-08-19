@@ -1,0 +1,1122 @@
+[
+  {
+    "id": "p_abduction_rb",
+    "card_id": "abduction",
+    "set_id": "rebirth",
+    "collector_number": "001",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/6e32f1b9-6721-42c1-b8cb-9d2314e37556/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_besieged_city_rb",
+    "card_id": "besieged_city",
+    "set_id": "rebirth",
+    "collector_number": "002",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/5e18ba56-5602-4f12-b4d1-d7d4c5bbf8e5/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_cutpurse_imp_rb",
+    "card_id": "cutpurse_imp",
+    "set_id": "rebirth",
+    "collector_number": "003",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/df11b672-2449-4ca1-b4f1-a8e714429ac0/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_dark_portal_rb",
+    "card_id": "dark_portal",
+    "set_id": "rebirth",
+    "collector_number": "004",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/23d68aac-807f-4e8e-baf8-695ee79fe600/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_deadly_shock_rb",
+    "card_id": "deadly_shock",
+    "set_id": "rebirth",
+    "collector_number": "005",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/b324e835-8352-4d0b-8426-366c358d9351/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_forgiving_vampire_rb",
+    "card_id": "forgiving_vampire",
+    "set_id": "rebirth",
+    "collector_number": "006",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/fe68f069-6e7f-4d66-9db9-c76a4338b53d/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_foul_imps_rb",
+    "card_id": "foul_imps",
+    "set_id": "rebirth",
+    "collector_number": "007",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/e040f4e6-5826-4ff2-aa37-267d204b254d/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_ghoul_rb",
+    "card_id": "ghoul",
+    "set_id": "rebirth",
+    "collector_number": "008",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/3fbd35fd-836a-4d15-8736-7ae35fed0f1b/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_imp_union_leader_rb",
+    "card_id": "imp_union_leader",
+    "set_id": "rebirth",
+    "collector_number": "009",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/d75d0ba9-0fd9-4eef-a1b2-288a0942a853/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_lobotomized_library_rb",
+    "card_id": "lobotomized_library",
+    "set_id": "rebirth",
+    "collector_number": "010",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/ca459abf-2452-4d92-966c-da73e55b383d/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_misled_orc_rb",
+    "card_id": "misled_orc",
+    "set_id": "rebirth",
+    "collector_number": "011",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/861fe424-64d7-4b3e-a471-17778ba06712/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_nirvana_of_the_undead_rb",
+    "card_id": "nirvana_of_the_undead",
+    "set_id": "rebirth",
+    "collector_number": "012",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/97f9e03b-9666-48d0-a44e-2ad59ae2e578/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_outmaneuvered_rb",
+    "card_id": "outmaneuvered",
+    "set_id": "rebirth",
+    "collector_number": "013",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/2493d016-fc78-473c-9f4f-e5f9589adf0d/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_second_sons_army_camp_rb",
+    "card_id": "second_sons_army_camp",
+    "set_id": "rebirth",
+    "collector_number": "014",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/b1f86aab-92fc-4d8b-80cd-36e559d2f5ef/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_shadow_in_the_dark_rb",
+    "card_id": "shadow_in_the_dark",
+    "set_id": "rebirth",
+    "collector_number": "015",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/d0ba6168-a245-4aa0-a437-923517a19314/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_undead_archer_rb",
+    "card_id": "undead_archer",
+    "set_id": "rebirth",
+    "collector_number": "016",
+    "quantity": 1,
+    "artist": "Chris Wilson",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/4ff310fc-d1b8-4243-91e9-369989bedf1f/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Chris Wilson",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_wild_warg_rb",
+    "card_id": "wild_warg",
+    "set_id": "rebirth",
+    "collector_number": "017",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/44d030ea-99d1-41a0-92e8-b62caab5a05c/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_botanist_rb",
+    "card_id": "botanist",
+    "set_id": "rebirth",
+    "collector_number": "018",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/5b61defd-a35e-4701-9c2a-ff1d59017f23/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_call_to_aid_rb",
+    "card_id": "call_to_aid",
+    "set_id": "rebirth",
+    "collector_number": "019",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/5df799f2-8796-4d0d-abe0-dced3ece38d1/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_crop_token_rb",
+    "card_id": "crop_token",
+    "set_id": "rebirth",
+    "collector_number": "020",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/13a6535d-7930-4fb0-88cb-3323cdc8f6d4/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_early_spring_rb",
+    "card_id": "early_spring",
+    "set_id": "rebirth",
+    "collector_number": "021",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/7a3a0a3b-b970-453c-a39c-add2bf2e5afc/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_elvish_ambush_rb",
+    "card_id": "elvish_ambush",
+    "set_id": "rebirth",
+    "collector_number": "022",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/c0661241-00cc-4d76-b757-5c1ab0452da1/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_elvish_archer_rb",
+    "card_id": "elvish_archer",
+    "set_id": "rebirth",
+    "collector_number": "023",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/15dc642a-bbd5-4ef9-8d0e-2c6e45d20c2f/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_falconer_rb",
+    "card_id": "falconer",
+    "set_id": "rebirth",
+    "collector_number": "024",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/ac88c304-fa49-4ba8-987d-04dbf15534de/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_farmland_rb",
+    "card_id": "farmland",
+    "set_id": "rebirth",
+    "collector_number": "025",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/bc91e84b-f231-4997-8e94-7f9fcdddc982/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_grassroots_rb",
+    "card_id": "grassroots",
+    "set_id": "rebirth",
+    "collector_number": "026",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/8ac5e9f1-c25c-450b-8642-8d20747e43ff/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_kolibri_rb",
+    "card_id": "kolibri",
+    "set_id": "rebirth",
+    "collector_number": "027",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/629a5adf-f9d5-44ff-b389-f640f529467a/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_majestic_griffin_rb",
+    "card_id": "majestic_griffin",
+    "set_id": "rebirth",
+    "collector_number": "028",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/770cdf48-97df-41d8-9d8f-5b6607e99feb/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_natures_outrage_rb",
+    "card_id": "natures_outrage",
+    "set_id": "rebirth",
+    "collector_number": "029",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/b9516f1a-6efa-4e8d-977e-0c5220d01f93/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_nightingale_rb",
+    "card_id": "nightingale",
+    "set_id": "rebirth",
+    "collector_number": "030",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/e2985a28-ee20-4b9e-908c-dddcd2aa1493/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_nourished_flower_rb",
+    "card_id": "nourished_flower",
+    "set_id": "rebirth",
+    "collector_number": "031",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/44836060-f6c4-432e-8122-8442ac9ab21a/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_poison_ivy_rb",
+    "card_id": "poison_ivy",
+    "set_id": "rebirth",
+    "collector_number": "032",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/265c1f00-d267-4d0a-a041-eb96921967ba/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_sanctuary_rb",
+    "card_id": "sanctuary",
+    "set_id": "rebirth",
+    "collector_number": "033",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/a7229396-f9ec-4516-b83d-73e3291b5527/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_sequoia_saplings_rb",
+    "card_id": "sequoia_saplings",
+    "set_id": "rebirth",
+    "collector_number": "034",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/09b06049-cf4f-48bd-b48c-dae06ff26bea/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_spirit_tree_rb",
+    "card_id": "spirit_tree",
+    "set_id": "rebirth",
+    "collector_number": "035",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/a4257262-0eb9-482a-aef3-bd930760378a/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_aethyr_er",
+    "card_id": "aethyr",
+    "set_id": "enchanted_realm",
+    "collector_number": "001",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/5ccfbf57-ab4b-46a7-925a-f9c6a303db14/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_as_you_command_er",
+    "card_id": "as_you_command",
+    "set_id": "enchanted_realm",
+    "collector_number": "002",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/73f46ac0-6c97-4084-a7cd-96d1fde7bcf0/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_baldras_er",
+    "card_id": "baldras",
+    "set_id": "enchanted_realm",
+    "collector_number": "003",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/c7d5d896-24f7-4f7c-b46b-f02ca5ba127f/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_dela_er",
+    "card_id": "dela",
+    "set_id": "enchanted_realm",
+    "collector_number": "004",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/ae536a29-ec36-492a-942e-d1c577109891/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_dragon_armor_er",
+    "card_id": "dragon_armor",
+    "set_id": "enchanted_realm",
+    "collector_number": "005",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/04ade3ab-2ebc-449f-902e-af1558b689c7/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_flartar_er",
+    "card_id": "flartar",
+    "set_id": "enchanted_realm",
+    "collector_number": "006",
+    "quantity": 1,
+    "artist": "Phil Barber",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/86d0be1d-3c1b-4aca-8e8c-fce2f448843b/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Phil Barber",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_guardians_fall_er",
+    "card_id": "guardians_fall",
+    "set_id": "enchanted_realm",
+    "collector_number": "007",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/66882acd-df3d-44d9-94a6-a5055027a5ab/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_hideout_er",
+    "card_id": "hideout",
+    "set_id": "enchanted_realm",
+    "collector_number": "008",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/096a7772-4fd7-4eac-859f-723279b81ac9/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_jessica_er",
+    "card_id": "jessica",
+    "set_id": "enchanted_realm",
+    "collector_number": "009",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/1fd68aef-c8b3-4384-8e28-14dcdd6e5110/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_jetto_er",
+    "card_id": "jetto",
+    "set_id": "enchanted_realm",
+    "collector_number": "010",
+    "quantity": 1,
+    "artist": "Christian Sirviö",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/0951154f-4317-4eec-ada1-ed6260bc1e58/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Christian Sirviö",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_karka_suno_er",
+    "card_id": "karka_suno",
+    "set_id": "enchanted_realm",
+    "collector_number": "011",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/6d2aba61-787b-4f9c-8654-d27175a655ee/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_mirmu_er",
+    "card_id": "mirmu",
+    "set_id": "enchanted_realm",
+    "collector_number": "012",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/69782448-a955-4b2d-a5c8-c5aa36ffab49/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_nun_er",
+    "card_id": "nun",
+    "set_id": "enchanted_realm",
+    "collector_number": "013",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/29f387ff-312b-41e6-b5db-5c71262480cd/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_rugnur_er",
+    "card_id": "rugnur",
+    "set_id": "enchanted_realm",
+    "collector_number": "014",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/23e16aa8-8dbe-48e6-8e76-0dbb22d9c857/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_smith_er",
+    "card_id": "smith",
+    "set_id": "enchanted_realm",
+    "collector_number": "015",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/345a2ad4-404c-463a-9af9-dd4baa5e9edd/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_tapper_er",
+    "card_id": "tapper",
+    "set_id": "enchanted_realm",
+    "collector_number": "016",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/545a09fa-91db-486c-ab29-9038eef4bd75/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_uneasy_pact_er",
+    "card_id": "uneasy_pact",
+    "set_id": "enchanted_realm",
+    "collector_number": "017",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/f614f670-bc62-4328-bbf7-9b2308c5808d/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_zorlan_er",
+    "card_id": "zorlan",
+    "set_id": "enchanted_realm",
+    "collector_number": "018",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/0db34712-6606-4f45-bfe3-1da37209f57e/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_ar_an_imeall_er",
+    "card_id": "ar_an_imeall",
+    "set_id": "enchanted_realm",
+    "collector_number": "019",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/2c89ff3e-783b-43fa-a26e-78ab5918ffc6/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_bracer_of_the_octopus_er",
+    "card_id": "bracer_of_the_octopus",
+    "set_id": "enchanted_realm",
+    "collector_number": "020",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/ec0154c1-9b9f-487a-9ed9-4db223a38c11/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_coral_labyrinth_er",
+    "card_id": "coral_labyrinth",
+    "set_id": "enchanted_realm",
+    "collector_number": "021",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/33b537bd-7d63-49d0-a3ee-7faac37866a9/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_cylanna_er",
+    "card_id": "cylanna",
+    "set_id": "enchanted_realm",
+    "collector_number": "022",
+    "quantity": 1,
+    "artist": "Justin Nichols",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/c6532a09-3a2e-4b95-b4b6-de8c656734fd/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Justin Nichols",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_devyanna_er",
+    "card_id": "devyanna",
+    "set_id": "enchanted_realm",
+    "collector_number": "023",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/b536e5fd-8ce9-4189-9cd8-bef4af8e11e6/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_ellyanna_er",
+    "card_id": "ellyanna",
+    "set_id": "enchanted_realm",
+    "collector_number": "024",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/916350c4-7d0a-46c5-86d2-f1e636a2a846/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_gwabbo_er",
+    "card_id": "gwabbo",
+    "set_id": "enchanted_realm",
+    "collector_number": "025",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/2458db5c-0fd7-4f4c-98e7-b15b3de092cd/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_ink_cloud_er",
+    "card_id": "ink_cloud",
+    "set_id": "enchanted_realm",
+    "collector_number": "026",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/4a18c55f-aa04-4457-8431-5376f6353b86/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_kai_dorellis_er",
+    "card_id": "kai_dorellis",
+    "set_id": "enchanted_realm",
+    "collector_number": "027",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/d7fe5a63-27f2-4956-b16a-5bdb4c8ef697/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_kai_krellis_er",
+    "card_id": "kai_krellis",
+    "set_id": "enchanted_realm",
+    "collector_number": "028",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/9ead45ac-4893-46e7-b048-0851442c9604/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_karma_er",
+    "card_id": "karma",
+    "set_id": "enchanted_realm",
+    "collector_number": "029",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/c8268d0c-aeec-4290-be42-6da290430049/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_kelp_forest_er",
+    "card_id": "kelp_forest",
+    "set_id": "enchanted_realm",
+    "collector_number": "030",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/a6dd17d6-9f29-40ff-bf06-46672b0cfa5a/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_merfolk_brawler_er",
+    "card_id": "merfolk_brawler",
+    "set_id": "enchanted_realm",
+    "collector_number": "031",
+    "quantity": 1,
+    "artist": "Kathrin Polikeit",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/ea51926a-d5f0-46e6-8c1f-41ae111e64e6/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Kathrin Polikeit",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  },
+  {
+    "id": "p_merfolk_joyride_er",
+    "card_id": "merfolk_joyride",
+    "set_id": "enchanted_realm",
+    "collector_number": "032",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/f41e6175-2ffc-4bc5-9966-171f0303979a/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_merman_armor_er",
+    "card_id": "merman_armor",
+    "set_id": "enchanted_realm",
+    "collector_number": "033",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/f478d3d9-ae57-44d5-a033-c6058847bacc/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_strategic_defense_er",
+    "card_id": "strategic_defense",
+    "set_id": "enchanted_realm",
+    "collector_number": "034",
+    "quantity": 1,
+    "artist": "Santiago Iborra",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/e446067f-0d54-4e05-b66f-3d3772ce9032/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Santiago Iborra",
+      "license": "CC-BY-SA-4.0",
+      "source_url": "https://arcmage.org/artwork/",
+      "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
+    }
+  },
+  {
+    "id": "p_typhon_er",
+    "card_id": "typhon",
+    "set_id": "enchanted_realm",
+    "collector_number": "035",
+    "quantity": 1,
+    "artist": "Emilien Rotival",
+    "image": "https://aminduna.arcmage.org/arcmage/Cards/91cc3930-ae20-43fe-84d1-60f190224dce/card.jpg",
+    "provenance": {
+      "source": "human",
+      "creator": "Emilien Rotival",
+      "license": "GPL-2.0",
+      "source_url": "https://www.wesnoth.org/",
+      "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
+    }
+  }
+]

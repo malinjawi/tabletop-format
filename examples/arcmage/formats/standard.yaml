@@ -1,0 +1,17 @@
+id: standard
+name: Standard
+description: >
+  All cards ported into this project are legal. No restriction list exists
+  yet for this port (see README.md — Arcmage's own competitive-legality
+  policy was not part of this data hunt).
+card_pool:
+  - rebirth
+  - enchanted_realm
+deck_rules:
+  notes: >
+    Arcmage decks are commonly built and sold as fixed preconstructed lists
+    (see the Set/Deck products at https://arcmage.org/shop/); this port did
+    not confirm an official minimum/maximum constructed deck size from the
+    live API or rules page, so min_size/max_size are deliberately omitted
+    rather than guessed. deck_limit on each card (3) is this port's own
+    reasonable default, not a value read from Arcmage's rules.

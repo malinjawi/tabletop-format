@@ -1,0 +1,108 @@
+format_version: "0.1.0"
+id: mindbug
+title: Mindbug
+# ---------------------------------------------------------------------------
+# LICENSE STATUS: UNCONFIRMED — see README.md "Provenance & license" before
+# hosting, publishing, or relying on this in any way.
+#
+# This port was researched live from primary sources on 2026-08-19:
+# mindbug.me (home, /rules/, /legal/, /press/, /game-overview/, /faq/, the
+# official "Rules (Base Game)" PDF, and the Mindbug Online Terms of
+# Service), plus attempts at Wikipedia, BoardGameGeek, GitHub code search,
+# and general web search (see README.md for what worked and what didn't).
+#
+# NO Creative Commons license was found anywhere in official Mindbug
+# materials. To the contrary, the publisher's own Legal page states a
+# bespoke, restrictive, NON-Creative-Commons clause for site content
+# ("private personal use... non-commercial purposes... provided that no
+# changes are made to the content" — i.e. explicitly NO derivatives, unlike
+# any CC license), and the Mindbug Online Terms of Service state plainly:
+# "All intellectual property rights in the Game... are owned by Kissaki
+# Studios." The publisher of record is Nerdlab Games (Tagnition GmbH) with
+# Kissaki Studios GmbH, per mindbug.me/legal/ — NOT "Nevermore Games" as
+# this port was originally briefed; no entity by that name turned up in any
+# source checked. Game design is credited (per the official rulebook PDF)
+# to Christian Kudahl, Marvin Hegen, Richard Garfield, and Skaff Elias.
+#
+# Because the CC claim could not be confirmed — and the best available
+# primary-source evidence points the other way — this directory is placed
+# under examples/_fixtures/ (per this task's own fallback instruction) and
+# `license` below is deliberately NOT a real SPDX/CC code. Do not move this
+# into examples/ (the public/showcase surface) without independently
+# re-clearing rights with Nerdlab Games / Kissaki Studios.
+# ---------------------------------------------------------------------------
+license: "Unconfirmed — verify before hosting"
+version: "0.1.0"
+description: >
+  A 2-player creature-dueling card game: Richard Garfield, Christian Kudahl,
+  Marvin Hegen, and Skaff Elias's design for Nerdlab Games / Kissaki
+  Studios. Both players draw from the same shuffled 48-card creature deck.
+  Playing a creature offers your opponent a choice: let it resolve, or
+  spend one of their two Mindbugs to steal it for themselves. Unblocked
+  attacks cost life; lose your last life point and you lose the duel. This
+  is a reconstructed data fixture for the tabletop-format platform, built
+  from primary-source research plus general knowledge — see README.md for
+  exactly what is verified vs. reconstructed vs. invented.
+genre: creature dueling card game
+tags: [dueling, two-player, creature-battle, hidden-information, bluffing, shared-deck, singleton, fixture, test-fixture]
+authors:
+  - name: Richard Garfield
+    role: design
+  - name: Christian Kudahl
+    role: design
+  - name: Marvin Hegen
+    role: design
+  - name: Skaff Elias
+    role: design
+  - name: Denis Martynets
+    role: illustration (original game; not reproduced in this fixture)
+  - name: Maximilian Gotthold
+    role: graphic design (original game; not reproduced in this fixture)
+players:
+  min: 2
+  max: 2
+playtime_minutes:
+  min: 15
+  max: 30
+default_provenance:
+  source: human
+  creator: >
+    Original game design by Richard Garfield, Christian Kudahl, Marvin
+    Hegen, and Skaff Elias for Nerdlab Games / Kissaki Studios GmbH (not
+    affiliated with this port). This fixture's data entry, reconstruction,
+    and placeholder authoring done by the tabletop-format build (2026-08-19).
+  license: "Unconfirmed — verify before hosting"
+  source_url: "https://mindbug.me/rules/"
+  notes: See README.md "Provenance & license" for the full research trail.
+attribute_definitions:
+  - key: power
+    name: Power
+    type: integer
+    required: true
+    description: >
+      Combat strength. In a block, the lower-power creature is defeated
+      (both are defeated on a tie) — see keyword Poisonous and Tough for
+      exceptions.
+symbols:
+  # (symbol.schema has no "description" field - full keyword rules text
+  # lives in rules/rules.md §7; "name" here is just the display label.)
+  - key: frenzy
+    name: "Frenzy — survive your first attack this turn, attack again"
+    glyph: "⚡"
+  - key: hunter
+    name: "Hunter — you name the forced blocker when this attacks"
+    glyph: "➤"
+  - key: poisonous
+    name: "Poisonous — always defeats what it fights"
+    glyph: "☠"
+  - key: sneaky
+    name: "Sneaky — only Sneaky creatures may block this"
+    glyph: "◆"
+  - key: tough
+    name: "Tough — first defeat exhausts it instead"
+    glyph: "▣"
+  - key: mindbug
+    name: "Mindbug — spend one to steal a just-played creature"
+    glyph: "🧠"
+type_colors:
+  creature: { fg: "#4a2b7a", bg: "#ece3f7" }

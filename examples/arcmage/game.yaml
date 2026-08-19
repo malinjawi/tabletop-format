@@ -1,0 +1,111 @@
+format_version: "0.1.0"
+id: arcmage
+title: "Arcmage"
+description: >
+  A free, community-developed fantasy trading card game. Two or more players
+  summon creatures and cast spells to defend their own cities while
+  besieging their opponents', spending faction-colored resource cards to
+  play from hand. Ported from the live Arcmage card database (aminduna.
+  arcmage.org) and arcmage.org's published rules and license pages: 70
+  cards across all five playable factions, spanning the "Rebirth" and
+  "Enchanted Realm" sets, with real artist credit and per-card license on
+  every printing. Arcmage is developed by the wtactics.org open-source
+  card-game community and has been in active development since 2013.
+version: "1.0.0"
+license: CC-BY-SA-4.0
+genre: trading card game
+tags: [fantasy, tcg, ccg, factions, open-source, print-and-play, community]
+authors:
+  - name: Arcmage / wtactics.org community
+    role: game design, development, and art
+    url: https://arcmage.org/credits/
+  - name: Nico Goeminne
+    role: lead developer, card database
+  - name: Santiago Iborra
+    role: principal artist
+attribution:
+  source_id: arcmage
+  source_title: "Arcmage"
+  source_url: https://arcmage.org/
+  source_license: CC-BY-SA-4.0
+  note: >
+    Card names, rules text, and faction/card-type structure are reproduced
+    from the live Arcmage card database (https://aminduna.arcmage.org/api/)
+    and arcmage.org, both released by the Arcmage community under
+    CC-BY-SA-4.0 (see https://arcmage.org/license/). This port assigns its
+    own card ids, printing ids, and collector numbers (Arcmage's own
+    database keys cards by GUID, not print position); see README.md for
+    the full provenance and what was and wasn't captured.
+players:
+  min: 2
+  max: 2
+playtime_minutes:
+  min: 30
+  max: 60
+default_provenance:
+  source: human
+  creator: Arcmage / wtactics.org community
+  license: CC-BY-SA-4.0
+  source_url: https://arcmage.org/license/
+  notes: >
+    Default for anything not overridden per-printing. Arcmage's own license
+    page splits licensing three ways (game/rules text, artwork, software);
+    this project only ports game text and card data (CC-BY-SA-4.0) plus
+    hot-linked artwork references — see each printing's own "provenance"
+    for its specific artwork license (CC-BY-SA-4.0 for original Arcmage/
+    wtactics.org art, GPL-2.0 for the subset of portraits reused from the
+    Battle for Wesnoth project).
+official_docs:
+  - name: "Arcmage project"
+    url: "https://arcmage.org/"
+  - name: "Source repository"
+    url: "https://github.com/wtactics/arcmage"
+  - name: "Official rules"
+    url: "https://arcmage.org/rules/"
+attribute_definitions:
+  - key: cost
+    name: Cost
+    type: string
+    required: true
+    description: >
+      Resource cards (of the matching faction color) a player must mark to
+      play this card. A plain number for most cards; "S" for cards with no
+      play cost (Cities, which are set up directly, not cast from hand);
+      "X" for a variable cost chosen when the card is played.
+  - key: loyalty
+    name: Loyalty
+    type: integer
+    required: true
+    description: >
+      The card's single combat/defense strength — Arcmage does not print
+      separate attack and defense numbers; a creature's loyalty mark value
+      serves as both, modified in play by +X/+Y-style counters and keyword
+      abilities named in its rules text. On City cards, loyalty is the
+      city's starting defense strength (always 3 among the cards in this
+      port).
+  - key: faction
+    name: Faction
+    type: string
+    required: true
+    description: >
+      One of Arcmage's five factions (Gaian, Dark Legion, Red Banner, House
+      of Nobles, The Empire), each tied to a resource color. Drives which
+      resource cards can pay a card's cost and colors its printed frame.
+type_colors:
+  creature:    { fg: "#4a3520", bg: "#efe6d8" }
+  event:       { fg: "#6a3fa0", bg: "#ebe0f5" }
+  enchantment: { fg: "#a05a00", bg: "#f7e6cc" }
+  magic:       { fg: "#0a6e6e", bg: "#d9f0f0" }
+  city:        { fg: "#555555", bg: "#e8e8e8" }
+# Faction colors are the real in-game resource colors, stated on
+# https://arcmage.org/rules/: "Green for Gaian, Black for Dark Legion, Red
+# for Red Banner, Blue for House of Nobles and White for The Empire." White
+# itself doesn't work as a legible UI foreground, so The Empire uses a
+# gold-on-parchment pairing (a common substitution for "white" factions in
+# card-game UI) rather than true white-on-white.
+faction_colors:
+  Gaian:            { fg: "#2e7d32", bg: "#e2f0d9" }
+  Dark Legion:      { fg: "#1a1a1a", bg: "#dddddd" }
+  Red Banner:       { fg: "#b71c1c", bg: "#f8d7d7" }
+  House of Nobles:  { fg: "#1565c0", bg: "#dbe9f6" }
+  The Empire:       { fg: "#8a6d00", bg: "#faf6e3" }

@@ -1,0 +1,12 @@
+- id: first_contact
+  name: "Mindbug: First Contact (reconstructed base set)"
+  position: 1
+  size: 48
+  description: >
+    The full shared 48-card creature deck used by both players every game —
+    Mindbug's base set has no expansions in print in this fixture and no
+    deck construction; this one set IS the game. Named "First Contact"
+    after the retail edition of the base game. release_date intentionally
+    omitted: this build did not verify an exact date (secondary sources
+    variously cite a 2021 Kickstarter and later retail printings) and would
+    rather omit than assert an unconfirmed figure — see README.md.

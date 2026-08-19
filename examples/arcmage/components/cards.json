@@ -1,0 +1,1068 @@
+[
+  {
+    "id": "abduction",
+    "name": "Abduction",
+    "type": "event",
+    "subtypes": [],
+    "text": "Mark target creature. Move the marked card to a city or army controlled by its owner.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 1,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "besieged_city",
+    "name": "Besieged City",
+    "type": "enchantment",
+    "subtypes": [],
+    "text": "All movement to or from target city is forbidden as long as your army has more creatures than the city's controller's army.",
+    "keywords": [],
+    "attributes": {
+      "cost": "5",
+      "loyalty": 3,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cutpurse_imp",
+    "name": "Cutpurse Imp",
+    "type": "creature",
+    "subtypes": [
+      "Imp"
+    ],
+    "text": "When I come into play, steal one resource card from target player and put it under your control. The card retains its resource type and its marked / unmarked state. When I leave play, return the stolen resource card.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dark_portal",
+    "name": "Dark Portal",
+    "type": "enchantment",
+    "subtypes": [],
+    "text": "M, Each city you control loses 1 defense point. Move target creature without marking it.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 3,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "deadly_shock",
+    "name": "Deadly Shock",
+    "type": "event",
+    "subtypes": [],
+    "text": "Deal 3 damage to target creature or deal 2 damage to target city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 1,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "forgiving_vampire",
+    "name": "Forgiving Vampire",
+    "type": "creature",
+    "subtypes": [
+      "Vampire"
+    ],
+    "text": "Flying - Creatures without flying cannot stop me. Lose 1 defense point on a city: either target creature gets -1/-1 and I get +1/+1, or vice versa.",
+    "keywords": [],
+    "attributes": {
+      "cost": "5",
+      "loyalty": 3,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "foul_imps",
+    "name": "Foul Imps",
+    "type": "creature",
+    "subtypes": [
+      "Imp"
+    ],
+    "text": "I get +1/+1 for each other Imp in play.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ghoul",
+    "name": "Ghoul",
+    "type": "creature",
+    "subtypes": [
+      "Undead"
+    ],
+    "text": "Sudden - I can be played directly into your army.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 2,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "imp_union_leader",
+    "name": "Imp Union Leader",
+    "type": "creature",
+    "subtypes": [
+      "Imp Leader"
+    ],
+    "text": "If you control at least 2 other Imps, all your Imps get +2/+0 during your turn and get +0/+2 during any opponent's turn.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 2,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "lobotomized_library",
+    "name": "Lobotomized Library",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 3: All players discard two cards. Level 5: Draw a card. Level 7: Each time an opponent draws a card, deal 2 damage to one of that opponent's cities.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "misled_orc",
+    "name": "Misled Orc",
+    "type": "creature",
+    "subtypes": [
+      "Orc"
+    ],
+    "text": "When I die, deal 1 damage to target creature or city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "nirvana_of_the_undead",
+    "name": "Nirvana of the Undead",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 3: All Undead creatures become deadly. Level 5: Whenever a non-undead creature you control would be put into a graveyard from play, you may put it in your army instead. That creature gains the type Undead.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "outmaneuvered",
+    "name": "Outmaneuvered",
+    "type": "event",
+    "subtypes": [],
+    "text": "Until end of turn, target army cannot defend target city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 2,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "second_sons_army_camp",
+    "name": "Second Sons' Army Camp",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 3: All creatures in your army get +2/+2. Level 5: All creatures in your army have overrun.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "shadow_in_the_dark",
+    "name": "Shadow in the Dark",
+    "type": "creature",
+    "subtypes": [
+      "Shadow"
+    ],
+    "text": "Infiltrate - I can move into opponents' cities. M, put a -1/-1 counter on me: destroy target creature in the same city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "undead_archer",
+    "name": "Undead Archer",
+    "type": "creature",
+    "subtypes": [
+      "Undead Skeleton"
+    ],
+    "text": "Ranged - I can defend against creatures with flying. M, Deal 1 damage to target creature or city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Dark Legion"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "wild_warg",
+    "name": "Wild Warg",
+    "type": "creature",
+    "subtypes": [
+      "Warg"
+    ],
+    "text": "I deal 2 damage to each creature defending against me.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 2,
+      "faction": "Red Banner"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "botanist",
+    "name": "Botanist",
+    "type": "creature",
+    "subtypes": [
+      "Elf"
+    ],
+    "text": "Peaceful. M Sacrifice two resource cards: prevent a Tree or Flower from dying. Mark the saved card.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 1,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "call_to_aid",
+    "name": "Call to Aid",
+    "type": "event",
+    "subtypes": [],
+    "text": "Residents of target city you control can help defend another city you control until end of turn.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "crop_token",
+    "name": "Crop Token",
+    "type": "creature",
+    "subtypes": [
+      "Flower Token"
+    ],
+    "text": "M, Sacrifice me to produce 1 Gaian resource.",
+    "keywords": [],
+    "attributes": {
+      "cost": "",
+      "loyalty": 0,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "early_spring",
+    "name": "Early Spring",
+    "type": "event",
+    "subtypes": [],
+    "text": "Each Tree or Flower creature gets +2/+2 until end of turn. Each Gaian city gains 2 defense points.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "elvish_ambush",
+    "name": "Elvish Ambush",
+    "type": "creature",
+    "subtypes": [
+      "Elf"
+    ],
+    "text": "Creatures defending against me get -1/-1 until end of turn. M, deal 1 damage to target creature or city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "elvish_archer",
+    "name": "Elvish Archer",
+    "type": "creature",
+    "subtypes": [
+      "Elf"
+    ],
+    "text": "When I come into play my city gains 2 defense points. All elves in play gain ranged. Ranged - I can defend against creatures with flying.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "falconer",
+    "name": "Falconer",
+    "type": "creature",
+    "subtypes": [
+      "Human"
+    ],
+    "text": "M, Sacrifice two resource cards: prevent a Bird from dying. Mark the saved card. Birds in your hand, deck and graveyard have sudden.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "farmland",
+    "name": "Farmland",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 2: Put a 0/1 crop token into play as my resident. [Remainder of this ability's text was cut off in the source fetch; not reconstructed.]",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "grassroots",
+    "name": "Grassroots",
+    "type": "enchantment",
+    "subtypes": [],
+    "text": "Put x grassroot counters on target creature and mark it. Each time the creature is marked, add 1 grassroot counter. Target creature does not unmark unless its controller pays 1 for each grassroot counter.",
+    "keywords": [],
+    "attributes": {
+      "cost": "X",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kolibri",
+    "name": "Kolibri",
+    "type": "creature",
+    "subtypes": [
+      "Bird"
+    ],
+    "text": "Flying - Only creatures with flying and ranged can defend against me. M, Produce 1 Gaian resource or produce 2 Gaian resources if you control at least a flower.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "majestic_griffin",
+    "name": "Majestic Griffin",
+    "type": "creature",
+    "subtypes": [
+      "Lion Bird"
+    ],
+    "text": "Flying - Only creatures with flying and ranged can defend against me. Veteran - I am not marked for attacking.",
+    "keywords": [],
+    "attributes": {
+      "cost": "5",
+      "loyalty": 3,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "natures_outrage",
+    "name": "Nature's Outrage",
+    "type": "magic",
+    "subtypes": [],
+    "text": "All trees and flowers with peaceful can attack this turn as though they didn't have peaceful.",
+    "keywords": [],
+    "attributes": {
+      "cost": "6",
+      "loyalty": 3,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "nightingale",
+    "name": "Nightingale",
+    "type": "creature",
+    "subtypes": [
+      "Bird"
+    ],
+    "text": "Flying - Only creatures with flying and ranged can defend against me. When I mark for devotion, mark target creature. That creature doesn't unmark during its controller's next unmark phase.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 3,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "nourished_flower",
+    "name": "Nourished Flower",
+    "type": "creature",
+    "subtypes": [
+      "Flower"
+    ],
+    "text": "Peaceful - I cannot attack. I gain a +1/+1 counter every time you play a Gaian card.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "poison_ivy",
+    "name": "Poison Ivy",
+    "type": "creature",
+    "subtypes": [
+      "Flower"
+    ],
+    "text": "Peaceful - I cannot attack. Each time I damage a creature it gets an additional counter. [Exact wording of the counter granted was cut off in the source fetch; not reconstructed.]",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sanctuary",
+    "name": "Sanctuary",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 3: All my residents have sanctuary. Level 5: All residents in your cities have sanctuary. Level 7: All creatures in your army have sanctuary.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "sequoia_saplings",
+    "name": "Sequoia Saplings",
+    "type": "creature",
+    "subtypes": [
+      "Tree"
+    ],
+    "text": "For each other Gaian card in the same city or army, I get +0/+1. If my defense reaches 5 I have ranged and can block creatures with flying. Peaceful - I cannot attack.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "spirit_tree",
+    "name": "Spirit Tree",
+    "type": "city",
+    "subtypes": [
+      "City Tree"
+    ],
+    "text": "Level 3: You may put a creature from your graveyard in your army. Remove it from the game at the start of your next turn. Level 7: You may put a creature from your graveyard in play as one of my residents.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "Gaian"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "aethyr",
+    "name": "Aethyr",
+    "type": "creature",
+    "subtypes": [
+      "Thug Soldier"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. Sudden - I can be played directly into your army.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "as_you_command",
+    "name": "As You Command",
+    "type": "magic",
+    "subtypes": [],
+    "text": "Destroy all creatures in every army. Each city gains defense points equal to the sum of the loyalty marks on the destroyed creatures of the city's corresponding faction.",
+    "keywords": [],
+    "attributes": {
+      "cost": "5",
+      "loyalty": 3,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "baldras",
+    "name": "Baldras",
+    "type": "creature",
+    "subtypes": [
+      "Human Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. Militia Battle Scream 1 - When I attack, all other attacking militia creatures get +1/+0.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dela",
+    "name": "Dela",
+    "type": "creature",
+    "subtypes": [
+      "Imp Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. Creatures with defense strength greater than my attack strength cannot defend against me.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "dragon_armor",
+    "name": "Dragon Armor",
+    "type": "enchantment",
+    "subtypes": [
+      "Enchantment Token"
+    ],
+    "text": "When I come into play, choose one piece of the Dragon Armor that is not yet in play. When a creature wears the full armor, other creatures cannot defend against it.",
+    "keywords": [],
+    "attributes": {
+      "cost": "",
+      "loyalty": 0,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "flartar",
+    "name": "Flartar",
+    "type": "creature",
+    "subtypes": [
+      "Human Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. I do not unmark during my controller's next unmark phase.",
+    "keywords": [],
+    "attributes": {
+      "cost": "5",
+      "loyalty": 3,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "guardians_fall",
+    "name": "Guardians Fall",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 1: An opponent's creature cannot attack, unless its controller pays one resource. Level 3: Creatures without flying attacking me get -1/-0.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "hideout",
+    "name": "Hideout",
+    "type": "city",
+    "subtypes": [
+      "City Ruin"
+    ],
+    "text": "Level 3: When a spell or ability would have an effect on a creature you control, you may hide it. Unhide it at the end of your next tactics phase. Use this advantage only once. (Hidden creatures are placed back side up and are no longer in play.)",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "jessica",
+    "name": "Jessica",
+    "type": "creature",
+    "subtypes": [
+      "Human Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. When I deal damage to a target, its controller shows you two cards from their hand at random.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "jetto",
+    "name": "Jetto",
+    "type": "creature",
+    "subtypes": [
+      "Thug"
+    ],
+    "text": "Infiltrate - I can move into opponents' cities. M, Destroy target unmarked creature in the same city. Return me to a city you control.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "karka_suno",
+    "name": "Kaɾka Sunɔ",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 1: Opponents' creatures with infiltrate cannot move into me. Level 2: You may bribe the city's guards by paying one resource for each additional creature (beyond the first) you wish to move out of the city.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "mirmu",
+    "name": "Mirmu",
+    "type": "creature",
+    "subtypes": [
+      "Human Priest"
+    ],
+    "text": "Bodyguard 1 - Each turn I may divert up to 1 damage from target creature you control and put that damage on myself instead. M, Mark or unmark target creature you control.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "nun",
+    "name": "Nun",
+    "type": "creature",
+    "subtypes": [
+      "Human Assassin"
+    ],
+    "text": "M, Destroy target creature with defense 4 or greater, unless its controller sacrifices two other creatures.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 1,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "rugnur",
+    "name": "Rugnur",
+    "type": "creature",
+    "subtypes": [
+      "Imp Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. Count the factions of all Imps in play and reduce by one. Each Imp gets +x/+x, where x is the calculated amount.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 1,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "smith",
+    "name": "Smith",
+    "type": "creature",
+    "subtypes": [
+      "Human"
+    ],
+    "text": "Fatigue - I come into play marked. I come into play with three ore counters. M, Remove one ore counter and create a Dragon Armor token enchantment. I do not unmark during your next unmark phase.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "tapper",
+    "name": "Tapper",
+    "type": "creature",
+    "subtypes": [
+      "Human Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. Ranged - I can defend against creatures with flying. M, Target creature with flying cannot attack this turn.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "uneasy_pact",
+    "name": "Uneasy Pact",
+    "type": "magic",
+    "subtypes": [],
+    "text": "Each player sacrifices / discards resource cards until they have the same amount as the player with the least resources. Repeat this for the cards in hand, the creatures in the army, and the residents in the cities.",
+    "keywords": [],
+    "attributes": {
+      "cost": "4",
+      "loyalty": 2,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "zorlan",
+    "name": "Zorlan",
+    "type": "creature",
+    "subtypes": [
+      "Thug"
+    ],
+    "text": "Militia - The militia may attack a second, alternative city. While casting Flartar, you may sacrifice me to reduce his casting cost with mine.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 1,
+      "faction": "The Empire"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ar_an_imeall",
+    "name": "Ar An Imeall",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 1: Shuffle your deck. Level 2: Discard two cards. Level 4: Search your deck for a creature card and put it in your hand. Shuffle your deck afterwards.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "bracer_of_the_octopus",
+    "name": "Bracer of the Octopus",
+    "type": "enchantment",
+    "subtypes": [],
+    "text": "Enchanted creature gets a -1/-1 counter at the end of its controller's turn. During combat, only House of Noble creatures can defend against enchanted creature.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 1,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "coral_labyrinth",
+    "name": "Coral Labyrinth",
+    "type": "city",
+    "subtypes": [],
+    "text": "Level 1: When an opponent moves a creature, toss a coin. If it is heads, select a new destination for the creature and have opponent draw a card. Level 3: When you move a creature, toss a coin. If it is heads, draw a card; otherwise target opponent selects a new destination for the creature.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "cylanna",
+    "name": "Cylanna",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "When I enter play, counter next non-Merfolk spell.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "devyanna",
+    "name": "Devyanna",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "When I enter play, return target creature from an opponent's army to its owner's hand.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ellyanna",
+    "name": "Ellyanna",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "When I enter play, return target creature from your army to its owner's hand.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "gwabbo",
+    "name": "Gwabbo",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "First Strike - In combat, I deal damage first. The opposing creature only strikes back if it survives. When I enter play, draw a card.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "ink_cloud",
+    "name": "Ink Cloud",
+    "type": "event",
+    "subtypes": [],
+    "text": "Non-Merfolk creatures deal no damage during combat this turn. Draw a card.",
+    "keywords": [],
+    "attributes": {
+      "cost": "1",
+      "loyalty": 1,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kai_dorellis",
+    "name": "Kai Dorellis",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "When I enter play, put a +1/+1 counter on every Merfolk creature you control.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kai_krellis",
+    "name": "Kai Krellis",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "When a Merfolk creature comes into play, put a +1/+1 counter on me.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "karma",
+    "name": "Karma",
+    "type": "event",
+    "subtypes": [],
+    "text": "When an enchantment, a magic, or an event spell has a single target, you may change it to a different valid target.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "kelp_forest",
+    "name": "Kelp Forest",
+    "type": "city",
+    "subtypes": [],
+    "text": "You may return one House of Nobles creature from your army to your hand. That creature's loyalty marks are added to my devotion. Level 2: I gain 1 defense point.",
+    "keywords": [],
+    "attributes": {
+      "cost": "S",
+      "loyalty": 3,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "merfolk_brawler",
+    "name": "Merfolk Brawler",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk"
+    ],
+    "text": "Damage dealt to Merfolk creatures is reduced by one.",
+    "keywords": [],
+    "attributes": {
+      "cost": "2",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "merfolk_joyride",
+    "name": "Merfolk Joyride",
+    "type": "magic",
+    "subtypes": [],
+    "text": "Switch a Merfolk from your army with target creature from an opponent's army. Unmark both creatures. The creature you gained control of dies at the end of your turn.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "merman_armor",
+    "name": "Merman Armor",
+    "type": "enchantment",
+    "subtypes": [],
+    "text": "Enchanted creature gets +1/+1 for each Merfolk you control.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 1,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "strategic_defense",
+    "name": "Strategic Defense",
+    "type": "magic",
+    "subtypes": [],
+    "text": "Search your deck for a creature with casting cost 3 or less and put it in your army marked. Shuffle your deck afterwards.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 2,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  },
+  {
+    "id": "typhon",
+    "name": "Typhon",
+    "type": "creature",
+    "subtypes": [
+      "Merfolk Legend"
+    ],
+    "text": "When I enter play, look at the top five cards of your deck. You may select a Merfolk creature and put it in target opponent's army under their control. If you do, gain control of a creature in the same army and put it in your army marked.",
+    "keywords": [],
+    "attributes": {
+      "cost": "3",
+      "loyalty": 3,
+      "faction": "House of Nobles"
+    },
+    "deck_limit": 3
+  }
+]

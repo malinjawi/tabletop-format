@@ -1,0 +1,386 @@
+[
+  {
+    "id": "p_gorillion",
+    "card_id": "gorillion",
+    "set_id": "first_contact",
+    "collector_number": "001",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_bee_bear",
+    "card_id": "bee_bear",
+    "set_id": "first_contact",
+    "collector_number": "002",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_luchataur",
+    "card_id": "luchataur",
+    "set_id": "first_contact",
+    "collector_number": "003",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_tusked_extorter",
+    "card_id": "tusked_extorter",
+    "set_id": "first_contact",
+    "collector_number": "004",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_spider_owl",
+    "card_id": "spider_owl",
+    "set_id": "first_contact",
+    "collector_number": "005",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_tiger_squirrel",
+    "card_id": "tiger_squirrel",
+    "set_id": "first_contact",
+    "collector_number": "006",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_kangasaurus_rex",
+    "card_id": "kangasaurus_rex",
+    "set_id": "first_contact",
+    "collector_number": "007",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_elephantopus",
+    "card_id": "elephantopus",
+    "set_id": "first_contact",
+    "collector_number": "008",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_compost_dragon",
+    "card_id": "compost_dragon",
+    "set_id": "first_contact",
+    "collector_number": "009",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_killer_bee",
+    "card_id": "killer_bee",
+    "set_id": "first_contact",
+    "collector_number": "010",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_sluggernaut",
+    "card_id": "sluggernaut",
+    "set_id": "first_contact",
+    "collector_number": "011",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_sharky_crab_dog_mummypus",
+    "card_id": "sharky_crab_dog_mummypus",
+    "set_id": "first_contact",
+    "collector_number": "012",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_axolotl_healer",
+    "card_id": "axolotl_healer",
+    "set_id": "first_contact",
+    "collector_number": "013",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_strange_barrel",
+    "card_id": "strange_barrel",
+    "set_id": "first_contact",
+    "collector_number": "014",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_rhino_turtle",
+    "card_id": "rhino_turtle",
+    "set_id": "first_contact",
+    "collector_number": "015",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_shark_dog",
+    "card_id": "shark_dog",
+    "set_id": "first_contact",
+    "collector_number": "016",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_turbo_bug",
+    "card_id": "turbo_bug",
+    "set_id": "first_contact",
+    "collector_number": "017",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_lone_yeti",
+    "card_id": "lone_yeti",
+    "set_id": "first_contact",
+    "collector_number": "018",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_witch_hazel",
+    "card_id": "witch_hazel",
+    "set_id": "first_contact",
+    "collector_number": "019",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_grave_robber",
+    "card_id": "grave_robber",
+    "set_id": "first_contact",
+    "collector_number": "020",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_deathweaver",
+    "card_id": "deathweaver",
+    "set_id": "first_contact",
+    "collector_number": "021",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_shrewd_rat",
+    "card_id": "shrewd_rat",
+    "set_id": "first_contact",
+    "collector_number": "022",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_snail_thrower",
+    "card_id": "snail_thrower",
+    "set_id": "first_contact",
+    "collector_number": "023",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_tough_chicken",
+    "card_id": "tough_chicken",
+    "set_id": "first_contact",
+    "collector_number": "024",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_urchin_hurler",
+    "card_id": "urchin_hurler",
+    "set_id": "first_contact",
+    "collector_number": "025",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_chameleon_sniper",
+    "card_id": "chameleon_sniper",
+    "set_id": "first_contact",
+    "collector_number": "026",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_harpy_mother",
+    "card_id": "harpy_mother",
+    "set_id": "first_contact",
+    "collector_number": "027",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_bulwark_beetle",
+    "card_id": "bulwark_beetle",
+    "set_id": "first_contact",
+    "collector_number": "028",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_ferret_bomber",
+    "card_id": "ferret_bomber",
+    "set_id": "first_contact",
+    "collector_number": "029",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_goblin_werewolf",
+    "card_id": "goblin_werewolf",
+    "set_id": "first_contact",
+    "collector_number": "030",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_pangolin_juggler",
+    "card_id": "pangolin_juggler",
+    "set_id": "first_contact",
+    "collector_number": "031",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_ember_newt",
+    "card_id": "ember_newt",
+    "set_id": "first_contact",
+    "collector_number": "032",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_cathedral_moose",
+    "card_id": "cathedral_moose",
+    "set_id": "first_contact",
+    "collector_number": "033",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_whisper_vole",
+    "card_id": "whisper_vole",
+    "set_id": "first_contact",
+    "collector_number": "034",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_iron_cricket",
+    "card_id": "iron_cricket",
+    "set_id": "first_contact",
+    "collector_number": "035",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_velvet_jackal",
+    "card_id": "velvet_jackal",
+    "set_id": "first_contact",
+    "collector_number": "036",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_marsh_auger",
+    "card_id": "marsh_auger",
+    "set_id": "first_contact",
+    "collector_number": "037",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_copper_heron",
+    "card_id": "copper_heron",
+    "set_id": "first_contact",
+    "collector_number": "038",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_static_opossum",
+    "card_id": "static_opossum",
+    "set_id": "first_contact",
+    "collector_number": "039",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_driftwood_crab",
+    "card_id": "driftwood_crab",
+    "set_id": "first_contact",
+    "collector_number": "040",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_quartz_beetle",
+    "card_id": "quartz_beetle",
+    "set_id": "first_contact",
+    "collector_number": "041",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_nettle_fox",
+    "card_id": "nettle_fox",
+    "set_id": "first_contact",
+    "collector_number": "042",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_thistle_ram",
+    "card_id": "thistle_ram",
+    "set_id": "first_contact",
+    "collector_number": "043",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_sable_wren",
+    "card_id": "sable_wren",
+    "set_id": "first_contact",
+    "collector_number": "044",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_gravel_toad",
+    "card_id": "gravel_toad",
+    "set_id": "first_contact",
+    "collector_number": "045",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_ashen_lynx",
+    "card_id": "ashen_lynx",
+    "set_id": "first_contact",
+    "collector_number": "046",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_brindle_ox",
+    "card_id": "brindle_ox",
+    "set_id": "first_contact",
+    "collector_number": "047",
+    "quantity": 1,
+    "template_id": "standard_face"
+  },
+  {
+    "id": "p_hollow_kite",
+    "card_id": "hollow_kite",
+    "set_id": "first_contact",
+    "collector_number": "048",
+    "quantity": 1,
+    "template_id": "standard_face"
+  }
+]

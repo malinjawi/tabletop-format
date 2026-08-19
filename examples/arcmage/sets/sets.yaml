@@ -1,0 +1,25 @@
+# Two of Arcmage's five released sets are ported here (see README.md for why
+# only these two). release_date is approximate: Arcmage's card database
+# doesn't expose an official product launch date, so these are derived from
+# the earliest card-record creation timestamps seen for each set via the
+# live API (Rebirth cards dated from 2016, Enchanted Realm cards from
+# 2019) — treat as "no earlier than", not a confirmed release day.
+- id: rebirth
+  name: "Set 1: Rebirth"
+  position: 1
+  release_date: "2016-04-01"
+  size: 35
+  description: >
+    Arcmage's first product set. This port includes the complete "Uneasy
+    Alliance" (Dark Legion + Red Banner) and "Gaian Love for Life" (Gaian)
+    preconstructed decks — 35 of Rebirth's cards.
+
+- id: enchanted_realm
+  name: "Set 2: Enchanted Realm"
+  position: 2
+  release_date: "2019-03-01"
+  size: 35
+  description: >
+    Arcmage's second product set. This port includes the complete "The
+    Empire's Thugs" (The Empire) and "Merfolk" (House of Nobles)
+    preconstructed decks — 35 of Enchanted Realm's cards.

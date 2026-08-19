@@ -1,0 +1,774 @@
+[
+  {
+    "id": "gorillion",
+    "name": "Gorillion",
+    "type": "creature",
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "power": 10
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Power confirmed verbatim in the official base-game rules sheet (mindbug.me, PDF fetched 2026-08-19): \"Alice attacks with Gorillion which has power 10.\" No keywords/ability confirmed; treated as a vanilla (text-less) creature. Verify against a physical card before relying on this."
+  },
+  {
+    "id": "bee_bear",
+    "name": "Bee Bear",
+    "type": "creature",
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "power": 8
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Power confirmed verbatim in the official base-game rules sheet: \"Bob has Bee Bear with power 8 in play.\" No keywords/ability confirmed; treated as vanilla. Verify."
+  },
+  {
+    "id": "luchataur",
+    "name": "Luchataur",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Frenzy"
+    ],
+    "attributes": {
+      "power": 5
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Frenzy keyword confirmed by name in the official rules sheet's worked Frenzy example (\"Luchataur can attack a second time, as it is Frenzy\"). Power (5) is this build's reconstruction, not officially confirmed. Verify."
+  },
+  {
+    "id": "tusked_extorter",
+    "name": "Tusked Extorter",
+    "type": "creature",
+    "text": "Play: The opponent discards a card.",
+    "keywords": [],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Name, a higher-power-than-Spider-Owl relationship, and an opponent-discard trigger are corroborated by the official rules sheet's worked Poisonous-keyword example (Tusked Extorter attacks, wins on power, and the example ends \"Player 2 discards a card\"). Exact power, trigger timing (Play vs Attack), and precise wording are this build's reconstruction. Verify."
+  },
+  {
+    "id": "spider_owl",
+    "name": "Spider Owl",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Poisonous",
+      "Sneaky"
+    ],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Poisonous and Sneaky are both confirmed by name in two separate official rules-sheet worked examples. Power (3) is reconstructed. Verify."
+  },
+  {
+    "id": "tiger_squirrel",
+    "name": "Tiger Squirrel",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Sneaky"
+    ],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Sneaky confirmed by the official rules sheet's Sneaky worked example (\"only Tiger Squirrel can be chosen as a blocker\"). Power reconstructed. Verify."
+  },
+  {
+    "id": "kangasaurus_rex",
+    "name": "Kangasaurus Rex",
+    "type": "creature",
+    "text": "Play: Defeat each enemy creature with power 3 or less.",
+    "keywords": [],
+    "attributes": {
+      "power": 6
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Equal power to Elephantopus (both are defeated simultaneously in the worked Tough example: \"Both creatures would be defeated since they have the same power value\") is confirmed. The shared value (6) and the ability text are this build's reconstruction from general knowledge. Verify."
+  },
+  {
+    "id": "elephantopus",
+    "name": "Elephantopus",
+    "type": "creature",
+    "text": "The opponent cannot block with creatures with power 4 or less.",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 6
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Tough keyword AND the ability text are quoted verbatim from the official FAQ (mindbug.me/faq, fetched 2026-08-19): \"Elephantopus says 'The opponent cannot block with creatures with power 4 or less.'\" Power (6, tied with Kangasaurus Rex per the rules sheet) is this build's reconstruction — verify the number only."
+  },
+  {
+    "id": "compost_dragon",
+    "name": "Compost Dragon",
+    "type": "creature",
+    "text": "Defeated: Draw a card.",
+    "keywords": [],
+    "attributes": {
+      "power": 1
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Lower power than Killer Bee (loses when forced to block by Hunter) is confirmed by the official rules sheet's Hunter worked example. Exact power and ability text are reconstructed. Verify."
+  },
+  {
+    "id": "killer_bee",
+    "name": "Killer Bee",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Hunter"
+    ],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Hunter confirmed by the official rules sheet's Hunter worked example (\"Player 1 forces Compost Dragon to block\"). Power reconstructed. Verify."
+  },
+  {
+    "id": "sluggernaut",
+    "name": "Sluggernaut",
+    "type": "creature",
+    "text": "The first time this would be defeated because it is Tough, turn it to its other side instead and choose that side's profile (Frenzy or Hunter) for the rest of the game.",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 5
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Tough keyword and this ability are paraphrased closely from an official FAQ ruling on Sluggernaut (mindbug.me/faq): a double-sided card that flips to a Frenzy-or-Hunter profile the first time Tough would save it, and the choice is final for the rest of the game. This fixture models it as a single card entry with that text — it cannot represent the physical double-sided card. Power reconstructed. Verify."
+  },
+  {
+    "id": "sharky_crab_dog_mummypus",
+    "name": "Sharky-Crab-Dog-Mummypus",
+    "type": "creature",
+    "text": "Has [hunter] while an enemy creature has Hunter. Has [sneaky] while an enemy creature has Sneaky. Has [frenzy] while an enemy creature has Frenzy. Has [poisonous] while an enemy creature has Poisonous.",
+    "keywords": [],
+    "attributes": {
+      "power": 5
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Ability paraphrased (expanded from official shorthand) from the official FAQ: \"Has HUNTER while an enemy creature does. Repeat for SNEAKY, FRENZY and POISONOUS.\" Power reconstructed. Verify."
+  },
+  {
+    "id": "axolotl_healer",
+    "name": "Axolotl Healer",
+    "type": "creature",
+    "text": "Play: Gain 2 life.",
+    "keywords": [],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Ability confirmed by the official rules sheet's worked example (\"activates its play ability (to gain 2 life)\"). Power reconstructed. Verify."
+  },
+  {
+    "id": "strange_barrel",
+    "name": "Strange Barrel",
+    "type": "creature",
+    "text": "Play: Look at the top 3 cards of your draw pile. Put them back in any order.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Name confirmed by the official rules sheet (used, unexplained, in a worked example). Power and ability text are this build's reconstruction from general knowledge, not officially confirmed. Verify."
+  },
+  {
+    "id": "rhino_turtle",
+    "name": "Rhino Turtle",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 7
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:verified"
+    ],
+    "notes": "Name confirmed via the official site's game-overview page (image captioned \"Mindbug Rhino Turtle\", mindbug.me/game-overview, fetched 2026-08-19). Keywords/power/ability are this build's reconstruction. Verify."
+  },
+  {
+    "id": "shark_dog",
+    "name": "Shark Dog",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Frenzy",
+      "Sneaky"
+    ],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "turbo_bug",
+    "name": "Turbo Bug",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Frenzy"
+    ],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "lone_yeti",
+    "name": "Lone Yeti",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Frenzy"
+    ],
+    "attributes": {
+      "power": 9
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "witch_hazel",
+    "name": "Witch Hazel",
+    "type": "creature",
+    "text": "Play: Draw a card, then discard a card.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "grave_robber",
+    "name": "Grave Robber",
+    "type": "creature",
+    "text": "Play: Put a creature card from either discard pile into your hand.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "deathweaver",
+    "name": "Deathweaver",
+    "type": "creature",
+    "text": "Play: Each player defeats their strongest creature in play.",
+    "keywords": [],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "shrewd_rat",
+    "name": "Shrewd Rat",
+    "type": "creature",
+    "text": "Play: Look at the opponent's hand.",
+    "keywords": [],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "snail_thrower",
+    "name": "Snail Thrower",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Poisonous"
+    ],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "tough_chicken",
+    "name": "Tough Chicken",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "urchin_hurler",
+    "name": "Urchin Hurler",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Poisonous"
+    ],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "chameleon_sniper",
+    "name": "Chameleon Sniper",
+    "type": "creature",
+    "text": "Play: Defeat an enemy creature with power 2 or less.",
+    "keywords": [],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "harpy_mother",
+    "name": "Harpy Mother",
+    "type": "creature",
+    "text": "Play: Search your draw pile for a card, reveal it, and draw it. Shuffle your draw pile.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "bulwark_beetle",
+    "name": "Bulwark Beetle",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "ferret_bomber",
+    "name": "Ferret Bomber",
+    "type": "creature",
+    "text": "Play: Look at the top 3 cards of the opponent's draw pile. Discard one of them.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "goblin_werewolf",
+    "name": "Goblin Werewolf",
+    "type": "creature",
+    "text": "This has +3 power while it is your turn.",
+    "keywords": [],
+    "attributes": {
+      "power": 6
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:reconstructed-known"
+    ],
+    "notes": "This build's best-effort recollection that this is a genuine Mindbug base-set creature name; power, keywords, and ability text are reconstructed from general knowledge, not re-verified against an official source or card database during this build. Treat as unverified and confirm before any real use."
+  },
+  {
+    "id": "pangolin_juggler",
+    "name": "Pangolin Juggler",
+    "type": "creature",
+    "text": "Play: Gain 1 life for each Tough creature you control.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "ember_newt",
+    "name": "Ember Newt",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Poisonous"
+    ],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "cathedral_moose",
+    "name": "Cathedral Moose",
+    "type": "creature",
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "power": 8
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "whisper_vole",
+    "name": "Whisper Vole",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Sneaky"
+    ],
+    "attributes": {
+      "power": 1
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "iron_cricket",
+    "name": "Iron Cricket",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "velvet_jackal",
+    "name": "Velvet Jackal",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Frenzy"
+    ],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "marsh_auger",
+    "name": "Marsh Auger",
+    "type": "creature",
+    "text": "Attack: The opponent discards a card.",
+    "keywords": [],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "copper_heron",
+    "name": "Copper Heron",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Hunter"
+    ],
+    "attributes": {
+      "power": 5
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "static_opossum",
+    "name": "Static Opossum",
+    "type": "creature",
+    "text": "Defeated: Gain 1 life.",
+    "keywords": [],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "driftwood_crab",
+    "name": "Driftwood Crab",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Tough"
+    ],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "quartz_beetle",
+    "name": "Quartz Beetle",
+    "type": "creature",
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "power": 6
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "nettle_fox",
+    "name": "Nettle Fox",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Poisonous",
+      "Sneaky"
+    ],
+    "attributes": {
+      "power": 2
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "thistle_ram",
+    "name": "Thistle Ram",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Frenzy"
+    ],
+    "attributes": {
+      "power": 7
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "sable_wren",
+    "name": "Sable Wren",
+    "type": "creature",
+    "text": "Play: Look at the top card of your draw pile. You may discard it.",
+    "keywords": [],
+    "attributes": {
+      "power": 1
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "gravel_toad",
+    "name": "Gravel Toad",
+    "type": "creature",
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "power": 4
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "ashen_lynx",
+    "name": "Ashen Lynx",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Sneaky"
+    ],
+    "attributes": {
+      "power": 5
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "brindle_ox",
+    "name": "Brindle Ox",
+    "type": "creature",
+    "text": "",
+    "keywords": [],
+    "attributes": {
+      "power": 9
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  },
+  {
+    "id": "hollow_kite",
+    "name": "Hollow Kite",
+    "type": "creature",
+    "text": "",
+    "keywords": [
+      "Hunter",
+      "Poisonous"
+    ],
+    "attributes": {
+      "power": 3
+    },
+    "deck_limit": 1,
+    "tags": [
+      "provenance:placeholder"
+    ],
+    "notes": "Original placeholder creature authored for this fixture (tabletop-format build, 2026-08-19) to fill out a 48-card shared pool for schema/tooling testing. This is NOT a real Mindbug card — do not present it as official content."
+  }
+]

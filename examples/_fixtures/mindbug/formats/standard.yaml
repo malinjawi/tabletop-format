@@ -1,0 +1,20 @@
+id: standard
+name: Standard
+description: >
+  The only way to play: shuffle all 48 creature cards from First Contact
+  together into one shared deck. There is no deck construction, no card
+  pool selection, and no format rotation in Mindbug — "Standard" exists
+  here only because the tabletop-format schema expects at least one
+  format document. See rules/rules.md "Setup".
+card_pool:
+  - first_contact
+deck_rules:
+  min_size: 48
+  max_size: 48
+  notes: >
+    Not deck-built. All 48 cards are shuffled together as a single shared
+    deck; each player then deals themselves a 10-card draw pile from it
+    (see rules/rules.md "Setup"). There is no sideboard, no card pool
+    trimming, and every card is a strict singleton (quantity 1 in
+    components/printings.json) — see game.yaml default_provenance and
+    README.md for why deck_limit is 1 on every card.

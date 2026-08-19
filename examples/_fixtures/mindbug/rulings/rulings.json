@@ -1,0 +1,20 @@
+[
+  {
+    "card_id": "elephantopus",
+    "date": "2021-10-19",
+    "text": "Elephantopus's constant ability (\"The opponent cannot block with creatures with power 4 or less\") only restricts which creature the DEFENDING player may choose as a blocker. It does not stop an attacking Hunter creature from naming a power-4-or-less creature as a forced blocker — Hunter overrides the defender's choice, not the attacker's own restriction. If the attacking player chooses not to use Hunter and the defender only has power-4-or-less creatures, the attack is effectively unblockable.",
+    "source": "Official FAQ — mindbug.me/faq (fetched 2026-08-19)"
+  },
+  {
+    "card_id": "sharky_crab_dog_mummypus",
+    "date": "2021-10-19",
+    "text": "\"Has HUNTER while an enemy creature does. Repeat for SNEAKY, FRENZY and POISONOUS\" means: for each of those four keywords, Sharky-Crab-Dog-Mummypus has that keyword for itself at any moment an enemy creature in play has it. It is checked continuously, not locked in at any one time.",
+    "source": "Official FAQ — mindbug.me/faq (fetched 2026-08-19), crediting community member 95chins on BoardGameGeek for the clarifying phrasing"
+  },
+  {
+    "card_id": "sluggernaut",
+    "date": "2023-05-09",
+    "text": "Sluggernaut is a double-sided card. The first time it would be defeated because of Tough, flip it to its other side instead of exhausting it in place; you must then pick a profile for that side (Frenzy or Hunter), and that choice is locked in for the rest of the game — you cannot switch sides again on later turns.",
+    "source": "Official FAQ — mindbug.me/faq (fetched 2026-08-19)"
+  }
+]
