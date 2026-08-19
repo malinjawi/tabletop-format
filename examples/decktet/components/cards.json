@@ -1,0 +1,679 @@
+[
+  {
+    "id": "ace_moons",
+    "name": "Ace of Moons",
+    "type": "ace",
+    "text": "Wisdom, especially divine wisdom -- mysteries, and the truth that the world outstrips our knowledge.",
+    "attributes": {
+      "rank": "Ace",
+      "rank_value": 1,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons"
+    ]
+  },
+  {
+    "id": "ace_suns",
+    "name": "Ace of Suns",
+    "type": "ace",
+    "text": "Power, perhaps divine power -- decisive action and clarity of purpose.",
+    "attributes": {
+      "rank": "Ace",
+      "rank_value": 1,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns"
+    ]
+  },
+  {
+    "id": "ace_waves",
+    "name": "Ace of Waves",
+    "type": "ace",
+    "text": "Nature as an active force -- weather, natural cycles, the passage of time.",
+    "attributes": {
+      "rank": "Ace",
+      "rank_value": 1,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves"
+    ]
+  },
+  {
+    "id": "ace_leaves",
+    "name": "Ace of Leaves",
+    "type": "ace",
+    "text": "Nature as matter -- raw materials and food, that from which things begin and end.",
+    "attributes": {
+      "rank": "Ace",
+      "rank_value": 1,
+      "faction": "leaves"
+    },
+    "subtypes": [
+      "leaves"
+    ]
+  },
+  {
+    "id": "ace_wyrms",
+    "name": "Ace of Wyrms",
+    "type": "ace",
+    "text": "Unnatural and at home underground -- violence, dreams fed upon; the most negative of the suits.",
+    "attributes": {
+      "rank": "Ace",
+      "rank_value": 1,
+      "faction": "wyrms"
+    },
+    "subtypes": [
+      "wyrms"
+    ]
+  },
+  {
+    "id": "ace_knots",
+    "name": "Ace of Knots",
+    "type": "ace",
+    "text": "Craft, skill, and refinement -- worked goods, commerce, and money.",
+    "attributes": {
+      "rank": "Ace",
+      "rank_value": 1,
+      "faction": "knots"
+    },
+    "subtypes": [
+      "knots"
+    ]
+  },
+  {
+    "id": "number_author",
+    "name": "the Author",
+    "type": "number",
+    "text": "An investigator who deals in partial answers, not certainties.",
+    "attributes": {
+      "rank": "2",
+      "rank_value": 2,
+      "faction": "moons",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "moons",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_origin",
+    "name": "the Origin",
+    "type": "number",
+    "text": "Morning light through clear water -- a living spring, or the moment of it.",
+    "attributes": {
+      "rank": "2",
+      "rank_value": 2,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves",
+      "leaves"
+    ]
+  },
+  {
+    "id": "number_desert",
+    "name": "the Desert",
+    "type": "number",
+    "text": "Barren and without life, offering a certain grim clarity.",
+    "attributes": {
+      "rank": "2",
+      "rank_value": 2,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "number_savage",
+    "name": "the Savage",
+    "type": "number",
+    "text": "Wears a pleasant face, but the wild lurks in his heart.",
+    "attributes": {
+      "rank": "3",
+      "rank_value": 3,
+      "faction": "leaves",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "leaves",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "number_painter",
+    "name": "the Painter",
+    "type": "number",
+    "text": "Paints the world as it truly is, seeing through posturing.",
+    "attributes": {
+      "rank": "3",
+      "rank_value": 3,
+      "faction": "suns",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "suns",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_journey",
+    "name": "the Journey",
+    "type": "number",
+    "text": "Its own story, written between departure and arrival.",
+    "attributes": {
+      "rank": "3",
+      "rank_value": 3,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "waves"
+    ]
+  },
+  {
+    "id": "number_sailor",
+    "name": "the Sailor",
+    "type": "number",
+    "text": "A traveller by nature, uneasy whenever not underway.",
+    "attributes": {
+      "rank": "4",
+      "rank_value": 4,
+      "faction": "waves",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "waves",
+      "leaves"
+    ]
+  },
+  {
+    "id": "number_battle",
+    "name": "the Battle",
+    "type": "number",
+    "text": "Struggle with forces that are half in shadow.",
+    "attributes": {
+      "rank": "4",
+      "rank_value": 4,
+      "faction": "wyrms"
+    },
+    "subtypes": [
+      "wyrms",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_mountain",
+    "name": "the Mountain",
+    "type": "number",
+    "text": "A quest leads to the peak -- getting there may matter more than arriving.",
+    "attributes": {
+      "rank": "4",
+      "rank_value": 4,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "suns"
+    ]
+  },
+  {
+    "id": "number_soldier",
+    "name": "the Soldier",
+    "type": "number",
+    "text": "War is craft to the Soldier, wrought in stillness and motion.",
+    "attributes": {
+      "rank": "5",
+      "rank_value": 5,
+      "faction": "wyrms",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "wyrms",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_discovery",
+    "name": "the Discovery",
+    "type": "number",
+    "text": "Something buried or lost is found, as sudden as a storm.",
+    "attributes": {
+      "rank": "5",
+      "rank_value": 5,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns",
+      "waves"
+    ]
+  },
+  {
+    "id": "number_forest",
+    "name": "the Forest",
+    "type": "number",
+    "text": "Usually a literal wooded place; in a crowded city, one tree can be a forest.",
+    "attributes": {
+      "rank": "5",
+      "rank_value": 5,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "leaves"
+    ]
+  },
+  {
+    "id": "number_lunatic",
+    "name": "the Lunatic",
+    "type": "number",
+    "text": "Sees things no one else sees -- deeper truths, or delusions.",
+    "attributes": {
+      "rank": "6",
+      "rank_value": 6,
+      "faction": "moons",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "moons",
+      "waves"
+    ]
+  },
+  {
+    "id": "number_penitent",
+    "name": "the Penitent",
+    "type": "number",
+    "text": "A higher calling hides a darker past; redemption is never complete.",
+    "attributes": {
+      "rank": "6",
+      "rank_value": 6,
+      "faction": "suns",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "suns",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "number_market",
+    "name": "the Market",
+    "type": "number",
+    "text": "A place of trade, or the act of commerce itself -- an exchange, and the matter is resolved.",
+    "attributes": {
+      "rank": "6",
+      "rank_value": 6,
+      "faction": "leaves"
+    },
+    "subtypes": [
+      "leaves",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_castle",
+    "name": "the Castle",
+    "type": "number",
+    "text": "A community; a place of civility or power, but only rarely both.",
+    "attributes": {
+      "rank": "7",
+      "rank_value": 7,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_cave",
+    "name": "the Cave",
+    "type": "number",
+    "text": "Home to grim things and a place of challenges; best entered and left only once.",
+    "attributes": {
+      "rank": "7",
+      "rank_value": 7,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "number_chance_meeting",
+    "name": "the Chance Meeting",
+    "type": "number",
+    "text": "Two stories half-written find themselves writing one another.",
+    "attributes": {
+      "rank": "7",
+      "rank_value": 7,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "leaves"
+    ]
+  },
+  {
+    "id": "number_mill",
+    "name": "the Mill",
+    "type": "number",
+    "text": "A place of craft and production, its song lost in the ceaseless turning wheel.",
+    "attributes": {
+      "rank": "8",
+      "rank_value": 8,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves",
+      "leaves"
+    ]
+  },
+  {
+    "id": "number_betrayal",
+    "name": "the Betrayal",
+    "type": "number",
+    "text": "Even a soft hand can wield a sharp knife -- a time to be wary.",
+    "attributes": {
+      "rank": "8",
+      "rank_value": 8,
+      "faction": "wyrms"
+    },
+    "subtypes": [
+      "wyrms",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_diplomat",
+    "name": "the Diplomat",
+    "type": "number",
+    "text": "Mediates between opposites: darkness and light, the one and the many.",
+    "attributes": {
+      "rank": "8",
+      "rank_value": 8,
+      "faction": "moons",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "moons",
+      "suns"
+    ]
+  },
+  {
+    "id": "number_pact",
+    "name": "the Pact",
+    "type": "number",
+    "text": "When two kings agree, the stones themselves agree.",
+    "attributes": {
+      "rank": "9",
+      "rank_value": 9,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "suns"
+    ]
+  },
+  {
+    "id": "number_merchant",
+    "name": "the Merchant",
+    "type": "number",
+    "text": "Wealth is its own end; amasses riches while fearing their loss.",
+    "attributes": {
+      "rank": "9",
+      "rank_value": 9,
+      "faction": "leaves",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "leaves",
+      "knots"
+    ]
+  },
+  {
+    "id": "number_darkness",
+    "name": "the Darkness",
+    "type": "number",
+    "text": "Settles on familiar places and hides all manner of things.",
+    "attributes": {
+      "rank": "9",
+      "rank_value": 9,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "crown_moons",
+    "name": "the Huntress",
+    "type": "crown",
+    "text": "A seeker who moves without reflection, in accord with her nature.",
+    "attributes": {
+      "rank": "Crown",
+      "rank_value": 12,
+      "faction": "moons",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "moons"
+    ]
+  },
+  {
+    "id": "crown_suns",
+    "name": "the Bard",
+    "type": "crown",
+    "text": "Where the Painter shows the world as it is, the Bard says how it ought to be.",
+    "attributes": {
+      "rank": "Crown",
+      "rank_value": 12,
+      "faction": "suns",
+      "mark": "personality"
+    },
+    "subtypes": [
+      "suns"
+    ]
+  },
+  {
+    "id": "crown_waves",
+    "name": "the Sea",
+    "type": "crown",
+    "text": "Often literally a large body of water; as a symbol, the source of storms.",
+    "attributes": {
+      "rank": "Crown",
+      "rank_value": 12,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves"
+    ]
+  },
+  {
+    "id": "crown_leaves",
+    "name": "the End",
+    "type": "crown",
+    "text": "The conclusion of one cycle, or a terminus with nothing beyond it.",
+    "attributes": {
+      "rank": "Crown",
+      "rank_value": 12,
+      "faction": "leaves"
+    },
+    "subtypes": [
+      "leaves"
+    ]
+  },
+  {
+    "id": "crown_wyrms",
+    "name": "the Calamity",
+    "type": "crown",
+    "text": "Death so sudden there is no time to bury the dead.",
+    "attributes": {
+      "rank": "Crown",
+      "rank_value": 12,
+      "faction": "wyrms"
+    },
+    "subtypes": [
+      "wyrms"
+    ]
+  },
+  {
+    "id": "crown_knots",
+    "name": "the Windfall",
+    "type": "crown",
+    "text": "Unannounced good fortune -- always a positive card on its own.",
+    "attributes": {
+      "rank": "Crown",
+      "rank_value": 12,
+      "faction": "knots"
+    },
+    "subtypes": [
+      "knots"
+    ]
+  },
+  {
+    "id": "excuse",
+    "name": "the Excuse",
+    "type": "excuse",
+    "text": "A blank, inert card with no suit and no rank -- the Decktet's joker.",
+    "attributes": {
+      "rank": "-",
+      "rank_value": 0
+    }
+  },
+  {
+    "id": "pawn_light_keeper",
+    "name": "the Light Keeper",
+    "type": "pawn",
+    "text": "Prepares for the worst, so danger is overcome before it arises.",
+    "attributes": {
+      "rank": "Pawn",
+      "rank_value": 10,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns",
+      "waves",
+      "knots"
+    ]
+  },
+  {
+    "id": "pawn_harvest",
+    "name": "the Harvest",
+    "type": "pawn",
+    "text": "What was sown may be reaped -- patience rewarded, labour demanded.",
+    "attributes": {
+      "rank": "Pawn",
+      "rank_value": 10,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "suns",
+      "leaves"
+    ]
+  },
+  {
+    "id": "pawn_watchman",
+    "name": "the Watchman",
+    "type": "pawn",
+    "text": "Waits for danger to arise and responds, if perceptive and lucky enough.",
+    "attributes": {
+      "rank": "Pawn",
+      "rank_value": 10,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "wyrms",
+      "knots"
+    ]
+  },
+  {
+    "id": "pawn_borderland",
+    "name": "the Borderland",
+    "type": "pawn",
+    "text": "The edge of things -- chance and uncertainty, threats and resources alike.",
+    "attributes": {
+      "rank": "Pawn",
+      "rank_value": 10,
+      "faction": "waves"
+    },
+    "subtypes": [
+      "waves",
+      "leaves",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "court_rite",
+    "name": "the Rite",
+    "type": "court",
+    "text": "Records the passage of time: sacrifice and accomplishment, ascension and decline.",
+    "attributes": {
+      "rank": "Court",
+      "rank_value": 11,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "leaves",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "court_island",
+    "name": "the Island",
+    "type": "court",
+    "text": "Discovery's surprise and the Cave's dark isolation -- you go there alone.",
+    "attributes": {
+      "rank": "Court",
+      "rank_value": 11,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns",
+      "waves",
+      "wyrms"
+    ]
+  },
+  {
+    "id": "court_consul",
+    "name": "the Consul",
+    "type": "court",
+    "text": "Wise and cunning; a source of advice who perhaps keeps the better part for himself.",
+    "attributes": {
+      "rank": "Court",
+      "rank_value": 11,
+      "faction": "moons"
+    },
+    "subtypes": [
+      "moons",
+      "waves",
+      "knots"
+    ]
+  },
+  {
+    "id": "court_window",
+    "name": "the Window",
+    "type": "court",
+    "text": "Lets you see out and the world see in, while still a barrier between them.",
+    "attributes": {
+      "rank": "Court",
+      "rank_value": 11,
+      "faction": "suns"
+    },
+    "subtypes": [
+      "suns",
+      "leaves",
+      "knots"
+    ]
+  }
+]

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "role_liberal",
+    "name": "Liberal",
+    "type": "role",
+    "text": "You are a Liberal. Help enact five Liberal Policies, or root out and kill Hitler, to win.",
+    "attributes": {
+      "faction": "liberal"
+    }
+  },
+  {
+    "id": "role_fascist",
+    "name": "Fascist",
+    "type": "role",
+    "text": "You are a Fascist. You know Hitler's identity. Help enact six Fascist Policies, or get Hitler elected Chancellor after three Fascist Policies are enacted, to win.",
+    "attributes": {
+      "faction": "fascist"
+    }
+  },
+  {
+    "id": "role_hitler",
+    "name": "Hitler",
+    "type": "role",
+    "text": "You are Hitler. You play for the Fascist team but do not know who the other Fascists are. Your team wins if you are elected Chancellor after three Fascist Policies have been enacted, or if six Fascist Policies are enacted.",
+    "attributes": {
+      "faction": "fascist"
+    }
+  },
+  {
+    "id": "party_liberal",
+    "name": "Liberal",
+    "type": "party",
+    "text": "Shown when investigated. Marks the holder's party loyalty as Liberal.",
+    "attributes": {
+      "faction": "liberal"
+    }
+  },
+  {
+    "id": "party_fascist",
+    "name": "Fascist",
+    "type": "party",
+    "text": "Shown when investigated. Marks the holder's party loyalty as Fascist. Ordinary Fascists AND Hitler both carry this same card, so investigating Hitler shows only \"Fascist,\" never \"Hitler.\"",
+    "attributes": {
+      "faction": "fascist"
+    }
+  },
+  {
+    "id": "policy_liberal",
+    "name": "Liberal Policy",
+    "type": "policy",
+    "text": "Enacted by a Chancellor during a Legislative Session. Five enacted Liberal Policies win the game for the Liberals immediately.",
+    "attributes": {
+      "faction": "liberal"
+    }
+  },
+  {
+    "id": "policy_fascist",
+    "name": "Fascist Policy",
+    "type": "policy",
+    "text": "Enacted by a Chancellor during a Legislative Session. Six enacted Fascist Policies win the game for the Fascists immediately. Most enacted Fascist Policies grant the President a one-time power (see rules.md).",
+    "attributes": {
+      "faction": "fascist"
+    }
+  },
+  {
+    "id": "ballot_ja",
+    "name": "Ja!",
+    "type": "ballot",
+    "text": "A yes vote on the proposed President/Chancellor government.",
+    "attributes": {
+      "vote": "ja"
+    }
+  },
+  {
+    "id": "ballot_nein",
+    "name": "Nein!",
+    "type": "ballot",
+    "text": "A no vote on the proposed President/Chancellor government.",
+    "attributes": {
+      "vote": "nein"
+    }
+  },
+  {
+    "id": "placard_president",
+    "name": "President",
+    "type": "placard",
+    "text": "Marks the current President. Passes clockwise to the next player at the start of each round (except after a Special Election)."
+  },
+  {
+    "id": "placard_chancellor",
+    "name": "Chancellor",
+    "type": "placard",
+    "text": "Marks the current Chancellor Candidate, then the sitting Chancellor once elected. Passed by the President to their nominee each round."
+  },
+  {
+    "id": "placard_election_tracker",
+    "name": "Election Tracker",
+    "type": "placard",
+    "text": "Advances by one after every failed government vote and every enacted Veto. On the third advance, the top Policy is enacted automatically (\"chaos\") and the tracker resets."
+  }
+]

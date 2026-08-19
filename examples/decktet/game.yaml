@@ -1,0 +1,128 @@
+format_version: "0.1.0"
+id: decktet
+title: "The Decktet"
+version: "1.0.0"
+# Public, CC-licensed deck-and-game-system by P.D. Magnus. Verified directly against
+# decktet.com (deck + PnP license) and wiki.decktet.com (game rules license) -- see
+# README.md for the full license trail, the two source URLs, and exact quotes.
+license: CC-BY-NC-SA-4.0
+description: >
+  A 45-card deck (36-card basic deck + 9-card extended deck) unlike an ordinary
+  poker or tarot deck: six suits, ten ranks, and most cards carry TWO suits at
+  once (a handful of extended-deck cards carry three). That cross-suiting is the
+  deck's signature and the engine behind dozens of different games playable on
+  the same physical cards. This port models the full deck plus two of its
+  best-known catalog games, Magnate and Quincunx.
+genre: card system
+tags: [multi-suit, deck-system, tableau, trick-taking, print-and-play, family-of-games]
+authors:
+  - name: P.D. Magnus
+    role: deck design, illustration, rules text
+  - name: Cristyn Magnus
+    role: "Magnate designer"
+  - name: Chris DeLeo
+    role: "Quincunx designer"
+  - name: The Format Project
+    role: port adaptation
+players:
+  min: 1
+  max: 5
+playtime_minutes:
+  min: 15
+  max: 45
+default_provenance:
+  source: human
+  creator: >
+    Deck design, card names, and rules text: P.D. Magnus (decktet.com,
+    wiki.decktet.com). Magnate: Cristyn Magnus. Quincunx: Chris DeLeo (rules
+    text by P.D. Magnus). See README.md for the exact license per source.
+  notes: >
+    (c) P.D. Magnus. The deck and its print-and-play version are CC BY-NC-SA
+    4.0 per decktet.com; wiki.decktet.com's game rules (Magnate, Quincunx, and
+    the rest of the catalog) are CC BY-NC-SA 3.0. Both require attribution,
+    forbid commercial use, and require share-alike -- this port carries the
+    same license. See README.md for exact quotes and URLs.
+attribute_definitions:
+  - key: rank
+    name: Rank
+    type: string
+    required: true
+    description: >
+      Printed rank label: Ace, 2-9, Pawn, Court, or Crown (extended-deck Pawns
+      and Courts sit between 9 and Crown). The Excuse has no rank ("-").
+  - key: rank_value
+    name: Rank Value
+    type: integer
+    required: true
+    description: >
+      Numeric ordering for comparison: Ace=1, 2-9 as printed, Pawn=10,
+      Court=11, Crown=12, Excuse=0. NOTE: several catalog games (Adaman,
+      Quincunx) instead score Aces as 1 and Crowns as 10 in BASIC-deck-only
+      play, per their own rules -- see rules.md. rank_value here is a single
+      monotonic ordering across all 45 cards including the extended deck, not
+      a universal point value; game-specific scoring is documented per game.
+  - key: faction
+    name: Primary suit
+    type: string
+    required: false
+    description: >
+      One of moons, suns, waves, leaves, wyrms, knots -- the FIRST suit on the
+      card in the deck's own canonical suit order (see subtypes for the card's
+      complete suit list, which is the authoritative multi-suit data). Exists
+      only to drive faction_colors below; the Excuse has none.
+  - key: mark
+    name: Personality mark
+    type: string
+    required: false
+    description: >
+      "personality" on the 11 face/personality cards (9 number cards + the
+      Bard and Huntress Crowns). Omitted on the deck's other 34 cards (which
+      are unmarked Aces, unmarked Crowns, location/event cards, or extended
+      cards) -- this port does not attempt to distinguish location vs. event
+      marks per-card; see README.md.
+symbols:
+  - key: moons
+    name: Moons
+    glyph: "☾"
+  - key: suns
+    name: Suns
+    glyph: "☀"
+  - key: waves
+    name: Waves
+    glyph: "≈"
+  - key: leaves
+    name: Leaves
+    glyph: "✤"
+  - key: wyrms
+    name: Wyrms
+    glyph: "ϟ"
+  - key: knots
+    name: Knots
+    glyph: "⌘"
+type_colors:
+  ace:     { fg: "#3a3f47", bg: "#e8eaed" }
+  number:  { fg: "#1f2933", bg: "#f0ede4" }
+  crown:   { fg: "#8a6d1f", bg: "#faf1d6" }
+  pawn:    { fg: "#3a5a7a", bg: "#dfe9f2" }
+  court:   { fg: "#6a3a7a", bg: "#efe0f2" }
+  excuse:  { fg: "#f5f5f5", bg: "#1a1a1a" }
+faction_colors:
+  moons:  { fg: "#2a2f6b", bg: "#dfe1f5" }
+  suns:   { fg: "#8a5a10", bg: "#fbecd0" }
+  waves:  { fg: "#1a5c78", bg: "#daf0f5" }
+  leaves: { fg: "#2f6b2f", bg: "#e1f3e1" }
+  wyrms:  { fg: "#6b1f1f", bg: "#f5dede" }
+  knots:  { fg: "#4a3320", bg: "#ecdfd0" }
+official_docs:
+  - name: "decktet.com (deck + license)"
+    url: https://www.decktet.com/
+  - name: "Complete deck rules (PDF)"
+    url: https://www.decktet.com/download/decktet-rules.pdf
+  - name: "Print-and-play deck (PDF)"
+    url: https://www.decktet.com/download/decktet.pdf
+  - name: "the Decktet Wiki (game catalog)"
+    url: http://wiki.decktet.com/
+  - name: "Magnate rules"
+    url: http://wiki.decktet.com/game:magnate
+  - name: "Quincunx rules"
+    url: http://wiki.decktet.com/game:quincunx

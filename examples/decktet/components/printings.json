@@ -1,0 +1,317 @@
+[
+  {
+    "id": "p_ace_moons",
+    "card_id": "ace_moons",
+    "set_id": "basic",
+    "collector_number": "001",
+    "quantity": 1
+  },
+  {
+    "id": "p_ace_suns",
+    "card_id": "ace_suns",
+    "set_id": "basic",
+    "collector_number": "002",
+    "quantity": 1
+  },
+  {
+    "id": "p_ace_waves",
+    "card_id": "ace_waves",
+    "set_id": "basic",
+    "collector_number": "003",
+    "quantity": 1
+  },
+  {
+    "id": "p_ace_leaves",
+    "card_id": "ace_leaves",
+    "set_id": "basic",
+    "collector_number": "004",
+    "quantity": 1
+  },
+  {
+    "id": "p_ace_wyrms",
+    "card_id": "ace_wyrms",
+    "set_id": "basic",
+    "collector_number": "005",
+    "quantity": 1
+  },
+  {
+    "id": "p_ace_knots",
+    "card_id": "ace_knots",
+    "set_id": "basic",
+    "collector_number": "006",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_author",
+    "card_id": "number_author",
+    "set_id": "basic",
+    "collector_number": "007",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_origin",
+    "card_id": "number_origin",
+    "set_id": "basic",
+    "collector_number": "008",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_desert",
+    "card_id": "number_desert",
+    "set_id": "basic",
+    "collector_number": "009",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_savage",
+    "card_id": "number_savage",
+    "set_id": "basic",
+    "collector_number": "010",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_painter",
+    "card_id": "number_painter",
+    "set_id": "basic",
+    "collector_number": "011",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_journey",
+    "card_id": "number_journey",
+    "set_id": "basic",
+    "collector_number": "012",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_sailor",
+    "card_id": "number_sailor",
+    "set_id": "basic",
+    "collector_number": "013",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_battle",
+    "card_id": "number_battle",
+    "set_id": "basic",
+    "collector_number": "014",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_mountain",
+    "card_id": "number_mountain",
+    "set_id": "basic",
+    "collector_number": "015",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_soldier",
+    "card_id": "number_soldier",
+    "set_id": "basic",
+    "collector_number": "016",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_discovery",
+    "card_id": "number_discovery",
+    "set_id": "basic",
+    "collector_number": "017",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_forest",
+    "card_id": "number_forest",
+    "set_id": "basic",
+    "collector_number": "018",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_lunatic",
+    "card_id": "number_lunatic",
+    "set_id": "basic",
+    "collector_number": "019",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_penitent",
+    "card_id": "number_penitent",
+    "set_id": "basic",
+    "collector_number": "020",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_market",
+    "card_id": "number_market",
+    "set_id": "basic",
+    "collector_number": "021",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_castle",
+    "card_id": "number_castle",
+    "set_id": "basic",
+    "collector_number": "022",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_cave",
+    "card_id": "number_cave",
+    "set_id": "basic",
+    "collector_number": "023",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_chance_meeting",
+    "card_id": "number_chance_meeting",
+    "set_id": "basic",
+    "collector_number": "024",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_mill",
+    "card_id": "number_mill",
+    "set_id": "basic",
+    "collector_number": "025",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_betrayal",
+    "card_id": "number_betrayal",
+    "set_id": "basic",
+    "collector_number": "026",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_diplomat",
+    "card_id": "number_diplomat",
+    "set_id": "basic",
+    "collector_number": "027",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_pact",
+    "card_id": "number_pact",
+    "set_id": "basic",
+    "collector_number": "028",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_merchant",
+    "card_id": "number_merchant",
+    "set_id": "basic",
+    "collector_number": "029",
+    "quantity": 1
+  },
+  {
+    "id": "p_number_darkness",
+    "card_id": "number_darkness",
+    "set_id": "basic",
+    "collector_number": "030",
+    "quantity": 1
+  },
+  {
+    "id": "p_crown_moons",
+    "card_id": "crown_moons",
+    "set_id": "basic",
+    "collector_number": "031",
+    "quantity": 1
+  },
+  {
+    "id": "p_crown_suns",
+    "card_id": "crown_suns",
+    "set_id": "basic",
+    "collector_number": "032",
+    "quantity": 1
+  },
+  {
+    "id": "p_crown_waves",
+    "card_id": "crown_waves",
+    "set_id": "basic",
+    "collector_number": "033",
+    "quantity": 1
+  },
+  {
+    "id": "p_crown_leaves",
+    "card_id": "crown_leaves",
+    "set_id": "basic",
+    "collector_number": "034",
+    "quantity": 1
+  },
+  {
+    "id": "p_crown_wyrms",
+    "card_id": "crown_wyrms",
+    "set_id": "basic",
+    "collector_number": "035",
+    "quantity": 1
+  },
+  {
+    "id": "p_crown_knots",
+    "card_id": "crown_knots",
+    "set_id": "basic",
+    "collector_number": "036",
+    "quantity": 1
+  },
+  {
+    "id": "p_excuse",
+    "card_id": "excuse",
+    "set_id": "extended",
+    "collector_number": "037",
+    "quantity": 1
+  },
+  {
+    "id": "p_pawn_light_keeper",
+    "card_id": "pawn_light_keeper",
+    "set_id": "extended",
+    "collector_number": "038",
+    "quantity": 1
+  },
+  {
+    "id": "p_pawn_harvest",
+    "card_id": "pawn_harvest",
+    "set_id": "extended",
+    "collector_number": "039",
+    "quantity": 1
+  },
+  {
+    "id": "p_pawn_watchman",
+    "card_id": "pawn_watchman",
+    "set_id": "extended",
+    "collector_number": "040",
+    "quantity": 1
+  },
+  {
+    "id": "p_pawn_borderland",
+    "card_id": "pawn_borderland",
+    "set_id": "extended",
+    "collector_number": "041",
+    "quantity": 1
+  },
+  {
+    "id": "p_court_rite",
+    "card_id": "court_rite",
+    "set_id": "extended",
+    "collector_number": "042",
+    "quantity": 1
+  },
+  {
+    "id": "p_court_island",
+    "card_id": "court_island",
+    "set_id": "extended",
+    "collector_number": "043",
+    "quantity": 1
+  },
+  {
+    "id": "p_court_consul",
+    "card_id": "court_consul",
+    "set_id": "extended",
+    "collector_number": "044",
+    "quantity": 1
+  },
+  {
+    "id": "p_court_window",
+    "card_id": "court_window",
+    "set_id": "extended",
+    "collector_number": "045",
+    "quantity": 1
+  }
+]

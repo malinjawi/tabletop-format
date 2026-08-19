@@ -1,0 +1,86 @@
+[
+  {
+    "id": "p_role_liberal",
+    "card_id": "role_liberal",
+    "set_id": "standard-edition",
+    "collector_number": "001",
+    "quantity": 6
+  },
+  {
+    "id": "p_role_fascist",
+    "card_id": "role_fascist",
+    "set_id": "standard-edition",
+    "collector_number": "002",
+    "quantity": 3
+  },
+  {
+    "id": "p_role_hitler",
+    "card_id": "role_hitler",
+    "set_id": "standard-edition",
+    "collector_number": "003",
+    "quantity": 1
+  },
+  {
+    "id": "p_party_liberal",
+    "card_id": "party_liberal",
+    "set_id": "standard-edition",
+    "collector_number": "004",
+    "quantity": 6
+  },
+  {
+    "id": "p_party_fascist",
+    "card_id": "party_fascist",
+    "set_id": "standard-edition",
+    "collector_number": "005",
+    "quantity": 4
+  },
+  {
+    "id": "p_policy_liberal",
+    "card_id": "policy_liberal",
+    "set_id": "standard-edition",
+    "collector_number": "006",
+    "quantity": 6
+  },
+  {
+    "id": "p_policy_fascist",
+    "card_id": "policy_fascist",
+    "set_id": "standard-edition",
+    "collector_number": "007",
+    "quantity": 11
+  },
+  {
+    "id": "p_ballot_ja",
+    "card_id": "ballot_ja",
+    "set_id": "standard-edition",
+    "collector_number": "008",
+    "quantity": 10
+  },
+  {
+    "id": "p_ballot_nein",
+    "card_id": "ballot_nein",
+    "set_id": "standard-edition",
+    "collector_number": "009",
+    "quantity": 10
+  },
+  {
+    "id": "p_placard_president",
+    "card_id": "placard_president",
+    "set_id": "standard-edition",
+    "collector_number": "010",
+    "quantity": 1
+  },
+  {
+    "id": "p_placard_chancellor",
+    "card_id": "placard_chancellor",
+    "set_id": "standard-edition",
+    "collector_number": "011",
+    "quantity": 1
+  },
+  {
+    "id": "p_placard_election_tracker",
+    "card_id": "placard_election_tracker",
+    "set_id": "standard-edition",
+    "collector_number": "012",
+    "quantity": 1
+  }
+]

@@ -1,0 +1,10 @@
+id: standard
+name: Standard
+description: >
+  The only official way to play: all components from the Standard Edition
+  box. Secret Hitler has no deckbuilding, expansions, or banlist -- "format"
+  here just names the single legal component pool this port ships. Player
+  count (5-10) determines how many of the role/party/ballot cards are
+  actually used each game; see rules.md's Setup section.
+card_pool:
+  - standard-edition

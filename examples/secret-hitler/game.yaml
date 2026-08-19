@@ -1,0 +1,80 @@
+format_version: "0.1.0"
+id: secret-hitler
+title: "Secret Hitler"
+version: "1.0.0"
+# Public, CC-licensed social deduction game. Verified directly against
+# secrethitler.com (site + FAQ) and the official rules PDF hosted there --
+# see README.md for the exact quotes, URLs, and the fetch dates. Unlike the
+# proprietary IP fixtures under examples/_fixtures/ (Netrunner, Hearthstone),
+# this is a real, openly-licensed public game and lives under examples/ on
+# purpose.
+license: CC-BY-NC-SA-4.0
+description: >
+  A social deduction game for 5-10 players. Players are secretly Liberal or
+  Fascist (one Fascist is secretly Hitler); Liberals win by enacting five
+  Liberal Policies or killing Hitler, Fascists win by enacting six Fascist
+  Policies or getting Hitler elected Chancellor after three Fascist
+  Policies are already in play. Created by Mike Boxleiter, Tommy Maranges,
+  Max Temkin, and Mackenzie "Mac" Schubert; published by Goat, Wolf, &
+  Cabbage. Free official print-and-play; CC BY-NC-SA 4.0.
+genre: social deduction
+tags: [hidden-role, social-deduction, party, bluffing, 1930s, elections, five-to-ten-player]
+authors:
+  - name: Mike Boxleiter
+    role: design
+  - name: Tommy Maranges
+    role: design
+  - name: Max Temkin
+    role: design
+  - name: Mackenzie "Mac" Schubert
+    role: design & art
+  - name: The Format Project
+    role: port adaptation
+players:
+  min: 5
+  max: 10
+playtime_minutes:
+  min: 30
+  max: 60
+default_provenance:
+  source: human
+  creator: >
+    Original design, text, and rules: Mike Boxleiter, Tommy Maranges, Max
+    Temkin, and Mackenzie "Mac" Schubert, published by Goat, Wolf, &
+    Cabbage. See README.md for the exact per-source credit line (the
+    official rules PDF and a library catalog record differ slightly on the
+    four names -- both are quoted there).
+  notes: >
+    (c) Goat, Wolf, & Cabbage. Licensed CC BY-NC-SA 4.0 -- design and text
+    used under license, non-commercially, with attribution, sharealike.
+    See README.md for the exact quote and URL.
+attribute_definitions:
+  - key: faction
+    name: Faction
+    type: string
+    required: false
+    description: >
+      liberal or fascist. Present on role, party, and policy cards. Hitler's
+      role card is faction fascist but his PARTY card is identical to an
+      ordinary Fascist's -- see party_fascist's text and README.md.
+  - key: vote
+    name: Vote
+    type: string
+    required: false
+    description: ja or nein. Present only on ballot cards.
+type_colors:
+  role:     { fg: "#2b2f38", bg: "#e4e6ea" }
+  party:    { fg: "#3a3f47", bg: "#eceef1" }
+  policy:   { fg: "#4a3a1f", bg: "#f2e9d6" }
+  ballot:   { fg: "#333333", bg: "#f4f1e8" }
+  placard:  { fg: "#5a4a1f", bg: "#f5edd0" }
+faction_colors:
+  liberal:  { fg: "#123a7a", bg: "#dbe6f7" }
+  fascist:  { fg: "#7a1f12", bg: "#f7ded9" }
+official_docs:
+  - name: "secrethitler.com (free download + license)"
+    url: https://www.secrethitler.com/
+  - name: "Official Rules (PDF)"
+    url: https://www.secrethitler.com/assets/Secret_Hitler_Rules.pdf
+  - name: "Official Print & Play (PDF)"
+    url: https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf

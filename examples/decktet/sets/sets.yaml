@@ -1,0 +1,18 @@
+- id: basic
+  name: Basic Deck
+  position: 1
+  size: 36
+  description: >
+    The core 36-card Decktet: 6 Aces, 24 number-rank cards (2-9, three per
+    rank, each with two suits), and 6 Crowns. Most catalog games default to
+    this set alone and add extended-deck cards only as an optional variant.
+- id: extended
+  name: Extended Deck
+  cycle_id: extended
+  position: 2
+  size: 9
+  description: >
+    The nine extended-deck cards: the Excuse (no suit, no rank -- a blank,
+    inert "joker"), 4 Pawns, and 4 Courts (each with three suits, ranked
+    between 9 and Crown). Optional add-ons -- most games work fine without
+    them, some use one or two, a few require them. See rules.md.

@@ -1,0 +1,11 @@
+id: standard
+name: Standard
+description: >
+  The full 45-card Decktet (basic + extended). Individual games restrict
+  themselves further (e.g. "basic deck only," or "basic deck + Excuse") in
+  their own setup instructions -- see rules.md. There is no deckbuilding or
+  banlist in the Decktet system; "format" here just names the complete legal
+  card pool this port ships.
+card_pool:
+  - basic
+  - extended
