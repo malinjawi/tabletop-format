@@ -77,12 +77,43 @@ attribute_definitions:
     type: integer
     required: true
     description: >
-      The card's single combat/defense strength — Arcmage does not print
-      separate attack and defense numbers; a creature's loyalty mark value
-      serves as both, modified in play by +X/+Y-style counters and keyword
-      abilities named in its rules text. On City cards, loyalty is the
-      city's starting defense strength (always 3 among the cards in this
-      port).
+      CORRECTED (was previously described here as Arcmage's only combat
+      stat -- it isn't; see attack/defense below, added after re-checking
+      the live API/source while building the official card layout). The
+      official card renders loyalty as up to 3 discrete pip icons (element
+      ids L1/L2/L3 in the card SVG template, toggled on when loyalty > 0/1/2
+      -- confirmed in Arcmage.Server.Api/Layout/CardGenerator.cs's
+      SetLoyalty()), always 0-3 among every card in this port. This layout
+      renders it as a numeric badge instead of pips -- a deliberate,
+      disclosed simplification (see examples/arcmage/README.md). On City
+      cards loyalty is always 3.
+  - key: attack
+    name: Attack
+    type: integer
+    required: false
+    description: >
+      A creature's printed attack strength (element id "attacktext" in the
+      official card SVG; SetAttack() in CardGenerator.cs). Only Creature
+      cards print this (Arcmage.DAL/Repository.cs's per-type
+      ShowAttack/ShowDefense/ShowLoyalty flags -- confirmed via the
+      wtactics/arcmage source and cross-checked against every Creature/City
+      card's live API record). Backfilled from
+      https://aminduna.arcmage.org/api/Cards/{guid} for all 40 Creature
+      cards in this port (see README's "Card layout" section) -- absent
+      here means "not yet backfilled for that card," not "this card has no
+      attack," except where the card's type never prints it.
+  - key: defense
+    name: Defense
+    type: integer
+    required: false
+    description: >
+      A creature or city's printed defense strength (element id
+      "defensetext"; SetDefense() in CardGenerator.cs). Printed on Creature
+      cards (paired with attack) AND on City cards (alone, as the city's
+      total defense -- distinct from and usually much larger than its
+      loyalty pip count, e.g. Karka Suno: loyalty 3, defense 10). Not
+      printed on Event/Equipment/Magic/Enchantment cards. Backfilled for
+      all 40 Creature + 12 City cards in this port.
   - key: faction
     name: Faction
     type: string
@@ -90,7 +121,14 @@ attribute_definitions:
     description: >
       One of Arcmage's five factions (Gaian, Dark Legion, Red Banner, House
       of Nobles, The Empire), each tied to a resource color. Drives which
-      resource cards can pay a card's cost and colors its printed frame.
+      resource cards can pay a card's cost, colors its printed frame (the
+      official backgroundPng texture, per faction+card-type -- see
+      templates/layout.yaml), and picks the card's official
+      backgroundPng/border art. The official card prints NO separate
+      faction-name text anywhere -- faction reads purely through frame
+      color/art (confirmed: Arcmage.Server.Api/Controllers/CardsController.cs's
+      Patch action tracks Name/SubType/Cost/Loyalty/Attack/Defense/Info/
+      MarkdownText as "layout changes" but never a faction text field).
 type_colors:
   creature:    { fg: "#4a3520", bg: "#efe6d8" }
   event:       { fg: "#6a3fa0", bg: "#ebe0f5" }

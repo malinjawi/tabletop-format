@@ -91,22 +91,125 @@ per the original art license for each card's art, per
 <https://creativecommons.org/licenses/by-sa/4.0/> and
 <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>.
 
-## Card layout: this is a real, editable, print-ready card now
+## Card layout: derived from Arcmage's OWN official template, not a guess
 
 `examples/arcmage/templates/layout.yaml` is a full card layout spec (see
-`docs/layout-engine.md` and `schemas/layout.schema.json`) — a
-faction-colored frame, a title bar, an art window, a type line, a rules
-text box with `[symbol]` chips and shrink-to-fit, and cost/loyalty badges,
-positioned in real millimeters at the true 63.5mm x 88.9mm trading-card
-trim size. `layoutCard()` (`tools/hub_template.html`) renders it — the
+`docs/layout-engine.md` and `schemas/layout.schema.json`, and that doc's
+"Importing an official template (case study: Arcmage)" section for the
+full method). `layoutCard()` (`tools/hub_template.html`) renders it — the
 cards grid, the card modal, the live card editor preview, the PR visual
 diff, and the true-size print sheet all draw the SAME spec. Before this,
 every card here rendered through the generic `cardFrame()` template like
-every other game; now editing a card's name/cost/text in the editor
-reformats the actual print-ready card, live, and `🖨 Print` on the Cards
-tab produces that same card at true size with cut lines.
+every other game; this port's *first* layout (still visible in git
+history) was a plausible-looking faction-colored frame invented for this
+project, with no real connection to Arcmage's own card design. This
+version replaces that with one derived from **Arcmage's own
+card-generation source and live API** — `wtactics/arcmage`'s
+`Arcmage.Server.Api/Layout/CardGenerator.cs`, `Styles.cs`, and
+`Arcmage.DAL/Repository.cs`, plus 55+ live card records fetched from
+`aminduna.arcmage.org` while building it. What that changed, and what's
+confirmed vs. still an estimate:
 
-## Artwork: hot-linked, and now (probably) the RAW art layer, not the composed card
+**Confirmed directly from Arcmage's own code/API** (not inferred from a
+rendered image):
+- **Card size: 65mm x 92mm** (not the 63.5mm x 88.9mm "poker" trim size
+  this port's first layout assumed) — a European trading-card size,
+  consistent with the wtactics.org team. `CardGenerator.cs`'s SVG-merge
+  step forces every card's content to `230.31496 x 325.98425` SVG
+  user-units inside a `244.48819 x 340.15747` print-bordered canvas; at
+  `1 unit = 1/90 inch` (the `7.0866184`-unit margin resolves to an exact
+  2.0mm at that ratio, confirming the unit system) that's exactly 65mm x
+  92mm content in a 69mm x 96mm bordered canvas — `card.w_mm`/`h_mm`/
+  `bleed_mm` in the layout below.
+- **The rules-text box is 53.62mm x 29.63mm on EVERY card type**
+  (`190 x 105` units — `Repository.cs`'s `FillPredefinedCartTypes()`),
+  used verbatim as the `text` region's `w`/`h`.
+- **Body font: Liberation Serif** (regular/bold/italic/bold-italic,
+  11.25pt, 1.25x line spacing — `Styles.cs`), plus a **Nimbus Roman No9
+  L** drop-cap for paragraphs that open with a `:X:`-style illuminated
+  capital letter (`CardGenerator.cs`'s `case "c":` text-layout branch) —
+  this layout doesn't attempt the drop-cap effect (see "Not replicated"
+  below). Neither font ships on Google Fonts (confirmed: `google/fonts`
+  issue #180, open, unresolved) — **Tinos**, Google's own metric-
+  compatible Times New Roman clone (same lineage/purpose as both official
+  faces), is substituted for both `title`/`body` in `fonts:`, not a
+  decorative pick — this port's first layout used "Cinzel" + "EB
+  Garamond" for looks alone, with no tie to Arcmage's actual design.
+- **Attack and Defense are real, separate printed stats** — Creature
+  cards print both, City cards print Defense alone (as the city's total
+  defense, distinct from and usually much larger than its loyalty pip
+  count), everything else prints neither (`ShowAttack`/`ShowDefense` per
+  card type in `Repository.cs`, cross-checked against every Creature/City
+  card's live API record). **This corrects an earlier, wrong claim in
+  this port's `game.yaml`** that Arcmage has no separate attack/defense —
+  it does; only Loyalty is the single combined-looking stat, and even
+  that isn't quite what it looks like (next point). `attack`/`defense`
+  were backfilled from the live API for all 40 Creature + 12 City cards
+  in this port (see `game.yaml`'s `attribute_definitions` for the fetch
+  details).
+- **Loyalty renders as up to 3 pip icons** (element ids `L1`/`L2`/`L3`,
+  lit when loyalty > 0/1/2 — `SetLoyalty()`), not a printed number. This
+  layout still renders it as a numeric badge — a disclosed
+  simplification, not a claim that Arcmage prints a digit there.
+- **The card's "type line" is the SubType, not the primary type** —
+  element id `cardtypetext` is set from `Card.SubType` alone
+  (`SetType()`); the primary type (Creature/Event/City/...) is NEVER
+  printed as text anywhere, only expressed via the frame art. Arcmage's
+  own SubType is never blank (it repeats the primary type name, e.g.
+  "Event", when a card has no more specific flavor subtype like "Imp") —
+  this port's `subtypes` field follows the same convention (empty exactly
+  when Arcmage's subType would repeat the type name). The layout
+  reproduces "show exactly one such string" with two regions and
+  complementary `show_if: "subtypes"` / `show_if: "!subtypes"`; the first
+  layout wrongly showed a primary-type label AND a subtype as two
+  separate strings, which the real card never does.
+- **No faction-name text is printed anywhere on the card** — faction
+  reads purely through frame color/art. Confirmed two ways: `Styles.cs`/
+  `CardGenerator.cs` never set any faction-name text element, and
+  `CardsController.cs`'s `Patch` action's `hasLayoutChanges` field list
+  (everything a card edit can change on the rendered card) never includes
+  Faction, only Name/SubType/Cost/Loyalty/Attack/Defense/Info/
+  MarkdownText. This layout accordingly has no faction-name text region
+  (the first layout did).
+- **Every real card carries a fixed `"arcmage.org - join us!"` info
+  line** (element id `infotext`, default baked into `Repository.
+  CreateCard`'s `JoinUsText`) — confirmed on every one of 55+ sampled
+  live cards across all 5 factions. Written as a literal in the layout
+  (not per-card data) since it never varies.
+- **`backgroundPng` is a reusable per-faction+card-type frame texture,
+  looked up by faction+type ALONE** — confirmed in
+  `CardsController.cs`'s `Export` action:
+  `Repository.GetBackgroundPngFile(faction.Name, type.Name)`, which never
+  reads the card guid in the URL. `overlaySvg` is genuinely per-card
+  (`Repository.GetOverlaySvgFile(id)`), the dynamic text/art overlay.
+  Both URL shapes (`.../export?format=BackgroundPng&faction={guid}&
+  type={guid}`, `.../export?format=OverlaySvg`) were confirmed against
+  live card JSON records across all 5 factions and 5 ported card types.
+
+**Approximated** (the actual per-faction/per-card-type template SVG
+files — `CardTemplates/{faction}/{type}.svg` — live only on Arcmage's
+server, are not in the `wtactics/arcmage` git repo, and this session's
+tools could not read raw SVG/PNG bytes over the network — see
+`docs/layout-engine.md`'s case study for why): the exact `x`/`y` of the
+title, cost badge, art window, type line, and Attack/Defense/Loyalty
+badges below. These are placed using the CONFIRMED card size and
+rules-text-box size as anchors (this layout's 5.7mm side margins are
+chosen so the rules-text region comes out exactly 53.6mm wide, matching
+the confirmed 53.62mm) — a reasoned estimate, not a traced measurement.
+Every text region also carries a translucent backing plate that is
+**not** part of the official design either, added specifically because
+this session could never visually inspect the real `backgroundPng`/
+`card.jpg` pixels (no tool here can render remote binary images), so
+text legibility against the real frame art is unverified without it.
+
+**Not replicated** (disclosed gaps, not attempted): the illuminated
+drop-cap first letter some rules text uses; Arcmage's private "WTactics
+Symbols" icon font (real, confirmed via `Styles.cs`, but not a freely
+obtainable asset, unlike the fonts above) — this project's own
+`[symbol]` chip glyphs are used instead; Loyalty's pip-icon rendering
+(numeric badge instead, see above).
+
+## Artwork and frame: hot-linked directly from Arcmage's own exports
 
 `components/printings.json`'s `image` field points at
 `https://aminduna.arcmage.org/arcmage/Cards/{card-guid}/card.jpg` — the
@@ -121,45 +224,32 @@ where each card's own GUID reliably appears immediately after its
 `language` field — cross-checked against directly-fetched cards to confirm
 the pattern before trusting it for all 70).
 
-Every printing now **also** carries `art_url`, pointed at
-`https://aminduna.arcmage.org/api/Cards/{card-guid}/export?format=Art` —
-what `templates/layout.yaml`'s `art` region actually composites into the
-rendered card, instead of the composed image above. What's confirmed and
-what isn't:
-
-- **Confirmed**: fetching a card's full JSON record from the live API
-  (`https://aminduna.arcmage.org/api/Cards/{guid}`) returns an `artwork`
-  field with exactly this URL shape, distinctly named and separate from
-  the composed-card exports on the same record (`png`/`svg`/`jpeg`/`pdf`/
-  `webp`, `format=Png`/`format=Svg`/etc. — `jpeg` is the same URL as this
-  port's `image` field). The same record also exposes `backgroundPng`
-  (`format=BackgroundPng`, parameterized by `faction`+`type`, not by
-  card — clearly the reusable frame texture) and `overlaySvg`
-  (`format=OverlaySvg` — clearly the name/cost/text overlay). Put
-  together, this is strong structural evidence that Aminduna's own card
-  renderer is itself layered (art + frame + text overlay, composited into
-  the `png`/`jpeg`/etc. exports) exactly the way this platform's own
-  `layoutCard()` now is, and that `format=Art` is the dedicated raw-art
-  export. This pattern was checked against two different cards (Abduction,
-  Cutpurse Imp) and is consistent between them. The independent, official
-  `wtactics/art` GitHub repository (CC-BY-SA-4.0, linked from arcmage.org's
-  own site nav as "Artwork → Repository") further corroborates that raw,
-  uncomposed artwork is a real, separately-maintained asset category for
-  this project — organized by art-piece name rather than card GUID, which
-  is why this port uses the API's GUID-keyed `format=Art` URLs instead of
-  trying to fuzzy-match 70 card names against that repo's folder names.
-- **NOT confirmed**: this session's sandbox can fetch and render *text*
-  responses but not binary/image ones, so the actual pixels behind
-  `format=Art` were never visually compared against the composed card —
-  the case above is structural/circumstantial, from the API's own
-  self-description, not a pixel diff. `art_url` is wired in because the
-  evidence is real and specific, but every `image` region in
-  `layoutCard()` also always paints a tinted (faction-palette-colored)
-  placeholder with the artist's credit *underneath* the `<img>` tag, shown
-  automatically if the URL ever 404s or turns out to be something other
-  than expected — so a card never goes visually blank or silently shows
-  the wrong thing either way. If you can verify the pixels (or find they
-  match the composed card after all), please update this note.
+Every printing also carries `art_url` (the raw artwork layer,
+`.../export?format=Art`, credited to the card's `artist` field — CC-BY-
+SA-4.0 for original Arcmage/wtactics.org art, GPL-2.0 for the Battle for
+Wesnoth-sourced subset, exactly as tracked per-printing in `provenance`)
+and, new in this version, `background_url` (the official per-faction+
+card-type frame texture, `.../export?format=BackgroundPng&faction=
+{guid}&type={guid}`, computed for all 70 printings from the live
+`/api/Factions` and `/api/CardTypes` GUID tables plus each printing's own
+card GUID). Both are genuinely confirmed URL shapes (see "Confirmed"
+above), not guesses — but **the actual pixels behind either URL were
+never visually verified** by this session, since its tools can fetch and
+render *text* (`text/html`, `application/json`) but not binary/image
+responses (confirmed against `image/svg+xml`, `image/png`, and even a
+plain `text/plain` `robots.txt` — all came back empty on every host
+tried, including Wikimedia, ruling out an Arcmage-specific block). Every
+`background`/`image` region in `layoutCard()` always paints a tinted
+placeholder (a flat faction-palette color for `background`; that plus an
+artist-credited icon for `image`) *underneath* the `<img>` tag, shown
+automatically if a URL ever 404s or isn't what's expected — so a card
+never goes visually blank or silently shows the wrong thing either way.
+The frame texture's own license isn't separately declared by the API the
+way per-card `artworkLicense` is; it's hot-linked (not redistributed)
+directly from Arcmage's own server with attribution to the project as a
+whole, the same low-risk approach this port already used for `image` and
+`art_url`. If you can verify the pixels behind either URL (or the frame
+texture's specific license), please update this note.
 
 ## What was ported vs. what wasn't
 
@@ -196,6 +286,17 @@ what isn't:
 - **Deck construction rules, starting setup, hand size, and the Aminduna
   team-format details** were not found in the rules content fetched — see
   the "What this document does not cover" section of `rules/rules.md`.
+- **`attack`/`defense` were backfilled for all 40 Creature + 12 City
+  cards** while building the official card layout (see "Card layout"
+  above) — this port's `game.yaml` previously and incorrectly claimed
+  Arcmage has no such stats. **`flavorText`** (a separate field the live
+  API also returns — an italicized closing line, e.g. Foul Imps: "United
+  we stand.") was noticed during that same fetch but was NOT backfilled
+  into `components/cards.json`'s `text` field — out of scope for a
+  layout pass, left as a follow-up. Neither gap was silently patched over
+  the other way either: cards without a backfilled stat simply don't
+  render that stat's badge (`show_if`-guarded), same honest-degrade
+  contract as everything else in this port.
 
 ## Attribution
 

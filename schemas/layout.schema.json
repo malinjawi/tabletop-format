@@ -67,8 +67,8 @@
         "id": { "type": "string", "minLength": 1, "description": "Unique within the layout. Used for highlight-on-diff matching and debugging." },
         "type": {
           "type": "string",
-          "enum": ["text", "richtext", "image", "badge", "row", "rect"],
-          "description": "text: one line/short field. richtext: multi-line body text with [symbol] chips + optional autoshrink. image: printing/card artwork. badge: circular/square numeric chip (cost, etc). row: evenly-spaced inline cells (e.g. stat line). rect: undecorated frame/bar/divider -- no text, no data."
+          "enum": ["text", "richtext", "image", "badge", "row", "rect", "background"],
+          "description": "text: one line/short field. richtext: multi-line body text with [symbol] chips + optional autoshrink. image: printing/card artwork (paints a credited, tinted placeholder -- for a PHOTO the layout is crediting an artist for). badge: circular/square numeric chip (cost, etc). row: evenly-spaced inline cells (e.g. stat line). rect: undecorated frame/bar/divider -- no text, no data. background: a full-bleed (or partial) decorative image -- a reusable frame/border texture, NOT artwork needing a credit strip -- meant to be the first region in the array so every later region paints on top of it; degrades to a flat (palette-aware) color the same way image does when src is empty or 404s, but without image's artist-credit chrome. Added for importing official card templates whose frame is itself a texture asset (see docs/layout-engine.md's 'Importing an official template' case study)."
         },
         "x": { "type": "number", "description": "mm from card left edge." },
         "y": { "type": "number", "description": "mm from card top edge." },
@@ -76,10 +76,10 @@
         "h": { "type": "number", "exclusiveMinimum": 0, "description": "mm. Required for all types except badge (which uses d)." },
         "d": { "type": "number", "exclusiveMinimum": 0, "description": "Diameter in mm -- badge only, alternative to w/h." },
         "shape": { "type": "string", "enum": ["circle", "square"], "default": "circle", "description": "badge only." },
-        "src": { "type": "string", "description": "Dot path (\"card.name\", \"printing.art_url\", \"card.attributes.cost\") or a \"{path} literal {path}\" interpolation template. text/richtext/image/badge." },
+        "src": { "type": "string", "description": "Dot path (\"card.name\", \"printing.art_url\", \"card.attributes.cost\") or a \"{path} literal {path}\" interpolation template. text/richtext/image/badge/background." },
         "text": { "type": "string", "description": "Literal static text, used instead of resolving src (e.g. a fixed caption)." },
         "credit": { "type": "string", "description": "Dot path for an artist/source credit caption overlaid on an image region, e.g. \"printing.artist\". Also shown on the tinted placeholder used when the image fails to load or src is empty." },
-        "fit": { "type": "string", "enum": ["cover", "contain"], "default": "cover", "description": "image only." },
+        "fit": { "type": "string", "enum": ["cover", "contain"], "default": "cover", "description": "image/background only." },
         "font": { "type": "string", "description": "References a fonts[].id." },
         "size_pt": { "type": "number", "exclusiveMinimum": 0 },
         "min_size_pt": { "type": "number", "exclusiveMinimum": 0, "description": "richtext autoshrink floor -- won't shrink smaller than this. Defaults to max(5, size_pt-4)." },

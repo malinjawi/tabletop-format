@@ -25,8 +25,11 @@ detects there's no spec and falls straight through to the original
 data-driven `cardFrame()`. Adding a layout is opt-in per game.
 
 See `schemas/layout.schema.json` for the formal schema, and
-`examples/arcmage/templates/layout.yaml` for a complete, real example
-(a faction-colored TCG frame at true 63.5mm x 88.9mm trading-card size).
+`examples/arcmage/templates/layout.yaml` for a complete, real example --
+now derived from Arcmage's OWN official card template (true 65mm x 92mm
+card size, official fonts/frame texture/field rules), not an invented
+default. See "Importing an official template (case study: Arcmage)"
+below for exactly how, and what's confirmed vs. estimated.
 
 ## Why millimeters
 
@@ -44,15 +47,15 @@ print.
 
 ```yaml
 card:
-  w_mm: 63.5        # trim (finished) size
-  h_mm: 88.9
-  bleed_mm: 3        # documentation only today -- not yet drawn
-  radius_mm: 2.8
-  bg: "#f7f1e3"       # hex, or "palette" (see below)
+  w_mm: 65           # trim (finished) size -- Arcmage's OWN card size, not the
+  h_mm: 92           # 63.5x88.9mm "poker" size printSheet() falls back to by
+  bleed_mm: 2         # default for games with no layout.yaml at all
+  radius_mm: 2.5
+  bg: "#1c1c1c"       # hex, or "palette" (see below)
 
 fonts:
-  - { id: title, family: "Cinzel",      weight: 700 }
-  - { id: body,  family: "EB Garamond", weight: 400 }
+  - { id: title, family: "Tinos", weight: 700 }
+  - { id: body,  family: "Tinos", weight: 400 }
 
 palette:
   by: "attributes.faction"      # dot path read off the card
@@ -96,6 +99,7 @@ printing, and game:
 | `badge` | circular/square numeric chip | `d` (diameter) instead of `w`/`h`, `shape` |
 | `row` | evenly-spaced inline cells | `of: [{key, label, ...}]`, each cell independently `show_if`-able |
 | `rect` | undecorated frame/bar/divider | `fill`, `stroke`, `stroke_w_mm`, `radius_mm` — no data, pure decoration |
+| `background` | full-bleed (or partial) decorative texture — a reusable frame/border image, not credited artwork | same fields as `image` (`src`, `fit`) minus the artist-credit chrome; meant to be the FIRST region so everything else paints on top |
 
 Every region (and every `row` cell) accepts `show_if`: a bare path (shown
 when truthy/non-empty), `!path` (shown when falsy/absent), or `path ==
@@ -154,6 +158,134 @@ needing to.
    into `g.layout` if the file exists; nothing else to wire).
 5. Try `🖨 Print` on the game's Cards tab — that's the same spec at true
    physical size, cut lines included.
+
+## Importing an official template (case study: Arcmage)
+
+Every other game's `templates/layout.yaml` up to this point (including
+Arcmage's own first version) was an invented default: a plausible-looking
+faction-colored frame, picked for taste, with no connection to how the
+source game's own software actually renders its cards. That's fine for a
+game with no such software to check against -- but Arcmage is real,
+currently-developed, and **open source** (game/rules text CC-BY-SA-4.0,
+server code GPL-3.0, most art CC-BY-SA-4.0), which means its actual
+template is legally obtainable, not just approximable. This section is
+the method used to replace Arcmage's invented default with one derived
+from Arcmage's own renderer -- written up as a repeatable recipe for
+"bring your formatter": any open card game with a live card database
+and/or an open-source rendering codebase can go through the same steps.
+
+### The method
+
+1. **Find the game's own renderer.** Two independent sources, and you
+   often only need one: (a) a **live card database API** that exposes
+   per-card export formats (Arcmage's `aminduna.arcmage.org/api/Cards/
+   {guid}/export?format=...` -- `OverlaySvg`, `BackgroundPng`, `Svg`,
+   `Art`, ...), and (b) the **open-source server code** that builds those
+   exports (`github.com/wtactics/arcmage`, specifically
+   `Arcmage.Server.Api/Layout/CardGenerator.cs` and `Styles.cs`).
+2. **Extract geometry from code, not pixels.** A rendered card image only
+   shows you *an* answer; the code that generates it shows you the *rule*
+   -- true for every card, not just the one you happened to look at.
+   `CardGenerator.cs`'s SVG-merge step revealed the exact card canvas
+   size (`230.31496 x 325.98425` SVG user-units) and print-border margin
+   (`7.0866184` units) as literal numbers; `Repository.cs`'s
+   `FillPredefinedCartTypes()` revealed the rules-text box's max size
+   (`190 x 105` units) and, critically, *which fields each card type even
+   shows* (only Creature cards print Attack; City cards print Defense but
+   not Attack; nothing but Loyalty/Cost/Text/Art/Info is universal) --
+   the kind of per-type rule you'd have to reverse-engineer from dozens
+   of card images otherwise, and might still get wrong.
+3. **Work out the unit system.** `230.31496` isn't a self-explanatory
+   number. Divide two related quantities to find the conversion: the
+   margin (`7.0866184` units) turned out to be exactly `2.0mm` at
+   `1 unit = 1/90 inch` (Inkscape's legacy DPI convention) --
+   `7.0866184 / 90 * 25.4 = 2.0000...` -- which then made the card canvas
+   an exact `65mm x 92mm` and the text box an exact `53.62mm x 29.63mm`.
+   Once you have one confirmed conversion factor, every other number in
+   the same coordinate space becomes trustworthy too.
+4. **Get the live per-instance asset URLs and confirm their
+   parameters.** Fetching one real card's full JSON record
+   (`/api/Cards/{guid}`) exposed `backgroundPng` and `overlaySvg` as
+   fields with their exact query-string shape already filled in
+   (`...&faction={guid}&type={guid}`); cross-checking the SAME URL
+   pattern against several cards across different factions/types (not
+   just one) is what turns "looks like a pattern" into "confirmed
+   parameterization" -- and reading the export controller's source
+   (`CardsController.cs`'s `Export` action) confirmed `BackgroundPng` is
+   looked up by faction+type ALONE (the card guid in the URL is unused
+   for that specific export), i.e. genuinely a reusable frame texture,
+   not a per-card render.
+5. **Map the confirmed geometry onto `layout.yaml`'s regions**, using
+   every hard number as an anchor and everything else as a clearly-labeled
+   estimate. `examples/arcmage/templates/layout.yaml`'s regions keep the
+   confirmed `card.w_mm`/`h_mm` and the rules-text region's `w`/`h`
+   verbatim; the exact `x`/`y` of the title, art window, and badges are
+   estimates *constrained* by those confirmed numbers (e.g. this layout's
+   5.7mm side margins were chosen specifically so the rules-text region
+   comes out exactly 53.6mm wide, matching the confirmed 53.62mm) rather
+   than invented independently.
+6. **Extend the engine only for what the schema genuinely can't
+   express yet.** Here that was ONE thing: a full-bleed, non-artwork,
+   non-credited decorative image layered under everything else. Rather
+   than misuse `image` (which always paints an artist-credit strip -- the
+   wrong chrome for a reusable border texture), a new `background` region
+   type was added to `schemas/layout.schema.json` and
+   `layRegionBackground()` to `tools/hub_template.html` -- reusing
+   `image`'s existing CSS and honest-degrade-to-a-flat-tint behavior,
+   since `layoutCard()` already paints regions in array order (no new
+   z-order mechanism was needed, just a region type with the right
+   chrome).
+7. **Verify against real, varied data** -- not one hand-picked card.
+   The Arcmage smoke test renders a Creature (both Attack and Defense), a
+   City (Defense only, no Attack), and an Event (neither) through the
+   SAME `layoutCard()` and asserts the official font, the official
+   background URL, the confirmed 53.6mm x 29.63mm text-box size, and that
+   each type-specific region shows/hides exactly per the source's
+   `ShowAttack`/`ShowDefense` rules -- a single good-looking card
+   screenshot can't catch a per-type field-visibility bug the way
+   rendering three structurally different cards can.
+8. **Write down what's confirmed vs. approximated, separately, and
+   don't blur them.** See `examples/arcmage/README.md`'s "Card layout"
+   section for the full list this project produced for Arcmage. The
+   honest version of "we imported the official template" is "we imported
+   the parts we could confirm, and clearly marked the rest as our best
+   estimate anchored to those confirmed parts" -- not a blanket claim of
+   pixel-perfect fidelity nobody actually checked.
+
+### What this session's tools could (and couldn't) do
+
+Worth recording plainly, since it shaped which parts of the above ended
+up CONFIRMED vs. APPROXIMATED: this session's web-fetch tool reliably
+returns `text/html` and `application/json` bodies but silently returns
+nothing for other content types (`image/svg+xml`, `image/png`,
+`text/plain` all came back empty, confirmed against multiple unrelated
+hosts) -- so the live `overlaySvg`/`BackgroundPng` exports (and even a
+plain `robots.txt`) could never be read directly, and the composed card
+JPEGs could never be visually inspected either. What rescued this port
+from being stuck at "the API returns some XML/PNG, presumably" was that
+`github.com/<owner>/<repo>/blob/<ref>/<path>` (the syntax-highlighted
+HTML file-view page, as opposed to `raw.githubusercontent.com` or the
+`api.github.com` Contents API, both of which hit the same content-type
+or rate-limit problems here) renders the full file as part of the page's
+HTML -- readable by the exact same tool that couldn't read the raw SVG.
+If you're doing this for another game and hit the same wall: check
+whether the *source code* that builds the official asset is available
+even when the *asset itself* isn't fetchable, and reach for the host's
+own human-readable code-browsing page over its raw/API endpoints.
+
+### Applying this to another open game
+
+The same shape of investigation -- a live export API with a discoverable
+URL/parameter pattern, plus (if available) open server source for the
+generation logic -- is worth checking for before writing a from-scratch
+`layout.yaml`. Start with: does the game have a public card
+database/deckbuilder with per-card export endpoints? Does its rendering
+code live in a public repo, even if the *card data* doesn't (Arcmage's
+own README says exactly that -- "this software stack comes with no
+cards or artwork")? If either is true, steps 1-8 above apply directly.
+If neither is true, fall back to the generic "Writing a layout for
+another game" section above -- an invented-but-honestly-labeled default,
+same as this project's other layouts.
 
 ## What this doesn't do (yet)
 

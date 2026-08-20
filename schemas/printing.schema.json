@@ -54,6 +54,11 @@
       "format": "uri",
       "description": "External URL for the RAW ARTWORK layer alone (no frame/text/border) -- what templates/layout.yaml image regions composite into the actual print-ready card. Distinct from \"image\" (a full composed/rendered card, kept as the original_print reference shown alongside the live render). Omit if no separate art-only asset is known; layoutCard() falls back to a tinted placeholder + artist credit when this is absent or fails to load."
     },
+    "background_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "External URL for the OFFICIAL FRAME/BORDER texture -- what templates/layout.yaml \"background\" regions composite full-bleed, underneath everything else. Reusable per faction+card-type (not unique per printing/card) where the source game exposes one, e.g. Arcmage's backgroundPng export. Omit if the game has no such asset; layoutCard() falls back to a flat palette tint when this is absent or fails to load."
+    },
     "back": {
       "type": "string",
       "description": "Relative path to back art if non-default."

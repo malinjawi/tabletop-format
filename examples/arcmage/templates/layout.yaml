@@ -1,40 +1,91 @@
 # Arcmage print-true card layout -- schemas/layout.schema.json
 #
-# This is the missing middle layer between card DATA (components/cards.json
-# + components/printings.json) and a finished, print-ready Arcmage card:
-# a faction-colored frame, a title bar, a real (or gracefully-placeholder)
-# art window, a type line, a rules-text box with [symbol] chips and
-# autoshrink-to-fit, and cost/loyalty badges -- at the real trim size of a
-# trading card, 63.5mm x 88.9mm. tools/hub_template.html's layoutCard()
-# renders this SAME spec in the cards grid, the card modal, the live card
-# editor preview (re-rendered on every keystroke), the PR visual diff, and
-# the true-size print sheet -- edit a card's name/cost/text in the editor
-# and this is the card that reformats, live, and the one that prints.
+# v2: rebuilt against ARCMAGE'S OWN official card-generation source and
+# live API, not an invented default. See docs/layout-engine.md's
+# "Importing an official template (case study: Arcmage)" section for the
+# method, and examples/arcmage/README.md's "Card layout" section for the
+# full official-vs-approximated breakdown and every source URL. Short
+# version of what changed from v1 (the generic faction-colored-rect
+# default this project shipped first):
 #
-# Art: printing.art_url points at Arcmage's own live "Art" export
-# (https://aminduna.arcmage.org/api/Cards/{guid}/export?format=Art) --
-# structurally a DIFFERENT, distinctly-named endpoint from the composed
-# card renders (format=Png/Svg/Jpeg/Pdf; printing.image is the Jpeg one,
-# kept as the original_print reference shown alongside the live render).
-# See examples/arcmage/README.md's "Layout & artwork" section for exactly
-# what was and wasn't possible to verify about it. If art_url is ever
-# empty or fails to load, the art region below still renders -- as a
-# faction-tinted placeholder with the artist's credit -- never a blank box.
+#  OFFICIAL, sourced directly from wtactics/arcmage's own code + live API
+#  (not guessed): the 65mm x 92mm card canvas size and 2mm print-border
+#  margin (Arcmage.Server.Api/Layout/CardGenerator.cs's SVG-merge step,
+#  which forces every card to 230.31496x325.98425 user-units inside a
+#  244.48819x340.15747 bordered canvas -- 1 unit = 1/90in, Inkscape's
+#  legacy DPI, confirmed by the 7.0866184-unit margin resolving to an
+#  exact 2.0mm); the rules-text box's max 190x105-unit (53.62mm x
+#  29.63mm) content area, IDENTICAL for every card type
+#  (Arcmage.DAL/Repository.cs's FillPredefinedCartTypes); the body font
+#  (Liberation Serif, regular/bold/italic/bold-italic) and its 11.25pt
+#  size / 1.25x line-spacing (Arcmage.Server.Api/Layout/Styles.cs); that
+#  Attack AND Defense are real separate printed stats on Creature cards
+#  (Defense alone on City cards) -- correcting this port's earlier,
+#  incorrect claim that Arcmage only prints one combined "loyalty" stat;
+#  that Loyalty itself actually renders as up to 3 pip icons (L1/L2/L3),
+#  not a number; that the card's "type line" text is actually the
+#  SubType (e.g. "Imp", "City Tree"), not the primary card type, which
+#  is NEVER printed as text anywhere -- only as the frame color/art; that
+#  every real card carries a fixed "arcmage.org - join us!" info line;
+#  and the official backgroundPng (per faction+card-type frame texture)
+#  and overlaySvg (per-card text) export URL patterns, confirmed against
+#  Arcmage.Server.Api/Controllers/CardsController.cs's Export action.
+#
+#  APPROXIMATED (the official per-faction/per-type template SVG files
+#  themselves -- CardTemplates/{faction}/{type}.svg -- live only on
+#  Arcmage's server, are not in the wtactics/arcmage git repo, and this
+#  session's tools could not read raw SVG/image bytes over the network to
+#  recover their literal element coordinates): the exact x/y of the title
+#  text, cost badge, art window, type line, and stat badges below. These
+#  are placed using the CONFIRMED card size and text-box size as anchors
+#  (e.g. the 5.7mm side margins here are chosen so the rules-text region
+#  is exactly 53.6mm wide, matching the confirmed 53.62mm), with
+#  everything else a reasonable, disclosed estimate -- not a traced
+#  measurement. Text regions carry a translucent backing plate (not part
+#  of the official design either) specifically because this session could
+#  never visually inspect the real backgroundPng/card.jpg pixels (no tool
+#  here can render remote binary images), so text color/legibility
+#  against the real frame art is unverified; the backing plate makes
+#  every card legible regardless.
+#
+# Art: printing.art_url is Arcmage's own live "Art" export
+# (https://aminduna.arcmage.org/api/Cards/{guid}/export?format=Art).
+# printing.background_url (new) is the official per-faction+card-type
+# frame/border texture
+# (.../export?format=BackgroundPng&faction={guid}&type={guid}), computed
+# for every printing in this port from the live /api/Factions and
+# /api/CardTypes GUID tables -- see build notes in
+# examples/arcmage/README.md. Both degrade honestly if unreachable: the
+# background region falls back to a flat faction-palette tint, and the
+# art region still shows its usual tinted artist-credit placeholder.
 
 card:
-  w_mm: 63.5
-  h_mm: 88.9
-  bleed_mm: 3
-  radius_mm: 2.8
-  bg: "#f7f1e3"
+  w_mm: 65
+  h_mm: 92
+  bleed_mm: 2
+  radius_mm: 2.5
+  bg: "#1c1c1c"
 
 fonts:
-  - { id: title, family: "Cinzel",       weight: 700 }
-  - { id: body,  family: "EB Garamond",  weight: 400 }
+  # Official body font is "Liberation Serif" (Styles.cs's NormalFont/
+  # BoldFont/ItalicFont/BoldItalicFont) -- a SIL-OFL Times New Roman
+  # clone -- with a further "Nimbus Roman No9 L" (GPL, also a Times
+  # clone) used only for an illuminated drop-cap first letter this
+  # layout doesn't attempt to reproduce (see README). Neither ships on
+  # Google Fonts (confirmed: google/fonts issue #180, open, unresolved).
+  # Tinos is Google's own Croscore metric-compatible Times New Roman
+  # clone -- same lineage/purpose as both official faces -- and IS on
+  # Google Fonts, so it's substituted here for both, noted honestly
+  # rather than reaching for an unrelated decorative face (this layout's
+  # v1 used "Cinzel" + "EB Garamond", picked for looks alone with no tie
+  # to Arcmage's actual design -- corrected here).
+  - { id: title, family: "Tinos", weight: 700 }
+  - { id: body,  family: "Tinos", weight: 400 }
 
-# Same five faction colors game.yaml's own faction_colors already use for
-# the rulebook accent / generic cardFrame() border -- the layout-rendered
-# card and the rest of the hub read as the same faction identity.
+# Faction frame colors: the official card's frame/border comes from the
+# real backgroundPng texture (background region below) -- this palette is
+# now only a fallback tint (while that image loads, or if it 404s) and a
+# tint for the translucent text backing plates, not a drawn frame itself.
 palette:
   by: "attributes.faction"
   map:
@@ -46,52 +97,89 @@ palette:
   default: "#4a4a4a"
 
 regions:
-  # -- frame: a colored full-bleed backing, inset by an off-white parchment
-  # body, reads as a ~1.6mm faction-colored border all the way around.
-  - { id: frame_bg, type: rect, x: 0,   y: 0,   w: 63.5, h: 88.9, fill: "palette", radius_mm: 2.8 }
-  - { id: body_bg,  type: rect, x: 1.6, y: 1.6, w: 60.3, h: 85.7, fill: "#f7f1e3", radius_mm: 2 }
+  # -- OFFICIAL frame texture: the real per-faction+card-type backgroundPng,
+  # full-bleed, painted first so every region below draws on top of it.
+  # Falls back to a flat faction tint if it 404s or is still loading.
+  - { id: background, type: background, src: "printing.background_url", x: 0, y: 0, w: 65, h: 92, fit: cover, bg: "palette" }
 
-  # -- title bar + cost badge
-  - { id: title_bar, type: rect, x: 1.6, y: 1.6, w: 60.3, h: 8.2, fill: "palette", radius_mm: 1.6 }
-  - { id: title, type: text, src: "card.name", x: 3, y: 1.6, w: 47, h: 8.2,
-      font: title, size_pt: 10, align: left, valign: middle, color: "#ffffff" }
-  - { id: cost, type: badge, src: "card.attributes.cost", x: 52.0, y: 1.9, d: 7.6,
-      shape: circle, font: title, size_pt: 11, bg: "#1c1c1c", color: "#ffffff" }
-
-  # -- art window (raw artwork layer; see note above) + a thin faction-colored frame on top
+  # -- art window (approximated position -- see header note)
   - { id: art, type: image, src: "printing.art_url", credit: "printing.artist",
-      x: 4.5, y: 11.5, w: 54.5, h: 32, fit: cover }
-  - { id: art_frame, type: rect, x: 4.5, y: 11.5, w: 54.5, h: 32, fill: "none",
-      stroke: "palette", stroke_w_mm: 0.5 }
+      x: 5.7, y: 11.5, w: 53.6, h: 31.0, fit: cover }
 
-  # -- type line: always shows the card type; the subtypes half only draws
-  # when a card actually has any (e.g. "Imp", "Undead") -- show_if in action
-  # on real data (Abduction has none, Cutpurse Imp has "Imp").
-  - { id: type_line, type: text, src: "card.type", x: 4.5, y: 44.6, w: 22, h: 5,
-      font: body, size_pt: 7.5, align: left, valign: middle, color: "#3a2f22", uppercase: true }
-  - { id: subtypes_line, type: text, src: "— {card.subtypes}", x: 26.5, y: 44.6, w: 32.5, h: 5,
-      font: body, size_pt: 7.5, align: left, valign: middle, color: "#6b5c46", uppercase: true,
-      show_if: "subtypes" }
-  - { id: type_rule, type: rect, x: 4.5, y: 50.0, w: 54.5, h: 0.3, fill: "palette", opacity: 0.55 }
+  # -- title: card name. Translucent backing plate (not official) so the
+  # name reads regardless of what the real frame art looks like there.
+  - { id: title, type: text, src: "card.name", x: 4.5, y: 3.0, w: 42, h: 7.5,
+      font: title, size_pt: 10, align: left, valign: middle, color: "#ffffff", bg: "#00000066" }
 
-  # -- rules text: symbol chips ([spark] etc, per game.yaml symbols) + shrink-
-  # to-fit so a long rules text (Cutpurse Imp, Forgiving Vampire, ...) still
-  # reads at full box width instead of overflowing the card.
-  - { id: text, type: richtext, src: "card.text", x: 4.5, y: 51.2, w: 54.5, h: 24.5,
-      font: body, size_pt: 8, min_size_pt: 5.5, color: "#241d12", symbols: true, autoshrink: true }
+  # -- cost: OFFICIAL as a field ("goldcosttext"); corner-badge placement
+  # and styling approximated. "S" (Cities, set up not cast) and "X"
+  # (variable-cost cards) render as text same as a number.
+  - { id: cost, type: badge, src: "card.attributes.cost", x: 51.5, y: 2.2, d: 8,
+      shape: circle, font: title, size_pt: 10, bg: "#1c1c1c", color: "#ffffff" }
 
-  # -- loyalty: Arcmage's single combat/defense number (see game.yaml's
-  # attribute_definitions note -- Arcmage prints one mark value, not split
-  # attack/defense). show_if guards it the same way a split attack/defense
-  # stat row would guard on attributes.attack in a game that has one.
-  - { id: loyalty, type: badge, src: "card.attributes.loyalty", x: 52.0, y: 76.7, d: 7.6,
-      shape: circle, font: title, size_pt: 11, bg: "#1c1c1c", color: "#ffffff",
-      show_if: "attributes.loyalty" }
+  # -- type line: OFFICIAL content (the SAME single field the real card
+  # prints, element id "cardtypetext") is the card's SubType -- e.g. "Imp",
+  # "City Tree" -- falling back to the primary type name ("Event", "City",
+  # ...) on cards with no more specific subtype (confirmed: Arcmage's own
+  # subType is never blank; this project's `subtypes` is empty exactly
+  # when Arcmage's subType repeats the primary type). Two regions with
+  # complementary show_if reproduce that always-show-exactly-one-string
+  # behavior; v1 wrongly showed BOTH a primary-type label and a subtype
+  # as two separate strings, which the official card never does.
+  - { id: type_line, type: text, src: "card.subtypes", x: 5.7, y: 43.3, w: 53.6, h: 5.0,
+      font: body, size_pt: 7, align: left, valign: middle, color: "#f7f1e3", bg: "#00000066",
+      uppercase: true, show_if: "subtypes" }
+  - { id: type_line_fallback, type: text, src: "card.type", x: 5.7, y: 43.3, w: 53.6, h: 5.0,
+      font: body, size_pt: 7, align: left, valign: middle, color: "#f7f1e3", bg: "#00000066",
+      uppercase: true, show_if: "!subtypes" }
 
-  - { id: faction_tag, type: text, src: "card.attributes.faction", x: 4.5, y: 78.5, w: 40, h: 6,
-      font: body, size_pt: 6, align: left, valign: bottom, color: "palette", uppercase: true,
-      show_if: "attributes.faction" }
+  # -- rules text: OFFICIAL box size (53.62mm x 29.63mm, from the 190x105
+  # "MaxTextBoxWidth/Height" every card type shares -- Repository.cs);
+  # position approximated. Parchment panel background (not official --
+  # the real design's actual per-pixel color under this text is
+  # unverified) doubles as a legibility guarantee and a nod to the
+  # parchment look this project's v1 layout used throughout. [symbol]
+  # chips use this project's own glyphs, not Arcmage's private "WTactics
+  # Symbols" font (real, confirmed via Styles.cs, but not a freely
+  # obtainable asset -- see README).
+  - { id: text, type: richtext, src: "card.text", x: 5.7, y: 49.0, w: 53.6, h: 29.63,
+      font: body, size_pt: 8, min_size_pt: 5.5, color: "#241d12", bg: "#f7f1e3e6",
+      symbols: true, autoshrink: true }
 
-  # -- crisp outer edge on top of everything
-  - { id: edge, type: rect, x: 0, y: 0, w: 63.5, h: 88.9, fill: "none",
-      stroke: "#00000040", stroke_w_mm: 0.3, radius_mm: 2.8 }
+  # -- stats: OFFICIAL as fields (attacktext/defensetext -- Creature cards
+  # print both, City cards print Defense alone, everything else prints
+  # neither; SetAttack/SetDefense in CardGenerator.cs, cross-checked
+  # against every Creature/City card's live API record while building
+  # this layout). Defense placed leftmost (not attack) specifically so a
+  # City card's lone Defense badge doesn't leave an empty gap where
+  # Attack would have been on a Creature card. Positions/circle styling
+  # approximated.
+  - { id: defense, type: badge, src: "card.attributes.defense", x: 5.7, y: 79.83, d: 7.5,
+      shape: circle, font: title, size_pt: 8.5, bg: "#1c1c1c", color: "#ffffff",
+      show_if: "attributes.defense" }
+  - { id: attack, type: badge, src: "card.attributes.attack", x: 14.2, y: 79.83, d: 7.5,
+      shape: circle, font: title, size_pt: 8.5, bg: "#1c1c1c", color: "#ffffff",
+      show_if: "attributes.attack" }
+
+  # -- loyalty: OFFICIAL as a concept (every card type but "None" prints
+  # it) but the official card shows it as up to 3 pip icons (element ids
+  # L1/L2/L3, lit when loyalty > 0/1/2 -- SetLoyalty() in
+  # CardGenerator.cs), always 0-3 across every card in this port. This
+  # layout renders it as a numeric badge instead -- a disclosed
+  # simplification (also arguably clearer for values a pip cap can't
+  # show), not a claim that Arcmage prints a number here.
+  - { id: loyalty, type: badge, src: "card.attributes.loyalty", x: 52.0, y: 79.6, d: 7.9,
+      shape: circle, font: title, size_pt: 10, bg: "#1c1c1c", color: "#ffffff" }
+
+  # -- info: OFFICIAL, verbatim -- every sampled card (55+ checked while
+  # building this layout, across all 5 factions and every ported type)
+  # carries this exact fixed line (element id "infotext", default value
+  # baked into Repository.CreateCard's JoinUsText). Written as a literal
+  # here (not per-card data) since it never varies.
+  - { id: info, type: text, text: "arcmage.org - join us!", x: 5.7, y: 88.03, w: 53.6, h: 2.8,
+      font: body, size_pt: 4.2, align: center, valign: middle, color: "#f7f1e3", bg: "#00000055" }
+
+  # -- crisp outer edge -- a hub/print affordance (cut-line clarity), not
+  # part of the official design, drawn last so it's always on top.
+  - { id: edge, type: rect, x: 0, y: 0, w: 65, h: 92, fill: "none",
+      stroke: "#00000040", stroke_w_mm: 0.3, radius_mm: 2.5 }

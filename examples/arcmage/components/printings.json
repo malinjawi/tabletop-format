@@ -14,7 +14,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/6e32f1b9-6721-42c1-b8cb-9d2314e37556/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/6e32f1b9-6721-42c1-b8cb-9d2314e37556/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/6e32f1b9-6721-42c1-b8cb-9d2314e37556/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_besieged_city_rb",
@@ -31,7 +32,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/5e18ba56-5602-4f12-b4d1-d7d4c5bbf8e5/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/5e18ba56-5602-4f12-b4d1-d7d4c5bbf8e5/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/5e18ba56-5602-4f12-b4d1-d7d4c5bbf8e5/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=37c46575-98c5-5a1c-aaaf-a44e19897afd"
   },
   {
     "id": "p_cutpurse_imp_rb",
@@ -48,7 +50,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/df11b672-2449-4ca1-b4f1-a8e714429ac0/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/df11b672-2449-4ca1-b4f1-a8e714429ac0/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/df11b672-2449-4ca1-b4f1-a8e714429ac0/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_dark_portal_rb",
@@ -65,7 +68,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/23d68aac-807f-4e8e-baf8-695ee79fe600/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/23d68aac-807f-4e8e-baf8-695ee79fe600/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/23d68aac-807f-4e8e-baf8-695ee79fe600/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=37c46575-98c5-5a1c-aaaf-a44e19897afd"
   },
   {
     "id": "p_deadly_shock_rb",
@@ -82,7 +86,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/b324e835-8352-4d0b-8426-366c358d9351/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/b324e835-8352-4d0b-8426-366c358d9351/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/b324e835-8352-4d0b-8426-366c358d9351/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_forgiving_vampire_rb",
@@ -99,7 +104,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/fe68f069-6e7f-4d66-9db9-c76a4338b53d/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/fe68f069-6e7f-4d66-9db9-c76a4338b53d/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/fe68f069-6e7f-4d66-9db9-c76a4338b53d/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_foul_imps_rb",
@@ -116,7 +122,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/e040f4e6-5826-4ff2-aa37-267d204b254d/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/e040f4e6-5826-4ff2-aa37-267d204b254d/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/e040f4e6-5826-4ff2-aa37-267d204b254d/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_ghoul_rb",
@@ -133,7 +140,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/3fbd35fd-836a-4d15-8736-7ae35fed0f1b/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/3fbd35fd-836a-4d15-8736-7ae35fed0f1b/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/3fbd35fd-836a-4d15-8736-7ae35fed0f1b/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_imp_union_leader_rb",
@@ -150,7 +158,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/d75d0ba9-0fd9-4eef-a1b2-288a0942a853/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/d75d0ba9-0fd9-4eef-a1b2-288a0942a853/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/d75d0ba9-0fd9-4eef-a1b2-288a0942a853/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_lobotomized_library_rb",
@@ -167,7 +176,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/ca459abf-2452-4d92-966c-da73e55b383d/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/ca459abf-2452-4d92-966c-da73e55b383d/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/ca459abf-2452-4d92-966c-da73e55b383d/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_misled_orc_rb",
@@ -184,7 +194,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/861fe424-64d7-4b3e-a471-17778ba06712/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/861fe424-64d7-4b3e-a471-17778ba06712/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/861fe424-64d7-4b3e-a471-17778ba06712/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_nirvana_of_the_undead_rb",
@@ -201,7 +212,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/97f9e03b-9666-48d0-a44e-2ad59ae2e578/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/97f9e03b-9666-48d0-a44e-2ad59ae2e578/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/97f9e03b-9666-48d0-a44e-2ad59ae2e578/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_outmaneuvered_rb",
@@ -218,7 +230,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/2493d016-fc78-473c-9f4f-e5f9589adf0d/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/2493d016-fc78-473c-9f4f-e5f9589adf0d/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/2493d016-fc78-473c-9f4f-e5f9589adf0d/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_second_sons_army_camp_rb",
@@ -235,7 +248,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/b1f86aab-92fc-4d8b-80cd-36e559d2f5ef/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/b1f86aab-92fc-4d8b-80cd-36e559d2f5ef/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/b1f86aab-92fc-4d8b-80cd-36e559d2f5ef/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_shadow_in_the_dark_rb",
@@ -252,7 +266,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/d0ba6168-a245-4aa0-a437-923517a19314/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/d0ba6168-a245-4aa0-a437-923517a19314/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/d0ba6168-a245-4aa0-a437-923517a19314/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_undead_archer_rb",
@@ -269,7 +284,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/4ff310fc-d1b8-4243-91e9-369989bedf1f/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/4ff310fc-d1b8-4243-91e9-369989bedf1f/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/4ff310fc-d1b8-4243-91e9-369989bedf1f/export?format=BackgroundPng&faction=f90a738e-f9a9-5ab1-96a8-e6096222ba68&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_wild_warg_rb",
@@ -286,7 +302,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/44d030ea-99d1-41a0-92e8-b62caab5a05c/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/44d030ea-99d1-41a0-92e8-b62caab5a05c/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/44d030ea-99d1-41a0-92e8-b62caab5a05c/export?format=BackgroundPng&faction=04cd1501-eacf-5b0d-964e-6d4bb4f5f130&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_botanist_rb",
@@ -303,7 +320,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/5b61defd-a35e-4701-9c2a-ff1d59017f23/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/5b61defd-a35e-4701-9c2a-ff1d59017f23/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/5b61defd-a35e-4701-9c2a-ff1d59017f23/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_call_to_aid_rb",
@@ -320,7 +338,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/5df799f2-8796-4d0d-abe0-dced3ece38d1/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/5df799f2-8796-4d0d-abe0-dced3ece38d1/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/5df799f2-8796-4d0d-abe0-dced3ece38d1/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_crop_token_rb",
@@ -337,7 +356,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/13a6535d-7930-4fb0-88cb-3323cdc8f6d4/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/13a6535d-7930-4fb0-88cb-3323cdc8f6d4/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/13a6535d-7930-4fb0-88cb-3323cdc8f6d4/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_early_spring_rb",
@@ -354,7 +374,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/7a3a0a3b-b970-453c-a39c-add2bf2e5afc/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/7a3a0a3b-b970-453c-a39c-add2bf2e5afc/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/7a3a0a3b-b970-453c-a39c-add2bf2e5afc/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_elvish_ambush_rb",
@@ -371,7 +392,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/c0661241-00cc-4d76-b757-5c1ab0452da1/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/c0661241-00cc-4d76-b757-5c1ab0452da1/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/c0661241-00cc-4d76-b757-5c1ab0452da1/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_elvish_archer_rb",
@@ -388,7 +410,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/15dc642a-bbd5-4ef9-8d0e-2c6e45d20c2f/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/15dc642a-bbd5-4ef9-8d0e-2c6e45d20c2f/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/15dc642a-bbd5-4ef9-8d0e-2c6e45d20c2f/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_falconer_rb",
@@ -405,7 +428,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/ac88c304-fa49-4ba8-987d-04dbf15534de/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/ac88c304-fa49-4ba8-987d-04dbf15534de/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/ac88c304-fa49-4ba8-987d-04dbf15534de/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_farmland_rb",
@@ -422,7 +446,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/bc91e84b-f231-4997-8e94-7f9fcdddc982/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/bc91e84b-f231-4997-8e94-7f9fcdddc982/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/bc91e84b-f231-4997-8e94-7f9fcdddc982/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_grassroots_rb",
@@ -439,7 +464,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/8ac5e9f1-c25c-450b-8642-8d20747e43ff/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/8ac5e9f1-c25c-450b-8642-8d20747e43ff/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/8ac5e9f1-c25c-450b-8642-8d20747e43ff/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=37c46575-98c5-5a1c-aaaf-a44e19897afd"
   },
   {
     "id": "p_kolibri_rb",
@@ -456,7 +482,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/629a5adf-f9d5-44ff-b389-f640f529467a/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/629a5adf-f9d5-44ff-b389-f640f529467a/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/629a5adf-f9d5-44ff-b389-f640f529467a/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_majestic_griffin_rb",
@@ -473,7 +500,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/770cdf48-97df-41d8-9d8f-5b6607e99feb/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/770cdf48-97df-41d8-9d8f-5b6607e99feb/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/770cdf48-97df-41d8-9d8f-5b6607e99feb/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_natures_outrage_rb",
@@ -490,7 +518,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/b9516f1a-6efa-4e8d-977e-0c5220d01f93/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/b9516f1a-6efa-4e8d-977e-0c5220d01f93/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/b9516f1a-6efa-4e8d-977e-0c5220d01f93/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=44bbe0f2-17d9-5ce3-ab33-b80902750616"
   },
   {
     "id": "p_nightingale_rb",
@@ -507,7 +536,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/e2985a28-ee20-4b9e-908c-dddcd2aa1493/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/e2985a28-ee20-4b9e-908c-dddcd2aa1493/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/e2985a28-ee20-4b9e-908c-dddcd2aa1493/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_nourished_flower_rb",
@@ -524,7 +554,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/44836060-f6c4-432e-8122-8442ac9ab21a/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/44836060-f6c4-432e-8122-8442ac9ab21a/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/44836060-f6c4-432e-8122-8442ac9ab21a/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_poison_ivy_rb",
@@ -541,7 +572,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/265c1f00-d267-4d0a-a041-eb96921967ba/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/265c1f00-d267-4d0a-a041-eb96921967ba/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/265c1f00-d267-4d0a-a041-eb96921967ba/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_sanctuary_rb",
@@ -558,7 +590,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/a7229396-f9ec-4516-b83d-73e3291b5527/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/a7229396-f9ec-4516-b83d-73e3291b5527/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/a7229396-f9ec-4516-b83d-73e3291b5527/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_sequoia_saplings_rb",
@@ -575,7 +608,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/09b06049-cf4f-48bd-b48c-dae06ff26bea/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/09b06049-cf4f-48bd-b48c-dae06ff26bea/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/09b06049-cf4f-48bd-b48c-dae06ff26bea/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_spirit_tree_rb",
@@ -592,7 +626,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/a4257262-0eb9-482a-aef3-bd930760378a/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/a4257262-0eb9-482a-aef3-bd930760378a/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/a4257262-0eb9-482a-aef3-bd930760378a/export?format=BackgroundPng&faction=c190bcb6-633d-5b3c-83ba-24306553e3ce&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_aethyr_er",
@@ -609,7 +644,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/5ccfbf57-ab4b-46a7-925a-f9c6a303db14/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/5ccfbf57-ab4b-46a7-925a-f9c6a303db14/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/5ccfbf57-ab4b-46a7-925a-f9c6a303db14/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_as_you_command_er",
@@ -626,7 +662,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/73f46ac0-6c97-4084-a7cd-96d1fde7bcf0/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/73f46ac0-6c97-4084-a7cd-96d1fde7bcf0/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/73f46ac0-6c97-4084-a7cd-96d1fde7bcf0/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=44bbe0f2-17d9-5ce3-ab33-b80902750616"
   },
   {
     "id": "p_baldras_er",
@@ -643,7 +680,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/c7d5d896-24f7-4f7c-b46b-f02ca5ba127f/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/c7d5d896-24f7-4f7c-b46b-f02ca5ba127f/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/c7d5d896-24f7-4f7c-b46b-f02ca5ba127f/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_dela_er",
@@ -660,7 +698,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/ae536a29-ec36-492a-942e-d1c577109891/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/ae536a29-ec36-492a-942e-d1c577109891/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/ae536a29-ec36-492a-942e-d1c577109891/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_dragon_armor_er",
@@ -677,7 +716,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/04ade3ab-2ebc-449f-902e-af1558b689c7/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/04ade3ab-2ebc-449f-902e-af1558b689c7/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/04ade3ab-2ebc-449f-902e-af1558b689c7/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=37c46575-98c5-5a1c-aaaf-a44e19897afd"
   },
   {
     "id": "p_flartar_er",
@@ -694,7 +734,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/86d0be1d-3c1b-4aca-8e8c-fce2f448843b/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/86d0be1d-3c1b-4aca-8e8c-fce2f448843b/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/86d0be1d-3c1b-4aca-8e8c-fce2f448843b/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_guardians_fall_er",
@@ -711,7 +752,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/66882acd-df3d-44d9-94a6-a5055027a5ab/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/66882acd-df3d-44d9-94a6-a5055027a5ab/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/66882acd-df3d-44d9-94a6-a5055027a5ab/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_hideout_er",
@@ -728,7 +770,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/096a7772-4fd7-4eac-859f-723279b81ac9/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/096a7772-4fd7-4eac-859f-723279b81ac9/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/096a7772-4fd7-4eac-859f-723279b81ac9/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_jessica_er",
@@ -745,7 +788,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/1fd68aef-c8b3-4384-8e28-14dcdd6e5110/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/1fd68aef-c8b3-4384-8e28-14dcdd6e5110/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/1fd68aef-c8b3-4384-8e28-14dcdd6e5110/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_jetto_er",
@@ -753,16 +797,17 @@
     "set_id": "enchanted_realm",
     "collector_number": "010",
     "quantity": 1,
-    "artist": "Christian Sirvi\u00f6",
+    "artist": "Christian Sirviö",
     "image": "https://aminduna.arcmage.org/arcmage/Cards/0951154f-4317-4eec-ada1-ed6260bc1e58/card.jpg",
     "provenance": {
       "source": "human",
-      "creator": "Christian Sirvi\u00f6",
+      "creator": "Christian Sirviö",
       "license": "GPL-2.0",
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/0951154f-4317-4eec-ada1-ed6260bc1e58/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/0951154f-4317-4eec-ada1-ed6260bc1e58/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/0951154f-4317-4eec-ada1-ed6260bc1e58/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_karka_suno_er",
@@ -779,7 +824,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/6d2aba61-787b-4f9c-8654-d27175a655ee/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/6d2aba61-787b-4f9c-8654-d27175a655ee/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/6d2aba61-787b-4f9c-8654-d27175a655ee/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_mirmu_er",
@@ -796,7 +842,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/69782448-a955-4b2d-a5c8-c5aa36ffab49/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/69782448-a955-4b2d-a5c8-c5aa36ffab49/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/69782448-a955-4b2d-a5c8-c5aa36ffab49/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_nun_er",
@@ -813,7 +860,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/29f387ff-312b-41e6-b5db-5c71262480cd/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/29f387ff-312b-41e6-b5db-5c71262480cd/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/29f387ff-312b-41e6-b5db-5c71262480cd/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_rugnur_er",
@@ -830,7 +878,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/23e16aa8-8dbe-48e6-8e76-0dbb22d9c857/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/23e16aa8-8dbe-48e6-8e76-0dbb22d9c857/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/23e16aa8-8dbe-48e6-8e76-0dbb22d9c857/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_smith_er",
@@ -847,7 +896,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/345a2ad4-404c-463a-9af9-dd4baa5e9edd/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/345a2ad4-404c-463a-9af9-dd4baa5e9edd/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/345a2ad4-404c-463a-9af9-dd4baa5e9edd/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_tapper_er",
@@ -864,7 +914,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/545a09fa-91db-486c-ab29-9038eef4bd75/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/545a09fa-91db-486c-ab29-9038eef4bd75/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/545a09fa-91db-486c-ab29-9038eef4bd75/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_uneasy_pact_er",
@@ -881,7 +932,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/f614f670-bc62-4328-bbf7-9b2308c5808d/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/f614f670-bc62-4328-bbf7-9b2308c5808d/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/f614f670-bc62-4328-bbf7-9b2308c5808d/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=44bbe0f2-17d9-5ce3-ab33-b80902750616"
   },
   {
     "id": "p_zorlan_er",
@@ -898,7 +950,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/0db34712-6606-4f45-bfe3-1da37209f57e/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/0db34712-6606-4f45-bfe3-1da37209f57e/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/0db34712-6606-4f45-bfe3-1da37209f57e/export?format=BackgroundPng&faction=a4ee02f3-055a-5846-8821-e37cf969ae95&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_ar_an_imeall_er",
@@ -915,7 +968,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/2c89ff3e-783b-43fa-a26e-78ab5918ffc6/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/2c89ff3e-783b-43fa-a26e-78ab5918ffc6/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/2c89ff3e-783b-43fa-a26e-78ab5918ffc6/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_bracer_of_the_octopus_er",
@@ -932,7 +986,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/ec0154c1-9b9f-487a-9ed9-4db223a38c11/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/ec0154c1-9b9f-487a-9ed9-4db223a38c11/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/ec0154c1-9b9f-487a-9ed9-4db223a38c11/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=37c46575-98c5-5a1c-aaaf-a44e19897afd"
   },
   {
     "id": "p_coral_labyrinth_er",
@@ -949,7 +1004,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/33b537bd-7d63-49d0-a3ee-7faac37866a9/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/33b537bd-7d63-49d0-a3ee-7faac37866a9/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/33b537bd-7d63-49d0-a3ee-7faac37866a9/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_cylanna_er",
@@ -966,7 +1022,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/c6532a09-3a2e-4b95-b4b6-de8c656734fd/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/c6532a09-3a2e-4b95-b4b6-de8c656734fd/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/c6532a09-3a2e-4b95-b4b6-de8c656734fd/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_devyanna_er",
@@ -983,7 +1040,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/b536e5fd-8ce9-4189-9cd8-bef4af8e11e6/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/b536e5fd-8ce9-4189-9cd8-bef4af8e11e6/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/b536e5fd-8ce9-4189-9cd8-bef4af8e11e6/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_ellyanna_er",
@@ -1000,7 +1058,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/916350c4-7d0a-46c5-86d2-f1e636a2a846/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/916350c4-7d0a-46c5-86d2-f1e636a2a846/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/916350c4-7d0a-46c5-86d2-f1e636a2a846/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_gwabbo_er",
@@ -1017,7 +1076,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/2458db5c-0fd7-4f4c-98e7-b15b3de092cd/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/2458db5c-0fd7-4f4c-98e7-b15b3de092cd/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/2458db5c-0fd7-4f4c-98e7-b15b3de092cd/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_ink_cloud_er",
@@ -1034,7 +1094,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/4a18c55f-aa04-4457-8431-5376f6353b86/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/4a18c55f-aa04-4457-8431-5376f6353b86/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/4a18c55f-aa04-4457-8431-5376f6353b86/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_kai_dorellis_er",
@@ -1051,7 +1112,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/d7fe5a63-27f2-4956-b16a-5bdb4c8ef697/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/d7fe5a63-27f2-4956-b16a-5bdb4c8ef697/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/d7fe5a63-27f2-4956-b16a-5bdb4c8ef697/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_kai_krellis_er",
@@ -1068,7 +1130,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/9ead45ac-4893-46e7-b048-0851442c9604/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/9ead45ac-4893-46e7-b048-0851442c9604/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/9ead45ac-4893-46e7-b048-0851442c9604/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_karma_er",
@@ -1085,7 +1148,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/c8268d0c-aeec-4290-be42-6da290430049/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/c8268d0c-aeec-4290-be42-6da290430049/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/c8268d0c-aeec-4290-be42-6da290430049/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=937f0066-c993-56f6-9bcb-3f672a4ec5bf"
   },
   {
     "id": "p_kelp_forest_er",
@@ -1102,7 +1166,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/a6dd17d6-9f29-40ff-bf06-46672b0cfa5a/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/a6dd17d6-9f29-40ff-bf06-46672b0cfa5a/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/a6dd17d6-9f29-40ff-bf06-46672b0cfa5a/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=c38a9cda-e669-54e2-9c91-db0a4a763460"
   },
   {
     "id": "p_merfolk_brawler_er",
@@ -1119,7 +1184,8 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/ea51926a-d5f0-46e6-8c1f-41ae111e64e6/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/ea51926a-d5f0-46e6-8c1f-41ae111e64e6/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/ea51926a-d5f0-46e6-8c1f-41ae111e64e6/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   },
   {
     "id": "p_merfolk_joyride_er",
@@ -1136,7 +1202,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/f41e6175-2ffc-4bc5-9966-171f0303979a/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/f41e6175-2ffc-4bc5-9966-171f0303979a/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/f41e6175-2ffc-4bc5-9966-171f0303979a/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=44bbe0f2-17d9-5ce3-ab33-b80902750616"
   },
   {
     "id": "p_merman_armor_er",
@@ -1153,7 +1220,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/f478d3d9-ae57-44d5-a033-c6058847bacc/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/f478d3d9-ae57-44d5-a033-c6058847bacc/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/f478d3d9-ae57-44d5-a033-c6058847bacc/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=37c46575-98c5-5a1c-aaaf-a44e19897afd"
   },
   {
     "id": "p_strategic_defense_er",
@@ -1170,7 +1238,8 @@
       "source_url": "https://arcmage.org/artwork/",
       "notes": "Original Arcmage artwork commissioned by wtactics.org, the open-source card-game platform behind Arcmage. Licensor of record: wtactics.org."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/e446067f-0d54-4e05-b66f-3d3772ce9032/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/e446067f-0d54-4e05-b66f-3d3772ce9032/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/e446067f-0d54-4e05-b66f-3d3772ce9032/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=44bbe0f2-17d9-5ce3-ab33-b80902750616"
   },
   {
     "id": "p_typhon_er",
@@ -1187,6 +1256,7 @@
       "source_url": "https://www.wesnoth.org/",
       "notes": "Portrait art reused from the Battle for Wesnoth project under wtactics.org's Arcmage art-sharing agreement. Licensor of record: Battle for Wesnoth. Recorded in the Arcmage card database as \"GNU GPLv2\"."
     },
-    "art_url": "https://aminduna.arcmage.org/api/Cards/91cc3930-ae20-43fe-84d1-60f190224dce/export?format=Art"
+    "art_url": "https://aminduna.arcmage.org/api/Cards/91cc3930-ae20-43fe-84d1-60f190224dce/export?format=Art",
+    "background_url": "https://aminduna.arcmage.org/api/Cards/91cc3930-ae20-43fe-84d1-60f190224dce/export?format=BackgroundPng&faction=cf535c5d-7fb3-59a7-9a0b-4e29fe9b364a&type=bc752e51-034a-56fa-a9b6-a4cb86049ec3"
   }
 ]

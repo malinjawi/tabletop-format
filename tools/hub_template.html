@@ -714,6 +714,23 @@ function layRegionImage(g, ctx, r, hl){
   const creditStrip = (url && credit) ? `<div class="lay-credit">${esc(credit)}</div>` : "";
   return `<div class="lay-region lay-image lay-fit-${r.fit||"cover"}${layHlClass(hl,r)}" style="${style}">${ph}${img}${creditStrip}</div>`;
 }
+// background: a full-bleed (or partial) DECORATIVE image region -- the
+// official-frame-texture case (see docs/layout-engine.md's "Importing an
+// official template" case study): a reusable per-faction/per-type border
+// PNG, not a credited artwork photo. Same honest-degrade contract as
+// image (palette/bg-tinted color shows through while loading or if src
+// 404s/empty) but WITHOUT image's artist-credit chrome/placeholder icon,
+// since a frame texture isn't crediting anyone. Meant to be painted first
+// in a layout's regions array so every later region (art, text, badges)
+// draws on top of it -- layoutCard() already paints regions in array
+// order, so no separate z-order mechanism is needed beyond that.
+function layRegionBackground(g, ctx, r, hl){
+  const url = layValue(ctx, r);
+  const tint = (r.bg!=null ? layColor(g, ctx, r.bg, null) : null) || layPalette(g, ctx) || "#4a4f57";
+  const style = `${layPosCss(r)}${r.opacity!=null?`opacity:${r.opacity};`:""}background:${tint};`;
+  const img = url ? `<img src="${esc(url)}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+  return `<div class="lay-region lay-image lay-bg lay-fit-${r.fit||"cover"}${layHlClass(hl,r)}" style="${style}">${img}</div>`;
+}
 function layRegionBadge(g, ctx, r, hl){
   const val = layValue(ctx, r);
   const bg = layColor(g, ctx, r.bg, "#333");
@@ -765,6 +782,7 @@ function layoutCard(g, c, printing, opts){
         case "text": return layRegionText(g, ctx, r, hl);
         case "richtext": return layRegionRich(g, ctx, r, hl);
         case "image": return layRegionImage(g, ctx, r, hl);
+        case "background": return layRegionBackground(g, ctx, r, hl);
         case "badge": return layRegionBadge(g, ctx, r, hl);
         case "row": return layRegionRow(g, ctx, r, hl);
         case "rect": return layRegionRect(g, ctx, r);

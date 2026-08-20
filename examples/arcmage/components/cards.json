@@ -39,7 +39,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Red Banner"
+      "faction": "Red Banner",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -83,7 +85,9 @@
     "attributes": {
       "cost": "5",
       "loyalty": 3,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "attack": 2,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -99,7 +103,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -115,7 +121,9 @@
     "attributes": {
       "cost": "4",
       "loyalty": 2,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "attack": 3,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -131,7 +139,9 @@
     "attributes": {
       "cost": "4",
       "loyalty": 2,
-      "faction": "Red Banner"
+      "faction": "Red Banner",
+      "attack": 2,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -145,7 +155,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "defense": 10
     },
     "deck_limit": 3
   },
@@ -161,7 +172,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "Red Banner"
+      "faction": "Red Banner",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -175,7 +188,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "defense": 8
     },
     "deck_limit": 3
   },
@@ -203,7 +217,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "Red Banner"
+      "faction": "Red Banner",
+      "defense": 8
     },
     "deck_limit": 3
   },
@@ -219,7 +234,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "attack": 1,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -235,7 +252,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Dark Legion"
+      "faction": "Dark Legion",
+      "attack": 2,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -251,7 +270,9 @@
     "attributes": {
       "cost": "4",
       "loyalty": 2,
-      "faction": "Red Banner"
+      "faction": "Red Banner",
+      "attack": 2,
+      "defense": 3
     },
     "deck_limit": 3
   },
@@ -267,7 +288,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 1,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -297,7 +320,9 @@
     "attributes": {
       "cost": "",
       "loyalty": 0,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 0,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -327,7 +352,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -343,7 +370,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -359,7 +388,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -373,7 +404,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "defense": 7
     },
     "deck_limit": 3
   },
@@ -403,7 +435,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 0,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -419,7 +453,9 @@
     "attributes": {
       "cost": "5",
       "loyalty": 3,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 4,
+      "defense": 4
     },
     "deck_limit": 3
   },
@@ -449,7 +485,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 3,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -465,7 +503,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -481,7 +521,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -495,7 +537,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "defense": 7
     },
     "deck_limit": 3
   },
@@ -511,7 +554,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "attack": 0,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -527,7 +572,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "Gaian"
+      "faction": "Gaian",
+      "defense": 6
     },
     "deck_limit": 3
   },
@@ -543,7 +589,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 2,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -573,7 +621,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -589,7 +639,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -621,7 +673,9 @@
     "attributes": {
       "cost": "5",
       "loyalty": 3,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 6,
+      "defense": 4
     },
     "deck_limit": 3
   },
@@ -635,7 +689,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "defense": 12
     },
     "deck_limit": 3
   },
@@ -651,7 +706,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "defense": 7
     },
     "deck_limit": 3
   },
@@ -667,7 +723,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -683,7 +741,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -697,7 +757,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "defense": 10
     },
     "deck_limit": 3
   },
@@ -713,7 +774,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -729,7 +792,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 1,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 2
     },
     "deck_limit": 3
   },
@@ -745,7 +810,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 1,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -761,7 +828,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 0,
+      "defense": 3
     },
     "deck_limit": 3
   },
@@ -777,7 +846,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -807,7 +878,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 1,
-      "faction": "The Empire"
+      "faction": "The Empire",
+      "attack": 2,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -821,7 +894,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "defense": 9
     },
     "deck_limit": 3
   },
@@ -849,7 +923,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "defense": 10
     },
     "deck_limit": 3
   },
@@ -865,7 +940,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -881,7 +958,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 2,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -897,7 +976,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -913,7 +994,9 @@
     "attributes": {
       "cost": "1",
       "loyalty": 1,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -943,7 +1026,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -959,7 +1044,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -987,7 +1074,8 @@
     "attributes": {
       "cost": "S",
       "loyalty": 3,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "defense": 5
     },
     "deck_limit": 3
   },
@@ -1003,7 +1091,9 @@
     "attributes": {
       "cost": "2",
       "loyalty": 2,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 1
     },
     "deck_limit": 3
   },
@@ -1061,7 +1151,9 @@
     "attributes": {
       "cost": "3",
       "loyalty": 3,
-      "faction": "House of Nobles"
+      "faction": "House of Nobles",
+      "attack": 1,
+      "defense": 3
     },
     "deck_limit": 3
   }
