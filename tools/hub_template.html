@@ -863,6 +863,1307 @@ ${pageHtml}
 }
 
 
+/* ================= CARD DESIGN EDITOR (visual layout.yaml authoring) =================
+ * The #1 usability fix from docs/card-formatting-pipelines.md's research: designers
+ * must never hand-type x/y/w/h into templates/layout.yaml -- geometry should be the
+ * BYPRODUCT of dragging boxes on the live card, the same way InDesign/Figma/Dextrous/
+ * nanDECK's Visual Editor all work (see that doc's Part 5-6). This editor reads and
+ * writes the EXACT SAME templates/layout.yaml shape (schemas/layout.schema.json) --
+ * no new file format -- and renders its canvas via the production layoutCard()
+ * function above, so what you design IS what ships (grid tile, modal, print sheet,
+ * PR diff all read the same g.layout this editor writes).
+ *
+ * State lives in DES (one game at a time, like ED for the card data editor above):
+ *   { slug, layout, orig, sel (previewed card id), selRegion, undo (<=20 snapshots),
+ *     access, view ('fit'|'1:1'), rawOpen, showGallery }
+ * DES.layout is a working COPY -- nothing touches g.layout (the baked DATA.games
+ * object every other tab reads) until Save succeeds, at which point it's synced so
+ * the rest of the hub (Cards grid, card modal, print sheet) reflects the change
+ * without a full page reload.
+ */
+let DES=null, DES_DRAG=null, DES_FIELD_DRAG=null;
+const DES_HANDLES=["nw","n","ne","e","se","s","sw","w"];
+
+const DES_CSS = `
+.des-wrap{display:grid;grid-template-columns:240px 1fr 300px;gap:16px;align-items:start;margin-top:14px}
+@media(max-width:1100px){.des-wrap{grid-template-columns:1fr}}
+.des-col-palette{position:sticky;top:12px;max-height:82vh;overflow:auto}
+.des-col-inspector{position:sticky;top:12px;max-height:82vh;overflow:auto}
+.des-palette{display:flex;flex-direction:column;gap:6px}
+.des-field{border:1px solid var(--bd);border-radius:7px;padding:7px 9px;cursor:grab;background:#fff}
+.des-field:hover{border-color:var(--acc);background:#faf8ff}
+.des-field:active{cursor:grabbing}
+.des-field-path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--acc);word-break:break-all}
+.des-field-val{font-size:12.5px;color:var(--fg);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.des-field-val.des-field-empty{color:var(--mut);font-style:italic}
+.des-previewbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.des-previewbar select{border:1px solid var(--bd);border-radius:6px;padding:6px 10px;font-size:13px;background:#fff;max-width:220px}
+.des-stagewrap{background-image:repeating-conic-gradient(#eef0f2 0% 25%,#fff 0% 50%);background-size:16px 16px;border:1px solid var(--bd);border-radius:10px;padding:24px;display:flex;justify-content:center;max-width:100%;overflow:auto}
+.des-stage{position:relative;flex:none;user-select:none}
+.des-stage .lay-wrap{position:absolute;top:0;left:0}
+.des-cardhost{position:absolute;inset:0;pointer-events:none}
+.des-overlay{position:absolute;inset:0}
+.des-box{position:absolute;box-sizing:border-box;border:1.5px dashed rgba(130,80,223,.6);cursor:move}
+.des-box:hover{border-color:var(--acc);background:rgba(130,80,223,.06)}
+.des-box.sel{border:2px solid var(--acc);box-shadow:0 0 0 3px rgba(130,80,223,.16);background:rgba(130,80,223,.05)}
+.des-box.des-hidden-now{opacity:.4}
+.des-box.des-hidden-now.sel{opacity:.8}
+.des-tag{position:absolute;top:-19px;left:-1.5px;font-size:10px;font-weight:600;background:var(--acc);color:#fff;padding:2px 6px;border-radius:4px 4px 0 0;white-space:nowrap;opacity:0;transition:opacity .1s;pointer-events:none}
+.des-box:hover .des-tag,.des-box.sel .des-tag{opacity:1}
+.des-h{position:absolute;width:9px;height:9px;background:#fff;border:1.5px solid var(--acc);border-radius:2px;z-index:5}
+.des-h-nw{left:-5px;top:-5px;cursor:nwse-resize}.des-h-n{left:50%;top:-5px;transform:translateX(-50%);cursor:ns-resize}
+.des-h-ne{right:-5px;top:-5px;cursor:nesw-resize}.des-h-e{right:-5px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.des-h-se{right:-5px;bottom:-5px;cursor:nwse-resize}.des-h-s{left:50%;bottom:-5px;transform:translateX(-50%);cursor:ns-resize}
+.des-h-sw{left:-5px;bottom:-5px;cursor:nesw-resize}.des-h-w{left:-5px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.des-readout{position:absolute;background:#1f2328;color:#fff;font-size:11px;padding:3px 8px;border-radius:5px;pointer-events:none;z-index:20;white-space:nowrap;transform:translate(-50%,-130%)}
+.des-canvasfoot{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.des-viewtoggle{display:inline-flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden}
+.des-viewtoggle .btn{border:none;border-radius:0;margin:0}
+.des-addfont{border:1px dashed var(--bd);border-radius:8px;padding:10px;margin:-4px 0 12px;background:var(--bg)}
+.des-addfont input{width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;box-sizing:border-box}
+.des-gallery{margin-top:18px;max-width:840px}
+.des-gallery h3{margin:0 0 4px}
+.des-presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:16px 0}
+.des-preset{border:1px solid var(--bd);border-radius:10px;padding:14px;cursor:pointer;text-align:center;transition:box-shadow .15s,border-color .15s}
+.des-preset:hover{border-color:var(--acc);box-shadow:0 3px 14px rgba(0,0,0,.1)}
+.des-preset-prev{display:flex;justify-content:center;margin-bottom:10px;min-height:130px;align-items:center}
+`;
+document.head.insertAdjacentHTML("beforeend", `<style>${DES_CSS}</style>`);
+
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+function round2(n){ return Math.round(n*100)/100; }
+function desTrim(s,n){ s=String(s); return s.length>n ? s.slice(0,n-1)+"…" : s; }
+function desSlug(s){ const t=String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,""); return t||"region"; }
+
+/* ---- palette: every bindable path off the currently-previewed card+printing ---- */
+function desFields(g, c, p){
+  const out=[], seen=new Set();
+  const push=(path,val,kind)=>{
+    if(seen.has(path)) return; seen.add(path);
+    if(!kind){
+      if(typeof val==="number") kind="number";
+      else if(typeof val==="boolean") kind="boolean";
+      else if(val==null) kind="string";
+      else{
+        const s=String(val);
+        if(/^https?:\/\//i.test(s) && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(s)) kind="image";
+        else if(/^https?:\/\//i.test(s)) kind="url";
+        else if(s.length>36 || /\n/.test(s)) kind="longstring";
+        else kind="string";
+      }
+    }
+    out.push({path,value:val,kind});
+  };
+  if(c){
+    push("card.name", c.name, "string");
+    push("card.type", c.type, "string");
+    push("card.subtypes", (c.subtypes||[]).join(", "), "array");
+    push("card.text", c.text||"", "longstring");
+    push("card.keywords", (c.keywords||[]).join(", "), "array");
+    if(c.deck_limit!=null) push("card.deck_limit", c.deck_limit, "number");
+    const declared=g.schema||[];
+    for(const d of declared){
+      const v=(c.attributes||{})[d.key];
+      push(`card.attributes.${d.key}`, v, (d.type==="integer"||d.type==="number")?"number":(d.type==="boolean"?"boolean":"string"));
+    }
+    for(const k of Object.keys(c.attributes||{})) if(!declared.find(d=>d.key===k)) push(`card.attributes.${k}`, c.attributes[k]);
+  }
+  if(p){
+    if(p.art_url!=null) push("printing.art_url", p.art_url, "image");
+    if(p.background_url!=null) push("printing.background_url", p.background_url, "image");
+    if(p.image!=null) push("printing.image", p.image, "image");
+    push("printing.collector_number", p.collector_number ?? "", "string");
+    push("printing.quantity", p.quantity ?? 1, "number");
+    if(p.artist!=null) push("printing.artist", p.artist, "string");
+    if(p.flavor_text!=null) push("printing.flavor_text", p.flavor_text, "longstring");
+    if(p.variant!=null) push("printing.variant", p.variant, "string");
+    if(p.set_id!=null) push("printing.set_id", p.set_id, "string");
+  }
+  return out;
+}
+function desKindLabel(k){ return {string:"text",longstring:"rich text",number:"badge",image:"image",url:"text",array:"text",boolean:"text"}[k]||"text"; }
+function desPaletteHtml(g,c,p){
+  const fields=desFields(g,c,p);
+  if(!fields.length) return `<div class="mut" style="font-size:13px;color:var(--mut)">No bindable fields on this card yet.</div>`;
+  return fields.map(f=>{
+    const empty=f.value===undefined||f.value===null||f.value==="";
+    return `<div class="des-field" draggable="true" ondragstart="desFieldDragStart(event,'${esc(f.path)}','${f.kind}')" title="Drag onto the card to create a ${esc(desKindLabel(f.kind))} region bound to ${esc(f.path)}">
+      <div class="des-field-path">${esc(f.path)}</div>
+      <div class="des-field-val${empty?' des-field-empty':''}">${empty?'—':esc(desTrim(String(f.value),42))}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ---- geometry: mm<->px, ghost game (DES.layout overlaid on the real game), card shell ---- */
+function desGeom(){
+  const spec=(DES.layout&&DES.layout.card)||{};
+  const W=spec.w_mm||63.5, H=spec.h_mm||88.9;
+  const pxmm = DES.view==="1:1" ? (96/25.4) : (460/H);
+  return {W,H,pxmm,pxW:W*pxmm,pxH:H*pxmm};
+}
+function desGhostGame(){ const g=G(DES.slug); return Object.assign({}, g, {layout: DES.layout}); }
+function desCard(){ const g=G(DES.slug); if(!g||!g.cards||!g.cards.length) return null; return g.cards.find(c=>c.id===DES.sel) || g.cards[0]; }
+function desRegion(id){ return DES.layout && (DES.layout.regions||[]).find(r=>r.id===id); }
+function desCardHtml(geom){
+  const g=desGhostGame(), c=desCard(); if(!c) return "";
+  const p=cfPrinting(g,c);
+  const pxW=Math.max(1,Math.round(geom.pxW));
+  if(DES.layout && Array.isArray(DES.layout.regions) && DES.layout.regions.length)
+    return layoutCard(g,c,p,{w:pxW});
+  // 0-region layout (blank start, or every region deleted): a bare card shell at
+  // the right size/bg so there's still something to drop fields onto -- layoutCard()
+  // itself would fall through to cardFrame() here, which is the wrong thing while designing.
+  const ctx={card:c,printing:p||{},g,attributes:c.attributes||{}};
+  const spec=(DES.layout&&DES.layout.card)||{};
+  const bg=layColor(g,ctx,spec.bg,"#ffffff");
+  const rx=(((spec.radius_mm||0)/geom.W)*100).toFixed(3), ry=(((spec.radius_mm||0)/geom.H)*100).toFixed(3);
+  return `<div class="lay-wrap cf-card" style="width:${pxW}px;aspect-ratio:${geom.W}/${geom.H};border-radius:${rx}% / ${ry}%">
+    <div class="lay-card" style="width:${geom.W}mm;height:${geom.H}mm;background:${bg}"></div>
+  </div>`;
+}
+
+/* ---- region overlay boxes: absolutely positioned atop the SAME layoutCard() output,
+ * same mm->px scale, so a box always sits exactly on top of the region it edits ---- */
+function desRegionBoxHtml(r, geom, selId){
+  const isBadge=r.type==="badge";
+  const w=isBadge?(r.d??r.w??8):(r.w??10), h=isBadge?(r.d??r.h??8):(r.h??10);
+  const x=r.x||0, y=r.y||0;
+  const left=(x*geom.pxmm).toFixed(2), top=(y*geom.pxmm).toFixed(2);
+  const ww=Math.max(4,w*geom.pxmm).toFixed(2), hh=Math.max(4,h*geom.pxmm).toFixed(2);
+  const g=G(DES.slug), c=desCard(), p=c?cfPrinting(g,c):null;
+  const ctx={card:c,printing:p||{},g,attributes:(c&&c.attributes)||{}};
+  let visible=true; try{ visible=layCond(ctx, r.show_if); }catch(e){}
+  const sel=r.id===selId;
+  const handles=sel?DES_HANDLES.map(hd=>`<div class="des-h des-h-${hd}" data-h="${hd}" onmousedown="desBoxMouseDown(event,'${esc(r.id)}')"></div>`).join(""):"";
+  return `<div class="des-box${sel?' sel':''}${visible?'':' des-hidden-now'}" data-rid="${esc(r.id)}"
+    style="left:${left}px;top:${top}px;width:${ww}px;height:${hh}px"
+    onmousedown="desBoxMouseDown(event,'${esc(r.id)}')">
+    <span class="des-tag">${esc(r.id)}${visible?'':' (hidden for this card)'}</span>
+    ${handles}
+  </div>`;
+}
+function desReadoutHtml(geom){
+  const r=DES_DRAG && desRegion(DES_DRAG.id); if(!r) return "";
+  const isBadge=r.type==="badge";
+  const w=isBadge?(r.d||0):(r.w||0), h=isBadge?(r.d||0):(r.h||0);
+  const left=((r.x||0)+w/2)*geom.pxmm, top=Math.max(0,(r.y||0)*geom.pxmm-4);
+  return `<div class="des-readout" style="left:${left.toFixed(1)}px;top:${top.toFixed(1)}px">${(r.x||0).toFixed(1)}, ${(r.y||0).toFixed(1)} mm · ${w.toFixed(1)}×${h.toFixed(1)} mm</div>`;
+}
+function desStageInnerHtml(){
+  const geom=desGeom();
+  const cardHtml=desCardHtml(geom);
+  const boxes=(DES.layout.regions||[]).map(r=>desRegionBoxHtml(r,geom,DES.selRegion)).join("");
+  const readout=DES_DRAG?desReadoutHtml(geom):"";
+  return `<div class="des-cardhost">${cardHtml}</div><div class="des-overlay">${boxes}</div>${readout}`;
+}
+function desRenderCanvasOnly(){ const host=document.getElementById("des-stage-inner"); if(host) host.innerHTML=desStageInnerHtml(); }
+function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desInspectorHtml(); }
+function desRefreshToolbar(){
+  const g=G(DES.slug); if(!g) return;
+  const host=document.querySelector(".des-toolbar-host");
+  if(host) host.innerHTML=desToolbarHtml(g, DES.showGallery, desDirty());
+}
+function desDirty(){ return !!(DES.layout && JSON.stringify(DES.layout)!==JSON.stringify(DES.orig)); }
+
+function desSelectRegion(id){ DES.selRegion=id; DES._addFontOpen=false; desRenderCanvasOnly(); desRenderInspectorOnly(); }
+function desCanvasBgMouseDown(e){
+  const t=e.target;
+  if(t && (t.id==="des-stage"||t.id==="des-stage-inner"||t.classList.contains("des-overlay")||t.classList.contains("des-cardhost"))) desSelectRegion(null);
+}
+
+/* ---- undo: a plain stack of JSON snapshots (<=20), pushed BEFORE each discrete edit ---- */
+function desBeginChange(){ return JSON.stringify(DES.layout); }
+function desPushUndo(snapshot){ DES.undo.push(snapshot); if(DES.undo.length>20) DES.undo.shift(); }
+function desCommitChange(pre){ desPushUndo(pre); }
+function desUndo(){
+  if(!DES || !DES.undo.length){ toast("Nothing to undo."); return; }
+  DES.layout=JSON.parse(DES.undo.pop());
+  if(!desRegion(DES.selRegion)) DES.selRegion=null;
+  DES._showIfDraft=null; // show_if may differ post-undo; force the builder to re-derive
+  desRenderFull();
+}
+
+/* ---- direct manipulation: drag to move, 8 handles to resize, snap to 0.5mm (Alt disables),
+ * live mm readout while dragging, one undo step per completed drag (not per mousemove) ---- */
+function desBoxMouseDown(e, rid){
+  if(e.button!==0) return;
+  e.stopPropagation(); e.preventDefault();
+  desSelectRegion(rid);
+  const r=desRegion(rid); if(!r) return;
+  const handleEl=e.target && e.target.closest ? e.target.closest(".des-h") : null;
+  const handle=handleEl ? handleEl.dataset.h : null;
+  const geom=desGeom(), isBadge=r.type==="badge";
+  DES_DRAG={ id:rid, handle, sx:e.clientX, sy:e.clientY, geom, moved:false,
+    snapshot: JSON.stringify(DES.layout),
+    orig:{ x:r.x||0, y:r.y||0, w:isBadge?(r.d||8):(r.w||10), h:isBadge?(r.d||8):(r.h||10) } };
+  document.addEventListener("mousemove", desDragMove);
+  document.addEventListener("mouseup", desDragEnd);
+}
+function desDragMove(e){
+  if(!DES_DRAG) return;
+  const d=DES_DRAG, r=desRegion(d.id); if(!r){ desDragEnd(); return; }
+  const dxPx=e.clientX-d.sx, dyPx=e.clientY-d.sy;
+  if(Math.abs(dxPx)>1||Math.abs(dyPx)>1) d.moved=true;
+  const dxmm=dxPx/d.geom.pxmm, dymm=dyPx/d.geom.pxmm;
+  const grid=e.altKey?0:0.5;
+  const snap=v=> grid ? Math.round(v/grid)*grid : v;
+  const W=d.geom.W, H=d.geom.H, minS=2;
+  let x,y,w,h;
+  if(!d.handle){
+    x=snap(clamp(d.orig.x+dxmm,0,Math.max(0,W-d.orig.w)));
+    y=snap(clamp(d.orig.y+dymm,0,Math.max(0,H-d.orig.h)));
+    w=d.orig.w; h=d.orig.h;
+  } else {
+    let nx=d.orig.x, ny=d.orig.y, nw=d.orig.w, nh=d.orig.h;
+    if(d.handle.includes("e")) nw=Math.max(minS, d.orig.w+dxmm);
+    if(d.handle.includes("s")) nh=Math.max(minS, d.orig.h+dymm);
+    if(d.handle.includes("w")){ nw=Math.max(minS, d.orig.w-dxmm); nx=d.orig.x+(d.orig.w-nw); }
+    if(d.handle.includes("n")){ nh=Math.max(minS, d.orig.h-dymm); ny=d.orig.y+(d.orig.h-nh); }
+    if(r.type==="badge"){ const dd=Math.max(nw,nh); nw=dd; nh=dd; }
+    x=snap(nx); y=snap(ny); w=snap(nw); h=snap(nh);
+    x=clamp(x,0,Math.max(0,W-minS)); y=clamp(y,0,Math.max(0,H-minS));
+    w=clamp(w,minS,W-x); h=clamp(h,minS,H-y);
+  }
+  r.x=round2(x); r.y=round2(y);
+  if(r.type==="badge") r.d=round2(Math.max(w,h)); else { r.w=round2(w); r.h=round2(h); }
+  desRenderCanvasOnly();
+}
+function desDragEnd(){
+  document.removeEventListener("mousemove", desDragMove);
+  document.removeEventListener("mouseup", desDragEnd);
+  const d=DES_DRAG; DES_DRAG=null;
+  if(d && d.moved) desPushUndo(d.snapshot);
+  desRenderCanvasOnly();
+  desSyncInspectorXYWH();
+  if(d && d.moved) desRefreshToolbar();
+}
+function desSyncInspectorXYWH(){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const isBadge=r.type==="badge";
+  const setv=(id,val)=>{ const el=document.getElementById(id); if(el && document.activeElement!==el) el.value=val; };
+  setv("des-ix", r.x??0); setv("des-iy", r.y??0);
+  if(isBadge) setv("des-id", r.d??8); else { setv("des-iw", r.w??0); setv("des-ih", r.h??0); }
+}
+
+/* ---- keyboard: arrows nudge 0.5mm (shift=2mm), Delete removes, Esc deselects, Ctrl/Cmd+Z undo ---- */
+function desOnKey(e){
+  if(!DES) return;
+  const stage=document.getElementById("des-stage"); if(!stage) return; // design tab not currently shown
+  const ae=document.activeElement, tag=(ae&&ae.tagName)||"";
+  const typing = tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(ae&&ae.isContentEditable);
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==="z"){
+    if(typing) return;
+    e.preventDefault(); desUndo(); return;
+  }
+  if(typing) return;
+  if(e.key==="Escape"){ if(DES.selRegion){ e.preventDefault(); desSelectRegion(null); } return; }
+  if(!DES.selRegion) return;
+  const r=desRegion(DES.selRegion); if(!r) return;
+  if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); desDeleteRegion(DES.selRegion); return; }
+  let dx=0,dy=0; const step=e.shiftKey?2:0.5;
+  if(e.key==="ArrowLeft") dx=-step; else if(e.key==="ArrowRight") dx=step;
+  else if(e.key==="ArrowUp") dy=-step; else if(e.key==="ArrowDown") dy=step;
+  else return;
+  e.preventDefault();
+  const geom=desGeom(), pre=desBeginChange();
+  const w=r.type==="badge"?(r.d||8):(r.w||10), h=r.type==="badge"?(r.d||8):(r.h||10);
+  r.x=round2(clamp((r.x||0)+dx,0,Math.max(0,geom.W-w)));
+  r.y=round2(clamp((r.y||0)+dy,0,Math.max(0,geom.H-h)));
+  desCommitChange(pre);
+  desRenderCanvasOnly(); desSyncInspectorXYWH(); desRefreshToolbar();
+}
+document.addEventListener("keydown", desOnKey);
+
+/* ---- creating regions: drag a field from the palette and drop it on the canvas,
+ * or "+ Add region" for a blank one. Default type/size inferred from field kind. ---- */
+function desFieldDragStart(e, path, kind){
+  DES_FIELD_DRAG={path,kind};
+  try{ e.dataTransfer.setData("text/plain", path); e.dataTransfer.effectAllowed="copy"; }catch(err){}
+}
+function desFieldDrop(e){
+  e.preventDefault();
+  const info=DES_FIELD_DRAG || {path:(e.dataTransfer&&e.dataTransfer.getData("text/plain"))||"", kind:"string"};
+  DES_FIELD_DRAG=null;
+  if(!info.path) return;
+  const stage=document.getElementById("des-stage"); if(!stage) return;
+  const rect=stage.getBoundingClientRect();
+  const geom=desGeom();
+  const xmm=(e.clientX-rect.left)/geom.pxmm, ymm=(e.clientY-rect.top)/geom.pxmm;
+  desCreateRegionFromField(info.path, info.kind, xmm, ymm);
+}
+function desUniqueId(base){
+  const ids=new Set((DES.layout.regions||[]).map(r=>r.id));
+  if(!ids.has(base)) return base;
+  let n=2; while(ids.has(`${base}_${n}`)) n++;
+  return `${base}_${n}`;
+}
+function desDefaultTextColor(){
+  const bg=DES.layout.card && DES.layout.card.bg;
+  if(!bg || bg==="palette") return "#ffffff";
+  const m=/^#([0-9a-fA-F]{6})$/.exec(bg);
+  if(!m) return "#222222";
+  const n=parseInt(m[1],16), r=(n>>16)&255, gg=(n>>8)&255, b=n&255;
+  const lum=(0.299*r+0.587*gg+0.114*b)/255;
+  return lum>0.55 ? "#1a1a1a" : "#ffffff";
+}
+function desCreateRegionFromField(path, kind, xmm, ymm){
+  if(!DES.layout) return;
+  const pre=desBeginChange();
+  const geom=desGeom();
+  const base=desSlug(String(path).split(".").pop());
+  const id=desUniqueId(base);
+  let type="text", w=32, h=7, extra={align:"left",valign:"middle"};
+  if(kind==="longstring"){ type="richtext"; w=42; h=22; extra={symbols:true,autoshrink:true,min_size_pt:5.5}; }
+  else if(kind==="number"){ type="badge"; w=8; h=8; extra={shape:"circle"}; }
+  else if(kind==="image"){ type="image"; w=30; h=30; extra={fit:"cover"}; }
+  let x=round2(clamp(xmm-w/2,0,Math.max(0,geom.W-w)));
+  let y=round2(clamp(ymm-h/2,0,Math.max(0,geom.H-h)));
+  w=Math.min(w, Math.max(2,geom.W-x)); h=Math.min(h, Math.max(2,geom.H-y));
+  const fontId=DES.layout.fonts && DES.layout.fonts[0] && DES.layout.fonts[0].id;
+  const region={id,type,src:path,x,y};
+  if(type==="badge") region.d=round2(Math.max(w,h)); else { region.w=round2(w); region.h=round2(h); }
+  if(fontId && type!=="image") region.font=fontId;
+  region.size_pt = type==="richtext"?8:(type==="badge"?11:10);
+  Object.assign(region, extra);
+  if(type!=="image") region.color=desDefaultTextColor();
+  DES.layout.regions.push(region);
+  desCommitChange(pre);
+  desSelectRegion(id);
+  desRenderFull();
+}
+function desAddBlank(){
+  if(!DES.layout) return;
+  const pre=desBeginChange();
+  const geom=desGeom();
+  const id=desUniqueId("region");
+  const w=20,h=10;
+  const x=round2(Math.max(0,(geom.W-w)/2)), y=round2(Math.max(0,(geom.H-h)/2));
+  DES.layout.regions.push({id,type:"rect",x,y,w,h,fill:"#cccccc",stroke:"#00000040",stroke_w_mm:0.3});
+  desCommitChange(pre);
+  desSelectRegion(id);
+  desRenderFull();
+}
+function desDeleteRegion(id){
+  if(!DES.layout) return;
+  const pre=desBeginChange();
+  DES.layout.regions=(DES.layout.regions||[]).filter(r=>r.id!==id);
+  desCommitChange(pre);
+  if(DES.selRegion===id) DES.selRegion=null;
+  desRenderFull();
+}
+function desRenameRegion(newIdRaw){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const newId=desSlug(newIdRaw);
+  if(newId===r.id){ desFieldCommit(); desRenderInspectorOnly(); return; }
+  const ids=new Set((DES.layout.regions||[]).map(x=>x.id));
+  if(ids.has(newId)){ toast("A region with that id already exists — pick another name."); desRenderInspectorOnly(); return; }
+  r.id=newId; DES.selRegion=newId;
+  desFieldCommit();
+  desRenderFull();
+}
+function desChangeRegionType(newType){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const pre=desBeginChange();
+  const oldType=r.type;
+  r.type=newType;
+  if(newType==="badge" && oldType!=="badge"){
+    const d=round2(Math.max(4, Math.min(r.w||8, r.h||8)));
+    delete r.w; delete r.h; r.d=d; r.shape=r.shape||"circle";
+  } else if(newType!=="badge" && oldType==="badge"){
+    const s=r.d||8; r.w=s; r.h=s; delete r.d; delete r.shape;
+  }
+  if(newType==="richtext"){ if(r.symbols===undefined) r.symbols=true; if(r.autoshrink===undefined) r.autoshrink=true; }
+  if(newType==="rect"){ delete r.src; delete r.text; delete r.font; delete r.size_pt; delete r.align; delete r.valign; delete r.color; if(!r.fill) r.fill="#cccccc"; }
+  if(newType==="image"||newType==="background"){ if(!r.fit) r.fit="cover"; }
+  if(newType==="row" && !r.of) r.of=[];
+  desCommitChange(pre);
+  desRenderFull();
+}
+
+/* ---- inspector field plumbing: two update paths --
+ * desInspSet: instantaneous controls (select/checkbox/color) -- begin+set+commit in one call.
+ * desInspLive/desFieldFocus/desFieldCommit: typed inputs -- live-update the canvas on every
+ * keystroke (oninput) but only push ONE undo step per focus-session (on blur/change), the
+ * same "one snapshot per gesture" discipline as drag. ---- */
+function desApplyProp(r,prop,val){
+  if(val===""||val===undefined){ delete r[prop]; return; }
+  if(prop==="uppercase"||prop==="symbols"||prop==="autoshrink"){ r[prop]=!!val; return; }
+  r[prop]=val;
+}
+function desInspSet(prop,val){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  if(prop==="type"){ desChangeRegionType(val); return; }
+  const pre=desBeginChange();
+  desApplyProp(r,prop,val);
+  desCommitChange(pre);
+  desRenderCanvasOnly(); desRenderInspectorOnly(); desRefreshToolbar();
+}
+function desInspLive(prop,val){ const r=desRegion(DES.selRegion); if(!r) return; desApplyProp(r,prop,val); desRenderCanvasOnly(); }
+function desInspLiveNum(prop,val){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const n=parseFloat(val);
+  if(val===""||isNaN(n)) delete r[prop]; else r[prop]=n;
+  desRenderCanvasOnly();
+}
+function desGeomLive(prop,val){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const n=parseFloat(val); if(isNaN(n)) return;
+  const geom=desGeom();
+  if(prop==="x") r.x=clamp(n,0,geom.W);
+  else if(prop==="y") r.y=clamp(n,0,geom.H);
+  else if(prop==="w") r.w=clamp(n,2,geom.W);
+  else if(prop==="h") r.h=clamp(n,2,geom.H);
+  else if(prop==="d") r.d=clamp(n,2,Math.min(geom.W,geom.H));
+  desRenderCanvasOnly();
+}
+function desFieldFocus(){ DES._pre=JSON.stringify(DES.layout); }
+function desFieldCommit(){
+  if(DES._pre!=null){ desPushUndo(DES._pre); DES._pre=null; }
+  desRefreshToolbar();
+}
+
+/* ---- inspector: binding dropdown (never a typed dot-path), region type, font,
+ * size_pt, align, color+bg (color inputs or "palette"), show_if builder, z-order,
+ * and x/y/w/h numeric inputs kept in sync with dragging in both directions. ---- */
+function desSrcBindingHtml(r, fields){
+  let h=`<div class="fld"><label>Bound to</label><select onchange="desBindSelect(this.value)">
+    <option value="" ${!r.src?"selected":""}>— static text below —</option>
+    ${fields.map(f=>`<option value="${esc(f.path)}" ${r.src===f.path?"selected":""}>${esc(f.path)}</option>`).join("")}
+    ${(r.src && !fields.find(f=>f.path===r.src))?`<option value="${esc(r.src)}" selected>${esc(r.src)} (not on this preview card)</option>`:""}
+  </select></div>`;
+  if(r.type!=="image" && r.type!=="background"){
+    h+=`<div class="fld"><label>Static text <span style="text-transform:none;font-weight:400">(shown when not bound to a field)</span></label>
+      <input value="${esc(r.text||"")}" onfocus="desFieldFocus()" oninput="desInspLive('text',this.value)" onchange="desFieldCommit()"></div>`;
+  }
+  return h;
+}
+function desBindSelect(val){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const pre=desBeginChange();
+  if(val){ r.src=val; delete r.text; } else { delete r.src; }
+  desCommitChange(pre);
+  desRenderCanvasOnly(); desRenderInspectorOnly(); desRefreshToolbar();
+}
+function desCreditHtml(r, fields){
+  return `<div class="fld"><label>Credit field <span style="text-transform:none;font-weight:400">(artist caption)</span></label>
+    <select onchange="desInspSet('credit',this.value)">
+      <option value="" ${!r.credit?"selected":""}>— none —</option>
+      ${fields.map(f=>`<option value="${esc(f.path)}" ${r.credit===f.path?"selected":""}>${esc(f.path)}</option>`).join("")}
+    </select></div>`;
+}
+function desFitHtml(r){
+  return `<div class="fld"><label>Fit</label><select onchange="desInspSet('fit',this.value)">
+    <option value="cover" ${(!r.fit||r.fit==="cover")?"selected":""}>cover</option>
+    <option value="contain" ${r.fit==="contain"?"selected":""}>contain</option>
+  </select></div>`;
+}
+function desShapeHtml(r){
+  return `<div class="fld"><label>Shape</label><select onchange="desInspSet('shape',this.value)">
+    <option value="circle" ${(!r.shape||r.shape==="circle")?"selected":""}>circle</option>
+    <option value="square" ${r.shape==="square"?"selected":""}>square</option>
+  </select></div>`;
+}
+function desUppercaseHtml(r){
+  return `<div class="fld"><label style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" ${r.uppercase?"checked":""} onchange="desInspSet('uppercase',this.checked)"> UPPERCASE</label></div>`;
+}
+function desSymbolsAutoshrinkHtml(r){
+  return `<div class="fld">
+    <label style="display:inline-flex;align-items:center;gap:5px;margin-right:16px"><input type="checkbox" ${r.symbols?"checked":""} onchange="desInspSet('symbols',this.checked)"> [symbol] chips</label>
+    <label style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${r.autoshrink?"checked":""} onchange="desInspSet('autoshrink',this.checked)"> auto-shrink to fit</label>
+  </div>`;
+}
+function desAlignValignHtml(r, withValign){
+  return `<div class="fld"><div class="row">
+    <div><label>Align</label><select onchange="desInspSet('align',this.value)">
+      ${["left","center","right"].map(a=>`<option value="${a}" ${(r.align||"left")===a?"selected":""}>${a}</option>`).join("")}
+    </select></div>
+    ${withValign?`<div><label>Vertical</label><select onchange="desInspSet('valign',this.value)">
+      ${["top","middle","bottom"].map(a=>`<option value="${a}" ${(r.valign||"middle")===a?"selected":""}>${a}</option>`).join("")}
+    </select></div>`:""}
+  </div></div>`;
+}
+function desFontSizeHtml(r, withMin){
+  return `<div class="fld"><div class="row">
+    <div><label>Size (pt)</label><input type="number" step="0.5" min="4" value="${r.size_pt??10}" onfocus="desFieldFocus()" oninput="desInspLiveNum('size_pt',this.value)" onchange="desFieldCommit()"></div>
+    ${withMin?`<div><label>Min size (pt)</label><input type="number" step="0.5" min="4" placeholder="auto" value="${r.min_size_pt??''}" onfocus="desFieldFocus()" oninput="desInspLiveNum('min_size_pt',this.value)" onchange="desFieldCommit()"></div>`:""}
+  </div></div>`;
+}
+function desStrokeWidthRadiusHtml(r){
+  return `<div class="fld"><div class="row">
+    <div><label>Stroke width (mm)</label><input type="number" step="0.1" min="0" value="${r.stroke_w_mm??0.3}" onfocus="desFieldFocus()" oninput="desInspLiveNum('stroke_w_mm',this.value)" onchange="desFieldCommit()"></div>
+    <div><label>Corner radius (mm)</label><input type="number" step="0.5" min="0" value="${r.radius_mm??0}" onfocus="desFieldFocus()" oninput="desInspLiveNum('radius_mm',this.value)" onchange="desFieldCommit()"></div>
+  </div></div>`;
+}
+function desRowHtml(r){
+  const cells=r.of||[];
+  return `<div class="fld"><label>Row cells</label>
+    <div style="font-size:12px;color:var(--mut);margin-bottom:6px">${cells.length} cell${cells.length===1?"":"s"} — quick-add binds the next declared numeric attribute; fine-tune labels/fonts in the raw-YAML view below.</div>
+    <button class="btn" onclick="desRowQuickAdd()">+ Add cell</button>
+    ${cells.length?`<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">${cells.map((c,i)=>`<div style="display:flex;gap:6px;align-items:center;font-size:12px"><code class="mono">${esc(c.key)}</code><span style="color:var(--mut)">${esc(c.label||"")}</span><button class="btn" style="margin-left:auto;padding:2px 8px" onclick="desRowRemoveCell(${i})">✕</button></div>`).join("")}</div>`:""}
+  </div>`;
+}
+function desRowQuickAdd(){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const g=G(DES.slug);
+  const used=new Set((r.of||[]).map(c=>c.key));
+  const cand=(g.schema||[]).find(d=>!used.has(`attributes.${d.key}`));
+  const pre=desBeginChange();
+  r.of=r.of||[];
+  r.of.push(cand?{key:`attributes.${cand.key}`,label:cand.name||cand.key,show_if:`attributes.${cand.key}`}:{key:"attributes.value",label:"Value"});
+  desCommitChange(pre);
+  desRenderInspectorOnly(); desRenderCanvasOnly(); desRefreshToolbar();
+}
+function desRowRemoveCell(i){
+  const r=desRegion(DES.selRegion); if(!r||!r.of) return;
+  const pre=desBeginChange();
+  r.of.splice(i,1);
+  desCommitChange(pre);
+  desRenderInspectorOnly(); desRenderCanvasOnly(); desRefreshToolbar();
+}
+
+/* ---- color/bg: literal hex, "palette", or none -- never forces a palette to exist
+ * until the first time someone actually asks for one, then it's auto-bootstrapped
+ * from the game's own faction/type colors (same heuristic the presets use). ---- */
+function desPickColorAttr(g){
+  if(g.faction_colors && Object.keys(g.faction_colors).length)
+    return {by:"attributes.faction", map:Object.fromEntries(Object.entries(g.faction_colors).map(([k,v])=>[k,(v&&v.fg)||"#4a4a4a"])), default:"#4a4a4a"};
+  if(g.type_colors && Object.keys(g.type_colors).length)
+    return {by:"type", map:Object.fromEntries(Object.entries(g.type_colors).map(([k,v])=>[k,(v&&v.fg)||"#4a4a4a"])), default:"#4a4a4a"};
+  return null;
+}
+function desEnsurePalette(){
+  if(DES.layout.palette && DES.layout.palette.by) return;
+  const g=G(DES.slug);
+  DES.layout.palette = desPickColorAttr(g) || {by:"attributes.faction", map:{}, default:"#4a4a4a"};
+  toast("Created a starter palette bound to "+esc(DES.layout.palette.by)+" — fine-tune its color map in the raw-YAML view.",5000);
+}
+function desColorFieldHtml(r, prop, label){
+  const val=r[prop];
+  const isPalette=val==="palette";
+  const hasPaletteBlock=!!(DES.layout.palette && DES.layout.palette.by);
+  const hex=(typeof val==="string" && /^#[0-9a-fA-F]{3,8}$/.test(val)) ? val.slice(0,7) : "#000000";
+  const mode = val==null ? "none" : (isPalette ? "palette" : "color");
+  return `<div class="fld"><label>${esc(label)}</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select onchange="desColorMode('${prop}',this.value)" style="width:auto">
+        <option value="none" ${mode==="none"?"selected":""}>none</option>
+        <option value="color" ${mode==="color"?"selected":""}>color</option>
+        <option value="palette" ${mode==="palette"?"selected":""}>palette</option>
+      </select>
+      ${mode==="color"?`<input type="color" value="${esc(hex)}" onchange="desInspSet('${prop}',this.value)" style="width:44px;padding:2px">`:""}
+      ${mode==="palette" && !hasPaletteBlock?`<span style="font-size:11px;color:var(--org)">no palette yet — one will be created</span>`:""}
+    </div>
+  </div>`;
+}
+function desColorMode(prop, mode){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const pre=desBeginChange();
+  if(mode==="none") delete r[prop];
+  else if(mode==="palette"){ desEnsurePalette(); r[prop]="palette"; }
+  else r[prop]="#222222";
+  desCommitChange(pre);
+  desRenderCanvasOnly(); desRenderInspectorOnly(); desRefreshToolbar();
+}
+
+/* ---- show_if builder: always / only if <field> exists / only if <field> is empty /
+ * only if <field> == value -- a picklist, never a hand-typed condition string. ---- */
+function desParseShowIf(cond){
+  if(!cond) return {mode:"always", field:"", value:""};
+  const s=String(cond).trim();
+  const m=/^(.+?)\s*(==|!=)\s*(.+)$/.exec(s);
+  if(m){ let v=m[3].trim(); if(/^".*"$/.test(v)||/^'.*'$/.test(v)) v=v.slice(1,-1);
+    return {mode:m[2]==="=="?"eq":"neq", field:m[1].trim(), value:v}; }
+  if(s.startsWith("!")) return {mode:"notexists", field:s.slice(1).trim(), value:""};
+  return {mode:"exists", field:s, value:""};
+}
+function desShowIfCompose(mode, field, value){
+  if(mode==="always"||!field) return undefined;
+  if(mode==="exists") return field;
+  if(mode==="notexists") return "!"+field;
+  if(mode==="eq") return `${field} == ${value}`;
+  return undefined;
+}
+/* desShowIfDraft: the mode/field/value picker is a THREE-part choice (mode, then
+ * field, then maybe a value) built up across separate onchange events, but
+ * desShowIfCompose only writes r.show_if once mode+field are BOTH non-empty --
+ * so each setter must accumulate into a small per-region draft rather than
+ * re-deriving from r.show_if on every call (which would make picking "only if
+ * field exists" and THEN a field a no-op, since neither half alone composes to
+ * anything). Invalidated whenever selection changes or show_if is set from
+ * outside this builder (raw-YAML apply, undo) so it never goes stale. */
+function desShowIfDraft(r){
+  if(!DES._showIfDraft || DES._showIfDraftFor!==r.id){ DES._showIfDraft=desParseShowIf(r.show_if); DES._showIfDraftFor=r.id; }
+  return DES._showIfDraft;
+}
+function desShowIfHtml(r, fields){
+  const si=desShowIfDraft(r);
+  const modes=[["always","Always"],["exists","Only if field exists"],["notexists","Only if field is empty/absent"],["eq","Only if field equals…"]];
+  const fieldOpts=fields.map(x=>`<option value="${esc(x.path)}" ${si.field===x.path?"selected":""}>${esc(x.path)}</option>`).join("");
+  return `<div class="fld"><label>Show</label>
+    <select onchange="desShowIfMode(this.value)">${modes.map(([v,l])=>`<option value="${v}" ${si.mode===v?"selected":""}>${esc(l)}</option>`).join("")}</select>
+    ${si.mode!=="always"?`<select style="margin-top:6px" onchange="desShowIfField(this.value)"><option value="">— pick a field —</option>${fieldOpts}</select>`:""}
+    ${si.mode==="eq"?`<input style="margin-top:6px" placeholder="value" value="${esc(si.value)}" onfocus="desFieldFocus()" oninput="desShowIfLiveValue(this.value)" onchange="desFieldCommit()">`:""}
+  </div>`;
+}
+function desShowIfApply(r, si){
+  const composed=desShowIfCompose(si.mode, si.field, si.value);
+  if(composed) r.show_if=composed; else delete r.show_if;
+}
+function desShowIfMode(mode){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const si=desShowIfDraft(r); si.mode=mode;
+  const pre=desBeginChange();
+  desShowIfApply(r, si);
+  desCommitChange(pre);
+  desRenderInspectorOnly(); desRenderCanvasOnly(); desRefreshToolbar();
+}
+function desShowIfField(field){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const si=desShowIfDraft(r); si.field=field;
+  const pre=desBeginChange();
+  desShowIfApply(r, si);
+  desCommitChange(pre);
+  desRenderInspectorOnly(); desRenderCanvasOnly(); desRefreshToolbar();
+}
+function desShowIfLiveValue(value){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const si=desShowIfDraft(r); si.value=value;
+  desShowIfApply(r, si);
+  desRenderCanvasOnly();
+}
+
+/* ---- z-order: paint order IS stacking order (layoutCard paints regions in array
+ * order) -- bring forward/send back reorder DES.layout.regions directly. ---- */
+function desZOrderHtml(r, idx, n){
+  return `<div class="fld"><label>Layer order <span style="text-transform:none;font-weight:400">(${idx+1} of ${n} — later draws on top)</span></label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn" ${idx<=0?"disabled":""} onclick="desZOrder('back')" title="Move earlier (further back)">⤒ Send back</button>
+      <button class="btn" ${idx>=n-1?"disabled":""} onclick="desZOrder('front')" title="Move later (further forward)">⤓ Bring forward</button>
+      <button class="btn" ${idx<=0?"disabled":""} onclick="desZOrder('bottom')" title="Move to the very back">⇤ To back</button>
+      <button class="btn" ${idx>=n-1?"disabled":""} onclick="desZOrder('top')" title="Move to the very front">⇥ To front</button>
+    </div>
+  </div>`;
+}
+function desZOrder(dir){
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const arr=DES.layout.regions; const idx=arr.indexOf(r); if(idx<0) return;
+  const pre=desBeginChange();
+  arr.splice(idx,1);
+  if(dir==="back") arr.splice(Math.max(0,idx-1),0,r);
+  else if(dir==="front") arr.splice(Math.min(arr.length,idx+1),0,r);
+  else if(dir==="bottom") arr.unshift(r);
+  else if(dir==="top") arr.push(r);
+  desCommitChange(pre);
+  desRenderFull();
+}
+
+/* ---- font picker: dropdown of layout.fonts[] + inline "add font" panel (no
+ * browser prompt() -- a small form that appears in place). ---- */
+function desFontFieldHtml(r, fonts){
+  let h=`<div class="fld"><label>Font</label><select onchange="desFontSelect(this.value)">
+    <option value="">— inherit —</option>
+    ${fonts.map(f=>`<option value="${esc(f.id)}" ${r.font===f.id?"selected":""}>${esc(f.id)} (${esc(f.family)})</option>`).join("")}
+    <option value="__new__">+ Add font…</option>
+  </select></div>`;
+  if(DES._addFontOpen){
+    h+=`<div class="fld des-addfont">
+      <label>New font family <span style="text-transform:none;font-weight:400">(Google Fonts name)</span></label>
+      <input id="des-nf-fam" placeholder="e.g. Cinzel">
+      <div class="row" style="margin-top:6px">
+        <div><label style="font-weight:400;text-transform:none;font-size:11px">Weight</label>
+          <select id="des-nf-w">${[300,400,500,600,700,800,900].map(w=>`<option ${w===700?"selected":""}>${w}</option>`).join("")}</select></div>
+        <div><label style="font-weight:400;text-transform:none;font-size:11px">Style</label>
+          <select id="des-nf-s"><option value="normal">normal</option><option value="italic">italic</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn primary" onclick="desAddFont()">Add font</button>
+        <button class="btn" onclick="desCancelAddFont()">Cancel</button>
+      </div>
+    </div>`;
+  }
+  return h;
+}
+function desFontSelect(val){
+  if(val==="__new__"){ DES._addFontOpen=true; desRenderInspectorOnly(); setTimeout(()=>{const el=document.getElementById("des-nf-fam"); if(el) el.focus();},20); return; }
+  desInspSet("font", val);
+}
+function desCancelAddFont(){ DES._addFontOpen=false; desRenderInspectorOnly(); }
+function desUniqueFontId(base){
+  const ids=new Set((DES.layout.fonts||[]).map(f=>f.id));
+  if(!ids.has(base)) return base;
+  let n=2; while(ids.has(`${base}_${n}`)) n++;
+  return `${base}_${n}`;
+}
+function desAddFont(){
+  const famEl=document.getElementById("des-nf-fam");
+  const fam=(famEl&&famEl.value||"").trim();
+  if(!fam){ toast("Enter a font family name."); return; }
+  const weight=parseInt((document.getElementById("des-nf-w")||{}).value||"400",10);
+  const style=(document.getElementById("des-nf-s")||{}).value||"normal";
+  const r=desRegion(DES.selRegion); if(!r) return;
+  const pre=desBeginChange();
+  DES.layout.fonts=DES.layout.fonts||[];
+  const id=desUniqueFontId(desSlug(fam));
+  DES.layout.fonts.push({id,family:fam,weight,style});
+  r.font=id;
+  DES._addFontOpen=false;
+  desCommitChange(pre);
+  desRenderFull();
+  toast(`Added font "${esc(fam)}".`,2000);
+}
+
+/* ---- x/y/w/h (or x/y/d for a badge), synced both ways with dragging ---- */
+function desGeomFieldsHtml(r){
+  const isBadge=r.type==="badge";
+  let h=`<div class="fld"><label>Position &amp; size (mm)</label><div class="row">`;
+  h+=`<div><label style="font-weight:400;text-transform:none;font-size:11px">x</label><input id="des-ix" type="number" step="0.5" value="${r.x||0}" onfocus="desFieldFocus()" oninput="desGeomLive('x',this.value)" onchange="desFieldCommit()"></div>`;
+  h+=`<div><label style="font-weight:400;text-transform:none;font-size:11px">y</label><input id="des-iy" type="number" step="0.5" value="${r.y||0}" onfocus="desFieldFocus()" oninput="desGeomLive('y',this.value)" onchange="desFieldCommit()"></div>`;
+  if(isBadge){
+    h+=`<div><label style="font-weight:400;text-transform:none;font-size:11px">size (d)</label><input id="des-id" type="number" step="0.5" min="2" value="${r.d||8}" onfocus="desFieldFocus()" oninput="desGeomLive('d',this.value)" onchange="desFieldCommit()"></div>`;
+  } else {
+    h+=`<div><label style="font-weight:400;text-transform:none;font-size:11px">w</label><input id="des-iw" type="number" step="0.5" min="2" value="${r.w||10}" onfocus="desFieldFocus()" oninput="desGeomLive('w',this.value)" onchange="desFieldCommit()"></div>`;
+    h+=`<div><label style="font-weight:400;text-transform:none;font-size:11px">h</label><input id="des-ih" type="number" step="0.5" min="2" value="${r.h||10}" onfocus="desFieldFocus()" oninput="desGeomLive('h',this.value)" onchange="desFieldCommit()"></div>`;
+  }
+  h+=`</div></div>`;
+  return h;
+}
+
+/* ---- the inspector, dispatched by region type ---- */
+function desInspectorHtml(){
+  if(!DES.selRegion) return `<div style="font-size:13px;color:var(--mut);padding:6px 0">Select a region on the card, or drag a field from the left to create one.</div>`;
+  const r=desRegion(DES.selRegion);
+  if(!r){ DES.selRegion=null; return desInspectorHtml(); }
+  const g=G(DES.slug);
+  const c=desCard(), p=c?cfPrinting(g,c):null;
+  const fields=desFields(g,c,p);
+  const fonts=DES.layout.fonts||[];
+  const idx=(DES.layout.regions||[]).indexOf(r), n=(DES.layout.regions||[]).length;
+
+  let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <input id="des-rid" value="${esc(r.id)}" style="font-weight:700;font-size:14px;flex:1;padding:6px 9px;border:1px solid var(--bd);border-radius:6px" onfocus="desFieldFocus()" onchange="desRenameRegion(this.value)">
+    <button class="btn" title="Delete region" style="color:var(--red)" onclick="desDeleteRegion('${esc(r.id)}')">🗑</button>
+  </div>`;
+  h+=`<div class="fld"><label>Type</label><select onchange="desInspSet('type',this.value)">
+    ${["text","richtext","image","badge","row","rect","background"].map(t=>`<option value="${t}" ${t===r.type?"selected":""}>${t}</option>`).join("")}
+  </select></div>`;
+
+  switch(r.type){
+    case "text":
+      h+=desSrcBindingHtml(r,fields)+desFontFieldHtml(r,fonts)+desFontSizeHtml(r,false)+desAlignValignHtml(r,true)+desUppercaseHtml(r)+desColorFieldHtml(r,"color","Text color")+desColorFieldHtml(r,"bg","Background");
+      break;
+    case "richtext":
+      h+=desSrcBindingHtml(r,fields)+desFontFieldHtml(r,fonts)+desFontSizeHtml(r,true)+desAlignValignHtml(r,false)+desUppercaseHtml(r)+desSymbolsAutoshrinkHtml(r)+desColorFieldHtml(r,"color","Text color")+desColorFieldHtml(r,"bg","Background");
+      break;
+    case "image":
+      h+=desSrcBindingHtml(r,fields)+desCreditHtml(r,fields)+desFitHtml(r)+desColorFieldHtml(r,"bg","Placeholder tint");
+      break;
+    case "background":
+      h+=desSrcBindingHtml(r,fields)+desFitHtml(r)+desColorFieldHtml(r,"bg","Placeholder tint");
+      break;
+    case "badge":
+      h+=desSrcBindingHtml(r,fields)+desShapeHtml(r)+desFontFieldHtml(r,fonts)+desFontSizeHtml(r,false)+desColorFieldHtml(r,"color","Text color")+desColorFieldHtml(r,"bg","Chip color");
+      break;
+    case "row":
+      h+=desRowHtml(r);
+      break;
+    case "rect":
+      h+=desColorFieldHtml(r,"fill","Fill")+desColorFieldHtml(r,"stroke","Stroke")+desStrokeWidthRadiusHtml(r);
+      break;
+  }
+  h+=desShowIfHtml(r, fields);
+  h+=desZOrderHtml(r, idx, n);
+  h+=desGeomFieldsHtml(r);
+  return h;
+}
+
+/* ---- presets: the zero-layout-work path (docs/card-formatting-pipelines.md 6.4.7) --
+ * generated FROM this game's own real data (attribute_definitions, faction/type
+ * colors, whether any printing has art) so even the "one click" starting point is
+ * tailored, not a generic mockup -- and rendered through the real layoutCard(). ---- */
+function desPreset(kind, g){
+  const W=63.5, H=88.9;
+  const pal=desPickColorAttr(g);
+  const numAttrs=(g.schema||[]).filter(d=>d.type==="integer"||d.type==="number");
+  const costAttr=numAttrs.find(d=>/cost|price|mana|energy/i.test(d.key))||numAttrs[0]||null;
+  const otherNum=numAttrs.filter(d=>d!==costAttr).slice(0,3);
+  const hasArt=(g.printings||[]).some(p=>p && (p.art_url||p.art));
+
+  if(kind==="minimal"){
+    return { card:{w_mm:W,h_mm:H,bleed_mm:2,radius_mm:3,bg:"#ffffff"},
+      fonts:[{id:"body",family:"Lora",weight:400},{id:"title",family:"Lora",weight:700}],
+      regions:[
+        {id:"edge",type:"rect",x:0,y:0,w:W,h:H,fill:"none",stroke:"#00000022",stroke_w_mm:0.4,radius_mm:3},
+        {id:"title",type:"text",src:"card.name",x:4,y:4,w:W-8,h:8,font:"title",size_pt:12,align:"left",valign:"middle",color:"#1a1a1a"},
+        {id:"type_line",type:"text",src:"card.type",x:4,y:12.5,w:W-8,h:5,font:"body",size_pt:7,align:"left",color:"#666666",uppercase:true},
+        {id:"text",type:"richtext",src:"card.text",x:4,y:20,w:W-8,h:H-28,font:"body",size_pt:9,min_size_pt:6,color:"#222222",symbols:true,autoshrink:true}
+      ]};
+  }
+  if(kind==="party"){
+    const regions=[
+      {id:"bg",type:"rect",x:0,y:0,w:W,h:H,fill:pal?"palette":"#161616",radius_mm:4},
+      {id:"text",type:"richtext",src:"card.text",x:6,y:8,w:W-12,h:H-22,font:"body",size_pt:14,min_size_pt:8,color:"#ffffff",align:"left",autoshrink:true},
+      {id:"type_line",type:"text",src:"card.type",x:6,y:H-11,w:W-12,h:6,font:"body",size_pt:8,color:"#ffffffaa",uppercase:true,align:"left"}
+    ];
+    return { card:{w_mm:W,h_mm:H,bleed_mm:2,radius_mm:4,bg:pal?"palette":"#161616"},
+      fonts:[{id:"body",family:"Barlow Condensed",weight:600}], ...(pal?{palette:pal}:{}), regions };
+  }
+  // classic
+  const regions=[];
+  regions.push({id:"frame",type:"rect",x:0,y:0,w:W,h:H,fill:pal?"palette":"#e8e2d0",radius_mm:3});
+  if(hasArt) regions.push({id:"art",type:"image",src:"printing.art_url",credit:"printing.artist",x:4,y:11,w:W-8,h:34,fit:"cover"});
+  regions.push({id:"title",type:"text",src:"card.name",x:4,y:3,w:costAttr?W-16:W-8,h:7,font:"title",size_pt:10,align:"left",valign:"middle",color:"#ffffff",bg:"#00000066"});
+  if(costAttr) regions.push({id:"cost",type:"badge",src:`card.attributes.${costAttr.key}`,x:W-11,y:2.5,d:8,shape:"circle",font:"title",size_pt:10,bg:"#1c1c1c",color:"#ffffff"});
+  const textY=hasArt?47:13;
+  regions.push({id:"type_line",type:"text",src:"card.type",x:4,y:textY,w:W-8,h:5,font:"body",size_pt:7,align:"left",color:"#333333",uppercase:true,bg:"#ffffffaa"});
+  const rowY=H-22, textH=Math.max(14, rowY-(textY+6));
+  regions.push({id:"text",type:"richtext",src:"card.text",x:4,y:textY+6,w:W-8,h:textH,font:"body",size_pt:8,min_size_pt:5.5,color:"#1c1c1c",bg:"#ffffffcc",symbols:true,autoshrink:true});
+  if(otherNum.length) regions.push({id:"stats",type:"row",x:4,y:H-14,w:W-8,h:9,gap_mm:2,
+    of:otherNum.map(d=>({key:`attributes.${d.key}`,label:d.name||d.key,show_if:`attributes.${d.key}`}))});
+  regions.push({id:"edge",type:"rect",x:0,y:0,w:W,h:H,fill:"none",stroke:"#00000040",stroke_w_mm:0.3,radius_mm:3});
+  return { card:{w_mm:W,h_mm:H,bleed_mm:2,radius_mm:3,bg:pal?"palette":"#e8e2d0"},
+    fonts:[{id:"title",family:"Cinzel",weight:700},{id:"body",family:"Lora",weight:400}], ...(pal?{palette:pal}:{}), regions };
+}
+function desGalleryHtml(g){
+  const kinds=[["classic","Classic TCG frame","art window, title bar, cost badge, stat row, rules text box"],
+               ["minimal","Minimal","just a title and rules text — nothing to configure"],
+               ["party","Party card","big centered text, no art — great for prompt/party games"]];
+  const c=g.cards[0];
+  return `<div class="des-gallery">
+    <h3>Start this game's card design</h3>
+    <p style="color:var(--mut)">No <code>templates/layout.yaml</code> yet — pick a starting point below, then drag things around. Nobody has to type a coordinate.</p>
+    <div class="des-presets">${kinds.map(([id,name,desc])=>{
+      const layout=desPreset(id,g);
+      const ghost=Object.assign({},g,{layout});
+      const html=c?layoutCard(ghost,c,cfPrinting(g,c),{w:150}):"";
+      return `<div class="des-preset" onclick="desChoosePreset('${id}')">
+        <div class="des-preset-prev">${html}</div>
+        <b>${esc(name)}</b><div style="color:var(--mut);font-size:12px;margin-top:3px">${esc(desc)}</div>
+      </div>`;
+    }).join("")}</div>
+    <button class="btn" onclick="desStartBlank()">Start from a blank card instead →</button>
+  </div>`;
+}
+function desChoosePreset(id){
+  const g=G(DES.slug);
+  const pre = DES.layout ? desBeginChange() : null;
+  DES.layout=desPreset(id,g);
+  DES.showGallery=false; DES.selRegion=null;
+  if(pre) desCommitChange(pre);
+  desRenderFull();
+}
+function desStartBlank(){
+  DES.layout={card:{w_mm:63.5,h_mm:88.9,bleed_mm:2,radius_mm:3,bg:"#ffffff"},fonts:[],regions:[]};
+  DES.showGallery=false; DES.selRegion=null;
+  desRenderFull();
+}
+function desReopenGallery(){ DES.showGallery=true; DES.selRegion=null; desRenderFull(); }
+
+/* ---- preview data switcher: any card in the game, prev/next, or "worst case"
+ * (longest rules text) so overflow shows up while designing, not after saving. ---- */
+function desPreviewBarHtml(g){
+  return `<select onchange="desSetPreviewCard(this.value)">${g.cards.map(c=>`<option value="${esc(c.id)}" ${c.id===DES.sel?"selected":""}>${esc(c.name||c.id)}</option>`).join("")}</select>
+  <button class="btn" onclick="desPrevCard(-1)" title="Previous card">‹</button>
+  <button class="btn" onclick="desPrevCard(1)" title="Next card">›</button>
+  <button class="btn" onclick="desWorstCase()" title="Preview the card with the longest rules text, so overflow shows up while you design">⚠ Worst case</button>`;
+}
+function desSetPreviewCard(id){ DES.sel=id; desRenderCanvasOnly(); desRenderPaletteOnly(); }
+function desPrevCard(dir){
+  const g=G(DES.slug), ids=g.cards.map(c=>c.id);
+  let i=ids.indexOf(DES.sel); if(i<0) i=0;
+  i=(i+dir+ids.length)%ids.length;
+  DES.sel=ids[i];
+  desRenderFull();
+}
+function desWorstCase(){
+  const g=G(DES.slug);
+  let best=null, bl=-1;
+  for(const c of g.cards){ const l=(c.text||"").length; if(l>bl){ bl=l; best=c.id; } }
+  if(best){ DES.sel=best; desRenderFull(); toast("Previewing the longest-text card — check for overflow.",2500); }
+}
+function desRenderPaletteOnly(){
+  const host=document.getElementById("des-palette-host");
+  if(!host) return;
+  const g=G(DES.slug), c=desCard(), p=c?cfPrinting(g,c):null;
+  host.innerHTML=desPaletteHtml(g,c,p);
+}
+function desSetView(v){ DES.view=v; desRenderFull(); }
+
+/* ---- layout.yaml <-> JS object, browser twin of layoutToYaml()/the (write-only)
+ * serializer in server.mjs. Deliberately NOT a general YAML implementation --
+ * this is a parser+serializer pair for the EXACT constrained shape both this
+ * editor and server.mjs emit: block-style top-level keys (card/fonts/palette/
+ * regions), a plain key:value block for card/palette, and single-line flow-maps
+ * ("- { id: x, ... }") for each fonts/regions list item -- the same style
+ * examples/arcmage/templates/layout.yaml is hand-authored in, and standard,
+ * valid YAML (PyYAML reads flow collections fine) so tools/build_hub.py and
+ * tools/validate.py need no changes. Good enough for the raw-YAML power-user
+ * toggle (tweak a number, add a show_if, hand-add a region) -- not a claim of
+ * general YAML-spec coverage (no anchors, no block scalars, no arbitrary deep
+ * block nesting beyond what's documented here). Parse errors are caught by the
+ * caller (desApplyRaw) and reported inline rather than applied. */
+function desYamlStringify(layout){
+  const L=layout||{};
+  const out=[];
+  const card=L.card||{};
+  out.push("card:");
+  for(const k of ["w_mm","h_mm","bleed_mm","radius_mm","bg"])
+    if(card[k]!==undefined && card[k]!==null) out.push(`  ${k}: ${desYVal(card[k])}`);
+  out.push("");
+  if(Array.isArray(L.fonts) && L.fonts.length){
+    out.push("fonts:");
+    for(const f of L.fonts) out.push(`  - ${desYFlowMap(f,["id","family","weight","style"])}`);
+    out.push("");
+  }
+  if(L.palette && L.palette.by){
+    out.push("palette:");
+    out.push(`  by: ${desYVal(L.palette.by)}`);
+    if(L.palette.map) out.push(`  map: ${desYFlowMapRaw(L.palette.map)}`);
+    if(L.palette.default!==undefined) out.push(`  default: ${desYVal(L.palette.default)}`);
+    out.push("");
+  }
+  out.push("regions:");
+  const RKEYS=["id","type","x","y","w","h","d","shape","src","text","credit","fit","font","size_pt","min_size_pt",
+    "align","valign","color","bg","uppercase","symbols","autoshrink","fill","stroke","stroke_w_mm","radius_mm",
+    "opacity","gap_mm","of","show_if"];
+  for(const r of (L.regions||[])) out.push(`  - ${desYFlowMap(r,RKEYS)}`);
+  return out.join("\n")+"\n";
+}
+function desYFlowMap(obj,order){
+  const keys=[...order.filter(k=>obj[k]!==undefined && obj[k]!==null),
+              ...Object.keys(obj).filter(k=>!order.includes(k) && obj[k]!==undefined && obj[k]!==null)];
+  return "{ "+keys.map(k=>`${k}: ${desYVal(obj[k],k)}`).join(", ")+" }";
+}
+function desYFlowMapRaw(o){ return "{ "+Object.keys(o).map(k=>`${desYScalarStr(String(k))}: ${desYScalarStr(String(o[k]))}`).join(", ")+" }"; }
+function desYVal(v,key){
+  if(v===null||v===undefined) return "null";
+  if(typeof v==="number") return String(Math.round(v*1000)/1000);
+  if(typeof v==="boolean") return String(v);
+  if(Array.isArray(v)){
+    if(key==="of") return "["+v.map(cell=>desYFlowMap(cell,["key","label","font","size_pt","color","show_if"])).join(", ")+"]";
+    return "["+v.map(x=>desYVal(x)).join(", ")+"]";
+  }
+  if(typeof v==="object") return desYFlowMapRaw(v);
+  return desYScalarStr(String(v));
+}
+function desYScalarStr(s){
+  if(/^[A-Za-z_][A-Za-z0-9_]*$/.test(s) && !/^(true|false|null|yes|no|on|off)$/i.test(s)) return s;
+  return '"'+s.replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"';
+}
+
+function desYamlParse(text){
+  const lines=String(text).replace(/\t/g,"  ").split("\n").map(desYStripComment);
+  let i=0;
+  const layout={};
+  while(i<lines.length){
+    const line=lines[i];
+    if(!line.trim()){ i++; continue; }
+    const mm=/^(\S+)\s*:\s*(.*)$/.exec(line.trim());
+    if(!mm){ i++; continue; }
+    const key=mm[1], restRaw=mm[2];
+    if(key==="card"){ const res=desYBlockOrFlow(lines,i,restRaw); layout.card=res.value; i=res.next; continue; }
+    if(key==="fonts"){ const res=desYBlockSeq(lines,i); layout.fonts=res.value; i=res.next; continue; }
+    if(key==="palette"){ const res=desYBlockOrFlow(lines,i,restRaw); layout.palette=res.value; i=res.next; continue; }
+    if(key==="regions"){ const res=desYBlockSeq(lines,i); layout.regions=res.value; i=res.next; continue; }
+    i++;
+  }
+  return layout;
+}
+function desYStripComment(line){
+  let inD=false,inS=false;
+  for(let j=0;j<line.length;j++){
+    const c=line[j];
+    if(c==='"' && !inS) inD=!inD;
+    else if(c==="'" && !inD) inS=!inS;
+    else if(c==="#" && !inD && !inS) return line.slice(0,j);
+  }
+  return line;
+}
+function desYIndent(s){ const m=/^(\s*)/.exec(s); return m[1].length; }
+// "key:\n  a: 1\n  b: 2" (block) OR "key: { a: 1, b: 2 }" (flow, may span lines).
+function desYBlockOrFlow(lines, i, restRaw){
+  const rest=restRaw.trim();
+  if(rest.startsWith("{")){
+    const joined=desYJoinFlow(lines, i, restRaw);
+    return { value: desYParseFlowValue(joined.text,0).value, next: joined.next };
+  }
+  const headerIndent=desYIndent(lines[i]);
+  const obj={};
+  let j=i+1;
+  for(; j<lines.length; j++){
+    const line=lines[j];
+    if(!line.trim()) continue;
+    if(desYIndent(line)<=headerIndent) break;
+    const m=/^(\S+)\s*:\s*(.*)$/.exec(line.trim());
+    if(!m) continue;
+    const k=m[1], vRest=m[2].trim();
+    if(vRest.startsWith("{")||vRest.startsWith("[")||vRest.startsWith('"')||vRest.startsWith("'")){
+      const joined=desYJoinFlow(lines, j, m[2]);
+      obj[k]=desYParseFlowValue(joined.text,0).value; j=joined.next-1;
+    } else {
+      obj[k]=desYScalar(vRest);
+    }
+  }
+  return { value: obj, next: j };
+}
+// "key:\n  - { ... }\n  - { ... }"
+function desYBlockSeq(lines, i){
+  const headerIndent=desYIndent(lines[i]);
+  const arr=[];
+  let j=i+1;
+  for(; j<lines.length; j++){
+    const line=lines[j];
+    if(!line.trim()) continue;
+    if(desYIndent(line)<=headerIndent) break;
+    const t=line.trim();
+    if(!t.startsWith("-")) continue;
+    const after=t.slice(1).trim();
+    const joined=desYJoinFlow(lines, j, after);
+    arr.push(desYParseFlowValue(joined.text,0).value); j=joined.next-1;
+  }
+  return { value: arr, next: j };
+}
+// Join continuation lines until {}/[] braces balance, starting from `firstRest`
+// (the text after "- " or "key:" on line `i`) -- supports a hand-wrapped flow value.
+function desYJoinFlow(lines, i, firstRest){
+  let text=firstRest, depth=0, k=i;
+  const count=(s)=>{ for(const ch of s){ if(ch==="{"||ch==="[") depth++; else if(ch==="}"||ch==="]") depth--; } };
+  count(text);
+  while(depth>0 && k+1<lines.length){ k++; text+="\n"+lines[k]; count(lines[k]); }
+  return { text, next: k+1 };
+}
+// Recursive-descent for one flow value: {...} | [...] | "..." | '...' | bare token.
+function desYParseFlowValue(s, pos){
+  pos=desYSkipWs(s,pos);
+  const c=s[pos];
+  if(c==="{") return desYParseFlowMap(s,pos);
+  if(c==="[") return desYParseFlowArr(s,pos);
+  if(c==='"'||c==="'") return desYParseQuoted(s,pos);
+  return desYParseBare(s,pos);
+}
+function desYSkipWs(s,pos){ while(pos<s.length && /\s/.test(s[pos])) pos++; return pos; }
+function desYParseFlowMap(s,pos){
+  pos++; // consume {
+  const obj={};
+  pos=desYSkipWs(s,pos);
+  if(s[pos]==="}") return {value:obj,pos:pos+1};
+  for(;;){
+    pos=desYSkipWs(s,pos);
+    let key;
+    if(s[pos]==='"'||s[pos]==="'"){ const kr=desYParseQuoted(s,pos); key=kr.value; pos=kr.pos; }
+    else { const m=/^[^\s:]+/.exec(s.slice(pos)); if(!m) throw new Error("expected a key near: "+s.slice(pos,pos+24)); key=m[0]; pos+=m[0].length; }
+    pos=desYSkipWs(s,pos);
+    if(s[pos]!==":") throw new Error("expected ':' after key '"+key+"'"); pos++;
+    const vr=desYParseFlowValue(s,pos); obj[key]=vr.value; pos=vr.pos;
+    pos=desYSkipWs(s,pos);
+    if(s[pos]===","){ pos++; continue; }
+    if(s[pos]==="}"){ pos++; break; }
+    throw new Error("expected ',' or '}' near: "+s.slice(pos,pos+24));
+  }
+  return {value:obj,pos};
+}
+function desYParseFlowArr(s,pos){
+  pos++; // consume [
+  const arr=[];
+  pos=desYSkipWs(s,pos);
+  if(s[pos]==="]") return {value:arr,pos:pos+1};
+  for(;;){
+    const vr=desYParseFlowValue(s,pos); arr.push(vr.value); pos=desYSkipWs(s,vr.pos);
+    if(s[pos]===","){ pos++; continue; }
+    if(s[pos]==="]"){ pos++; break; }
+    throw new Error("expected ',' or ']' near: "+s.slice(pos,pos+24));
+  }
+  return {value:arr,pos};
+}
+function desYParseQuoted(s,pos){
+  const q=s[pos]; pos++;
+  let out="";
+  while(pos<s.length){
+    const c=s[pos];
+    if(q==='"' && c==="\\" && pos+1<s.length){ out+=s[pos+1]; pos+=2; continue; }
+    if(c===q){
+      if(q==="'" && s[pos+1]==="'"){ out+="'"; pos+=2; continue; }
+      pos++; return {value:out,pos};
+    }
+    out+=c; pos++;
+  }
+  throw new Error("unterminated quoted string: "+s.slice(0,24)+"…");
+}
+function desYParseBare(s,pos){
+  const m=/^[^,\]\}\s][^,\]\}]*/.exec(s.slice(pos));
+  if(!m) throw new Error("expected a value near: "+s.slice(pos,pos+24));
+  const tok=m[0].replace(/\s+$/,"");
+  pos+=m[0].length;
+  return {value: desYScalar(tok), pos};
+}
+function desYScalar(tok){
+  const t=String(tok).trim();
+  if(t==="") return null;
+  if(/^-?\d+$/.test(t)) return parseInt(t,10);
+  if(/^-?(\d+\.\d+|\.\d+|\d+\.)$/.test(t)) return parseFloat(t);
+  if(/^true$/i.test(t)) return true;
+  if(/^false$/i.test(t)) return false;
+  if(/^(null|~)$/i.test(t)) return null;
+  if(/^".*"$/.test(t)||/^'.*'$/.test(t)) return t.slice(1,-1);
+  return t;
+}
+
+/* ---- raw YAML: collapsible power-user view, read/write -- editing it re-renders.
+ * Applies on blur; a failed parse reports inline and does NOT touch DES.layout. ---- */
+function desToggleRaw(){ DES.rawOpen=!DES.rawOpen; desRenderFull(); }
+function desRawHtml(){
+  const text=desYamlStringify(DES.layout||{card:{w_mm:63.5,h_mm:88.9},regions:[]});
+  return `<textarea id="des-raw" spellcheck="false" style="width:100%;min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;padding:10px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box" onblur="desApplyRaw()">${esc(text)}</textarea>
+  <div style="font-size:12px;color:var(--mut);margin-top:6px">Click away to apply — this is the exact text <code>PUT /api/games/:slug/layout</code> writes to <code>templates/layout.yaml</code>. Parse errors are reported here and NOT applied.</div>
+  <div id="des-raw-err" style="color:var(--red);font-size:12px;margin-top:4px"></div>`;
+}
+function desApplyRaw(){
+  const ta=document.getElementById("des-raw"); if(!ta) return;
+  const errHost=document.getElementById("des-raw-err");
+  let parsed;
+  try{ parsed=desYamlParse(ta.value); }
+  catch(e){ if(errHost) errHost.textContent="Parse error: "+e.message; return; }
+  if(!parsed || typeof parsed!=="object" || !parsed.card || !Array.isArray(parsed.regions)){
+    if(errHost) errHost.textContent="A layout needs at least a card: {...} block and a regions: [...] list.";
+    return;
+  }
+  if(errHost) errHost.textContent="";
+  const pre=desBeginChange();
+  DES.layout=parsed;
+  if(!desRegion(DES.selRegion)) DES.selRegion=null;
+  DES._showIfDraft=null; // hand-edited text may have changed show_if; force the builder to re-derive
+  desCommitChange(pre);
+  desRenderFull();
+}
+
+/* ---- save: LIVE -> PUT /api/games/:slug/layout (validated commit). STATIC ->
+ * download layout.yaml + toast that a server is needed to save in place. ---- */
+async function desSave(){
+  if(!DES.layout) return;
+  const isLive = typeof LIVE!=="undefined" && LIVE;
+  if(isLive){
+    const btn=document.getElementById("des-save"); if(btn){ btn.disabled=true; btn.textContent="Saving…"; }
+    try{
+      const r=await fetch(`/api/games/${DES.slug}/layout`,{method:"PUT",headers:authHdr(),body:JSON.stringify({layout:DES.layout})});
+      const d=await r.json().catch(()=>({}));
+      if(r.status===200 && (d.saved || d.saved===false)){
+        if(d.saved===false){ toast("No changes to save."); }
+        else{
+          toast(`<b>✓ Committed ${esc(d.commit)}</b><br>${esc(d.message||"layout: update card design")}`);
+          const g=G(DES.slug); if(g) g.layout=JSON.parse(JSON.stringify(DES.layout));
+          DES.orig=JSON.parse(JSON.stringify(DES.layout));
+        }
+      } else if(r.status===401){ toast("Sign in to save changes."); authOpen(); }
+      else if(r.status===403){ toast(esc(d.error||"No commit access to this game."),7000); }
+      else if(r.status===422){ toast(`<b style="color:#ffa198">✗ Validation failed</b><br>`+((d.report||[]).filter(l=>l.includes("ERROR")).slice(0,3).map(esc).join("<br>")||esc(d.error||"invalid layout")),9000); }
+      else toast(`<b style="color:#ffa198">✗ ${esc(d.error||r.status)}</b>`,8000);
+    }catch(e){ toast(`<b style="color:#ffa198">✗ ${esc(e.message)}</b>`,8000); }
+    desRenderFull();
+  } else {
+    const text=desYamlStringify(DES.layout);
+    const blob=new Blob([text],{type:"text/yaml"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="layout.yaml"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    toast("Downloaded layout.yaml — server needed to save in place (run node server.mjs).",7000);
+  }
+}
+function desCopyFallback(text,done){
+  const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand("copy"); done(); }catch(e){ toast("Copy failed — select the raw YAML manually and copy it yourself."); }
+  ta.remove();
+}
+function desCopyYaml(){
+  const text=desYamlStringify(DES.layout||{});
+  const done=()=>toast("Copied layout.yaml to clipboard.",2500);
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(()=>desCopyFallback(text,done));
+  else desCopyFallback(text,done);
+}
+
+/* ---- chrome: toolbar + 3-column layout + gallery wrapper + entry point ---- */
+function desToolbarHtml(g, galleryMode, dirty){
+  const isLive = typeof LIVE!=="undefined" && LIVE;
+  const access=DES.access||{};
+  const note = !isLive
+    ? `<span style="color:var(--mut)">static preview — Save downloads <code>layout.yaml</code></span>`
+    : access.canWrite
+      ? `<span style="color:var(--grn)">● saves as a commit to <b>${esc(g.slug)}</b></span>`
+      : `<span style="color:var(--mut)">no write access — sign in with a collaborator account to save</span>`;
+  return `<div class="edhrow">
+    <div style="flex:1"><h2 style="margin:0;font-size:19px">🎨 Card design — ${esc(g.title)}</h2>
+      <div style="font-size:13px;margin-top:2px">${note}${dirty?' · <b style="color:var(--org)">unsaved changes</b>':''}</div></div>
+    ${!galleryMode?`
+      <div class="des-viewtoggle">
+        <button class="btn${DES.view==="fit"?" primary":""}" onclick="desSetView('fit')">Fit</button>
+        <button class="btn${DES.view==="1:1"?" primary":""}" onclick="desSetView('1:1')">1:1</button>
+      </div>
+      <button class="btn" onclick="desReopenGallery()">↺ Presets</button>
+      <button class="btn" onclick="desCopyYaml()">⧉ Copy YAML</button>
+      <button class="btn primary" id="des-save" onclick="desSave()">Save</button>
+    `:``}
+  </div>`;
+}
+function desLayoutHtml(g){
+  const c=desCard();
+  const geom=desGeom();
+  const dirty=desDirty();
+  if(!c){
+    return `<div class="des-toolbar-host">${desToolbarHtml(g,false,dirty)}</div><div class="emptystate">This game has no cards yet — add one on the Cards tab, then come back to design its layout.</div>`;
+  }
+  const p=cfPrinting(g,c);
+  return `<div class="des-toolbar-host">${desToolbarHtml(g,false,dirty)}</div>
+    <div class="des-wrap">
+      <div class="box des-col-palette"><div class="bh">Fields <span style="font-weight:400;color:var(--mut)">— drag onto the card</span></div>
+        <div class="bb des-palette" id="des-palette-host">${desPaletteHtml(g,c,p)}</div></div>
+      <div class="des-col-canvas">
+        <div class="des-previewbar">${desPreviewBarHtml(g)}</div>
+        <div class="des-stagewrap">
+          <div class="des-stage" id="des-stage" style="width:${Math.round(geom.pxW)}px;height:${Math.round(geom.pxH)}px"
+            onmousedown="desCanvasBgMouseDown(event)" ondragover="event.preventDefault()" ondrop="desFieldDrop(event)">
+            <div id="des-stage-inner">${desStageInnerHtml()}</div>
+          </div>
+        </div>
+        <div class="des-canvasfoot">
+          <button class="btn" onclick="desAddBlank()">+ Add region</button>
+          <span style="font-size:12px;color:var(--mut)">${(DES.layout.regions||[]).length} region${(DES.layout.regions||[]).length===1?"":"s"} · snap 0.5mm (hold Alt to disable) · arrows nudge 0.5mm (shift = 2mm) · Delete removes · click empty space or Esc deselects · Ctrl/Cmd+Z undo</span>
+        </div>
+      </div>
+      <div class="box des-col-inspector"><div class="bh">Inspector</div><div class="bb" id="des-inspector">${desInspectorHtml()}</div></div>
+    </div>
+    <div class="box" style="margin-top:16px">
+      <div class="bh" style="cursor:pointer" onclick="desToggleRaw()">Raw YAML <span style="font-weight:400;color:var(--mut)">— power user, read/write</span> <span style="float:right">${DES.rawOpen?"▾ hide":"▸ show"}</span></div>
+      ${DES.rawOpen?`<div class="bb">${desRawHtml()}</div>`:``}
+    </div>`;
+}
+function desRenderFull(){
+  const g=G(DES.slug); if(!g) return;
+  if(DES.showGallery){
+    $("#pane").innerHTML = `<div class="des-toolbar-host">${desToolbarHtml(g,true,false)}</div>` + desGalleryHtml(g);
+    return;
+  }
+  $("#pane").innerHTML = desLayoutHtml(g);
+}
+
+/* ---- entry point: dispatched from repoPage() same as cards/rules/play. Route
+ * #/g/<slug>/design. One DES per slug (rebuilt if you navigate to a different
+ * game); revisiting the SAME game's design tab keeps your in-progress edits. ---- */
+async function design(g, mode){
+  if(!DES || DES.slug!==g.slug){
+    const hasLayout = !!(g.layout && Array.isArray(g.layout.regions) && g.layout.regions.length);
+    let access={canWrite:true,authed:true,ownerless:true};
+    if(typeof LIVE!=="undefined" && LIVE){
+      try{ access=await (await fetch(`/api/games/${g.slug}/access`,{headers:authHdr()})).json(); }catch(e){}
+    }
+    DES={ slug:g.slug,
+      layout: hasLayout ? JSON.parse(JSON.stringify(g.layout)) : null,
+      orig:   hasLayout ? JSON.parse(JSON.stringify(g.layout)) : null,
+      sel: (g.cards[0] && g.cards[0].id) || null,
+      selRegion:null, undo:[], access, view:"fit", rawOpen:false, showGallery:!hasLayout, _addFontOpen:false };
+  }
+  desRenderFull();
+}
+
+
 /* ================= SHARED CLIENT RULEBOOK RENDERER =================
  * rulebookHtml(g) -> HTML string. Client-side compile of g.rules_md (the
  * SAME raw markdown embedded per game that rulesEdit()'s textarea edits
@@ -1345,7 +2646,7 @@ function searchAll(v){
 /* ---------- repo page ---------- */
 function repoPage(g, tab, mode){
   const tabs = [
-    ["overview","Overview",null],["cards","Cards",g.ncards],["rules","Rules",null],
+    ["overview","Overview",null],["cards","Cards",g.ncards],["design","Card design",null],["rules","Rules",null],
     ["playtests","Playtests",g.playtests.length],["play","Play",null],["history","Commits",g.history.length],
     ["suggestions","Pull requests",g.prs.length],["issues","Issues",null],["releases","Releases",g.releases.length],
     ["banlist","Banlist",null],["decks","Decks",g.decks.length],
@@ -1369,7 +2670,7 @@ function repoPage(g, tab, mode){
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
-  ({overview,cards,rules,playtests,play,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
+  ({overview,cards,design,rules,playtests,play,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
 }
 // which tabs have an editor (URL-addressable: #/g/slug/<tab>/edit)
 const EDITABLE_TABS = ["cards","rules"];

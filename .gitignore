@@ -2,7 +2,8 @@
 node_modules/
 
 # generated exports — derived, regenerable, never versioned (design rule)
-examples/*/exports/
+# ** covers both examples/<slug>/exports/ and examples/_fixtures/<slug>/exports/
+examples/**/exports/
 
 # local scratch
 *.log

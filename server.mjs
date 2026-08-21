@@ -426,6 +426,91 @@ gw.route("PUT", "/api/games/:slug/artifact", async (ctx) => {
   const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
   ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label });
 }, "edit a non-card artifact (rules, community, design, metadata) → validated commit");
+// VISUAL CARD DESIGN EDITOR (tools/hub_template.html's "Card design" tab): drag-and-drop
+// boxes onto a live card, bound to data fields by name -- writes the SAME templates/
+// layout.yaml the rest of the engine already reads (schemas/layout.schema.json,
+// layoutCard() in tools/hub_template.html). There is no YAML library in this Node
+// runtime, so layoutToYaml() below is a small deterministic serializer scoped to
+// exactly this schema's shape (block top-level keys, flow-map list items) -- the
+// same style examples/arcmage/templates/layout.yaml is hand-authored in, and
+// ordinary valid YAML (PyYAML/tools/build_hub.py + tools/validate.py need no
+// changes to read it). The browser has a matching desYamlStringify() (used by the
+// editor's raw-YAML power-user view) -- intentionally duplicated rather than
+// shared, but both MUST stay format-compatible; a round-trip smoke test covers this.
+const LAYOUT_FONT_KEYS = ["id", "family", "weight", "style"];
+const LAYOUT_ROW_CELL_KEYS = ["key", "label", "font", "size_pt", "color", "show_if"];
+const LAYOUT_REGION_KEYS = ["id", "type", "x", "y", "w", "h", "d", "shape", "src", "text", "credit", "fit",
+  "font", "size_pt", "min_size_pt", "align", "valign", "color", "bg", "uppercase", "symbols",
+  "autoshrink", "fill", "stroke", "stroke_w_mm", "radius_mm", "opacity", "gap_mm", "of", "show_if"];
+function layoutYamlScalarStr(s) {
+  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(s) && !/^(true|false|null|yes|no|on|off)$/i.test(s)) return s;
+  return '"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+}
+function layoutYamlVal(v, key) {
+  if (v === null || v === undefined) return "null";
+  if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
+  if (typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) {
+    if (key === "of") return "[" + v.map(cell => layoutYamlFlowMap(cell, LAYOUT_ROW_CELL_KEYS)).join(", ") + "]";
+    return "[" + v.map(x => layoutYamlVal(x)).join(", ") + "]";
+  }
+  if (typeof v === "object") return layoutYamlFlowMapRaw(v);
+  return layoutYamlScalarStr(String(v));
+}
+function layoutYamlFlowMap(obj, order) {
+  const keys = [...order.filter(k => obj[k] !== undefined && obj[k] !== null),
+                ...Object.keys(obj).filter(k => !order.includes(k) && obj[k] !== undefined && obj[k] !== null)];
+  return "{ " + keys.map(k => `${k}: ${layoutYamlVal(obj[k], k)}`).join(", ") + " }";
+}
+function layoutYamlFlowMapRaw(o) {
+  return "{ " + Object.keys(o).map(k => `${layoutYamlScalarStr(String(k))}: ${layoutYamlScalarStr(String(o[k]))}`).join(", ") + " }";
+}
+/** Deterministic layout object -> layout.yaml text. Mirrors desYamlStringify() in
+ *  tools/hub_template.html (browser twin, backs the raw-YAML power-user toggle). */
+function layoutToYaml(layout) {
+  const L = layout || {};
+  const out = [];
+  const card = L.card || {};
+  out.push("card:");
+  for (const k of ["w_mm", "h_mm", "bleed_mm", "radius_mm", "bg"])
+    if (card[k] !== undefined && card[k] !== null) out.push(`  ${k}: ${layoutYamlVal(card[k])}`);
+  out.push("");
+  if (Array.isArray(L.fonts) && L.fonts.length) {
+    out.push("fonts:");
+    for (const f of L.fonts) out.push(`  - ${layoutYamlFlowMap(f, LAYOUT_FONT_KEYS)}`);
+    out.push("");
+  }
+  if (L.palette && L.palette.by) {
+    out.push("palette:");
+    out.push(`  by: ${layoutYamlVal(L.palette.by)}`);
+    if (L.palette.map) out.push(`  map: ${layoutYamlFlowMapRaw(L.palette.map)}`);
+    if (L.palette.default !== undefined) out.push(`  default: ${layoutYamlVal(L.palette.default)}`);
+    out.push("");
+  }
+  out.push("regions:");
+  for (const r of (L.regions || [])) out.push(`  - ${layoutYamlFlowMap(r, LAYOUT_REGION_KEYS)}`);
+  return out.join("\n") + "\n";
+}
+gw.route("PUT", "/api/games/:slug/layout", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await authedUser(ctx);
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const { layout } = await json(ctx);
+  if (!layout || typeof layout !== "object" || Array.isArray(layout))
+    return ctx.send(422, { error: "body must be {layout: <object>}" });
+  if (!layout.card || typeof layout.card !== "object" || typeof layout.card.w_mm !== "number" || typeof layout.card.h_mm !== "number")
+    return ctx.send(422, { error: "layout.card.w_mm and layout.card.h_mm are required" });
+  if (!Array.isArray(layout.regions))
+    return ctx.send(422, { error: "layout.regions must be an array" });
+  const content = layoutToYaml(layout);
+  const before = (await store.readFile(slug, "templates/layout.yaml"))?.toString() ?? "";
+  if (before === content) return ctx.send(200, { saved: false, message: "no changes" });
+  const v = await validateCandidate(slug, "templates/layout.yaml", content);
+  if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
+  const { sha } = await store.writeFiles(slug, [{ path: "templates/layout.yaml", content }],
+    "layout: update card design", `${u.handle} <${u.email}>`);
+  ctx.send(200, { saved: true, commit: sha, message: "layout: update card design" });
+}, "visual card-design editor: validated commit of templates/layout.yaml");
 gw.route("PUT", "/api/games/:slug/art", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
