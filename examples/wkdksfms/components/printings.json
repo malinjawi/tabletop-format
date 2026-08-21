@@ -1,0 +1,37 @@
+[
+  {
+    "id": "p_spark_core",
+    "card_id": "spark",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "001"
+  },
+  {
+    "id": "p_guard_core",
+    "card_id": "guard",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "002"
+  },
+  {
+    "id": "p_fireball_core",
+    "card_id": "fireball",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "003"
+  },
+  {
+    "id": "p_healing_light_core",
+    "card_id": "healing_light",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "004"
+  },
+  {
+    "id": "p_iron_golem_core",
+    "card_id": "iron_golem",
+    "set_id": "core",
+    "template_id": "standard_face",
+    "collector_number": "005"
+  }
+]

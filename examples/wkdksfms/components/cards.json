@@ -1,0 +1,47 @@
+[
+  {
+    "id": "spark",
+    "name": "Spark",
+    "type": "unit",
+    "text": "Deal 1 damage to a target.",
+    "attributes": {
+      "cost": 1
+    }
+  },
+  {
+    "id": "guard",
+    "name": "Guard",
+    "type": "unit",
+    "text": "Blocks the next attack against you.",
+    "attributes": {
+      "cost": 2
+    }
+  },
+  {
+    "id": "fireball",
+    "name": "Fireball",
+    "type": "spell",
+    "text": "Deal 4 damage to a target.",
+    "attributes": {
+      "cost": 4
+    }
+  },
+  {
+    "id": "healing_light",
+    "name": "Healing Light",
+    "type": "spell",
+    "text": "Restore 3 health to a unit.",
+    "attributes": {
+      "cost": 2
+    }
+  },
+  {
+    "id": "iron_golem",
+    "name": "Iron Golem",
+    "type": "unit",
+    "text": "A slow but sturdy defender.",
+    "attributes": {
+      "cost": 5
+    }
+  }
+]
