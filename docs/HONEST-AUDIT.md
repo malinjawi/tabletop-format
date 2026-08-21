@@ -265,3 +265,139 @@ The pattern across both estimates is the same, and it's the headline finding of 
 merge, a real validation-gated write path — is already built and already works.** What's
 missing is the last mile of connecting it to a human being who isn't reading the source
 code.
+
+---
+
+## Post-fix status (2026-08-21)
+
+A follow-up engineering pass closed the three ranked blockers above (#1, #2, #3) plus the
+native-dialog part of #7 and the four fake `alert()` buttons called out under #5's "dead
+and duplicated UI code." Nothing else in this document was touched — the remaining
+blockers (#4 page weight, #5's `openEditor_UNUSED`/`ed-canvas` dead code, #6 missing rules
+text, #8 silent fetch failures, #9 raw 500 on bad JSON, #10 the Mindbug license regex bug)
+are **still open** exactly as described above. This section records what changed and the
+live evidence for it; it does not re-run or re-grade the rest of the audit.
+
+### Blocker #1 — no way to create a game through the UI: CLOSED
+
+`tools/hub_template.html`'s **"+ New game"** button (top bar) and a new CTA on the
+Explore page both now call `newGameModal()` — a real, custom-styled modal (title field;
+a CSV textarea with a header hint derived from `tools/import-csv.mjs`'s `CORE` columns, a
+"load example" link, and a file-upload button that reads a `.csv` into the same textarea;
+three hardcoded starter-deck presets — 5/12/20 cards; and Google-Sheet-URL detection —
+pasting a published sheet link into the cards box instead of CSV creates the game with the
+server's default single-card CSV, then calls `PUT .../sync/sheet` → `POST .../sync/pull`
+so the sheet becomes the source). Submit calls `POST /api/games {title, csv}` with auth
+headers; 201 routes to `#/g/<slug>`; 409/422 show the error inline without closing the
+modal; signing out first opens the existing auth modal and resumes into the new-game modal
+on success (`_afterAuth`).
+
+**Live evidence** (scratch server, fresh account): `POST /api/games
+{"title":"UI Test Game","csv":"name,type,text,cost\nSpark,unit,Deal 1.,1"}` → `201
+{"slug":"ui-test-game","owner":"playera","commit":"14b3709","cards":1,...}`; a follow-up
+`GET /api/games/ui-test-game/cards` → `200 [{"id":"spark","name":"Spark",...}]`. All three
+starter-deck presets were also POSTed for real and came back `201` with the exact expected
+card counts (5, 12, 20).
+
+### Blocker #2 — PRs/releases could never land on any of the 12 shipped games: CLOSED
+
+Added `canAdmin(u, slug, { releases })` next to `canWrite()` in `server.mjs`: no user →
+false; `owner_id == null` (ownerless/demo game) → true; `owner_id === u.id` → true;
+otherwise, an invited collaborator → true **unless** `releases: true`, in which case only
+the owner or an ownerless game qualifies (a collaborator may merge/close PRs and issues,
+but may not cut a release — see the comment above `canAdmin`). Replaced the strict
+`game?.owner_id !== u.id` checks with `canAdmin()` on: PR merge, PR close, issue close, and
+releases. Anonymous callers still get `401` (unchanged — `requireAuth`/`canWrite`'s
+own-null check runs first).
+
+**Live evidence** (scratch server): user B, a fresh account with no relationship to
+`hearts` (ownerless, like all 12 shipped games), forked it, edited a card in the fork,
+opened a PR back to `hearts`, then **merged that PR as a non-owner** →
+`200 {"merged":true,"commit":"0f3b185",...}` (this exact call returned `403 "only the
+game's owner can merge"` before the fix — see Blocker #2 above). The edited card's new
+text was confirmed present in `hearts`'s live card data afterward. B then **cut a release**
+on `hearts` → `201 {"tag":"v1.0.0-livetest...","sha":"0f3b185",...}` (was `403`). B also
+closed a second PR and an issue on `hearts` as a non-owner/non-author → both `200` (same
+`canAdmin` sweep). A regression check confirmed the sandbox carve-out did **not** leak into
+owned games: a collaborator added to a *real, owned* game (not ownerless) was correctly
+refused when cutting a release on it → `403`; `journey.sh`'s own assertions #33 ("bob
+CANNOT merge into alice's game — owner-only rule") and #60 ("only the owner can cut a
+release") still pass unchanged.
+
+### Blocker #3 — trust model backwards/invisible on ownerless games: ADDRESSED (visibility, not permission)
+
+Per instructions, the permission itself was left alone (ownerless games are still an
+intentional open sandbox). `GET /api/games/:slug/access` now returns a `sandbox` boolean
+(`true` when `owner_id` is null) alongside the existing `ownerless` field. The hub now
+fetches this on every game page and shows a badge in the header — "Open sandbox — anyone
+signed in can edit directly" (tooltip: "fork it if you want your own copy") — and the card
+editor's commit bar reads "Commits directly to this open game" instead of the generic
+"lands as a commit" when `sandbox` is true.
+
+**Live evidence:** `GET /api/games/hearts/access` → `{"authed":true,"canWrite":true,
+"isOwner":false,"ownerless":true,"sandbox":true}`; `GET /api/games/ui-test-game/access`
+(user A's own freshly-created game) → `{"authed":true,"canWrite":true,"isOwner":true,
+"ownerless":false,"sandbox":false}`.
+
+### Polish — placeholder alert/prompt/confirm: CLOSED
+
+- The **"+ New game"** `alert()` is now `newGameModal()` (Blocker #1).
+- `suggestions()`'s "Accept changes" `alert()` (3-way-merge explainer) was deleted outright
+  — there is no live-independent equivalent to wire it to — and replaced with a plain note
+  that merging needs the live platform; its "💬 Discuss" `alert()` now routes to the
+  Issues tab (`go('g/<slug>/issues')`) as instructed.
+- `releases()`'s two download `alert()`s were deleted; `liveReleases()` (the real,
+  already-working frozen-download renderer) now takes over via `if(LIVE) return
+  liveReleases(g)`, matching the same pattern `suggestions()`/`issues()` already used.
+- `exportMenu()`'s `prompt()` (format picker) is now `exportModal()`, a styled 3-button
+  chooser.
+- `edCommit()`'s `prompt()` (PR title) is now `askForm()` — the same custom-modal helper
+  already used elsewhere in this file (e.g. `proposePr()`).
+- `edDelete()`'s `confirm()` (delete card) is now `confirmModal()`, a new small
+  Cancel/Remove modal styled like `askForm()`; the function is now `async`.
+
+**Verification:** `grep -c 'onclick="alert(' tools/hub_template.html` → `0`. `grep -n
+'prompt('` / `'confirm('` → each has exactly one remaining match, and both are inside
+code comments (one pre-existing, one newly added to document the replacement) — zero
+matches inside actual executable code.
+
+### Build / syntax / suite verification
+
+- `node --check server.mjs` → OK.
+- 12-game showcase rebuilt from `examples/{ember,harbor-nine,netrunner-urbp,arcmage,
+  secret-hitler,decktet}` + `examples/_fixtures/{netrunner-sg,hearthstone-classic,hearts,
+  cards-against-humanity,mindbug,duelyst}` via `python3 tools/build_hub.py --games
+  /tmp/showcase -o /tmp/sc.html` → succeeded (29.2MB, unchanged order of magnitude — see
+  open Blocker #4). The single embedded `<script>` extracted from that real, fully-baked
+  build → `node --check` → OK.
+- `node tools/store2-conformance.mjs` → **36/36 green**.
+- `bash journey.sh` → **71/71 assertions, 0 failures**, in 7.4s (well under the ~100s
+  budget).
+- Full live-HTTP test against a fresh scratch copy (`git init` + one commit, its own
+  `DB_PATH`/`CACHE_DIR`, `node server.mjs --port <random 47xxx>`): **25/25** checks passed,
+  covering all five required scenarios (a–e) above plus six additional regression checks
+  (PR/issue close by a non-owner on an ownerless game, collaborator-cannot-release on an
+  owned game, and all three starter-deck CSV presets importing cleanly).
+
+### Known gaps / honesty
+
+- The new client-side code (`newGameModal`, `confirmModal`, `exportModal`,
+  `loadSandboxBadge`, and the edited `edBar`/`edCommit`/`edDelete`/`authSubmit`) was
+  verified by `node --check` (twice — stubbed `DATA` and the real 12-game showcase build),
+  a full manual line-by-line re-read, and a static cross-reference of every new identifier
+  against its definition — but **not** by actually running it in a browser. No browser
+  tool, jsdom, or npm registry access (`npm install jsdom` → `403 Forbidden`) is available
+  in this environment — the same limitation the original audit itself notes for its own
+  mobile/viewport/in-browser-editor grades. This should be clicked through in a real
+  browser before being fully trusted.
+- The Google-Sheet-URL creation path (option (d)) calls the same `sync/sheet` +
+  `sync/pull` routes the existing "connect a spreadsheet" feature already uses live, but
+  was **not** exercised end-to-end against a real published Google Sheet in this pass — the
+  sandbox's outbound network access is proxied/restricted and wasn't tested against
+  `docs.google.com`. The two routes it calls are unchanged and were already covered by
+  prior work.
+- `canAdmin()`'s sweep intentionally did **not** touch the owner-only collaborator
+  grant/revoke routes (`PUT`/`DELETE /api/games/:slug/collaborators/:handle`) — on an
+  ownerless game `canWrite()` already grants everyone direct-write access regardless of the
+  collaborator list, so that list is inert there, and widening who can grant/revoke it
+  wasn't part of the instructed scope.
