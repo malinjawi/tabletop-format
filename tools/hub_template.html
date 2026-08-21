@@ -179,7 +179,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
   <input id="q" placeholder="Search games and cards…" oninput="searchAll(this.value)">
   <a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="go('jams')">Jams</a><a class="nl" onclick="showNotifs()" title="Notifications">🔔 Inbox</a>
   <div class="spacer"></div>
-  <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="alert('Platform: creates a repo + format scaffold. CLI today: fmt import csv your.csv my-game')">+ New game</button>
+  <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="newGameModal()">+ New game</button>
   <span id="authArea"><div class="av" title="you"></div></span>
 </div>
 <div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(28,33,40,.6);z-index:70;align-items:center;justify-content:center">
@@ -193,7 +193,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="authSubmit()">Continue</button>
     <div style="font-size:13px;color:var(--mut);margin-top:12px;text-align:center">
       <a id="amSwitch" onclick="authMode(amMode==='login'?'register':'login')">Create an account instead</a>
-      · <a onclick="document.getElementById('authModal').style.display='none'">cancel</a>
+      · <a onclick="_afterAuth=null;document.getElementById('authModal').style.display='none'">cancel</a>
     </div>
   </div>
 </div>
@@ -223,7 +223,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <script>
 const DATA = __DATA__;
 /* ---- live mode + auth + stars (feature: accounts & stars end-to-end) ---- */
-let LIVE=false, ME=null, STARS={}, MYSTARS=new Set(), amMode="login";
+let LIVE=false, ME=null, STARS={}, MYSTARS=new Set(), amMode="login", _afterAuth=null;
 const tok = () => localStorage.getItem("forge_token");
 const authH = () => tok() ? {Authorization:"Bearer "+tok()} : {};
 async function refreshLive(){
@@ -263,7 +263,8 @@ async function authSubmit(){
     headers:{"content-type":"application/json"},body:JSON.stringify(body)});
   const d=await r.json();
   if(r.ok){ localStorage.setItem("forge_token",d.token);
-    document.getElementById("authModal").style.display="none"; refreshLive(); }
+    document.getElementById("authModal").style.display="none"; await refreshLive();
+    if(_afterAuth){ const fn=_afterAuth; _afterAuth=null; fn(); } }
   else { const e=document.getElementById("amErr"); e.textContent=d.error??r.status; e.style.display=""; }
 }
 async function toggleStar(slug, ev){
@@ -2598,6 +2599,7 @@ function explorePage(filter){
   <div class="hero"><div class="wrap">
     <h1>Games are repositories here.</h1>
     <p>Every game is versioned, forkable, and exportable. Card changes diff like code — but read like a designer wrote them. Print it, play it in TTS, remix it with credit.</p>
+    <button class="btn primary" style="margin-top:14px" onclick="newGameModal()">+ New game</button>
   </div></div>
   <div class="wrap"><div class="gamegrid">${games.map(g=>`
     <div class="gcard">
@@ -2670,6 +2672,7 @@ function repoPage(g, tab, mode){
       `<a class="${tab===id?"on":""}" onclick="go('g/${g.slug}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}</div>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
+  loadSandboxBadge(g.slug);
   ({overview,cards,design,rules,playtests,play,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
 }
 // which tabs have an editor (URL-addressable: #/g/slug/<tab>/edit)
@@ -2775,10 +2778,7 @@ async function doExport(slug, fmt, label){
   window.open(url, "_blank");
 }
 function exportMenu(slug){
-  const pick = prompt("Export "+slug+" to:\n\n  1 — Tabletop Club asset pack (open, 3D table)\n  2 — Tabletop Simulator mod\n  3 — Print-and-play PDF\n\nEnter 1, 2, or 3:");
-  if(pick==="1") doExport(slug,"ttc","Tabletop Club pack");
-  else if(pick==="2") doExport(slug,"tts","TTS mod");
-  else if(pick==="3") doExport(slug,"pnp","Print-and-play PDF");
+  exportModal(slug);
 }
 /* ================= IN-HUB CARD EDITOR (live preview + commit/propose) ================= */
 let ED=null; // {slug, cards, orig, sel, access, dirty:Set}
@@ -2909,6 +2909,191 @@ function askForm(title, fields, okLabel){
   });
 }
 async function reload(){ location.reload(); }
+/* ---------- small custom-styled confirm (replaces native confirm()) ---------- */
+function confirmModal(msg, okLabel){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div");
+    ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
+    const box=document.createElement("div");
+    box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+    box.innerHTML=`<p style="margin:0 0 18px;font-size:14px;line-height:1.5">${esc(msg)}</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok style="background:var(--red);border-color:var(--red)">${esc(okLabel||"OK")}</button></div>`;
+    ov.appendChild(box); document.body.appendChild(ov);
+    const done=v=>{ov.remove();document.removeEventListener("keydown",onKey);resolve(v);};
+    const onKey=e=>{if(e.key==="Escape")done(false);};
+    box.querySelector("[data-x]").onclick=()=>done(false);
+    ov.addEventListener("mousedown",e=>{if(e.target===ov)done(false);});
+    box.querySelector("[data-ok]").onclick=()=>done(true);
+    document.addEventListener("keydown",onKey);
+  });
+}
+/* ---------- export format chooser (replaces native prompt()) ---------- */
+function exportModal(slug){
+  const ov=document.createElement("div");
+  ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
+  const box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+  const opts=[["ttc","Tabletop Club pack","Open-source 3D tabletop"],["tts","Tabletop Simulator mod","TTS .json + sheet images"],["pnp","Print-and-play PDF","300dpi, crop marks"]];
+  box.innerHTML=`<h3 style="margin:0 0 14px;font-size:17px;font-weight:600">Export ${esc(slug)}</h3>`+
+    opts.map(([fmt,label,hint])=>`<button type="button" class="btn" data-fmt="${esc(fmt)}" style="display:flex;flex-direction:column;align-items:flex-start;width:100%;margin-bottom:8px;padding:10px 14px;gap:2px"><b>${esc(label)}</b><span style="font-weight:400;color:var(--mut);font-size:12px">${esc(hint)}</span></button>`).join("")+
+    `<div style="text-align:right;margin-top:6px"><button class="btn" data-x>Cancel</button></div>`;
+  ov.appendChild(box); document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  box.querySelector("[data-x]").onclick=close;
+  ov.addEventListener("mousedown",e=>{if(e.target===ov)close();});
+  const labelOf={ttc:"Tabletop Club pack",tts:"TTS mod",pnp:"Print-and-play PDF"};
+  box.querySelectorAll("[data-fmt]").forEach(b=>b.onclick=()=>{const fmt=b.dataset.fmt;close();doExport(slug,fmt,labelOf[fmt]);});
+}
+/* ================= NEW GAME (Blocker 1): title + CSV -> POST /api/games =================
+ * The one real "create" entry point. Cards can come from: pasting CSV text,
+ * uploading a .csv file (read client-side into the same textarea), picking a
+ * hardcoded starter deck, or pasting a published Google Sheet link INSTEAD of
+ * CSV text -- detected at submit time (an http(s) URL where CSV was expected)
+ * -- in which case we create with the server's own default single-card CSV,
+ * then connect + pull that sheet (PUT sync/sheet -> POST sync/pull) so the
+ * sheet becomes the source, same as connecting one from an existing game's
+ * Cards tab (see syncConnect()/syncPull() above). */
+const CSV_HINT = "Header row: name,type,text,cost,… — name is required. type, text, subtypes, keywords, deck_limit, set, collector_number, quantity, artist and flavor_text are recognized columns; anything else (like cost) becomes a custom card attribute.";
+const CSV_EXAMPLE = `name,type,text,cost
+Spark,unit,Deal 1 damage to a target.,1
+Guard,unit,Blocks the next attack against you.,2
+Fireball,spell,Deal 4 damage to a target.,4
+Healing Light,spell,Restore 3 health to a unit.,2
+Iron Golem,unit,A slow but sturdy defender.,5`;
+const STARTER_DECKS = {
+  demo: { label:"5-card demo", hint:"Tiny — enough to see how editing works.", csv: CSV_EXAMPLE },
+  duel: { label:"12-card duel", hint:"A small head-to-head pool of units and spells.", csv: `name,type,text,cost,subtypes
+Squire,unit,A reliable early blocker.,1,human
+Apprentice,unit,"When played, draw a card.",1,human;wizard
+Watchtower Archer,unit,Ranged. Can attack the turn it enters.,2,human
+Stone Wall,unit,+0/+4. Cannot attack.,2,construct
+Flame Bolt,spell,Deal 2 damage to a target.,2,
+War Hound,unit,Attacks twice each turn.,3,beast
+Battle Cleric,unit,Heals 3 damage when this enters play.,3,human;cleric
+Lightning Storm,spell,Deal 2 damage to all enemy units.,4,
+Griffon Rider,unit,Flying.,4,beast;rider
+Dark Knight,unit,Gets +2/+2 while you control no other units.,4,human;knight
+Ancient Dragon,unit,Flying. Deals 2 damage to a random enemy unit when it enters.,6,dragon
+Meteor,spell,Deal 6 damage to a target — destroyed outright if that would leave it critical.,6,` },
+  party: { label:"20-card party pack", hint:"Prompt-and-react cards for a no-board party game.", csv: `name,type,text
+Movie Night,prompt,Act out your favorite movie scene without speaking.
+Animal Sounds,prompt,Make the sound of an animal until someone guesses it.
+Speed Round,wildcard,Everyone has 10 seconds to name a fruit — last to answer is out.
+Rhyme Time,prompt,Say a word — the next player must rhyme with it.
+Freeze!,wildcard,Everyone freezes until the next card is drawn.
+Story Starter,prompt,Begin a story with one sentence — the next player continues it.
+Mime Time,prompt,Act out a daily chore without speaking.
+Swap Seats,wildcard,Everyone swaps seats with the player across from them.
+Impression,prompt,Do your best impression of a famous voice.
+Category Blitz,prompt,Name five items in a category before time runs out.
+Reverse Day,wildcard,For one round play passes in the opposite direction.
+Alphabet Game,prompt,Name something starting with the next letter of the alphabet.
+Charades,prompt,Act out a book title without speaking.
+Point and Guess,prompt,Point at an object in the room and describe it in one word.
+Skip a Turn,wildcard,The next player skips their turn.
+Two Truths,prompt,Say two true things and one false thing about yourself.
+Sing It,prompt,Sing your next sentence instead of saying it.
+Double Draw,wildcard,Draw two extra cards this turn.
+Accent Challenge,prompt,Speak in a different accent until your next turn.
+Grand Finale,wildcard,Everyone applauds — the round is over.` }
+};
+function ngFileLoad(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ const el=document.getElementById("ng-csv"); if(el) el.value=String(r.result||""); };
+  r.readAsText(f);
+}
+function newGameModal(){
+  if(typeof LIVE==="undefined" || !LIVE){ toast("Creating a game needs the live platform — run <code>node server.mjs</code>."); return; }
+  if(!ME){ _afterAuth=newGameModal; authOpen(); return; }
+  const ov=document.createElement("div"); ov.id="ngModal";
+  ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
+  const box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:580px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+  box.innerHTML=`
+    <h3 style="margin:0 0 4px;font-size:17px;font-weight:600">New game</h3>
+    <p style="margin:0 0 16px;color:var(--mut);font-size:13px">Every game here is a real, versioned, forkable repo — this creates yours.</p>
+    <div id="ngErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:#fff0f0;border:1px solid #ffd7d7;border-radius:8px;padding:8px 10px"></div>
+    <label style="display:block;margin-bottom:14px;font-size:13px;color:var(--mut)">Title
+      <input id="ng-title" placeholder="e.g. Wildfire Duel" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+    <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:4px">Cards <span style="font-weight:400">— paste CSV, upload a file, pick a starter deck below, or paste a published Google Sheet link</span></label>
+    <div class="mono" style="font-size:11.5px;color:var(--mut);margin-bottom:6px;line-height:1.5">${esc(CSV_HINT)}</div>
+    <textarea id="ng-csv" placeholder="name,type,text,cost&#10;Spark,unit,Deal 1 damage.,1" style="display:block;width:100%;min-height:120px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:12.5px/1.5 ui-monospace,Menlo,monospace"></textarea>
+    <div style="display:flex;gap:14px;align-items:center;margin:8px 0 16px;flex-wrap:wrap;font-size:13px">
+      <a onclick="document.getElementById('ng-csv').value=CSV_EXAMPLE">load example</a>
+      <label class="btn" style="cursor:pointer;margin:0">&#8682; Upload a CSV file<input id="ng-file" type="file" accept=".csv,text/csv" style="display:none" onchange="ngFileLoad(this)"></label>
+    </div>
+    <div style="font-size:13px;color:var(--mut);margin-bottom:6px">Or start from a preset:</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      ${Object.entries(STARTER_DECKS).map(([k,d])=>`<button type="button" class="btn" title="${esc(d.hint)}" onclick="document.getElementById('ng-csv').value=STARTER_DECKS['${k}'].csv">${esc(d.label)}</button>`).join("")}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" data-x>Cancel</button>
+      <button class="btn primary" id="ng-ok">Create game</button>
+    </div>`;
+  ov.appendChild(box); document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  box.querySelector("[data-x]").onclick=close;
+  ov.addEventListener("mousedown",e=>{if(e.target===ov)close();});
+  document.getElementById("ng-ok").onclick=()=>ngSubmit(close);
+  box.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+  setTimeout(()=>{const f=document.getElementById("ng-title"); if(f)f.focus();},30);
+}
+async function ngSubmit(close){
+  const btn=document.getElementById("ng-ok"); if(!btn) return;
+  const errEl=document.getElementById("ngErr"); errEl.style.display="none";
+  const title=(document.getElementById("ng-title").value||"").trim();
+  const raw=(document.getElementById("ng-csv").value||"").trim();
+  if(!title){ errEl.textContent="Title is required."; errEl.style.display=""; return; }
+  const isSheet=/^https?:\/\//i.test(raw);
+  const was=btn.textContent; btn.disabled=true; btn.textContent="Creating…";
+  try{
+    const body={title}; if(raw && !isSheet) body.csv=raw;
+    const r=await fetch("/api/games",{method:"POST",headers:authHdr(),body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===201){
+      if(isSheet){
+        btn.textContent="Connecting sheet…";
+        try{
+          const sr=await fetch(`/api/games/${d.slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url:raw})});
+          const sd=await sr.json().catch(()=>({}));
+          if(sr.ok) await fetch(`/api/games/${d.slug}/sync/pull`,{method:"POST",headers:authHdr()});
+          else toast(`'${esc(d.slug)}' created, but connecting the sheet failed: ${esc(sd.error||sr.status)} — connect it later from the game page.`,9000);
+        }catch(e){ toast(`'${esc(d.slug)}' created, but connecting the sheet failed — try again from the game page.`,9000); }
+      }
+      close();
+      toast(`<b>✓ '${esc(d.slug)}' created</b><br>${esc(d.cards)} card${d.cards===1?"":"s"} imported.`);
+      setTimeout(()=>{ location.href=`/?t=${Date.now()}#/g/${d.slug}`; },1100); // reload -> hub rebakes with the new game
+    } else if(r.status===401){
+      close(); _afterAuth=newGameModal; authOpen();
+    } else if(r.status===409 || r.status===422){
+      let msg=d.error||`request failed (${r.status})`;
+      if(Array.isArray(d.report)&&d.report.length) msg+=": "+d.report.slice(0,2).join("; ");
+      errEl.textContent=msg; errEl.style.display="";
+      btn.disabled=false; btn.textContent=was;
+    } else {
+      errEl.textContent=d.error||`request failed (${r.status})`; errEl.style.display="";
+      btn.disabled=false; btn.textContent=was;
+    }
+  }catch(e){
+    errEl.textContent=e.message||"network error"; errEl.style.display="";
+    btn.disabled=false; btn.textContent=was;
+  }
+}
+/* ---------- sandbox visibility (Blocker 3): badge on an ownerless/demo game's header ---------- */
+async function loadSandboxBadge(slug){
+  if(typeof LIVE==="undefined" || !LIVE) return;
+  let acc; try{ acc=await (await fetch(`/api/games/${slug}/access`,{headers:authHdr()})).json(); }catch{ return; }
+  const tl=document.querySelector(".repohead .titleline"); if(!tl) return;
+  const old=tl.querySelector(".sandbox-badge"); if(old) old.remove();
+  if(!acc.sandbox) return;
+  const b=document.createElement("span");
+  b.className="badge sandbox-badge";
+  b.title="Open sandbox — fork it if you want your own copy";
+  b.textContent="Open sandbox — anyone signed in can edit directly";
+  const actionsEl=tl.querySelector(".actions");
+  tl.insertBefore(b, actionsEl||null);
+}
 
 function edField(label, key, val, opts){
   const id="ef-"+key.replace(/\./g,"_");
@@ -2976,9 +3161,9 @@ function edAdd(){
   ED.cards.push({id,name:"New Card",type:t,subtypes:[],text:"",keywords:[],attributes:{},deck_limit:1});
   edRefreshDirty(); edSelect(id); edBar();
 }
-function edDelete(){
+async function edDelete(){
   const c=edCard(); if(!c)return;
-  if(!confirm(`Remove "${c.name}" from this edit?`))return;
+  if(!await confirmModal(`Remove "${c.name}" from this edit?`,"Remove"))return;
   ED.cards=ED.cards.filter(x=>x.id!==c.id); edRefreshDirty();
   edSelect(ED.cards[0]?.id); edBar();
 }
@@ -3013,8 +3198,9 @@ function edBar(){
   const s=edSummary();
   $("#ed-del").style.display=edCard()?"":"none";
   $("#ed-commit").disabled=!s;
+  const howPhrase=!ED.access.canWrite?"opens a pull request":(ED.access.sandbox?"Commits directly to this open game":"lands as a commit");
   $("#ed-msg").innerHTML=s
-    ? `<b>${esc(s.title)}</b><br><span class="mut">this message writes itself from the diff — ${ED.access.canWrite?"lands as a commit":"opens a pull request"}</span>`
+    ? `<b>${esc(s.title)}</b><br><span class="mut">this message writes itself from the diff — ${howPhrase}</span>`
     : `<span class="mut">No changes yet. Pick a card and start editing — the preview updates live.</span>`;
 }
 async function edCommit(){
@@ -3030,7 +3216,9 @@ async function edCommit(){
       else if(r.status===403&&d.propose){ED.access.canWrite=false;$("#ed-commit").textContent="Propose as PR";toast("You don't have write access — switching to propose.",6000);}
       else toast(`<b style="color:#ffa198">✗ ${esc(d.error||r.status)}</b>`,8000);
     } else {
-      const title=prompt("Title for your pull request:",s.title); if(!title){btn.disabled=false;btn.textContent=was;return;}
+      const tv=await askForm("Title for your pull request",[{name:"title",label:"Title",value:s.title}],"Open PR");
+      const title=tv&&tv.title;
+      if(!title){btn.disabled=false;btn.textContent=was;return;}
       const r=await fetch(`/api/games/${ED.slug}/cards/propose`,{method:"POST",headers:{"content-type":"application/json",...edToken()},body:JSON.stringify({cards:ED.cards,title})});
       const d=await r.json();
       if(r.status===201)toast(`<b>⇡ Pull request opened</b><br>${esc(d.message)}<br><span style="opacity:.7">Committed to your fork <b>${esc(d.fork)}</b> as ${esc(d.commit)} — owner can review on the Pull requests tab.</span>`,12000);
@@ -3409,20 +3597,18 @@ async function suggestions(g){
         </div>`).join("")}
     </div>
     <div class="mergebar">
-      <button class="btn primary" onclick="alert('Platform: 3-way merge on card JSON; conflicts resolve per-card, pick-one.\\nToday: git merge ${esc(pr.branch)}')">Accept changes</button>
-      <button class="btn" onclick="alert('Comments thread — playtest results belong here.')">💬 Discuss</button>
-      <span style="color:var(--mut);font-size:13px">Every accepted change keeps ${esc(pr.author)}'s name in the game's history.</span>
+      <span style="color:var(--mut);font-size:13px">Merging and 3-way conflict resolution need the live platform — run <code>node server.mjs</code>.</span>
+      <button class="btn" onclick="go('g/${g.slug}/issues')">💬 Discuss in Issues</button>
     </div></div>`;}).join("");
 }
 
 function releases(g){
+  if(typeof LIVE!=="undefined" && LIVE) return liveReleases(g);
   $("#pane").innerHTML=g.releases.length?g.releases.slice().reverse().map(r=>`
     <div class="rel"><h3>🏷 ${esc(r.tag)} <span style="color:var(--mut);font-weight:400;font-size:13px">${esc(r.date)}</span></h3>
     <pre>${esc(r.notes)||"(no notes)"}</pre>
-    <button class="btn" onclick="alert('Platform: frozen PnP PDF + TTS mod attached to every release.')">⤓ PnP PDF</button>
-    <button class="btn" onclick="alert('Platform: frozen TTS mod for this exact version.')">⤓ TTS mod</button></div>`).join("")
+    <div class="mut" style="font-size:12px">Frozen PnP PDF / TTS mod downloads need the live platform — run <code>node server.mjs</code>.</div></div>`).join("")
   :"<div class='emptystate'>No releases yet — <code>fmt release &lt;game&gt; 1.0.0</code></div>";
-  if(typeof LIVE!=="undefined" && LIVE) liveReleases(g);
 }
 async function liveReleases(g){
   let rels; try{ rels=await (await fetch(`/api/games/${g.slug}/releases`)).json(); }catch{ return; }

@@ -125,6 +125,23 @@ async function canWrite(u, slug) {
   if (g.owner_id === u.id) return true;
   return !!(await q.isCollaborator(db, slug, u.id));
 }
+/** ADMIN ACCESS (merge a PR, close a PR/issue, cut a release): same ownerless
+ *  -> open-sandbox carve-out as canWrite() above, since none of the 12 shipped
+ *  demo games have an owner and the whole point of the sandbox policy is that
+ *  the collaboration loop (fork -> PR -> merge) has to actually be completable
+ *  on them. BUT a release is a stronger, citable, harder-to-undo action than a
+ *  merge, so it stays intentionally narrower: an invited collaborator (write
+ *  access short of ownership) may merge/close but may NOT cut a release on
+ *  someone else's game -- only the owner, or anyone on an ownerless/demo game,
+ *  can do that. Pass { releases: true } to get that stricter rule. */
+async function canAdmin(u, slug, { releases = false } = {}) {
+  if (!u) return false;
+  const g = await q.gameBySlug(db, slug);
+  if (!g || !g.owner_id) return true;              // ownerless/demo game: open sandbox
+  if (g.owner_id === u.id) return true;             // owner
+  if (releases) return false;                       // releases: owner-or-ownerless only
+  return !!(await q.isCollaborator(db, slug, u.id)); // collaborators may merge/close, not release
+}
 const denyWrite = (ctx, u) => u
   ? ctx.send(403, { error: "no commit access to this game", propose: true,
       hint: "fork it and open a PR (POST /api/games/:slug/cards/propose does both in one step), or ask the owner for access" })
@@ -350,8 +367,9 @@ gw.route("GET", "/api/games/:slug/access", async (ctx) => {
   ctx.send(200, { authed: !!u,
     canWrite: await canWrite(u, slug),
     isOwner: !!(u && owner && owner === u.id),
-    ownerless: !owner });
-}, "can the current user commit here directly? (editor picks commit vs propose)");
+    ownerless: !owner,
+    sandbox: !owner });   // explicit, UI-facing name for the same fact: no owner = open sandbox
+}, "can the current user commit here directly? (editor picks commit vs propose) -- sandbox:true means any signed-in user can write/merge/close here directly");
 gw.route("GET", "/api/games/:slug/collaborators", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   ctx.send(200, await q.collaboratorsOf(db, slug));
@@ -671,8 +689,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
   const pr = await q.prById(db, ctx.params.id);
   if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
   if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
-  const game = await q.gameBySlug(db, slug);
-  if (game?.owner_id !== u.id) return ctx.send(403, { error: "only the game's owner can merge" });
+  if (!await canAdmin(u, slug)) return ctx.send(403, { error: "only the game's owner (or, on an open sandbox/ownerless game, any signed-in user) can merge" });
   const current = await cardsOf(slug);
   const { merged, conflicts } = mergeCards(JSON.parse(pr.base), JSON.parse(pr.proposed), current);
   if (conflicts.length) return ctx.send(409, { error: "conflicts — both sides changed these cards", conflicts });
@@ -695,9 +712,8 @@ gw.route("POST", "/api/games/:slug/prs/:id/close", async (ctx) => {
   const pr = await q.prById(db, ctx.params.id);
   if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
   if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
-  const game = await q.gameBySlug(db, slug);
-  if (game?.owner_id !== u.id && pr.author_id !== u.id)
-    return ctx.send(403, { error: "only the owner or the author can close" });
+  if (!await canAdmin(u, slug) && pr.author_id !== u.id)
+    return ctx.send(403, { error: "only the owner (or, on an open sandbox/ownerless game, any signed-in user) or the PR's author can close" });
   await q.setPrStatus(db, pr.id, "closed");
   ctx.send(200, { closed: true });
 }, "close a PR without merging");
@@ -740,9 +756,8 @@ gw.route("POST", "/api/games/:slug/issues/:n/close", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const iss = await q.issueByNumber(db, slug, parseInt(ctx.params.n, 10));
   if (!iss) return ctx.send(404, { error: "no such issue" });
-  const g = await q.gameBySlug(db, slug);
-  if (g?.owner_id !== u.id && iss.author_id !== u.id)
-    return ctx.send(403, { error: "only the owner or the issue author can close" });
+  if (!await canAdmin(u, slug) && iss.author_id !== u.id)
+    return ctx.send(403, { error: "only the owner (or, on an open sandbox/ownerless game, any signed-in user) or the issue's author can close" });
   await q.setIssueStatus(db, iss.id, iss.status === "open" ? "closed" : "open");
   ctx.send(200, { status: iss.status === "open" ? "closed" : "open" });
 }, "close (or reopen) an issue — owner or author");
@@ -917,8 +932,7 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
 gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
-  const game = await q.gameBySlug(db, slug);
-  if (game?.owner_id !== u.id) return ctx.send(403, { error: "only the game's owner can cut a release" });
+  if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release (an open sandbox/ownerless game may be cut by any signed-in user, but a collaborator alone may not)" });
   const { tag, title } = await json(ctx);
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must look like v1.0 (letters, digits, . _ -)" });
   if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
