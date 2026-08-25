@@ -21,8 +21,9 @@ export function parseCSV(text) {
   return rows;
 }
 
-const CORE = new Set(["id","name","type","subtypes","keywords","text","deck_limit","set",
-                      "collector_number","quantity","artist","flavor_text"]);
+const CARD_COLUMNS = new Set(["name", "type", "subtypes", "keywords", "text", "deck_limit"]);
+const PRINTING_COLUMNS = new Set(["printing_id", "set", "collector_number", "quantity", "artist", "flavor_text"]);
+const CORE = new Set(["id", ...CARD_COLUMNS, ...PRINTING_COLUMNS]);
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 const infer = (vals) => {
   const n = vals.filter(v => v !== "");
@@ -35,20 +36,28 @@ const infer = (vals) => {
 const cast = (v, t) => t === "integer" ? parseInt(v, 10) : t === "number" ? parseFloat(v)
   : t === "boolean" ? /^true$/i.test(v) : v;
 
-/** CSV text → { cards, warnings, attrCols } (cards.json shape) */
+/** CSV text → parsed cards plus enough column metadata for safe Sheet sync.
+ *  `identitySafe` means every non-empty row has an explicit, unique `id`.
+ *  Name-derived ids remain supported for one-off CSV imports, but a connected
+ *  Sheet should surface the warning because renaming a row then looks like a
+ *  delete + add instead of a stable card edit. */
 export function csvToCards(text) {
   const rows = parseCSV(text);
-  if (!rows.length) return { cards: [], warnings: ["the sheet is empty"], attrCols: [] };
+  if (!rows.length) return { cards: [], cardRows: [], warnings: ["the sheet is empty"], attrCols: [], headers: [],
+    managedCardFields: [], managedPrintingFields: [], identitySafe: false };
   const headers = rows[0].map(h => h.trim().toLowerCase());
-  if (!headers.includes("name")) return { cards: [], warnings: ["no 'name' column — the sheet needs at least a name column"], attrCols: [] };
+  if (!headers.includes("name")) return { cards: [], cardRows: [], warnings: ["no 'name' column — the sheet needs at least a name column"], attrCols: [], headers,
+    managedCardFields: [], managedPrintingFields: [], identitySafe: false };
   const recs = rows.slice(1).map(r => Object.fromEntries(headers.map((h, i) => [h, (r[i] ?? "").trim()])));
   const attrCols = headers.filter(h => h && !CORE.has(h));
   const types = Object.fromEntries(attrCols.map(c => [c, infer(recs.map(r => r[c] ?? ""))]));
-  const cards = [], warnings = [], seen = new Set();
+  const cards = [], cardRows = [], warnings = [], seen = new Set();
+  let identitySafe = headers.includes("id");
   recs.forEach((r, i) => {
     if (!r.name) { warnings.push(`row ${i + 2}: no name — skipped`); return; }
+    if (!r.id) identitySafe = false;
     let id = r.id ? slug(r.id) : slug(r.name);
-    if (seen.has(id)) { warnings.push(`row ${i + 2}: duplicate id '${id}' — suffixed`); let n = 2; while (seen.has(`${id}_${n}`)) n++; id = `${id}_${n}`; }
+    if (seen.has(id)) { identitySafe = false; warnings.push(`row ${i + 2}: duplicate id '${id}' — suffixed`); let n = 2; while (seen.has(`${id}_${n}`)) n++; id = `${id}_${n}`; }
     seen.add(id);
     const card = { id, name: r.name, type: r.type || "card" };
     if (r.subtypes) card.subtypes = r.subtypes.split(";").map(s => s.trim()).filter(Boolean);
@@ -59,8 +68,15 @@ export function csvToCards(text) {
     if (Object.keys(attrs).length) card.attributes = attrs;
     if (r.deck_limit) card.deck_limit = parseInt(r.deck_limit, 10);
     cards.push(card);
+    cardRows.push(r);
   });
-  return { cards, warnings, attrCols, rows: recs };
+  if (!identitySafe && cards.length)
+    warnings.push("Add a unique, permanent 'id' column before renaming cards; name-derived ids cannot track renames safely.");
+  const managedCardFields = headers.filter(h => CARD_COLUMNS.has(h))
+    .concat(attrCols.map(h => `attributes.${h}`));
+  const managedPrintingFields = headers.filter(h => PRINTING_COLUMNS.has(h));
+  return { cards, warnings, attrCols, rows: recs, cardRows, headers, managedCardFields,
+    managedPrintingFields, identitySafe };
 }
 
 /** Merge sheet rows into printings, PRESERVING art/provenance on printings that

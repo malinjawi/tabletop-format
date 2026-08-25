@@ -51,9 +51,9 @@ node tools/import-nrdb.mjs nrdb-data my-game --title "My Game"  # NRDB/Alsciende
 node tools/validate.mjs examples/ember               # schema + referential integrity (needs: npm i ajv ajv-formats js-yaml)
 python3 tools/validate.py examples/ember             # identical checks, Python twin
 node tools/diff.mjs old-cards.json new-cards.json    # semantic card diff, zero deps
-python3 tools/render_cards.py examples/ember         # card faces @300dpi (reference renderer; Pillow)
+node tools/render_cards.mjs examples/ember           # card faces @300dpi (the exact browser renderer; Chrome required)
 python3 tools/export_pnp.py examples/ember           # print-and-play PDF, 3x3 US Letter, crop marks
-python3 tools/export_tts.py examples/ember           # TTS sprite sheet + save JSON (CardID math, quantities)
+python3 tools/export_tts.py examples/ember           # TTS sheet(s) + save JSON (auto-splits after 70 faces)
 node tools/fmt.mjs import decklist examples/ember list.txt --name "Burn Rush" --format standard   # "3 Kindling" lines -> deck.json
 node tools/fmt.mjs check-deck examples/ember examples/ember/decks/burn-rush.json                  # legality: pool, size, deck limits, BANLIST
 ```
@@ -104,6 +104,20 @@ under a minute, with version control semantics at the end.
 The validator enforces what schemas alone can't: every printing points at a real card
 and set, banned cards exist, attributes match their declared types, symbols in card
 text are declared, set sizes match their printings.
+
+### Google Sheets as a working copy
+
+Forge does not replace Sheets collaboration or version history. A published Sheet
+can be attached from a game's Cards page, and a bound Apps Script proof of concept
+in [`integrations/google-sheets`](integrations/google-sheets) adds the same status
+inside private Sheets. **Check draft changes** compares playable objects with the
+last Forge candidate, renders semantic and visual diffs, validates the complete
+game tree, and then commits only the exact reviewed snapshot. Stable `id` columns
+keep renamed cards attached to their histories. See
+[`docs/google-sheets-sync.md`](docs/google-sheets-sync.md) for the boundary and
+installation instructions. The connector contract, real `Code.gs` harness, and
+a Google-hosted private-Sheet OAuth → attributed commit smoke test are green.
+A stable HTTPS deployment and packaged Workspace add-on remain production gates.
 
 The diff tool matches cards by stable ID and reports *meaning*, not JSON noise:
 

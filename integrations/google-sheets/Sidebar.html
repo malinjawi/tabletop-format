@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root{color-scheme:light;font:13px/1.45 Arial,sans-serif;color:#24292f}
+    body{margin:0;padding:16px;background:#f6f8fa}
+    h1{font-size:18px;margin:0}.sub{color:#66707b;margin:3px 0 14px}
+    .box{background:white;border:1px solid #d8dee4;border-radius:10px;padding:12px;margin:10px 0}
+    label{display:block;color:#57606a;font-size:11px;margin-top:8px}
+    input,textarea{box-sizing:border-box;width:100%;border:1px solid #c6ccd2;border-radius:6px;padding:8px;margin-top:3px;font:inherit}
+    textarea{resize:vertical}.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+    button{border:1px solid #b8c0c8;background:#fff;border-radius:6px;padding:7px 10px;font-weight:600;cursor:pointer}
+    button.primary{color:#fff;background:#1f6f43;border-color:#1f6f43}button:disabled{opacity:.5;cursor:default}
+    .status{display:flex;gap:8px;align-items:flex-start}.dot{width:10px;height:10px;border-radius:50%;background:#8c959f;margin-top:4px;flex:none}
+    .dirty .dot{background:#d29922}.clean .dot{background:#2da44e}.bad .dot{background:#cf222e}
+    .big{font-weight:700}.muted{color:#66707b;font-size:11px}.counts{margin-top:8px}.change{border-left:3px solid #bf8700;padding-left:8px;margin:7px 0}
+    .preview{border-top:1px solid #d8dee4;margin-top:10px;padding-top:9px}.pair{display:flex;gap:7px;overflow:auto;margin-top:5px}
+    .face{position:relative;flex:0 0 116px;min-height:158px;border:1px solid #c6ccd2;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 2px 7px #1f23281a}
+    .face .name{padding:7px 26px 6px 7px;background:#e9eef3;font-weight:700}.face .badge{position:absolute;right:6px;top:5px;background:#34495e;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-weight:700}
+    .face .type{padding:4px 7px;border-bottom:1px solid #d8dee4;color:#57606a;font-size:10px;text-transform:uppercase}.face .text{padding:8px 7px;white-space:pre-wrap;font-size:11px}.absent{display:grid;place-items:center;color:#8c959f;border-style:dashed}
+    .error{color:#b42318;white-space:pre-wrap}.ok{color:#1a7f37}.hidden{display:none}.spin{opacity:.6;pointer-events:none}
+  </style>
+</head>
+<body>
+  <h1>Forge candidate</h1>
+  <div class="sub" id="sheet-label">Loading this Sheet…</div>
+
+  <div class="box" id="settings">
+    <div class="row" style="margin-top:0;align-items:center;justify-content:space-between">
+      <div class="big">Connection</div>
+      <button class="hidden" id="settings-back" onclick="hideSettings()">← Back to candidate</button>
+    </div>
+    <label>Forge URL<input id="origin" placeholder="https://forge.example"></label>
+    <label>Game slug<input id="game" placeholder="netrunner-sg"></label>
+    <label>Forge handle or email<input id="handle" autocomplete="username" placeholder="Your Forge account"></label>
+    <label>Forge password<input id="password" type="password" autocomplete="current-password" placeholder="Used once to sign in; never stored"></label>
+    <div class="row">
+      <button class="primary" onclick="saveSettings()">Save / attach this tab</button>
+      <button class="hidden" id="sign-out" onclick="signOut()">Sign out</button>
+      <button class="hidden" id="detach" onclick="detachTab()">Detach tab</button>
+    </div>
+  </div>
+
+  <div class="box hidden" id="candidate">
+    <div class="status" id="status"><span class="dot"></span><div><div class="big" id="status-title">Not checked</div><div class="muted" id="status-detail">Sheet edits are saved by Google. Check what has not entered Forge.</div></div></div>
+    <div id="results"></div>
+    <div class="row"><button class="primary" onclick="checkCandidate()">Check draft changes</button><button onclick="showSettings()">Settings</button></div>
+    <div id="commit-form" class="hidden">
+      <label>Commit message<textarea id="message" rows="2" placeholder="What is this candidate trying to change?"></textarea></label>
+      <label>Other contributors<input id="contributors" placeholder="Names or Forge handles, comma separated"></label>
+      <div class="muted">You are the verified submitter. Add collaborators explicitly; Sheet edit history remains in Google.</div>
+      <div class="row"><button class="primary" onclick="commitCandidate()">Commit this exact candidate</button></div>
+    </div>
+  </div>
+  <div class="error" id="error"></div>
+
+  <script>
+    let state=null, preview=null;
+    const el=id=>document.getElementById(id);
+    function busy(on){document.body.classList.toggle("spin",on);}
+    function fail(err){busy(false);el("error").textContent=err&&err.message?err.message:String(err||"Unknown error");}
+    function init(s){
+      state=s; el("sheet-label").textContent=`${s.spreadsheet_name} · ${s.sheet_name}`;
+      el("origin").value=s.origin||""; el("game").value=s.game||"";el("handle").value=s.user_handle||"";
+      const ready=!!(s.origin&&s.game&&s.has_token);
+      el("settings").classList.toggle("hidden",ready); el("candidate").classList.toggle("hidden",!ready);
+      el("settings-back").classList.toggle("hidden",!ready);
+      el("sign-out").classList.toggle("hidden",!s.has_token);
+      el("detach").classList.toggle("hidden",!ready);
+      if(ready&&s.dirty_at){el("status").className="status dirty";el("status-title").textContent="Draft may have uncommitted game changes";}
+    }
+    function showSettings(){
+      el("password").value="";
+      const canReturn=!!(state&&state.origin&&state.game&&state.has_token);
+      el("settings-back").classList.toggle("hidden",!canReturn);
+      el("settings").classList.remove("hidden");el("candidate").classList.add("hidden");
+    }
+    function hideSettings(){if(state&&state.origin&&state.game&&state.has_token){el("settings").classList.add("hidden");el("candidate").classList.remove("hidden");}}
+    function saveSettings(){
+      busy(true);el("error").textContent="";
+      google.script.run.withSuccessHandler(x=>{busy(false);el("password").value="";init(x.state);checkCandidate();}).withFailureHandler(fail)
+        .saveForgeSettings({origin:el("origin").value,game:el("game").value,handle:el("handle").value,password:el("password").value});
+    }
+    function signOut(){
+      busy(true);el("error").textContent="";
+      google.script.run.withSuccessHandler(s=>{busy(false);el("password").value="";init(s);}).withFailureHandler(fail).signOutForge();
+    }
+    function detachTab(){
+      if(!confirm("Detach this Sheet tab from Forge? Existing Forge commits are not deleted."))return;
+      busy(true);el("error").textContent="";
+      google.script.run.withSuccessHandler(x=>{busy(false);preview=null;init(x.state);}).withFailureHandler(fail).detachForgeWorkingCopy();
+    }
+    function checkCandidate(){
+      busy(true);el("error").textContent="";el("commit-form").classList.add("hidden");
+      google.script.run.withSuccessHandler(x=>{busy(false);state=x.state;renderResult(x.result);}).withFailureHandler(fail).checkForgeCandidate();
+    }
+    function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+    function face(c){
+      if(!c)return `<div class="face absent">card absent</div>`;
+      const cost=c.attributes&&c.attributes.cost;
+      return `<div class="face"><div class="name">${esc(c.name||c.id)}</div>${cost==null?"":`<div class="badge">${esc(cost)}</div>`}<div class="type">${esc(c.type||"card")}</div><div class="text">${esc(c.text||"")}</div></div>`;
+    }
+    function candidatePreview(item){
+      return `<div class="preview"><b>${esc((item.candidate||item.before||{}).name||item.id)}</b><div class="pair"><div><div class="muted">FORGE NOW</div>${face(item.before)}</div><div><div class="muted ok">CANDIDATE</div>${face(item.candidate)}</div></div></div>`;
+    }
+    function renderResult(r){
+      preview=r.preview; const counts=r.counts||{}, changes=r.changes||[], warnings=r.warnings||[];
+      const status=el("status");status.className="status "+(r.status==="clean"?"clean":r.status==="changes"?"dirty":"bad");
+      el("status-title").textContent=r.status==="clean"?"No uncommitted game changes":r.status==="changes"?`${counts.cards||0} cards differ from Forge`:r.status==="conflicts"?"Forge and Sheet changes conflict":"Candidate fails validation";
+      el("status-detail").textContent=`Compared with Forge ${String(r.preview&&r.preview.head_sha||"").slice(0,8)}. Google still owns draft history.`;
+      const lines=changes.slice(0,30).map(c=>`<div class="change"><b>${esc(c.name)}</b> · ${esc(c.kind==="changed"?c.field:c.kind)}</div>`).join("");
+      const more=changes.length>30?`<div class="muted">+ ${changes.length-30} more field changes</div>`:"";
+      const previews=(r.candidate_cards||[]).slice(0,4).map(candidatePreview).join("");
+      const previewMore=(r.candidate_cards||[]).length>4?`<div class="muted">+ ${(r.candidate_cards||[]).length-4} more affected cards</div>`:"";
+      const warn=warnings.map(w=>`<div class="muted">⚠ ${esc(w)}</div>`).join("");
+      const validation=r.validation&&r.validation.ok?`<div class="ok">✓ Game validation passed</div>`:`<div class="error">Validation is blocking this candidate.</div>`;
+      el("results").innerHTML=`<div class="counts">${counts.modified||0} modified · ${counts.added||0} added · ${counts.removed||0} removed · ${counts.printings||0} printing changes</div>${validation}${lines}${more}${warn}${previews}${previewMore}`;
+      if(r.status==="changes"&&r.can_commit){el("commit-form").classList.remove("hidden");el("message").value=r.summary||"";}
+    }
+    function commitCandidate(){
+      busy(true);el("error").textContent="";
+      google.script.run.withSuccessHandler(x=>{busy(false);state=x.state;preview=null;el("commit-form").classList.add("hidden");el("status").className="status clean";el("status-title").textContent=`Committed ${String(x.result.commit||"").slice(0,8)}`;el("status-detail").textContent="This exact candidate is now available to Forge exports and version-pinned playtests.";el("results").innerHTML=`<div class="ok">✓ ${esc(x.result.commit_message||"Candidate committed")}</div>`;}).withFailureHandler(fail)
+        .commitForgeCandidate({preview,commit_message:el("message").value,contributors:el("contributors").value});
+    }
+    google.script.run.withSuccessHandler(init).withFailureHandler(fail).getForgeState();
+  </script>
+</body>
+</html>

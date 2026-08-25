@@ -139,4 +139,22 @@ assert(nl.length === 2 && nl[0].actor_handle === ana.handle, "notificationsFor n
 await q.markAllRead(db, rcv.id);
 assert(await q.unreadCount(db, rcv.id) === 0, "markAllRead clears the unread count");
 
+// Sheet sync contract (009 + 010) — both drivers persist the same merge base
+// and exact remote fingerprint, and reconnecting resets stale sync metadata.
+await q.connectSource(db, { game_slug: slug, kind: "sheet", url: "https://example.com/cards.csv",
+  connected_by: ana.id, last_sha: "base123" });
+let src = await q.sourceFor(db, slug, "sheet");
+assert(src.last_sha === "base123" && src.source_hash == null, "connectSource establishes a merge base without claiming a completed sync");
+await q.recordSync(db, slug, "sheet", "sync456", "hash789", "etag-1");
+src = await q.sourceFor(db, slug, "sheet");
+assert(src.last_sha === "sync456" && src.source_hash === "hash789" && src.source_revision === "etag-1" && src.last_sync,
+  "recordSync persists repository base + remote fingerprint");
+await q.connectSource(db, { game_slug: slug, kind: "sheet", url: "https://example.com/new.csv",
+  connected_by: ana.id, last_sha: "base999" });
+src = await q.sourceFor(db, slug, "sheet");
+assert(src.last_sha === "base999" && src.source_hash == null && src.last_sync == null,
+  "reconnecting resets stale synchronization metadata");
+await q.disconnectSource(db, slug, "sheet");
+assert(!(await q.sourceFor(db, slug, "sheet")), "disconnectSource removes the connector");
+
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);

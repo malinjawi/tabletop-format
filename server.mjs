@@ -4,6 +4,7 @@
  * Usage: node server.mjs [--port 8420] [--games <dir>] [--readonly]
  * Env: STORE1 (local|forgejo) · LFS_URL (local asset mode) · DB_PATH (Store 2)
  *      CACHE_DIR (Store 3) · FORGE_URL/FORGE_TOKEN (forgejo backend)
+ *      FORGE_PUBLIC_ORIGIN (absolute public URL embedded in TTS saves)
  *
  * Structure (mirrors the system-design diagram):
  *   gateway kernel (platform/gateway.mjs): middleware → route table → logs
@@ -15,14 +16,17 @@
  * GET /api lists every route; GET /healthz for probes.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { fileURLToPath } from "node:url";
 import { createGateway, readBody } from "./platform/gateway.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { jamQualify } from "./tools/lib/jamcheck.mjs";
-import { csvToCards, mergePrintings, normalizeSheetUrl } from "./tools/lib/cardcsv.mjs";
+import { csvToCards, normalizeSheetUrl } from "./tools/lib/cardcsv.mjs";
+import { fingerprintCsv, sheetCardsFromBase, sheetPrintingsFromBase, mergeSheetState } from "./tools/lib/sheetsync.mjs";
 import { assertAssetAllowed } from "./tools/lib/limits.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
@@ -34,6 +38,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const opt = (f, d) => { const i = args.indexOf(f); return i > -1 ? args[i + 1] : d; };
 const PORT = parseInt(opt("--port", "8420"), 10);
+const PUBLIC_ORIGIN = process.env.FORGE_PUBLIC_ORIGIN ?? `http://localhost:${PORT}`;
 const GAMES_DIR = resolve(opt("--games", join(ROOT, "examples")));
 const READONLY = args.includes("--readonly");
 const RATE = { windowMs: 60_000, max: 120 };
@@ -152,6 +157,10 @@ const requireGame = (ctx) => {
   return ctx.params.slug;
 };
 const json = async (ctx) => JSON.parse((await readBody(ctx.req)).toString());
+const optionalJson = async (ctx) => {
+  const raw = (await readBody(ctx.req)).toString().trim();
+  return raw ? JSON.parse(raw) : {};
+};
 
 /** Validate a candidate tree = game at HEAD + one replaced file. Never touches
  *  the live tree — the rollback path is simply "don't commit". Backend-agnostic. */
@@ -207,7 +216,7 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
   const file = ctx.params["*"];
   if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || file.includes("..")) return ctx.send(404, { error: "bad ref" });
   const kind = file.startsWith("pnp") ? "pnp" : file.endsWith("-ttc.zip") ? "ttc" : "tts";
-  const { dir } = await cache.ensureExport(mat(slug), slug, ref, kind);
+  const { dir } = await cache.ensureExport(mat(slug), slug, ref, kind, { publicOrigin: PUBLIC_ORIGIN });
   const fp = join(dir, file);
   if (!existsSync(fp)) return ctx.send(404, { error: "not producible" });
   ctx.sendRaw(200, readFileSync(fp), { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
@@ -457,7 +466,7 @@ gw.route("PUT", "/api/games/:slug/artifact", async (ctx) => {
 // shared, but both MUST stay format-compatible; a round-trip smoke test covers this.
 const LAYOUT_FONT_KEYS = ["id", "family", "weight", "style"];
 const LAYOUT_ROW_CELL_KEYS = ["key", "label", "font", "size_pt", "color", "show_if"];
-const LAYOUT_REGION_KEYS = ["id", "type", "x", "y", "w", "h", "d", "shape", "src", "text", "credit", "fit",
+const LAYOUT_REGION_KEYS = ["id", "type", "x", "y", "w", "h", "d", "shape", "src", "text", "map", "glyph", "max", "credit", "fit",
   "font", "size_pt", "min_size_pt", "align", "valign", "color", "bg", "uppercase", "symbols",
   "autoshrink", "fill", "stroke", "stroke_w_mm", "radius_mm", "opacity", "gap_mm", "of", "show_if"];
 function layoutYamlScalarStr(s) {
@@ -767,11 +776,13 @@ gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
   const { fmt } = ctx.params;
   if (!["pnp", "tts", "ttc"].includes(fmt)) return ctx.send(400, { error: "pnp, tts, or ttc" });
   const sha = await store.headSha(slug);
-  const { hit } = await cache.ensureExport(mat(slug), slug, sha, fmt);
+  const { dir, hit } = await cache.ensureExport(mat(slug), slug, sha, fmt, { publicOrigin: PUBLIC_ORIGIN });
   const base = `/cache/exports/${slug}/${sha}`;
   const urls = fmt === "pnp" ? [`${base}/pnp.pdf`]
     : fmt === "ttc" ? [`${base}/${slug}-ttc.zip`]
-    : [`${base}/tts.json`, `${base}/sheet.png`, `${base}/back.png`];
+    : [`${base}/tts.json`,
+       ...readdirSync(dir).filter(f => /^sheet(?:-\d+)?\.png$/.test(f)).sort().map(f => `${base}/${f}`),
+       `${base}/back.png`];
   ctx.send(200, { ok: true, ref: sha, cached: hit, urls });
 }, "export into the immutable cache; returns permanent URLs");
 
@@ -841,79 +852,256 @@ gw.route("GET", "/api/games/:slug/diff", async (ctx) => {
   } catch (e) { ctx.send(422, { error: "could not diff those versions", detail: e.message }); }
 }, "balance diff: what changed in the cards between two versions");
 
-/* ---------- routes: sync — external source of truth (the infra spine) ----------
- * A game can bind its card data to a PUBLISHED spreadsheet (Google Sheets, or any
- * CSV url). We never touch credentials: the sheet must be link-shared/published.
- * Pull = fetch → parse → diff → validate → ONE commit. Everything downstream
- * (PnP, TTS, TTC, nanDECK, renders) regenerates from that commit automatically. */
+/* ---------- routes: Sheets — external working copy → game candidate ----------
+ * A game can attach a Google Sheet (or HTTPS CSV) as an authoring surface.
+ * Sheets owns live drafting and collaboration; Forge owns the deliberate
+ * promotion boundary into validated, reproducible game history. The last
+ * candidate commit is a real three-way merge base:
+ *
+ *      last candidate commit
+ *        /              \
+ *   Forge HEAD       fresh Sheet
+ *
+ * Building a candidate never blindly replaces cards. Independent field edits
+ * merge; divergent edits and delete-vs-edit races are returned as explicit
+ * conflicts. A preview carries both working-copy and HEAD fingerprints so
+ * Commit cannot promote a different Sheet or repository state than reviewed. */
+const MAX_SHEET_BYTES = 5_000_000;
+const loopbackHost = (h) => ["localhost", "127.0.0.1", "::1"].includes(h.toLowerCase());
+const privateAddress = (a) => {
+  if (!isIP(a)) return true;
+  if (a.includes(":")) {
+    const mapped = a.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+    if (mapped) return privateAddress(mapped[1]);
+    return a === "::" || a === "::1" || /^f[cd]/i.test(a) || /^fe[89ab]/i.test(a) || /^ff/i.test(a);
+  }
+  const p = a.split(".").map(Number);
+  return p[0] === 0 || p[0] === 10 || p[0] === 127 || (p[0] === 169 && p[1] === 254) ||
+    (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168) ||
+    (p[0] === 100 && p[1] >= 64 && p[1] <= 127) || p[0] >= 224;
+};
+async function safeSyncUrl(raw) {
+  const u = new URL(raw);
+  if (u.username || u.password) throw new Error("source URLs cannot contain credentials");
+  const devLoopback = loopbackHost(u.hostname) && loopbackHost(new URL(PUBLIC_ORIGIN).hostname);
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && devLoopback))
+    throw new Error("Sheet/CSV sources must use HTTPS");
+  if (!devLoopback) {
+    const addresses = await lookup(u.hostname, { all: true });
+    if (!addresses.length || addresses.some(a => privateAddress(a.address)))
+      throw new Error("source resolves to a private or unsafe network address");
+  }
+  return u;
+}
 async function fetchCsv(url) {
   const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 15000);
   try {
-    const r = await fetch(url, { signal: ac.signal, redirect: "follow" });
+    let current = await safeSyncUrl(url), r;
+    for (let redirect = 0; redirect <= 5; redirect++) {
+      r = await fetch(current, { signal: ac.signal, redirect: "manual",
+        headers: { accept: "text/csv,text/plain;q=0.9,*/*;q=0.1" } });
+      if (r.status >= 300 && r.status < 400 && r.headers.get("location")) {
+        if (redirect === 5) throw new Error("source redirected too many times");
+        current = await safeSyncUrl(new URL(r.headers.get("location"), current).toString());
+        continue;
+      }
+      break;
+    }
     if (!r.ok) throw new Error(`source returned ${r.status}`);
+    const declared = parseInt(r.headers.get("content-length") || "0", 10);
+    if (declared > MAX_SHEET_BYTES) throw new Error("sheet is larger than the 5 MB working-copy limit");
     const text = await r.text();
+    if (Buffer.byteLength(text) > MAX_SHEET_BYTES) throw new Error("sheet is larger than the 5 MB working-copy limit");
     if (/^\s*<(!doctype|html)/i.test(text))
-      throw new Error("got a web page, not CSV — is the sheet published/shared as 'anyone with the link'?");
-    return text;
+      throw new Error("got a web page, not CSV — share the Sheet as 'anyone with the link' and select a tab");
+    const hash = fingerprintCsv(text);
+    return { text, hash, revision: r.headers.get("etag") || r.headers.get("last-modified") || `sha256:${hash}`,
+      fetched_url: current.toString() };
   } finally { clearTimeout(t); }
+}
+function sheetSnapshot(body, fallbackUrl = "") {
+  const text = body?.snapshot_csv ?? body?.csv;
+  if (text === undefined) return null;
+  if (typeof text !== "string") { const e = new Error("the Sheet snapshot must be CSV text"); e.status = 422; throw e; }
+  if (Buffer.byteLength(text) > MAX_SHEET_BYTES) { const e = new Error("sheet is larger than the 5 MB working-copy limit"); e.status = 422; throw e; }
+  const hash = fingerprintCsv(text);
+  return { text, hash, revision: String(body.source_revision || `sha256:${hash}`),
+    fetched_url: fallbackUrl || String(body.source_id || "google-sheets-addon") };
+}
+const addonSourceUrl = (sourceId) => `gsheet://google/${encodeURIComponent(sourceId)}`;
+const addonSourceId = (url) => url?.startsWith("gsheet://google/")
+  ? decodeURIComponent(url.slice("gsheet://google/".length)) : null;
+async function workingCopySource(src, body = {}) {
+  const supplied = sheetSnapshot(body, src.url);
+  const expectedId = addonSourceId(src.url);
+  if (supplied) {
+    if (expectedId && String(body.source_id || "") !== expectedId) {
+      const e = new Error("this snapshot came from a different spreadsheet or tab"); e.status = 409; throw e;
+    }
+    return supplied;
+  }
+  if (expectedId) {
+    const e = new Error("this is a private Sheet working copy — open Forge in that Sheet to check or build it"); e.status = 422; throw e;
+  }
+  return fetchCsv(src.url);
+}
+async function syncStateAt(slug, ref) {
+  const { dir, cleanup } = await store.materialize(slug, ref);
+  try {
+    return { cards: JSON.parse(readFileSync(join(dir, "components/cards.json"), "utf8")),
+      printings: JSON.parse(readFileSync(join(dir, "components/printings.json"), "utf8")) };
+  } finally { cleanup(); }
+}
+const changedRecords = (a, b) => {
+  const A = new Map(a.map(v => [v.id, v])), B = new Map(b.map(v => [v.id, v]));
+  return [...new Set([...A.keys(), ...B.keys()])].filter(id => JSON.stringify(A.get(id)) !== JSON.stringify(B.get(id)));
+};
+async function sheetSyncPlan(slug, src, body = {}) {
+  const headSha = await store.headSha(slug);
+  const baseSha = src.last_sha || headSha;
+  let base;
+  try { base = await syncStateAt(slug, baseSha); }
+  catch (cause) { const e = new Error(`the previous Sheet candidate base is no longer available — reattach the Sheet to establish a new base (${cause.message})`); e.status = 409; throw e; }
+  const forge = baseSha === headSha ? base : await syncStateAt(slug, headSha);
+  const source = await workingCopySource(src, body);
+  const parsed = csvToCards(source.text);
+  if (!parsed.cards.length) { const e = new Error("no cards in the Sheet — refusing to wipe the game"); e.status = 422; e.warnings = parsed.warnings; throw e; }
+  const sheetCards = sheetCardsFromBase(base.cards, parsed);
+  const sheetPrintings = sheetPrintingsFromBase(base.printings, sheetCards, parsed);
+  const merged = mergeSheetState({ baseCards: base.cards, forgeCards: forge.cards, sheetCards,
+    basePrintings: base.printings, forgePrintings: forge.printings, sheetPrintings });
+  return { headSha, baseSha, base, forge, source, parsed, sheetCards, sheetPrintings, merged,
+    changes: diffCards(forge.cards, merged.cards),
+    forgeChanges: diffCards(base.cards, forge.cards), remoteChanges: diffCards(base.cards, sheetCards),
+    printingChanges: changedRecords(forge.printings, merged.printings) };
+}
+const sheetCandidateFiles = (plan) => ({
+  cards: JSON.stringify(plan.merged.cards, null, 2) + "\n",
+  printings: JSON.stringify(plan.merged.printings, null, 2) + "\n",
+});
+async function validateSheetCandidate(slug, plan) {
+  if (plan.merged.conflicts.length) return { ok: false, skipped: true,
+    report: ["Resolve working-copy conflicts before validation."] };
+  const content = sheetCandidateFiles(plan);
+  return validateCandidate(slug, "components/cards.json", content.cards,
+    { "components/printings.json": content.printings });
+}
+function sheetCandidatePayload(plan, validation) {
+  const candidateCards = new Map(plan.merged.cards.map(c => [c.id, c]));
+  const currentCards = new Map(plan.forge.cards.map(c => [c.id, c]));
+  const printingById = new Map([...plan.forge.printings, ...plan.merged.printings].map(p => [p.id, p]));
+  const affected = new Set(plan.changes.map(c => c.card));
+  for (const id of plan.printingChanges) if (printingById.get(id)?.card_id) affected.add(printingById.get(id).card_id);
+  const cards = [...affected].map(id => ({ id, before: currentCards.get(id) ?? null,
+    candidate: candidateCards.get(id) ?? null,
+    printings: plan.merged.printings.filter(p => p.card_id === id) }));
+  const cardIds = new Set(plan.changes.map(c => c.card));
+  const counts = {
+    cards: cardIds.size,
+    fields: plan.changes.filter(c => c.kind === "changed").length,
+    added: new Set(plan.changes.filter(c => c.kind === "added").map(c => c.card)).size,
+    removed: new Set(plan.changes.filter(c => c.kind === "removed").map(c => c.card)).size,
+    modified: new Set(plan.changes.filter(c => c.kind === "changed").map(c => c.card)).size,
+    printings: plan.printingChanges.length,
+  };
+  const hasChanges = !!(plan.changes.length || plan.printingChanges.length);
+  const canCommit = !plan.merged.conflicts.length && validation.ok;
+  const status = plan.merged.conflicts.length ? "conflicts" : !validation.ok ? "invalid" : hasChanges ? "changes" : "clean";
+  return { changes: plan.changes, printing_changes: plan.printingChanges,
+    forge_changes: plan.forgeChanges, sheet_changes: plan.remoteChanges,
+    conflicts: plan.merged.conflicts, can_apply: canCommit, can_commit: canCommit,
+    warnings: plan.parsed.warnings, identity_safe: plan.parsed.identitySafe,
+    validation, candidate_cards: cards, counts, status,
+    summary: summarize(plan.changes)?.title ?? null };
 }
 gw.route("GET", "/api/games/:slug/sync", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const s = await q.sourceFor(db, slug, "sheet");
-  ctx.send(200, s ? { connected: true, kind: "sheet", url: s.url, last_sync: s.last_sync, last_sha: s.last_sha }
-                  : { connected: false });
-}, "is this game bound to an external source (published sheet)?");
+  if (!s) return ctx.send(200, { connected: false });
+  const headSha = await store.headSha(slug);
+  ctx.send(200, { connected: true, kind: "sheet", url: s.url,
+    source_mode: addonSourceId(s.url) ? "addon" : "published", source_id: addonSourceId(s.url), last_sync: s.last_sync,
+    base_sha: s.last_sha, source_hash: s.source_hash, source_revision: s.source_revision,
+    head_sha: headSha, forge_ahead: !!s.last_sha && s.last_sha !== headSha });
+}, "is this game attached to a Sheet working copy?");
 gw.route("PUT", "/api/games/:slug/sync/sheet", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
-  const { url } = await json(ctx);
-  if (!url || !/^https?:\/\//i.test(url)) return ctx.send(422, { error: "a http(s) url is required" });
-  const norm = normalizeSheetUrl(url.trim());
-  try { const csv = await fetchCsv(norm); const { cards, warnings } = csvToCards(csv);
-    if (!cards.length) return ctx.send(422, { error: "could not read any cards from that sheet", warnings });
-    await q.connectSource(db, { game_slug: slug, kind: "sheet", url: norm, connected_by: u.id });
-    ctx.send(200, { connected: true, url: norm, cards: cards.length, warnings });
+  const body = await json(ctx);
+  const { url, source_id: sourceId } = body;
+  if (!sourceId && (!url || !/^https?:\/\//i.test(url)))
+    return ctx.send(422, { error: "provide a Google Sheet/CSV URL, or connect from the Forge Sheets add-on" });
+  const norm = sourceId ? addonSourceUrl(String(sourceId)) : normalizeSheetUrl(url.trim());
+  try { const source = sourceId ? sheetSnapshot(body, norm) : await fetchCsv(norm);
+    if (!source) return ctx.send(422, { error: "the Sheets add-on must include the active tab snapshot" });
+    const parsed = csvToCards(source.text);
+    if (!parsed.cards.length) return ctx.send(422, { error: "could not read any cards from that Sheet", warnings: parsed.warnings });
+    const headSha = await store.headSha(slug);
+    await q.connectSource(db, { game_slug: slug, kind: "sheet", url: norm, connected_by: u.id, last_sha: headSha });
+    ctx.send(200, { connected: true, url: norm, cards: parsed.cards.length, warnings: parsed.warnings,
+      identity_safe: parsed.identitySafe, base_sha: headSha, source_hash: source.hash,
+      source_mode: sourceId ? "addon" : "published",
+      message: "Working copy attached. Check its draft changes before building a candidate." });
   } catch (e) { return ctx.send(422, { error: `couldn't read the sheet: ${e.message}` }); }
-}, "connect a published spreadsheet as this game's card source");
+}, "attach a public or add-on-provided Sheet as an external working copy");
 gw.route("DELETE", "/api/games/:slug/sync/sheet", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
   await q.disconnectSource(db, slug, "sheet");
   ctx.send(200, { connected: false });
-}, "disconnect the external source");
+}, "detach the Sheet working copy");
 gw.route("POST", "/api/games/:slug/sync/pull", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
   const src = await q.sourceFor(db, slug, "sheet");
-  if (!src) return ctx.send(422, { error: "no source connected — connect a sheet first" });
-  let csv; try { csv = await fetchCsv(src.url); }
-  catch (e) { return ctx.send(502, { error: `couldn't read the sheet: ${e.message}` }); }
-  const { cards, warnings, rows } = csvToCards(csv);
-  if (!cards.length) return ctx.send(422, { error: "no cards in the sheet — refusing to wipe the game", warnings });
-  const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
-  const prevPrintings = JSON.parse((await store.readFile(slug, "components/printings.json")).toString());
-  // every card needs a printing or it is invisible in every export (art/provenance preserved)
-  const printings = mergePrintings(prevPrintings, cards, rows);
-  const changes = diffCards(before, cards);
-  const printingsChanged = JSON.stringify(prevPrintings) !== JSON.stringify(printings);
+  if (!src) return ctx.send(422, { error: "no Sheet working copy attached" });
   const dry = ctx.url.searchParams.has("dry");
-  if (dry) return ctx.send(200, { dry: true, changes, warnings, summary: summarize(changes)?.title ?? null });
-  if (!changes.length && !printingsChanged) return ctx.send(200, { saved: false, changes: [], warnings, message: "already in sync" });
-  const content = JSON.stringify(cards, null, 2) + "\n";
-  const pcontent = JSON.stringify(printings, null, 2) + "\n";
-  const v = await validateCandidate(slug, "components/cards.json", content, { "components/printings.json": pcontent });
-  if (!v.ok) return ctx.send(422, { error: "the sheet's cards fail validation — nothing was committed", report: v.report });
-  const auto = summarize(changes);
+  let body;
+  try { body = await optionalJson(ctx); }
+  catch { return ctx.send(400, { error: "request body must be valid JSON" }); }
+  let plan;
+  try { plan = await sheetSyncPlan(slug, src, body); }
+  catch (e) { return ctx.send(e.status || 502, { error: `couldn't read the Sheet working copy: ${e.message}`, warnings: e.warnings }); }
+  const validation = await validateSheetCandidate(slug, plan);
+  const preview = { source_hash: plan.source.hash, source_revision: plan.source.revision,
+    head_sha: plan.headSha, base_sha: plan.baseSha };
+  const payload = { ...sheetCandidatePayload(plan, validation), preview };
+  if (dry) return ctx.send(200, { dry: true, ...payload });
+  const expectedSource = ctx.url.searchParams.get("source_hash") || body.preview?.source_hash;
+  const expectedHead = ctx.url.searchParams.get("head_sha") || body.preview?.head_sha;
+  if (!expectedSource || !expectedHead)
+    return ctx.send(409, { error: "check the working copy first, then commit that exact reviewed candidate", stale: "preview", ...payload });
+  if (expectedSource && expectedSource !== plan.source.hash)
+    return ctx.send(409, { error: "the Sheet changed after review — check it again before committing", stale: "sheet", ...payload });
+  if (expectedHead && expectedHead !== plan.headSha)
+    return ctx.send(409, { error: "Forge changed after review — check again so those edits are included", stale: "forge", ...payload });
+  if (plan.merged.conflicts.length)
+    return ctx.send(409, { error: "Sheet and Forge changed the same fields differently — resolve the conflicts before committing", ...payload });
+  if (!validation.ok)
+    return ctx.send(422, { error: "the candidate fails game validation — nothing was committed", report: validation.report, ...payload });
+  if (!plan.changes.length && !plan.printingChanges.length) {
+    return ctx.send(200, { saved: false, message: "no draft changes to build", ...payload });
+  }
+  if (await store.headSha(slug) !== plan.headSha)
+    return ctx.send(409, { error: "Forge changed while the candidate was being validated — check again", stale: "forge", ...payload });
+  const auto = summarize(plan.changes);
+  const requested = String(body.commit_message || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  const subject = requested || `sheet: build candidate with ${plan.changes.length} card change${plan.changes.length === 1 ? "" : "s"} and ${plan.printingChanges.length} printing change${plan.printingChanges.length === 1 ? "" : "s"}`;
+  const contributors = Array.isArray(body.contributors) ? body.contributors
+    .map(v => String(v).trim().replace(/[\r\n]+/g, " ").slice(0, 80)).filter(Boolean).slice(0, 20) : [];
+  const content = sheetCandidateFiles(plan);
+  const detail = [auto?.body, contributors.length ? `Contributors: ${contributors.join(", ")}` : null,
+    `Source: attached Sheet working copy\nBase: ${plan.baseSha}`].filter(Boolean).join("\n\n");
   const { sha } = await store.writeFiles(slug,
-    [{ path: "components/cards.json", content }, { path: "components/printings.json", content: pcontent }],
-    `sync: pull ${changes.length} change${changes.length === 1 ? "" : "s"} from the connected sheet\n\n${auto?.body ?? ""}`,
+    [{ path: "components/cards.json", content: content.cards }, { path: "components/printings.json", content: content.printings }],
+    `${subject}\n\n${detail}`,
     `${u.handle} <${u.email}>`);
-  await q.recordSync(db, slug, "sheet", sha);
-  ctx.send(200, { saved: true, commit: sha, changes, warnings, summary: auto?.title ?? null });
-}, "pull the connected sheet → diff → validated commit (?dry=1 to preview only)");
+  await q.recordSync(db, slug, "sheet", sha, plan.source.hash, plan.source.revision);
+  ctx.send(200, { saved: true, commit: sha, commit_message: subject, ...payload, summary: auto?.title ?? null });
+}, "Sheet working copy → semantic/visual candidate → optimistic, validated commit (?dry=1 checks)");
 
 /* ---------- routes: releases (citable, immutable versions) ---------- */
 const TAG_RE = /^v?[0-9][0-9A-Za-z._-]{0,31}$/;
@@ -944,7 +1132,7 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const notes = commits.map(h => `- ${h.subject} (${h.author})`).join("\n") || "- (initial release)";
   await q.createRelease(db, { game_slug: slug, tag, sha, title: title?.trim() || null, notes, author_id: u.id });
   await q.recordEvent(db, { id: newId("ev"), kind: "release", actor_id: u.id, game_slug: slug, target: tag });
-  for (const kind of ["pnp", "tts", "ttc"]) { try { await cache.ensureExport(mat(slug), slug, sha, kind); } catch {} }  // freeze exports at the sha
+  for (const kind of ["pnp", "tts", "ttc"]) { try { await cache.ensureExport(mat(slug), slug, sha, kind, { publicOrigin: PUBLIC_ORIGIN }); } catch {} }  // freeze exports at the sha
   ctx.send(201, { tag, sha, notes });
 }, "cut a release: pin a tag to the current sha with an auto-changelog (owner only)");
 

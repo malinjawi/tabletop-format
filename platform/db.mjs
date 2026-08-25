@@ -182,13 +182,15 @@ export const q = {
   markAllRead: (db, userId) => db.prepare(`UPDATE notifications SET read = 1 WHERE user_id = ?`).run(userId),
 
   connectSource: (db, s) => db.prepare(
-    `INSERT INTO sync_sources (game_slug, kind, url, connected_by, created_at) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (game_slug, kind) DO UPDATE SET url = excluded.url, connected_by = excluded.connected_by`)
-    .run(s.game_slug, s.kind, s.url, s.connected_by ?? null, Date.now()),
+    `INSERT INTO sync_sources (game_slug, kind, url, connected_by, last_sha, created_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (game_slug, kind) DO UPDATE SET url = excluded.url, connected_by = excluded.connected_by,
+       last_sync = NULL, last_sha = excluded.last_sha, source_hash = NULL, source_revision = NULL`)
+    .run(s.game_slug, s.kind, s.url, s.connected_by ?? null, s.last_sha ?? null, Date.now()),
   sourceFor: (db, slug, kind) => db.prepare(
     "SELECT * FROM sync_sources WHERE game_slug = ? AND kind = ?").get(slug, kind),
-  recordSync: (db, slug, kind, sha) => db.prepare(
-    "UPDATE sync_sources SET last_sync = ?, last_sha = ? WHERE game_slug = ? AND kind = ?").run(Date.now(), sha, slug, kind),
+  recordSync: (db, slug, kind, sha, sourceHash = null, sourceRevision = null) => db.prepare(
+    "UPDATE sync_sources SET last_sync = ?, last_sha = ?, source_hash = ?, source_revision = ? WHERE game_slug = ? AND kind = ?")
+    .run(Date.now(), sha, sourceHash, sourceRevision, slug, kind),
   disconnectSource: (db, slug, kind) => db.prepare(
     "DELETE FROM sync_sources WHERE game_slug = ? AND kind = ?").run(slug, kind),
 

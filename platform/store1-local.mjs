@@ -139,7 +139,14 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       try { return Buffer.from(git(["show", `${ref}:${rel(slug)}/${relPath}`], QUIET)); }
       catch { return null; }
     },
-    headSha() { return git(["rev-parse", "--short", "HEAD"]); },
+    // Each game is conceptually its own repository even though the local beta
+    // driver stores several game directories in one checkout. Key versions to
+    // the latest commit that touched THIS game so an unrelated game's commit
+    // cannot invalidate exports or make Sheet sync report false local drift.
+    headSha(slug) {
+      return git(["log", "-1", "--format=%h", "--", rel(slug)], QUIET)
+        || git(["rev-parse", "--short", "HEAD"]);
+    },
 
     /** SPEC §7 write path: LFS batch upload + pointer committed (or portable inline). */
     async putAsset(slug, relPath, buf, author) {

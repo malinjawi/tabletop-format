@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i > -1 ? process.argv[i + 1] : d; };
 let CSV = arg("--csv", null) ? readFileSync(arg("--csv"), "utf8")
-  : "name,type,text,cost\nSpark,unit,Deal 1 damage.,1\nWall,unit,Blocks.,2\n";
+  : "id,name,type,text,cost\nspark,Spark,unit,Deal 1 damage.,1\nwall,Wall,unit,Blocks.,2\n";
 createServer((req, res) => {
   if (req.method === "POST" && req.url.startsWith("/_set")) {
     let b = ""; req.on("data", d => b += d);

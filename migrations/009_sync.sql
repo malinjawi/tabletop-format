@@ -1,6 +1,6 @@
--- 009: external source connections (Store 2). A game can be bound to an
--- external source of truth for its card data — e.g. a published Google Sheet.
--- We store only a PUBLIC url + sync bookkeeping: never credentials.
+-- 009: external working-copy connections (Store 2). A game can attach a Sheet
+-- or CSV authoring surface without making it the accepted source of history.
+-- The value is a public URL or a credential-free add-on source identity.
 CREATE TABLE IF NOT EXISTS sync_sources (
   game_slug   TEXT NOT NULL,
   kind        TEXT NOT NULL,           -- 'sheet'

@@ -26,8 +26,11 @@ check_fails(){ # inverse: command MUST exit nonzero
 }
 
 say "e2e: scratch at $SCRATCH"
-tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='examples/*/exports' -cf - . | tar -C "$SCRATCH" -xf -
+tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='tmp' --exclude='examples/*/exports' -cf - . | tar -C "$SCRATCH" -xf -
 cd "$SCRATCH" || { echo "FATAL: cannot cd to scratch"; exit 2; }
+# The scratch copy intentionally excludes dependency bytes, but Node tools still
+# resolve the exact dependencies installed for this checkout.
+[ ! -d "$REPO/node_modules" ] || ln -s "$REPO/node_modules" "$SCRATCH/node_modules"
 # SAFETY: git must never walk up into the real repo (scratch has no .git of its own
 # until section 'git porcelain' inits it). Without this, a failed scratch copy would
 # make git commit/reset --hard operate on the source repo and destroy work.
@@ -281,8 +284,8 @@ PORT=$(( (RANDOM % 2000) + 18000 ))
 node server.mjs --port $PORT > "$SCRATCH/srv.log" 2>&1 &
 SRVPID=$!
 sleep 1.5
-NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;print(len(json.load(sys.stdin)))" 2>/dev/null)
-[ "$NGAMES" = "3" ] && ok "server discovers 3 games" || bad "server discovery" "got '$NGAMES'"
+NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;d=json.load(sys.stdin);need={'ember','harbor-nine','netrunner-urbp'};slugs={g['slug'] for g in d};assert need<=slugs;print(len(d))" 2>/dev/null)
+[ -n "$NGAMES" ] && ok "server discovers the game catalog ($NGAMES games, core examples present)" || bad "server discovery" "missing core examples"
 curl -s "localhost:$PORT/api/games/ember/cards" | python3 -c "
 import json,sys
 cards=json.load(sys.stdin)
@@ -748,6 +751,27 @@ node -e "
   console.log('issues+comments complete');
 })().catch(e=>{console.error(e);process.exit(13)})" && ok "issues: 401 gate -> open -> number-per-game -> thread -> author/owner close (403 for others)" || bad "issues flow"
 kill $ISPID 2>/dev/null
+
+say "== FEATURE: Google Sheets working copy → reviewed game candidate =="
+SYNCPORT=$(( (RANDOM % 1500) + 41000 ))
+SHEETPORT=$(( SYNCPORT + 2000 ))
+node tools/sheet-mock.mjs --port $SHEETPORT > "$SCRATCH/sheet-mock.log" 2>&1 &
+SHEETPID=$!
+DB_PATH="$SCRATCH/sheet-sync.db" CACHE_DIR="$SCRATCH/sheet-sync-cache" \
+  node server.mjs --port $SYNCPORT > "$SCRATCH/sheet-sync-server.log" 2>&1 &
+SYNCPID=$!
+sleep 1.5
+if node tools/sync-check.mjs "http://127.0.0.1:$SYNCPORT" "http://127.0.0.1:$SHEETPORT/sheet.csv" > "$SCRATCH/sheet-sync-check.log" 2>&1; then
+  ok "Sheets: stable ids → candidate token → validation/render payload → three-way merge → stale-review guards → all exports"
+else
+  bad "Sheets reviewed-candidate connector" "$(tail -1 "$SCRATCH/sheet-sync-check.log")"
+fi
+if node tools/sheets-addon-check.mjs "http://127.0.0.1:$SYNCPORT" > "$SCRATCH/sheets-addon-check.log" 2>&1; then
+  ok "actual Code.gs: sign in → attach private tab → dirty hint → check → exact candidate commit"
+else
+  bad "Google Sheets Apps Script connector" "$(tail -1 "$SCRATCH/sheets-addon-check.log")"
+fi
+kill $SYNCPID $SHEETPID 2>/dev/null
 
 say ""
 say "(perf: run ./perf.sh separately)"
