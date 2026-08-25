@@ -1,0 +1,21 @@
+{
+  "id": "2026-07-09-post-patch",
+  "date": "2026-07-09",
+  "version_ref": "f59991d",
+  "format_id": "standard",
+  "location": "screentop",
+  "duration_minutes": 33,
+  "players": [
+    { "name": "Linja", "result": "loss" },
+    { "name": "Sam", "deck_id": "burn-rush", "result": "win" }
+  ],
+  "notes": "First session on the post-patch build (Ash Cloak at 2, Bellows no longer self-discards). With Wildfire restricted, games went the distance — both went past round 5.",
+  "card_notes": [
+    { "card_id": "ash_cloak", "tag": "balance", "note": "At cost 2 it's a real decision instead of an auto-play. Good change." },
+    { "card_id": "bellows", "tag": "fun", "note": "Keeping Bellows in play opens a slow-burn economy line nobody had explored. Two distinct archetypes now." },
+    { "card_id": "ember_thief", "tag": "balance", "note": "Quietly the best card now? Watch steal tempo over next sessions." }
+  ],
+  "decisions": [
+    { "action": "Hold all changes; gather 3 more sessions on this build", "rationale": "Patch looks right; don't over-correct." }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "burn-rush",
+  "name": "Burn Rush",
+  "format_id": "standard",
+  "cards": {
+    "kindling": 3,
+    "twin_flame": 2,
+    "ash_cloak": 2,
+    "bellows": 1,
+    "wildfire": 1,
+    "ember_thief": 2,
+    "last_light": 1,
+    "cinder_rat": 2
+  }
+}

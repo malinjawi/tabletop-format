@@ -1,0 +1,22 @@
+{
+  "id": "2026-06-27-wildfire-watch",
+  "date": "2026-06-27",
+  "version_ref": "9d1b530",
+  "format_id": "standard",
+  "location": "tts",
+  "duration_minutes": 41,
+  "players": [
+    { "name": "Linja", "deck_id": "burn-rush", "result": "win" },
+    { "name": "Priya", "result": "loss" }
+  ],
+  "notes": "Three games over TTS (41 min total). Wildfire openings won 2 of 3 — whoever draws it early snowballs. Ash economy otherwise feels tight and interesting.",
+  "card_notes": [
+    { "card_id": "wildfire", "tag": "balance", "note": "Won 2/3 games on the back of turn-1/2 Wildfire. 40% of games this week ended by round two when it appears early.", "suggestion": "Restrict to 1 copy in Standard rather than nerfing the card — burn should stay scary, just not consistent." },
+    { "card_id": "last_light", "tag": "timing", "note": "Interaction with Ash Cloak prevention order was ambiguous at the table.", "suggestion": "Ruling: defender chooses order." },
+    { "card_id": "bellows", "tag": "balance", "note": "Only enables the Wildfire opening; fine on its own." }
+  ],
+  "decisions": [
+    { "action": "Publish standard-2026-07 restriction: Wildfire limited to 1", "card_id": "wildfire", "rationale": "Two sessions of data; restriction preserves the archetype while killing the coin-flip opening." },
+    { "action": "Add ruling for Last Light + Ash Cloak ordering", "card_id": "last_light", "rationale": "Second timing ambiguity found by playtesters." }
+  ]
+}

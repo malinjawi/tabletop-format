@@ -1,0 +1,15 @@
+# One file with all sets (small game); larger games may use one file per set.
+- id: core
+  name: Ember Core
+  position: 1
+  release_date: "2026-07-01"
+  size: 8
+  description: The base 14-card deck (8 unique cards).
+
+- id: embers_rising
+  name: Embers Rising
+  cycle_id: first_flame
+  position: 1
+  release_date: "2026-09-01"
+  size: 2
+  description: Promo mini-expansion demonstrating reprints and variants.

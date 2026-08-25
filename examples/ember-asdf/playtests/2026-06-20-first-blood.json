@@ -1,0 +1,22 @@
+{
+  "id": "2026-06-20-first-blood",
+  "date": "2026-06-20",
+  "version_ref": "9d1b530",
+  "format_id": "standard",
+  "location": "in-person",
+  "duration_minutes": 14,
+  "players": [
+    { "name": "Linja", "deck_id": "burn-rush", "result": "loss" },
+    { "name": "Sam", "result": "win", "first_game": true }
+  ],
+  "notes": "First outside playtest. Game length is right (under 15). New player understood Dawn/Act immediately; Clash took one full example to click.",
+  "card_notes": [
+    { "card_id": "wildfire", "tag": "balance", "note": "Sam opened double Wildfire via Bellows and the game was decided by round 2.", "suggestion": "Cost up, or limit copies." },
+    { "card_id": "twin_flame", "tag": "confusing", "note": "Both players played Twin Flame simultaneously — rules don't say what happens.", "suggestion": "Needs a ruling." },
+    { "card_id": "cinder_rat", "tag": "fun", "note": "The hand-peek felt sneaky and great. Signature card energy." }
+  ],
+  "decisions": [
+    { "action": "Add ruling for double Twin Flame", "card_id": "twin_flame", "rationale": "Undefined interaction found at the table." },
+    { "action": "Watch Wildfire across more sessions before nerfing", "card_id": "wildfire", "rationale": "One game is noise, not signal." }
+  ]
+}

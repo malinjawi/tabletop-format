@@ -1,0 +1,49 @@
+format_version: "0.1.0"
+id: ember-asdf
+title: Ember
+description: >
+  An 18-card dueling microgame. Draft embers, stoke your flame, extinguish
+  your rival's. Created as the reference example for the format — free to
+  copy, fork, sell, or set on fire.
+version: "0.2.0"
+license: CC0-1.0
+authors:
+  - name: The Format Project
+    role: design
+players:
+  min: 2
+  max: 2
+playtime_minutes:
+  min: 10
+  max: 15
+default_provenance:
+  source: human
+  creator: The Format Project
+attribute_definitions:
+  - key: cost
+    name: Cost
+    type: integer
+    required: true
+    description: Sparks paid to play this card.
+  - key: power
+    name: Power
+    type: integer
+    description: Flame strength in a clash.
+symbols:
+  - key: spark
+    name: Spark
+    glyph: "✦"
+    asset: assets/icons/spark.png
+  - key: ash
+    name: Ash
+    glyph: "▲"
+    asset: assets/icons/ash.png
+type_colors:
+  ember:  { fg: "#8c2f1b", bg: "#f6e3d3" }
+  ward:   { fg: "#1b4f8c", bg: "#dbe9f6" }
+  tool:   { fg: "#7a5a1b", bg: "#f4ead2" }
+  figure: { fg: "#3a6b28", bg: "#e2f0d9" }
+attribution:
+  source_id: ember
+  source_title: "Ember"
+  source_license: CC0-1.0
