@@ -15,6 +15,9 @@ two-way synchronization:
 
 - Sheets remains the editor of choice and owns draft collaboration/history.
 - A Sheet edit never changes the accepted Forge game by itself.
+- While the sidebar is open, **Live diff** polls the shared edit marker every two
+  seconds. After an edit burst settles it automatically recomputes the same
+  authoritative semantic, visual, conflict, and validation candidate.
 - **Check draft changes** creates an authoritative semantic, visual, and
   validation candidate from the active tab.
 - **Commit this exact candidate** is the only promotion step. Forge rechecks the
@@ -78,6 +81,13 @@ are useful only as a quick dirty hint; the person authenticated to Forge and
 pressing Commit is the verified submitter. Google remains the audit trail for
 draft-level coworker activity.
 
+Live diff does not send every keystroke to Forge. The sidebar cheaply polls the
+document's dirty timestamp, debounces an edit burst, and then sends one current
+Sheet snapshot for an authoritative dry run. The watcher can be paused. If a
+new edit arrives while a check or commit is in flight, revision-aware clearing
+keeps the newer marker dirty and schedules another check; it never labels that
+newer edit reviewed or committed.
+
 ## Stable row identity
 
 Use a permanent, unique `id` column. Names can change; IDs cannot. The CSV
@@ -140,7 +150,8 @@ review.
 Forge server with a small mock of the Apps Script host. The main `e2e.sh` suite
 runs it automatically and covers sign-in, private-tab attachment, password/token
 storage boundaries, password-free token reuse, clean and dirty status,
-validation/preview data, exact candidate commit, resulting cards, attribution,
+polled live-diff hints, edit-during-check race protection, validation/preview
+data, exact candidate commit, resulting cards, attribution,
 wrong-tab rejection, expired-session cleanup, safe detach, and sign-out.
 
 Sources are limited to 5 MB. Production sources must use HTTPS; redirect targets

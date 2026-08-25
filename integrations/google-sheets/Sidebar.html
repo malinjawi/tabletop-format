@@ -14,7 +14,13 @@
     button.primary{color:#fff;background:#1f6f43;border-color:#1f6f43}button:disabled{opacity:.5;cursor:default}
     .status{display:flex;gap:8px;align-items:flex-start}.dot{width:10px;height:10px;border-radius:50%;background:#8c959f;margin-top:4px;flex:none}
     .dirty .dot{background:#d29922}.clean .dot{background:#2da44e}.bad .dot{background:#cf222e}
+    .watch{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #d8dee4;padding-bottom:9px;margin-bottom:10px}
+    .watch-state{display:flex;align-items:center;gap:7px}.pulse{width:8px;height:8px;border-radius:50%;background:#8c959f;flex:none}
+    .pulse.live{background:#2da44e;box-shadow:0 0 0 0 #2da44e80;animation:pulse 2s infinite}@keyframes pulse{70%{box-shadow:0 0 0 6px #2da44e00}100%{box-shadow:0 0 0 0 #2da44e00}}
+    .watch button{font-size:11px;padding:4px 7px}
     .big{font-weight:700}.muted{color:#66707b;font-size:11px}.counts{margin-top:8px}.change{border-left:3px solid #bf8700;padding-left:8px;margin:7px 0}
+    .change-head{font-size:12px}.minus,.plus{font:11px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;padding:2px 5px;margin-top:2px;border-radius:4px}
+    .minus{color:#82071e;background:#ffebe9}.plus{color:#116329;background:#dafbe1}.added{border-left-color:#2da44e}.removed{border-left-color:#cf222e}
     .preview{border-top:1px solid #d8dee4;margin-top:10px;padding-top:9px}.pair{display:flex;gap:7px;overflow:auto;margin-top:5px}
     .face{position:relative;flex:0 0 116px;min-height:158px;border:1px solid #c6ccd2;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 2px 7px #1f23281a}
     .face .name{padding:7px 26px 6px 7px;background:#e9eef3;font-weight:700}.face .badge{position:absolute;right:6px;top:5px;background:#34495e;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-weight:700}
@@ -43,6 +49,7 @@
   </div>
 
   <div class="box hidden" id="candidate">
+    <div class="watch"><div class="watch-state"><span class="pulse" id="watch-pulse"></span><div><div class="big" id="watch-title">Live diff starting…</div><div class="muted" id="watch-detail">Watching this tab for edits</div></div></div><button id="watch-toggle" onclick="toggleLiveDiff()">Pause</button></div>
     <div class="status" id="status"><span class="dot"></span><div><div class="big" id="status-title">Not checked</div><div class="muted" id="status-detail">Sheet edits are saved by Google. Check what has not entered Forge.</div></div></div>
     <div id="results"></div>
     <div class="row"><button class="primary" onclick="checkCandidate()">Check draft changes</button><button onclick="showSettings()">Settings</button></div>
@@ -56,10 +63,13 @@
   <div class="error" id="error"></div>
 
   <script>
-    let state=null, preview=null;
+    let state=null, preview=null, checking=false, pendingCheck=false;
+    let liveDiff=true, pulseTimer=null, refreshTimer=null, lastDirtyAt="";
+    const POLL_MS=2000, EDIT_DEBOUNCE_MS=900;
     const el=id=>document.getElementById(id);
     function busy(on){document.body.classList.toggle("spin",on);}
     function fail(err){busy(false);el("error").textContent=err&&err.message?err.message:String(err||"Unknown error");}
+    function connected(){return !!(state&&state.origin&&state.game&&state.has_token);}
     function init(s){
       state=s; el("sheet-label").textContent=`${s.spreadsheet_name} · ${s.sheet_name}`;
       el("origin").value=s.origin||""; el("game").value=s.game||"";el("handle").value=s.user_handle||"";
@@ -69,6 +79,9 @@
       el("sign-out").classList.toggle("hidden",!s.has_token);
       el("detach").classList.toggle("hidden",!ready);
       if(ready&&s.dirty_at){el("status").className="status dirty";el("status-title").textContent="Draft may have uncommitted game changes";}
+      lastDirtyAt=s.dirty_at||"";
+      startLiveDiff();
+      if(ready) scheduleCandidateCheck(180);
     }
     function showSettings(){
       el("password").value="";
@@ -77,9 +90,53 @@
       el("settings").classList.remove("hidden");el("candidate").classList.add("hidden");
     }
     function hideSettings(){if(state&&state.origin&&state.game&&state.has_token){el("settings").classList.add("hidden");el("candidate").classList.remove("hidden");}}
+    function watcherUi(mode,detail){
+      const active=mode==="live"||mode==="checking";
+      el("watch-pulse").className="pulse "+(active?"live":"");
+      el("watch-title").textContent=mode==="paused"?"Live diff paused":mode==="checking"?"Updating live diff…":mode==="error"?"Live diff retrying":"Live diff on";
+      el("watch-detail").textContent=detail||(active?"Polling this tab every 2 seconds":"Sheet edits will not refresh the preview");
+      el("watch-toggle").textContent=liveDiff?"Pause":"Resume";
+    }
+    function startLiveDiff(){
+      clearTimeout(pulseTimer);clearTimeout(refreshTimer);
+      if(!liveDiff||!connected()){watcherUi("paused",connected()?"Resume to watch Sheet edits":"Connect this tab to start");return;}
+      watcherUi("live");
+      pulseTimer=setTimeout(pollForgePulse,250);
+    }
+    function toggleLiveDiff(){
+      liveDiff=!liveDiff;
+      if(!liveDiff){clearTimeout(pulseTimer);clearTimeout(refreshTimer);watcherUi("paused");return;}
+      startLiveDiff();
+    }
+    function invalidatePreview(detail){
+      preview=null;el("commit-form").classList.add("hidden");
+      el("status").className="status dirty";el("status-title").textContent="Sheet changed — refreshing diff";
+      el("status-detail").textContent=detail||"The previous candidate is no longer current.";
+    }
+    function scheduleCandidateCheck(delay){
+      if(!liveDiff||!connected())return;
+      clearTimeout(refreshTimer);
+      refreshTimer=setTimeout(()=>checkCandidate(true),delay==null?EDIT_DEBOUNCE_MS:delay);
+    }
+    function pollForgePulse(){
+      if(!liveDiff||!connected())return;
+      google.script.run.withSuccessHandler(p=>{
+        if(!liveDiff)return;
+        const wrongTab=p.configured_source_id&&p.configured_source_id!==p.source_id;
+        if(wrongTab){watcherUi("error","This connection belongs to another tab");pulseTimer=setTimeout(pollForgePulse,POLL_MS);return;}
+        if(p.dirty_at&&p.dirty_at!==lastDirtyAt){
+          lastDirtyAt=p.dirty_at;invalidatePreview("Waiting for this edit burst to settle before checking Forge.");scheduleCandidateCheck();
+        }
+        if(!checking)watcherUi("live");
+        pulseTimer=setTimeout(pollForgePulse,POLL_MS);
+      }).withFailureHandler(err=>{
+        watcherUi("error",err&&err.message?err.message:"Could not read Sheet edit state");
+        pulseTimer=setTimeout(pollForgePulse,5000);
+      }).getForgePulse();
+    }
     function saveSettings(){
       busy(true);el("error").textContent="";
-      google.script.run.withSuccessHandler(x=>{busy(false);el("password").value="";init(x.state);checkCandidate();}).withFailureHandler(fail)
+      google.script.run.withSuccessHandler(x=>{busy(false);el("password").value="";init(x.state);}).withFailureHandler(fail)
         .saveForgeSettings({origin:el("origin").value,game:el("game").value,handle:el("handle").value,password:el("password").value});
     }
     function signOut(){
@@ -91,9 +148,20 @@
       busy(true);el("error").textContent="";
       google.script.run.withSuccessHandler(x=>{busy(false);preview=null;init(x.state);}).withFailureHandler(fail).detachForgeWorkingCopy();
     }
-    function checkCandidate(){
-      busy(true);el("error").textContent="";el("commit-form").classList.add("hidden");
-      google.script.run.withSuccessHandler(x=>{busy(false);state=x.state;renderResult(x.result);}).withFailureHandler(fail).checkForgeCandidate();
+    function checkCandidate(automatic){
+      if(checking){pendingCheck=true;return;}
+      checking=true;pendingCheck=false;clearTimeout(refreshTimer);el("error").textContent="";el("commit-form").classList.add("hidden");
+      if(!automatic)busy(true);watcherUi("checking","Building a semantic and visual candidate in Forge");
+      google.script.run.withSuccessHandler(x=>{
+        checking=false;busy(false);state=x.state;lastDirtyAt=state.dirty_at||"";renderResult(x.result);
+        if(x.stale_local){
+          invalidatePreview("A newer Sheet edit arrived while Forge was checking. Rechecking automatically.");scheduleCandidateCheck(250);
+        }else watcherUi(liveDiff?"live":"paused");
+        if(pendingCheck)scheduleCandidateCheck(100);
+      }).withFailureHandler(err=>{
+        checking=false;watcherUi(liveDiff?"error":"paused");fail(err);
+        if(pendingCheck)scheduleCandidateCheck(500);
+      }).checkForgeCandidate();
     }
     function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
     function face(c){
@@ -104,12 +172,22 @@
     function candidatePreview(item){
       return `<div class="preview"><b>${esc((item.candidate||item.before||{}).name||item.id)}</b><div class="pair"><div><div class="muted">FORGE NOW</div>${face(item.before)}</div><div><div class="muted ok">CANDIDATE</div>${face(item.candidate)}</div></div></div>`;
     }
+    function diffValue(value){
+      if(value===undefined||value===null)return "∅";
+      if(typeof value==="string")return value===""?"(empty)":value;
+      return JSON.stringify(value);
+    }
+    function changeHtml(c){
+      if(c.kind==="added")return `<div class="change added"><div class="change-head"><b>${esc(c.name)}</b> · ${esc(c.card)}</div><div class="plus">+ card added</div></div>`;
+      if(c.kind==="removed")return `<div class="change removed"><div class="change-head"><b>${esc(c.name)}</b> · ${esc(c.card)}</div><div class="minus">− card removed</div></div>`;
+      return `<div class="change"><div class="change-head"><b>${esc(c.name)}</b> · ${esc(c.field)}</div><div class="minus">− ${esc(diffValue(c.from))}</div><div class="plus">+ ${esc(diffValue(c.to))}</div></div>`;
+    }
     function renderResult(r){
       preview=r.preview; const counts=r.counts||{}, changes=r.changes||[], warnings=r.warnings||[];
       const status=el("status");status.className="status "+(r.status==="clean"?"clean":r.status==="changes"?"dirty":"bad");
       el("status-title").textContent=r.status==="clean"?"No uncommitted game changes":r.status==="changes"?`${counts.cards||0} cards differ from Forge`:r.status==="conflicts"?"Forge and Sheet changes conflict":"Candidate fails validation";
       el("status-detail").textContent=`Compared with Forge ${String(r.preview&&r.preview.head_sha||"").slice(0,8)}. Google still owns draft history.`;
-      const lines=changes.slice(0,30).map(c=>`<div class="change"><b>${esc(c.name)}</b> · ${esc(c.kind==="changed"?c.field:c.kind)}</div>`).join("");
+      const lines=changes.slice(0,30).map(changeHtml).join("");
       const more=changes.length>30?`<div class="muted">+ ${changes.length-30} more field changes</div>`:"";
       const previews=(r.candidate_cards||[]).slice(0,4).map(candidatePreview).join("");
       const previewMore=(r.candidate_cards||[]).length>4?`<div class="muted">+ ${(r.candidate_cards||[]).length-4} more affected cards</div>`:"";
@@ -120,7 +198,13 @@
     }
     function commitCandidate(){
       busy(true);el("error").textContent="";
-      google.script.run.withSuccessHandler(x=>{busy(false);state=x.state;preview=null;el("commit-form").classList.add("hidden");el("status").className="status clean";el("status-title").textContent=`Committed ${String(x.result.commit||"").slice(0,8)}`;el("status-detail").textContent="This exact candidate is now available to Forge exports and version-pinned playtests.";el("results").innerHTML=`<div class="ok">✓ ${esc(x.result.commit_message||"Candidate committed")}</div>`;}).withFailureHandler(fail)
+      google.script.run.withSuccessHandler(x=>{
+        busy(false);state=x.state;lastDirtyAt=state.dirty_at||"";preview=null;el("commit-form").classList.add("hidden");
+        el("status").className="status "+(x.stale_local?"dirty":"clean");el("status-title").textContent=`Committed ${String(x.result.commit||"").slice(0,8)}`;
+        el("status-detail").textContent=x.stale_local?"That reviewed snapshot committed; newer Sheet edits are being checked now.":"This exact candidate is now available to Forge exports and version-pinned playtests.";
+        el("results").innerHTML=`<div class="ok">✓ ${esc(x.result.commit_message||"Candidate committed")}</div>`;
+        if(x.stale_local)scheduleCandidateCheck(250);
+      }).withFailureHandler(fail)
         .commitForgeCandidate({preview,commit_message:el("message").value,contributors:el("contributors").value});
     }
     google.script.run.withSuccessHandler(init).withFailureHandler(fail).getForgeState();

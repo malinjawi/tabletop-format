@@ -77,6 +77,28 @@ function getForgeState() {
   return forgeSettings_();
 }
 
+/** Cheap sidebar heartbeat. It deliberately does not contact Forge or serialize
+ * the card table; the sidebar polls this shared edit marker, then requests one
+ * authoritative candidate after the edit burst settles. */
+function getForgePulse() {
+  const state = forgeSettings_();
+  return {
+    dirty_at: state.dirty_at,
+    source_id: state.source_id,
+    configured_source_id: state.configured_source_id,
+    has_token: state.has_token,
+  };
+}
+
+/** Delete only the marker represented by the snapshot we just processed. An
+ * onEdit that lands during a Forge request writes a newer marker which must
+ * remain dirty and trigger another candidate check. */
+function clearForgeDirtyRevision_(revision) {
+  const doc = PropertiesService.getDocumentProperties();
+  if (revision && doc.getProperty(FORGE_DOC_KEYS.dirty) === revision)
+    doc.deleteProperty(FORGE_DOC_KEYS.dirty);
+}
+
 function saveForgeSettings(input) {
   input = input || {};
   const origin = String(input.origin || "").trim().replace(/\/+$/, "");
@@ -172,18 +194,24 @@ function forgeSnapshot_() {
 
 function attachForgeWorkingCopy() {
   const state = forgeSettings_();
-  const result = forgeRequest_(`/api/games/${encodeURIComponent(state.game)}/sync/sheet`, "put", forgeSnapshot_());
-  if (result.connected) PropertiesService.getDocumentProperties().deleteProperty(FORGE_DOC_KEYS.dirty);
-  return { state: forgeSettings_(), result };
+  const snapshot = forgeSnapshot_();
+  const result = forgeRequest_(`/api/games/${encodeURIComponent(state.game)}/sync/sheet`, "put", snapshot);
+  if (result.connected) clearForgeDirtyRevision_(snapshot.source_revision);
+  const nextState = forgeSettings_();
+  return { state: nextState, result,
+    stale_local: !!nextState.dirty_at && nextState.dirty_at !== snapshot.source_revision };
 }
 
 function checkForgeCandidate() {
   const state = forgeSettings_();
   if (state.configured_source_id && state.configured_source_id !== state.source_id)
     throw new Error("This Forge connection belongs to another tab. Open that tab or configure this one separately.");
-  const result = forgeRequest_(`/api/games/${encodeURIComponent(state.game)}/sync/pull?dry=1`, "post", forgeSnapshot_());
-  if (result.status === "clean") PropertiesService.getDocumentProperties().deleteProperty(FORGE_DOC_KEYS.dirty);
-  return { state: forgeSettings_(), result };
+  const snapshot = forgeSnapshot_();
+  const result = forgeRequest_(`/api/games/${encodeURIComponent(state.game)}/sync/pull?dry=1`, "post", snapshot);
+  if (result.status === "clean") clearForgeDirtyRevision_(snapshot.source_revision);
+  const nextState = forgeSettings_();
+  return { state: nextState, result,
+    stale_local: !!nextState.dirty_at && nextState.dirty_at !== snapshot.source_revision };
 }
 
 function commitForgeCandidate(input) {
@@ -194,14 +222,17 @@ function commitForgeCandidate(input) {
     throw new Error("Check the candidate again before committing it.");
   const contributors = String(input.contributors || "").split(",").map(v => v.trim()).filter(Boolean);
   const state = forgeSettings_();
-  const payload = Object.assign(forgeSnapshot_(), {
+  const snapshot = forgeSnapshot_();
+  const payload = Object.assign(snapshot, {
     preview: input.preview,
     commit_message: message,
     contributors,
   });
   const result = forgeRequest_(`/api/games/${encodeURIComponent(state.game)}/sync/pull`, "post", payload);
-  if (result.saved) PropertiesService.getDocumentProperties().deleteProperty(FORGE_DOC_KEYS.dirty);
-  return { state: forgeSettings_(), result };
+  if (result.saved) clearForgeDirtyRevision_(snapshot.source_revision);
+  const nextState = forgeSettings_();
+  return { state: nextState, result,
+    stale_local: !!nextState.dirty_at && nextState.dirty_at !== snapshot.source_revision };
 }
 
 function detachForgeWorkingCopy() {

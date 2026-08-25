@@ -29,6 +29,9 @@ const ok = (condition, message) => {
 const sidebar = readFileSync(join(ROOT, "integrations/google-sheets/Sidebar.html"), "utf8");
 ok(sidebar.includes('id="settings-back"') && sidebar.includes("← Back to candidate") &&
   sidebar.includes('onclick="hideSettings()"'), "connection settings always provide a return to the candidate");
+ok(sidebar.includes("getForgePulse()") && sidebar.includes("POLL_MS=2000") &&
+  sidebar.includes("scheduleCandidateCheck") && sidebar.includes("diffValue(c.from)"),
+  "sidebar polls the cheap edit marker and renders field-level live diffs");
 
 const api = async (path, options = {}) => {
   const response = await fetch(origin + path, options);
@@ -130,6 +133,15 @@ sheetRows = [
 ];
 context.onEdit();
 ok(docValues.has("FORGE_DIRTY_AT"), "onEdit marks the shared working copy possibly dirty");
+const markedRevision = docValues.get("FORGE_DIRTY_AT");
+const pulse = context.getForgePulse();
+ok(pulse.dirty_at === markedRevision && pulse.source_id === pulse.configured_source_id,
+  "live-diff heartbeat exposes the shared edit marker without contacting Forge");
+docValues.set("FORGE_DIRTY_AT", "newer-edit-during-request");
+context.clearForgeDirtyRevision_(markedRevision);
+ok(docValues.get("FORGE_DIRTY_AT") === "newer-edit-during-request",
+  "an older candidate response cannot erase a newer Sheet edit marker");
+context.onEdit();
 const candidate = context.checkForgeCandidate();
 ok(candidate.result.status === "changes" && candidate.result.can_commit && candidate.result.counts.cards === 2 &&
   candidate.result.candidate_cards.length === 2, "authoritative check returns two playable changes, validation, and visual-preview data");
