@@ -130,9 +130,16 @@ attribution:
   source_title: <origin title>
   source_url: <origin url>
   source_license: <origin license at fork time>
+  source_ref: <exact source commit copied into this edition>
 ```
 License compatibility is enforced at *publish* (check_licenses: NC propagates,
 ShareAlike carries), not at fork (private experimentation is always allowed).
+
+A fork is an independent edition, not an implicit pull request. Its owner may
+make and release any number of changes permitted by the source license. Sending
+changes upstream is a later, explicit action that selects the edition as a PR
+source. The platform resolves `latest` to a commit before copying, so even a
+fork made while the source is active records one reproducible starting point.
 
 ## 10. Conformance
 

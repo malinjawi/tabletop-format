@@ -150,10 +150,10 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       return commitFiles(owner, slug, treeFiles(srcTree), message, author);
     },
 
-    async fork(src, dest, transformYaml, message, author) {
+    async fork(src, dest, transformYaml, message, author, ref = "HEAD") {
       const { name: forker, email } = parseAuthor(author);
       const srcOwner = ownerOf(src);
-      const { dir, cleanup } = await store.materialize(src, "HEAD", { resolveLfs: false });
+      const { dir, cleanup } = await store.materialize(src, ref, { resolveLfs: false });
       try {
         const files = treeFiles(dir);
         const gy = files.find(f => f.path === "game.yaml");

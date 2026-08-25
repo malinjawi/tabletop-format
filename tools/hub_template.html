@@ -231,6 +231,7 @@ async function refreshLive(){
     const h = await (await fetch("/healthz")).json(); LIVE = !!h.ok;
     if(!LIVE) return;
     const gs = await (await fetch("/api/games")).json();
+    window.__catalog=gs;
     for(const g of gs) STARS[g.slug]=g.stars??0;
     if(tok()){
       const r = await fetch("/api/me",{headers:authH()});
@@ -282,14 +283,46 @@ const starBtn = (slug) => LIVE
   : "";
 let FORKED_FROM={};
 async function forkGame(slug){
-  if(!ME){ authOpen(); return; }
-  const r=await fetch(`/api/games/${slug}/fork`,{method:"POST",headers:authH()});
-  const d=await r.json();
-  if(r.status===201){
-    alert(`⑂ Forked! '${d.slug}' is yours — attribution to '${slug}' is committed (${d.commit}).\nTaking you to your copy…`);
-    location.href=`/?t=${Date.now()}#/g/${d.slug}`; // reload → hub rebakes with the new game
-  } else if(r.status===401){ authOpen(); }
-  else toast(`✗ ${d.error??r.status}`);
+  if(!ME){ _afterAuth=()=>forkGame(slug); authOpen(); return; }
+  let releases=[];
+  try{const r=await fetch(`/api/games/${slug}/releases`);if(r.ok)releases=await r.json();}catch(e){}
+  const g=G(slug), choices=[{tag:"HEAD",label:"Latest working version",sha:"resolved when you create it"},
+    ...releases.map(r=>({tag:r.tag,label:`Release ${r.tag}`,sha:r.sha}))];
+  const ov=document.createElement("div");
+  ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
+  const box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 26px;max-width:500px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+  box.innerHTML=`
+    <div style="font-size:12px;color:var(--acc);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Create your own edition</div>
+    <h3 style="margin:0 0 8px;font-size:20px">Fork ${esc(g?.title||slug)}</h3>
+    <p style="margin:0 0 16px;color:var(--mut);font-size:13.5px;line-height:1.55">This creates a complete independent game under your account. Change one card or rebuild the whole thing within its <b>${esc(g?.license||"source")}</b> license. Nothing is sent upstream unless you explicitly propose it later.</p>
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.03em">Starting version
+      <select data-ref style="display:block;width:100%;margin-top:6px;padding:10px 11px;border:1px solid var(--bd);border-radius:8px;background:#fff;font:inherit">
+        ${choices.map((c,i)=>`<option value="${i}">${esc(c.label)} · ${esc(c.sha)}</option>`).join("")}
+      </select></label>
+    <div data-err style="display:none;color:var(--red);font-size:13px;margin-top:12px;background:#fff0f0;border:1px solid #ffd7d7;border-radius:8px;padding:9px 11px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>⑂ Create my edition</button></div>`;
+  ov.appendChild(box);document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  box.querySelector("[data-x]").onclick=close;
+  ov.addEventListener("mousedown",e=>{if(e.target===ov)close();});
+  box.querySelector("[data-ok]").onclick=async()=>{
+    const btn=box.querySelector("[data-ok]"), err=box.querySelector("[data-err]");
+    const choice=choices[parseInt(box.querySelector("[data-ref]").value,10)]||choices[0];
+    btn.disabled=true;btn.textContent="Creating exact copy…";err.style.display="none";
+    const r=await fetch(`/api/games/${slug}/fork`,{method:"POST",headers:{"content-type":"application/json",...authH()},body:JSON.stringify({ref:choice.tag})});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===201){
+      localStorage.setItem("forge_new_edition",d.slug);
+      close();toast(`<b>✓ Your edition is ready</b><br>Started from ${esc(d.source_label)} at <code>${esc(d.source_ref)}</code>. Nothing has been proposed upstream.`,7000);
+      setTimeout(()=>{location.href=`/?t=${Date.now()}#/g/${d.slug}`;},700);
+    }else if(r.status===409&&d.existing){
+      err.style.display="";err.innerHTML=`${esc(d.error)} <a data-open style="font-weight:600">Open it →</a>`;
+      err.querySelector("[data-open]").onclick=()=>{close();location.href=`/?t=${Date.now()}#/g/${d.existing}`;};
+      btn.disabled=false;btn.textContent="⑂ Create my edition";
+    }else if(r.status===401){close();_afterAuth=()=>forkGame(slug);authOpen();}
+    else{err.style.display="";err.textContent=d.error||`fork failed (${r.status})`;btn.disabled=false;btn.textContent="⑂ Create my edition";}
+  };
 }
 refreshLive();
 const $ = s => document.querySelector(s);
@@ -2597,17 +2630,19 @@ function explorePage(filter){
   const games = DATA.games.filter(g=>!filter||g.title.toLowerCase().includes(filter));
   $("#view").innerHTML = `
   <div class="hero"><div class="wrap">
-    <h1>Games are repositories here.</h1>
-    <p>Every game is versioned, forkable, and exportable. Card changes diff like code — but read like a designer wrote them. Print it, play it in TTS, remix it with credit.</p>
-    <button class="btn primary" style="margin-top:14px" onclick="newGameModal()">+ New game</button>
+    <h1>Find a game. Make it yours.</h1>
+    <p>Fork an exact version, change one card or the whole game, and download your independent edition ready to test. Proposing changes back is always your choice, and accepted work keeps your credit.</p>
+    <button class="btn primary" style="margin-top:14px" onclick="document.getElementById('game-catalog')?.scrollIntoView({behavior:'smooth'})">⑂ Browse games to remix</button>
+    <button class="btn" style="margin-top:14px;margin-left:6px" onclick="newGameModal()">Bring or start a game</button>
   </div></div>
-  <div class="wrap"><div class="gamegrid">${games.map(g=>`
+  <div class="wrap" id="game-catalog"><div class="gamegrid">${games.map(g=>`
     <div class="gcard">
       <h3><a onclick="go('g/${g.slug}')">${esc(g.title)}</a> <span class="badge lic">${esc(g.license)}</span></h3>
       <div class="desc">${esc(g.description).slice(0,120)}</div>
       <div class="thumbs">${g.cards.slice(0,4).map(c=>layoutCard(g,c,cfPrinting(g,c),{w:92})).join("")}</div>
       <div class="meta">
         ${starBtn(g.slug)}
+        ${LIVE?`<button class="btn" onclick="forkGame('${g.slug}')">⑂ Create edition</button>`:""}
         <span>🃏 ${g.ncards} cards</span><span>⑂ ${g.prs.length} PR${g.prs.length===1?"":"s"}</span>
         <span>🏷 ${g.releases.length} release${g.releases.length===1?"":"s"}</span>
         <span>updated ${esc(g.updated)}</span>
@@ -2662,8 +2697,8 @@ function repoPage(g, tab, mode){
       ${g.attribution?`<span class="badge">⑂ remix of ${esc(g.attribution.source_title)}</span>`:""}
       <div class="actions">
         ${starBtn(g.slug)}
-        <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Fork</button>
-        <button class="btn" onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Club asset pack (open-source 3D table)\\n· Tabletop Simulator mod\\n· Print-and-play PDF (300dpi, crop marks)')">⤓ Export</button>
+        <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Create edition</button>
+        <button class="btn" onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Club asset pack (open-source 3D table)\\n· Tabletop Simulator mod\\n· Print-and-play PDF (300dpi, crop marks)')">⤓ Download exact version</button>
         <button class="btn" onclick="printSheet('${g.slug}')" title="Every card at true physical size (63.5×88.9mm), ready to print">🖨 Print cards</button>
         ${EDITABLE_TABS.includes(tab)?`<button class="btn primary" onclick="go('g/${g.slug}/${tab}/edit')">✎ Edit ${tab}</button>`:``}
       </div>
@@ -2679,8 +2714,24 @@ function repoPage(g, tab, mode){
 const EDITABLE_TABS = ["cards","rules"];
 
 /* ---------- tabs ---------- */
+function editionPanel(g){
+  const a=g.attribution;if(!a)return"";
+  const source=a.source_id||"", own=!!(ME&&(ME.games||[]).includes(g.slug));
+  const ref=a.source_ref?` at <code>${esc(a.source_ref)}</code>`:"";
+  return `<div class="box" style="border-color:#b7a4e8;background:linear-gradient(135deg,#fbf9ff,#fff)">
+    <div class="bh" style="display:flex;align-items:center;gap:8px"><span style="color:var(--acc)">⑂</span> ${own?"Your independent edition":"Independent edition"}<span class="badge" style="margin-left:auto;color:var(--acc);border-color:#b7a4e8">remix</span></div>
+    <div class="bb"><div style="font-size:15px;font-weight:600;margin-bottom:5px">Started from ${esc(a.source_title||source)}${ref}</div>
+      <p style="font-size:13px;color:var(--mut);line-height:1.55;margin:0 0 13px">${own?"This copy is yours. Make as many changes and releases as its license allows. Nothing changes the source game unless you deliberately open a pull request.":"This game develops independently from its source; its attribution remains attached."}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${own?`<button class="btn primary" onclick="go('g/${g.slug}/cards/edit')">✎ Change cards</button><button class="btn" onclick="go('g/${g.slug}/cards')">▦ Connect a Sheet</button><button class="btn" onclick="exportMenu('${g.slug}')">⤓ Download this version</button>`:""}
+        ${own&&source?`<button class="btn" onclick="proposePr('${g.slug}','${source}')">⇡ Propose upstream</button>`:""}
+        ${source&&G(source)?`<button class="btn" onclick="go('g/${source}')">View source →</button>`:""}
+      </div>
+      ${own?`<div style="font-size:11.5px;color:var(--mut);margin-top:10px">Keep it as your edition, propose later, or do both. A pull request is optional.</div>`:""}
+    </div></div>`;
+}
 function overview(g){
-  $("#pane").innerHTML = `<div class="two"><div>
+  $("#pane").innerHTML = `${editionPanel(g)}<div class="two"><div>
     <div class="box"><div class="bh">README</div><div class="bb">
       <h2 style="margin-top:0">${esc(g.title)} <span style="color:var(--mut);font-weight:400">v${esc(g.version)}</span></h2>
       <p>${esc(g.description)}</p>

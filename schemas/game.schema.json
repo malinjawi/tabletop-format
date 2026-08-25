@@ -58,6 +58,11 @@
         "source_title": { "type": "string" },
         "source_url": { "type": "string", "format": "uri" },
         "source_license": { "type": "string" },
+        "source_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$",
+          "description": "Exact source commit copied when this edition was created."
+        },
         "note": { "type": "string" }
       }
     },

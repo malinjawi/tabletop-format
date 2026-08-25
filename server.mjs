@@ -309,37 +309,67 @@ gw.route("GET", "/api/games", async (ctx) => {
     cards: g.card_count, stars: g.stars, forked_from: g.forked_from ?? null,
     owner_handle: g.owner_handle ?? null })));
 }, "catalog from the rebuildable index (DA-3), star counts included");
-async function doFork(u, src) {
+async function resolveForkPoint(src, requestedRef) {
+  const requested = String(requestedRef ?? "HEAD").trim() || "HEAD";
+  if (/^(HEAD|latest)$/i.test(requested)) {
+    const sha = await store.headSha(src);
+    const sourceYaml = await store.fileAt(src, sha, "game.yaml");
+    if (!sourceYaml) { const e = new Error("the latest source version is unavailable"); e.code = 422; throw e; }
+    return { sha, label: "latest working version", sourceYaml: sourceYaml.toString() };
+  }
+  const release = await q.releaseByTag(db, src, requested);
+  const sha = release?.sha ?? requested;
+  // Fork refs are deliberately narrower than general git refs: a release tag
+  // is resolved server-side and an explicit version must be a commit id. This
+  // keeps the local archive boundary safe and makes every fork reproducible.
+  if (!/^[0-9a-f]{7,40}$/i.test(sha)) {
+    const e = new Error("fork from 'latest' or a published release/commit"); e.code = 422; throw e;
+  }
+  const sourceYaml = await store.fileAt(src, sha, "game.yaml");
+  if (!sourceYaml) { const e = new Error(`source version '${requested}' is unavailable`); e.code = 422; throw e; }
+  let label = release ? `release ${release.tag}` : `commit ${sha}`;
+  if (!release) {
+    const releases = await q.releasesFor(db, src);
+    const pinned = releases.find(r => r.sha === sha);
+    if (pinned) label = `release ${pinned.tag}`;
+  }
+  return { sha, label, sourceYaml: sourceYaml.toString() };
+}
+async function doFork(u, src, requestedRef = "HEAD") {
   const newSlug = `${src}-${u.handle}`.slice(0, 60);
-  if (store.has(newSlug)) { const e = new Error(`you already forked this ('${newSlug}')`); e.code = 409; throw e; }
-  const srcYaml = (await store.readFile(src, "game.yaml")).toString();
+  if (store.has(newSlug)) { const e = new Error(`your edition already exists ('${newSlug}')`); e.code = 409; e.existing = newSlug; throw e; }
+  const point = await resolveForkPoint(src, requestedRef);
+  const srcYaml = point.sourceYaml;
   const title = (srcYaml.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? src;
   const lic = (srcYaml.match(/^license:\s*(\S+)/m) ?? [])[1] ?? "unknown";
   const transform = (yaml) => {
     let out = yaml.replace(/^id:\s*\S+/m, `id: ${newSlug}`);
     if (!/^attribution:/m.test(out)) {
-      out = out.trimEnd() + `\nattribution:\n  source_id: ${src}\n  source_title: ${JSON.stringify(title)}\n  source_license: ${lic}\n`;
+      out = out.trimEnd() + `\nattribution:\n  source_id: ${src}\n  source_title: ${JSON.stringify(title)}\n  source_license: ${lic}\n  source_ref: ${point.sha}\n  note: ${JSON.stringify(`Forked from ${point.label}; this edition is independent unless its owner proposes changes upstream.`)}\n`;
     }
     return out;
   };
   const { sha } = await store.fork(src, newSlug, transform,
-    `fork: ${src} → ${newSlug} by ${u.handle}\n\nattribution committed per SPEC §9`,
-    `${u.handle} <${u.email}>`);
+    `fork: ${src}@${point.sha} → ${newSlug} by ${u.handle}\n\nsource-version: ${point.sha}\nsource-label: ${point.label}\nattribution committed per SPEC §9`,
+    `${u.handle} <${u.email}>`, point.sha);
   await reindexGames();
   await q.setForkMeta(db, newSlug, src, u.id);
-  return { slug: newSlug, sha };
+  return { slug: newSlug, sha, source_ref: point.sha, source_label: point.label };
 }
 gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const src = requireGame(ctx); if (!src) return;
   try {
-    const f = await doFork(u, src);
+    const body = await optionalJson(ctx);
+    const f = await doFork(u, src, body.ref ?? "HEAD");
     await q.recordEvent(db, { id: newId("ev"), kind: "fork", actor_id: u.id, game_slug: f.slug, target: src });
     const _og = await q.gameBySlug(db, src);
     if (_og?.owner_id && _og.owner_id !== u.id) await q.notify(db, { id: newId("n"), user_id: _og.owner_id, kind: "fork", actor_handle: u.handle, game_slug: src, target: f.slug });
-    ctx.send(201, { slug: f.slug, forked_from: src, commit: f.sha, url: `/#/g/${f.slug}` });
-  } catch (e) { ctx.send(e.code ?? 500, { error: e.message }); }
-}, "one-click fork: copy → attribution block → commit → indexed w/ forked_from");
+    ctx.send(201, { slug: f.slug, forked_from: src, source_ref: f.source_ref,
+      source_label: f.source_label, commit: f.sha, url: `/#/g/${f.slug}` });
+  } catch (e) { ctx.send(e.code ?? 500, { error: e.message,
+      ...(e.existing ? { existing: e.existing, url: `/#/g/${e.existing}` } : {}) }); }
+}, "create an independent edition from an exact version: copy → attribution → commit → indexed lineage");
 gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
   // THE NO-ACCESS EDIT PATH: your edit becomes a commit in YOUR fork + a PR here
   const u = await requireAuth(ctx); if (!u) return;

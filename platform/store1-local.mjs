@@ -19,7 +19,7 @@
  *   readMeta(slug)                → { title, license, cardCount } (index fodder, DA-3)
  *   writeFiles(slug, files, message, author) → { sha }   // atomic multi-file commit
  *   createGame(slug, srcTree, message, author) → { sha } // import a validated tree
- *   fork(src, dest, transformYaml, message, author) → { sha }
+ *   fork(src, dest, transformYaml, message, author, ref?) → { sha }
  *   history(slug, rel, n)         → [{ full, sha, author, date, subject }]
  *   fileAt(slug, ref, rel)        → Buffer | null        // file content at a commit
  *   headSha(slug)                 → short sha
@@ -116,15 +116,20 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       return { sha: git(["rev-parse", "--short", "HEAD"]) };
     },
 
-    /** Copy-fork with a game.yaml transform (id rewrite + SPEC §9 attribution). */
-    fork(src, dest, transformYaml, message, author) {
-      cpSync(abs(src), abs(dest), { recursive: true,
-        filter: (p) => !p.includes("/exports") && !p.split("/").pop().startsWith(".") });
-      const yaml = readFileSync(join(abs(dest), "game.yaml"), "utf8");
-      writeFileSync(join(abs(dest), "game.yaml"), transformYaml(yaml));
-      git(["add", "--", abs(dest)]);
-      git(["commit", "-m", message, "--author", author]);
-      return { sha: git(["rev-parse", "--short", "HEAD"]) };
+    /** Copy-fork an exact source ref with a game.yaml transform (id rewrite +
+     *  SPEC §9 attribution). Resolving HEAD before this call makes the fork
+     *  immune to a source commit landing between the user's click and copy. */
+    fork(src, dest, transformYaml, message, author, ref = "HEAD") {
+      const { dir, cleanup } = store.materialize(src, ref);
+      try {
+        cpSync(dir, abs(dest), { recursive: true,
+          filter: (p) => !p.includes("/exports") && !p.split("/").pop().startsWith(".") });
+        const yaml = readFileSync(join(abs(dest), "game.yaml"), "utf8");
+        writeFileSync(join(abs(dest), "game.yaml"), transformYaml(yaml));
+        git(["add", "--", abs(dest)]);
+        git(["commit", "-m", message, "--author", author]);
+        return { sha: git(["rev-parse", "--short", "HEAD"]) };
+      } finally { cleanup(); }
     },
 
     history(slug, relPath, n = 20) {

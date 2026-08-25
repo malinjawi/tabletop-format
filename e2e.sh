@@ -545,6 +545,9 @@ grep -q "EDITABLE_TABS" "$SCRATCH/live-hub.html" && grep -q "rulesEdit" "$SCRATC
   && grep -q "g/\${g.slug}/cards/edit" "$SCRATCH/live-hub.html" && ok "hub: editing is a routed mode (#/g/:slug/:tab/edit) for cards AND rules" || bad "hub edit routing"
 grep -q "exportMenu" "$SCRATCH/live-hub.html" && grep -q "Tabletop Club" "$SCRATCH/live-hub.html" \
   && ok "live hub Export offers Tabletop Club / TTS / PnP downloads" || bad "hub export wiring"
+grep -q "Create my edition" "$SCRATCH/live-hub.html" && grep -q "Nothing is sent upstream" "$SCRATCH/live-hub.html" \
+  && grep -q "Your independent edition" "$SCRATCH/live-hub.html" && grep -q "Propose upstream" "$SCRATCH/live-hub.html" \
+  && ok "north-star UI: exact-version edition is independent; upstream proposal stays optional" || bad "north-star edition UI"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
 node -e "
 (async () => {
@@ -577,23 +580,33 @@ node -e "
   const reg=await (await fetch(base+'/api/auth/register',{method:'POST',
     headers:{'content-type':'application/json'},
     body:JSON.stringify({handle:'forker',email:'f@x.co',password:'longenough1'})})).json();
-  const H={Authorization:'Bearer '+reg.token};
+  const H={Authorization:'Bearer '+reg.token,'content-type':'application/json'};
   const noauth=await fetch(base+'/api/games/ember/fork',{method:'POST'});
   if(noauth.status!==401) process.exit(1);
-  const f=await (await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H})).json();
-  if(!(f.slug==='ember-forker' && f.forked_from==='ember' && f.commit)) process.exit(2);
+  const oldCards=await (await fetch(base+'/api/games/ember/cards')).json();
+  const hist=await (await fetch(base+'/api/games/ember/history')).json();
+  const pinned=hist[0]&&hist[0].sha;
+  if(!pinned) process.exit(5);
+  const changed=JSON.parse(JSON.stringify(oldCards)); changed[0].text+=' LATER SOURCE EDIT';
+  const edit=await fetch(base+'/api/games/ember/cards',{method:'PUT',headers:H,body:JSON.stringify(changed)});
+  if(edit.status!==200) process.exit(6);
+  const f=await (await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H,body:JSON.stringify({ref:pinned})})).json();
+  if(!(f.slug==='ember-forker' && f.forked_from==='ember' && f.commit && f.source_ref===pinned)) process.exit(2);
+  const forkCards=await (await fetch(base+'/api/games/ember-forker/cards')).json();
+  if(forkCards[0].text!==oldCards[0].text || forkCards[0].text.includes('LATER SOURCE EDIT')) process.exit(7);
   const again=await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H});
-  if(again.status!==409) process.exit(3);
+  if(again.status!==409 || !(await again.json()).existing) process.exit(3);
   const games=await (await fetch(base+'/api/games')).json();
   const fk=games.find(g=>g.slug==='ember-forker');
   if(!(fk && fk.forked_from==='ember')) process.exit(4);
-  console.log('fork:', f.slug, f.commit);
+  console.log('exact fork:', f.slug, f.source_ref, f.commit);
 })().catch(e=>{console.error(e);process.exit(9)})" && ok "fork flow: 401→auth→201→409 dup→indexed w/ forked_from" || bad "fork flow"
 grep -q "attribution:" "$SCRATCH/examples/ember-forker/game.yaml" \
   && grep -q "source_id: ember" "$SCRATCH/examples/ember-forker/game.yaml" \
+  && grep -q "source_ref:" "$SCRATCH/examples/ember-forker/game.yaml" \
   && grep -q "id: ember-forker" "$SCRATCH/examples/ember-forker/game.yaml" \
-  && ok "fork's game.yaml: new id + SPEC §9 attribution block" || bad "fork attribution yaml"
-git log -1 --format='%an %s' | grep -q "forker fork: ember → ember-forker" && ok "fork commit authored by the forker" || bad "fork commit author"
+  && ok "fork's game.yaml: new id + exact source ref + SPEC §9 attribution" || bad "fork attribution yaml"
+git log -1 --format='%an %s' | grep -q "forker fork: ember@.* → ember-forker" && ok "fork commit authored by the forker and pins its source" || bad "fork commit author"
 python3 tools/validate.py "$SCRATCH/examples/ember-forker" >/dev/null 2>&1 && ok "fork validates as a complete game" || bad "fork validates"
 curl -s "localhost:$FPORT/" | grep -q "ember-forker" && ok "hub rebake includes the fork" || bad "hub shows fork"
 kill $FPID 2>/dev/null
