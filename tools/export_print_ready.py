@@ -31,7 +31,6 @@ from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
-from render_support import render_faces
 from design_engines import load_design_engines
 
 
@@ -166,6 +165,28 @@ def add_edge_bleed(source, target, bleed_px, dpi):
         result.paste(image.crop(crop).resize((bleed_px, bleed_px)), position)
     target.parent.mkdir(parents=True, exist_ok=True)
     result.save(target, "PNG", dpi=(dpi, dpi), optimize=True)
+
+
+def extract_trim(source, target, expected_trim, bleed_px, dpi):
+    """Materialize trim from a renderer-native bleed face."""
+    with Image.open(source) as opened:
+        image = opened.convert("RGB")
+    expected_bleed = (expected_trim[0] + 2 * bleed_px,
+                      expected_trim[1] + 2 * bleed_px)
+    if image.size == expected_trim:
+        image.save(target, "PNG", dpi=(dpi, dpi), optimize=True)
+        add_edge_bleed(target, source, bleed_px, dpi)
+        return
+    if image.size != expected_bleed:
+        raise ValueError(
+            f"{source.name}: renderer produced {image.size}; expected trim "
+            f"{expected_trim} or bleed {expected_bleed}"
+        )
+    image.crop((bleed_px, bleed_px,
+                bleed_px + expected_trim[0],
+                bleed_px + expected_trim[1])).save(
+        target, "PNG", dpi=(dpi, dpi), optimize=True,
+    )
 
 
 def jpeg_copy(source, target, dpi, size=None, quality=95):
@@ -367,7 +388,6 @@ def main():
         scratch = Path(scratch_name)
         trim = scratch / "trim"
         bleed = out / "fronts-bleed"
-        render_faces(game_dir, trim)
         subprocess.run([
             shutil.which("node") or "node", str(TOOLS / "render_cards.mjs"),
             str(game_dir), str(bleed), "--bleed",
@@ -378,17 +398,12 @@ def main():
             bleed_path = bleed / f"{printing['id']}.png"
             trim_mm = trim_for(printing, contract)
             expected_trim = (px(trim_mm[0], args.dpi), px(trim_mm[1], args.dpi))
-            expected_bleed = (expected_trim[0] + 2 * bleed_px,
-                              expected_trim[1] + 2 * bleed_px)
-            with Image.open(bleed_path) as image:
-                rendered_size = image.size
-            if rendered_size == expected_trim and bleed_px:
-                add_edge_bleed(trim_path, bleed_path, bleed_px, args.dpi)
-            elif rendered_size != expected_bleed:
-                raise ValueError(
-                    f"{bleed_path.name}: renderer produced {rendered_size}; "
-                    f"expected trim {expected_trim} or bleed {expected_bleed}"
-                )
+            trim_path.parent.mkdir(parents=True, exist_ok=True)
+            extract_trim(bleed_path, trim_path, expected_trim, bleed_px, args.dpi)
+        base_trim_px = (px(contract["w_mm"], args.dpi),
+                        px(contract["h_mm"], args.dpi))
+        extract_trim(bleed / "_back.png", trim / "_back.png",
+                     base_trim_px, bleed_px, args.dpi)
         stamp_pngs(trim, args.dpi)
         stamp_pngs(bleed, args.dpi)
 
