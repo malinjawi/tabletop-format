@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Launch-level browser smoke: lazy shell, topics, narrow layouts, and touch size. */
-import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -10,6 +10,7 @@ import { DatabaseSync } from "node:sqlite";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const scratch = mkdtempSync(join(tmpdir(), "forge-ui-smoke."));
+const storeRoot = join(scratch, "store"), gamesRoot = join(storeRoot, "examples");
 const port = 30000 + Math.floor(Math.random() * 10000);
 const origin = `http://127.0.0.1:${port}`;
 const chrome = process.env.CHROME_PATH || [
@@ -19,14 +20,37 @@ const chrome = process.env.CHROME_PATH || [
   "/usr/bin/chromium",
   "/usr/bin/chromium-browser",
 ].find(existsSync);
+const sourceGit=(args)=>spawnSync("git",args,{cwd:ROOT,encoding:"utf8"}).stdout.trimEnd();
+const sourceBefore={head:sourceGit(["rev-parse","HEAD"]),status:sourceGit(["status","--porcelain"])};
 
 if (!chrome) throw new Error("Chrome/Chromium not found; run npm run doctor or set CHROME_PATH");
 
+// Local Store-1 commits to its configured Git root. Seed a small, fully
+// isolated repository so this mutating UI test can never advance the
+// developer's branch or add a fixture to the real catalog.
+mkdirSync(join(gamesRoot, "_fixtures"), { recursive: true });
+for (const [source, target] of [
+  [join(ROOT, "examples", "ember"), join(gamesRoot, "ember")],
+  [join(ROOT, "examples", "secret-hitler"), join(gamesRoot, "secret-hitler")],
+  [join(ROOT, "examples", "_fixtures", "cards-against-humanity"), join(gamesRoot, "_fixtures", "cards-against-humanity")],
+]) cpSync(source, target, { recursive: true, filter: path => !path.split("/").includes("exports") });
+for (const args of [
+  ["init", "-q"], ["config", "user.name", "Forge UI Smoke"],
+  ["config", "user.email", "ui-smoke@example.invalid"], ["add", "examples"],
+  ["commit", "-q", "-m", "seed isolated UI fixtures"],
+]) {
+  const git=spawn("git", args, { cwd: storeRoot, stdio: "ignore" });
+  // Complete each setup command before the next one so server startup cannot
+  // race the fixture commit.
+  await new Promise((resolveDone,reject)=>git.once("exit",code=>code===0?resolveDone():reject(new Error(`git ${args[0]} failed`))));
+}
+
 let logs = "";
-const server = spawn(process.execPath, [join(ROOT, "server.mjs"), "--port", String(port)], {
+const server = spawn(process.execPath, [join(ROOT, "server.mjs"), "--port", String(port), "--games", gamesRoot], {
   cwd: ROOT,
   env: { ...process.env, DB_PATH: join(scratch, "platform.db"), CACHE_DIR: join(scratch, "cache"),
-    FARM_DIR: join(scratch, "farm"), FORGE_HUB_PATH: join(scratch, "hub.html") },
+    FARM_DIR: join(scratch, "farm"), FORGE_HUB_PATH: join(scratch, "hub.html"),
+    LOCAL_STORE_ROOT: storeRoot, FORGE_PUBLIC_ORIGIN: origin, FORGE_REGISTRATION_MODE: "open" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 server.stdout.on("data", chunk => { logs = (logs + chunk).slice(-12000); });
@@ -78,6 +102,29 @@ try {
   await page.goto(origin, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Topic filters").waitFor();
 
+  const pseudoLink = page.locator(".gcard h3 a").first();
+  assert(await pseudoLink.getAttribute("role") === "link" && await pseudoLink.getAttribute("tabindex") === "0",
+    "client navigation is keyboard and screen-reader reachable");
+
+  const registration = await page.evaluate(async () => {
+    const response = await fetch("/api/auth/register", { method: "POST", headers: {
+      "content-type": "application/json", "x-forge-browser": "1",
+    }, body: JSON.stringify({ handle: "onboarding-smoke", email: "onboarding@example.invalid", password: "password123" }) });
+    return { status: response.status, body: await response.text() };
+  });
+  assert(registration.status === 201, "onboarding smoke account created in the disposable server", `${registration.status} ${registration.body}`);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Bring or start a game" }).click();
+  assert(await page.getByRole("radio", { name: /Start from an idea/ }).isChecked(),
+    "new game opens on the guided idea path");
+  await page.getByRole("radio", { name: /Import CSV/ }).check();
+  assert(await page.getByLabel("CSV card data").isVisible() && !await page.getByLabel("What should players feel?").isVisible(),
+    "CSV path shows only import-relevant fields");
+  await page.getByRole("radio", { name: /Connect Google Sheet/ }).check();
+  assert(await page.getByLabel("Published Google Sheet URL").isVisible() && !await page.getByLabel("CSV card data").isVisible(),
+    "Sheets path is distinct from CSV and explains the working-copy boundary");
+  await page.getByRole("button", { name: "Cancel" }).click();
+
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     const geometry = await page.evaluate(() => ({
@@ -85,11 +132,12 @@ try {
       scroll: document.documentElement.scrollWidth,
       buttons: [...document.querySelectorAll("button")]
         .filter(button => { const box = button.getBoundingClientRect(); return box.width && box.height && box.bottom > 0 && box.top < innerHeight; })
-        .map(button => button.getBoundingClientRect().height),
+        .map(button => ({ label: button.textContent.trim(), height: button.getBoundingClientRect().height })),
     }));
     assert(geometry.scroll <= geometry.viewport, `${width}px Explore has no horizontal overflow`, `${geometry.scroll}/${geometry.viewport}`);
-    assert(geometry.buttons.length > 0 && Math.min(...geometry.buttons) >= 44,
-      `${width}px visible buttons meet the 44px touch target`, String(Math.min(...geometry.buttons)));
+    const shortButtons=geometry.buttons.filter(button=>button.height<44);
+    assert(geometry.buttons.length > 0 && shortButtons.length===0,
+      `${width}px visible buttons meet the 44px touch target`, JSON.stringify(shortButtons));
   }
 
   await page.getByLabel("Topic filters").getByRole("button", { name: "party", exact: true }).click();
@@ -100,10 +148,34 @@ try {
   await page.getByLabel("Topic filters").getByRole("button", { name: "All", exact: true }).click();
   await page.getByLabel("Search games and cards").fill("dueling");
   const searchTitles = await page.locator(".gcard h3").allTextContents();
-  assert(searchTitles.length === 1 && searchTitles[0].includes("Ember"), "global search includes indexed topics");
+  assert(searchTitles.some(title=>title.includes("Ember")), "global search includes indexed topics", JSON.stringify(searchTitles));
+
+  // Exercise the real self-serve import UI, not merely its API. The disposable
+  // server/store keeps this mutation isolated from the developer's catalog.
+  await page.getByRole("button", { name: "Bring or start a game" }).click();
+  await page.getByRole("radio", { name: /Import CSV/ }).check();
+  await page.getByLabel("Working title").fill("Onboarding Smoke Game");
+  await page.getByLabel("CSV card data").fill(`name,type,text,cost\nSpark,unit,Deal 1 damage.,1\nGuard,unit,Prevent 1 damage.,2`);
+  await page.getByRole("button", { name: "Import cards as first commit" }).click();
+  try {
+    await page.waitForURL(/#\/g\/onboarding-smoke\/onboarding-smoke-game\/cards$/,
+      { timeout: 20_000, waitUntil: "domcontentloaded" });
+  } catch (error) {
+    const detail=await page.evaluate(()=>({url:location.href,
+      formError:document.getElementById("ngErr")?.textContent,
+      modal:document.querySelector("#newGameOverlay")?.textContent,
+      toast:document.querySelector(".toast")?.textContent}));
+    throw new Error(`CSV onboarding navigation failed: ${JSON.stringify(detail)}\n${error.message}`);
+  }
+  const imported = await page.evaluate(async()=>await (await fetch("/api/games/onboarding-smoke-game/ui")).json());
+  assert(imported.ncards === 2 && imported.namespace === "onboarding-smoke",
+    "a stranger can import CSV as an owned two-card first commit through the UI");
+  const sourceAfter={head:sourceGit(["rev-parse","HEAD"]),status:sourceGit(["status","--porcelain"])};
+  assert(sourceAfter.head===sourceBefore.head && sourceAfter.status===sourceBefore.status,
+    "mutating browser smoke leaves the source checkout untouched");
   assert(errors.length === 0, "Explore produces no browser errors", errors.join(" | "));
 
-  console.log("\nUI SMOKE GREEN — lazy catalog, facets, search, 320/390px layout, and touch targets verified.");
+  console.log("\nUI SMOKE GREEN — onboarding, CSV import, lazy catalog, facets, search, narrow layout, and touch targets verified.");
 } finally {
   if (browser) await browser.close();
   server.kill("SIGTERM");

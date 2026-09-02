@@ -100,7 +100,7 @@ These are deployment operations, not additional product feature projects:
 3. Replace `{{OPERATOR}}`, `{{CONTACT}}`, and example addresses in the policy
    runtime configuration. Assign one human to support, moderation, and rights
    reports during every invitation window.
-4. Enable off-host encrypted backups and object-store versioning, restore all
+4. Enable off-host encrypted backups and object-store deletion protection, restore all
    three stores into a disposable environment, and reproduce one release. A
    failed restore is a stop condition.
 5. Run the post-deploy smoke: health, login/logout/revoke, anonymous private

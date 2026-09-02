@@ -66,13 +66,16 @@ service token by updating the secret file and recreating only the gateway.
 
 ## 4. Edge contract
 
-Terminate TLS at the host proxy/CDN and forward to `127.0.0.1:8420`. Preserve
+Terminate TLS at the host proxy/CDN and forward the Forge origin to
+`127.0.0.1:8420` and the Git/Forgejo origin to
+`127.0.0.1:${FORGEJO_BIND_PORT:-3000}`. Preserve
 the real client address and set `FORGE_TRUST_PROXY=1` only for that trusted
 proxy path. Forward the original `Host` and `X-Forwarded-Proto`. Do not cache
 API or HTML responses. Immutable `/cache/*` responses may be cached only when
 Forge itself returns `public, max-age=31536000, immutable`.
 
-The application refuses production startup with HTTP, local Store-1, missing
+Both application ports bind to loopback; TLS is the only public ingress. The
+application refuses production startup with HTTP, local Store-1, missing
 Forge credentials, or open registration. Browser sessions are HttpOnly,
 Secure, SameSite cookies; connector sessions remain revocable bearer tokens.
 
@@ -112,21 +115,27 @@ cohort protocol and success/stop thresholds in
 
 ## 6. Backup and restore drill
 
-Back up before every Forgejo/database upgrade and daily during the alpha:
+Forgejo's supported consistency model for PostgreSQL plus S3-compatible object
+storage requires a short write outage. Do not take three independent live
+copies and call them one backup. Announce a maintenance window, then run:
 
 ```sh
-docker compose -f docker-compose.prod.yml exec -u 1000 forgejo \
-  forgejo dump --file /data/backup/forgejo.zip
-docker compose -f docker-compose.prod.yml exec -T db \
-  pg_dump -U postgres -Fc platform > platform.dump
-docker compose -f docker-compose.prod.yml exec -T db \
-  pg_dump -U postgres -Fc forgejo > forgejo.dump
+cd deploy
+FORGE_BACKUP_ACK_DOWNTIME=1 ./backup.sh /encrypted/off-host/staging
 ```
 
-R2 versioning must be enabled for the LFS bucket. Store encrypted copies away
-from this host. At least once before inviting users, restore all three stores
-into a disposable environment and run the Forgejo journey. Store-3 render and
-export cache is derived and is deliberately not backed up.
+The script stops the gateway and Forgejo, creates a Forgejo archive (including
+repositories and LFS objects), makes independent custom-format dumps of both
+PostgreSQL databases, validates all three files, records hashes and exact image
+IDs, then restarts the services even if the backup fails. Copy the completed
+directory to encrypted storage away from the host.
+
+R2 does not provide an S3 object-versioning safety net. The Forgejo archive is
+therefore the recoverable LFS copy; bucket-scoped credentials and an R2 bucket
+lock reduce accidental deletion risk but are not a backup. Follow
+[`RESTORE-DRILL.md`](RESTORE-DRILL.md) to restore into a separate project,
+database volumes, ports, and LFS bucket. Store-3 render/export cache and the
+generated hub are derived and deliberately excluded.
 
 ## 7. Operational stop conditions
 

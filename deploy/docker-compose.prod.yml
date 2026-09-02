@@ -37,6 +37,9 @@ services:
       PGUSER: platform
       CACHE_DIR: /app/data/cache
       FARM_DIR: /app/data/forge-farm
+      # The shell is regenerated when application assets change. /app itself
+      # is intentionally read-only, so derived UI must live on the data volume.
+      FORGE_HUB_PATH: /app/data/hub.html
       FORGE_PUBLIC_ORIGIN: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
       FORGE_ALLOWED_ORIGINS: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
       FORGE_HTTPS: "1"
@@ -63,6 +66,10 @@ services:
     restart: unless-stopped
     init: true
     security_opt: [no-new-privileges:true]
+    ports:
+      # Git HTTP/LFS must be reachable by the host TLS proxy, but never on a
+      # public interface directly.
+      - "${FORGE_BIND_IP:-127.0.0.1}:${FORGEJO_BIND_PORT:-3000}:3000"
     volumes:
       - forgejo-data:/data
     secrets:

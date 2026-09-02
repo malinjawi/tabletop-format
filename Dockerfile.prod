@@ -17,4 +17,4 @@ COPY --chown=node:node . .
 ENV NODE_ENV=production FORGE_LISTEN_HOST=0.0.0.0
 USER node
 EXPOSE 8420
-ENTRYPOINT ["node", "server.mjs", "--port", "8420"]
+CMD ["node", "server.mjs", "--port", "8420"]

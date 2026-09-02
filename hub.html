@@ -7,6 +7,7 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--fg);background:#fff;font-size:14px;line-height:1.5}
 a{color:var(--blu);text-decoration:none;cursor:pointer}a:hover{text-decoration:underline}
+a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(9,105,218,.34);outline-offset:2px}
 code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
 /* top bar */
 #top{background:var(--h);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 24px;min-height:54px}
@@ -20,7 +21,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 #top .spacer{flex:1}
 #top .av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#8c2f1b,#e0a458);border:1.5px solid rgba(255,255,255,.4)}
 #authArea{display:flex;align-items:center;white-space:nowrap}
-.account-menu{position:relative}.account-menu summary{list-style:none;color:#d6dae0;font-size:13px;cursor:pointer;padding:5px 7px;border-radius:6px}.account-menu summary::-webkit-details-marker{display:none}.account-menu summary:hover{background:#ffffff12;color:#fff}.account-popover{position:absolute;right:0;top:calc(100% + 7px);z-index:95;width:150px;padding:6px;background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 10px 30px #0003}.account-popover button{display:block;width:100%;padding:7px 9px;border:0;background:none;text-align:left;font:inherit;color:var(--fg);cursor:pointer;border-radius:5px}.account-popover button:hover{background:var(--bg)}
+.account-menu{position:relative}.account-menu summary{list-style:none;color:#d6dae0;font-size:13px;cursor:pointer;padding:5px 7px;border-radius:6px}.account-menu summary::-webkit-details-marker{display:none}.account-menu summary:hover{background:#ffffff12;color:#fff}.account-popover{position:absolute;right:0;top:calc(100% + 7px);z-index:95;width:150px;padding:6px;background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 10px 30px #0003}.account-popover button{display:block;width:100%;min-height:44px;padding:7px 9px;border:0;background:none;text-align:left;font:inherit;color:var(--fg);cursor:pointer;border-radius:5px}.account-popover button:hover{background:var(--bg)}
 /* buttons & badges */
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);background:var(--bg);border-radius:6px;padding:5px 14px;font-size:13px;font-weight:600;color:var(--fg);cursor:pointer}
 .btn:hover{background:#eef1f4}
@@ -267,6 +268,26 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
 <script>
 let DATA = {"games": [], "jams": [{"id": "first-flame-jam", "title": "First Flame Jam", "theme": "fire", "tagline": "Design a complete card game in 18 cards or fewer. One week. The theme is fire.", "host": "Forge", "timezone": "UTC", "starts_at": "2026-07-01T16:00:00Z", "submissions_close_at": "2026-07-08T16:00:00Z", "judging_ends_at": "2026-07-14T16:00:00Z", "results_at": "2026-07-15T16:00:00Z", "organizers": ["forge"], "constraints": {"max_cards": 18, "min_cards": 6, "max_deck_size": 40, "required_license": ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"], "theme_word_required": true, "notes": "Placeholder art is fine \u2014 this jam judges design, not illustration. Rules must fit on one page. Solo entries and teams both welcome.\n"}, "judging": ["fun in the first game", "theme use", "elegance (rules-to-depth ratio)", "originality"], "prizes": ["Winner: featured on the platform front page + printed copies of your game", "Best theme use: featured card frame for your game page"], "entries": [{"game_id": "ember", "title": "Ember", "author": "Linja", "submitted": "2026-07-07", "award": "host entry (not judged)"}, {"game_id": "harbor-nine", "title": "Harbor Nine", "author": "Linja", "submitted": "2026-07-07", "award": "host entry (not judged)"}]}, {"id": "spark-jam", "title": "Spark Jam", "theme": "spark", "tagline": "A rolling, open jam: prototype a tiny card game from a single spark of an idea. Placeholder art welcome \u2014 this jam judges design, not illustration.", "host": "Forge", "timezone": "UTC", "starts_at": "2026-09-05T16:00:00Z", "submissions_close_at": "2026-09-19T16:00:00Z", "judging_ends_at": "2026-09-26T16:00:00Z", "results_at": "2026-09-27T16:00:00Z", "organizers": ["forge"], "team_rules": {"max_members": 12, "one_entry_per_game": true}, "constraints": {"max_cards": 24, "min_cards": 3, "max_deck_size": 60, "required_license": ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"], "theme_word_required": true, "notes": "Keep the rules to one page. Solo entries and teams both welcome. One-click \"Join\" forks a tiny spark starter into your account so you can begin from something playable.\n"}, "submission": {"kind": "forge-release", "resubmission_before_close": true, "external_entries": false}, "judging": ["fun in the first game", "theme use", "elegance (rules-to-depth ratio)"], "prizes": ["Winner: featured on the platform front page", "Community pick: a featured card frame for your game page"], "entries": []}], "people": [{"name": "Linja", "roles": [], "games": [], "commits": 0, "sessions": 0, "entries": [{"jam": "First Flame Jam", "jam_id": "first-flame-jam", "game": "Ember", "award": "host entry (not judged)"}, {"jam": "First Flame Jam", "jam_id": "first-flame-jam", "game": "Harbor Nine", "award": "host entry (not judged)"}]}]};
+// The prototype historically used <a onclick> for client-side navigation.
+// Make every one keyboard- and assistive-technology reachable while preserving
+// the lightweight hash router; ordinary href links retain native behavior.
+function upgradePseudoLinks(root=document){
+  const links=[];
+  if(root.matches?.("a:not([href])"))links.push(root);
+  root.querySelectorAll?.("a:not([href])").forEach(link=>links.push(link));
+  links.forEach(link=>{
+    link.setAttribute("role","link");
+    if(!link.hasAttribute("tabindex"))link.tabIndex=0;
+  });
+}
+document.addEventListener("keydown",event=>{
+  const link=event.target?.closest?.("a:not([href])");
+  if(link&&event.key==="Enter"){event.preventDefault();link.click();}
+});
+new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
+  if(node.nodeType===1)upgradePseudoLinks(node);
+}))).observe(document.body,{childList:true,subtree:true});
+upgradePseudoLinks();
 /* ---- live mode + auth + stars (feature: accounts & stars end-to-end) ---- */
 let LIVE=false, ME=null, STARS={}, MYSTARS=new Set(), amMode="login", _afterAuth=null, CATALOG_LOADING=true;
 let EXPLORE_QUERY="", EXPLORE_TOPIC="";
@@ -1196,7 +1217,10 @@ function sourceOneLineCqw(g,region,value){
   const rotated=Math.abs(Number(r.rotation_deg)||0)%180===90;
   const width=rotated?region.h_pct*H/W:region.w_pct;
   const usable=Math.max(1,width-(Number(r.padding_left_cqw)||0)-(Number(r.padding_right_cqw)||0));
-  return usable/Math.max(1,sourcePlainLength(value)*.56);
+  const length=Math.max(1,sourcePlainLength(value));
+  const glyphWidth=Math.max(.1,Number(r.average_glyph_width_em)||.56);
+  const tracking=Math.max(0,Number(r.letter_spacing_cqw)||0);
+  return Math.max(.1,usable-Math.max(0,length-1)*tracking)/Math.max(1,length*glyphWidth);
 }
 function sourceWrappedLineCount(value,maxChars){
   const paragraphs=String(value??"").replace(/\[[^\]]+\]/g,"x").replace(/\*+/g,"").split("\n");
@@ -1226,9 +1250,10 @@ function sourceRichLayout(g,region,value){
   const boxHCqw=rotated?region.w_pct:region.h_pct*H/W;
   const usableH=Math.max(.1,boxHCqw-(Number(r.padding_top_cqw)||0)-(Number(r.padding_bottom_cqw)||0));
   const maxLines=Number(r.max_lines)||12, lineHeight=Number(r.line_height)||1.25;
+  const glyphWidth=Math.max(.1,Number(r.average_glyph_width_em)||.56);
   const formatted=productionFormat(value,region);
   const assess=size=>{
-    const chars=Math.max(1,Math.floor(usableW/(size*.56)));
+    const chars=Math.max(1,Math.floor(usableW/(size*glyphWidth)));
     const lines=sourceWrappedLineCount(formatted,chars);
     return {size,lines,fit:lines<=maxLines&&lines*size*lineHeight<=usableH+.001};
   };
@@ -1285,7 +1310,7 @@ function sourceRenderRich(g,card,region,value){
   const style=`left:${region.x_pct}%;top:${region.y_pct}%;width:${region.w_pct}%;height:${region.h_pct}%;${pattern}padding:${r.padding_top_cqw||0}cqw ${r.padding_right_cqw||0}cqw ${r.padding_bottom_cqw||0}cqw ${r.padding_left_cqw||0}cqw;font-family:'${family}',Georgia,'Times New Roman',serif;font-weight:${r.font_weight||400};font-style:${r.font_style||"normal"};font-size:${sizeCqw.toFixed(4)}cqw;line-height:${r.line_height||1.25};letter-spacing:${Number(r.letter_spacing_cqw)||0}cqw;color:${r.color||"#111"};${stroke?`-webkit-text-stroke:${stroke}cqw ${r.text_stroke_color||r.color||"#111"};`:""}text-align:${r.text_align||"left"};flex-direction:column;justify-content:${justify};`;
   const html=r.symbols===false?esc(String(value??"")):layRichInline(g,String(value??""));
   const rotation=Number(r.rotation_deg)||0;
-  const rotated=rotation?`position:absolute;left:50%;top:50%;width:${(region.h_pct*H/W).toFixed(4)}cqw;height:${region.w_pct.toFixed(4)}cqw;transform:translate(-50%,-50%) rotate(${rotation}deg);transform-origin:center;`:"";
+  const rotated=rotation?`position:absolute;left:50%;top:50%;width:${(region.h_pct*H/W).toFixed(4)}cqw;height:${region.w_pct.toFixed(4)}cqw;display:flex;align-items:center;justify-content:center;text-align:center;transform:translate(-50%,-50%) rotate(${rotation}deg);transform-origin:center;`:"";
   return `${fontFace}<div class="source-patch source-rich" data-source-region="${esc(region.id)}" data-source-asset="live-richtext" style="${style}"><span class="source-rich-content" style="${rotated}${r.max_lines===1?"white-space:nowrap;":""}">${html}</span></div>`;
 }
 function sourceOverlayCard(g,c,printing,opts){
@@ -4056,6 +4081,14 @@ function ngFileLoad(inp){
   r.onload=()=>{ const el=document.getElementById("ng-csv"); if(el) el.value=String(r.result||""); };
   r.readAsText(f);
 }
+function ngMode(mode){
+  const brief=document.getElementById("ng-brief-fields"), csv=document.getElementById("ng-csv-fields"), sheet=document.getElementById("ng-sheet-fields"), button=document.getElementById("ng-ok");
+  if(brief)brief.style.display=mode==="idea"?"":"none";
+  if(csv)csv.style.display=mode==="csv"?"":"none";
+  if(sheet)sheet.style.display=mode==="sheet"?"":"none";
+  if(button)button.textContent=mode==="idea"?"Create game and build first test":mode==="csv"?"Import cards as first commit":"Create game and connect Sheet";
+  document.querySelectorAll("[data-ng-mode]").forEach(label=>label.style.borderColor=label.querySelector("input")?.checked?"var(--acc)":"var(--bd)");
+}
 function newGameModal(){
   if(typeof LIVE==="undefined" || !LIVE){ toast("Creating a game needs the live platform — run <code>node server.mjs</code>."); return; }
   if(!ME){ _afterAuth=newGameModal; authOpen(); return; }
@@ -4064,11 +4097,15 @@ function newGameModal(){
   const box=document.createElement("div");
   box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:680px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)";
   box.innerHTML=`
-    <h3 style="margin:0 0 4px;font-size:19px;font-weight:650">Get the idea onto a table</h3>
-    <p style="margin:0 0 18px;color:var(--mut);font-size:13px;line-height:1.5">Start messy. Forge will commit the intent and the smallest thing worth testing. Cards and polish can come later.</p>
+    <h3 style="margin:0 0 4px;font-size:19px;font-weight:650">Start or bring a game</h3>
+    <p style="margin:0 0 15px;color:var(--mut);font-size:13px;line-height:1.5">Choose what you already have. Every path creates one owned, versioned game; nothing is published or opened for remixing unless you choose that license.</p>
     <div id="ngErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:#fff0f0;border:1px solid #ffd7d7;border-radius:8px;padding:8px 10px"></div>
+    <div role="radiogroup" aria-label="How are you starting?" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px">
+      ${[["idea","Start from an idea","Describe the smallest test"],["csv","Import CSV","Bring an existing card table"],["sheet","Connect Google Sheet","Keep drafting in Sheets"]].map(([v,l,h],i)=>`<label data-ng-mode class="btn" style="cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;${i===0?"border-color:var(--acc)":""}"><span><input type="radio" name="ng-mode" value="${v}" ${i===0?"checked":""} onchange="ngMode(this.value)"> <b>${l}</b></span><span style="font-size:11px;color:var(--mut);font-weight:400">${h}</span></label>`).join("")}
+    </div>
     <label style="display:block;margin-bottom:15px;font-size:13px;color:var(--mut)">Working title
       <input id="ng-title" placeholder="e.g. Wildfire Duel" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+    <div id="ng-brief-fields">
     <div style="font-size:13px;color:var(--mut);margin-bottom:6px">What sparked it?</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px">
       ${[["experience","An experience","How players should feel"],["mechanism","A mechanism","Something interesting players do"],["theme","A theme","A world or story worth inhabiting"],["existing_prototype","Existing prototype","Something already on your table"]].map(([v,l,h],i)=>`<label class="btn" style="cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;${i===0?"border-color:var(--acc)":""}"><span><input type="radio" name="ng-anchor" value="${v}" ${i===0?"checked":""}> <b>${l}</b></span><span style="font-size:11px;color:var(--mut);font-weight:400">${h}</span></label>`).join("")}
@@ -4081,18 +4118,27 @@ function newGameModal(){
       <textarea id="ng-mvp" placeholder="e.g. one room, three tactical choices, and one relationship consequence afterward" style="display:block;width:100%;min-height:62px;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit;line-height:1.45"></textarea></label>
     <label style="display:block;margin-bottom:16px;font-size:13px;color:var(--mut)">What question should that test answer? <span style="font-weight:400">(optional)</span>
       <input id="ng-question" placeholder="e.g. Does the relationship consequence make the dungeon choice matter?" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
-    <details style="border-top:1px solid var(--bd);padding-top:12px;margin-bottom:14px"><summary style="cursor:pointer;font-size:13px;font-weight:600">Already have cards or a Sheet? <span style="font-weight:400;color:var(--mut)">Optional</span></summary>
-      <div style="font-size:12px;color:var(--mut);margin:10px 0 6px;line-height:1.45">Paste CSV or a published Google Sheet link. This becomes the first component commit; it does not replace the design brief.</div>
+    </div>
+    <div id="ng-csv-fields" style="display:none;border:1px solid var(--bd);background:var(--bg);border-radius:9px;padding:12px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:650;margin-bottom:3px">Import a card table</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:7px;line-height:1.45">Paste CSV or upload a file. Forge previews and validates it before the first commit; the original file remains yours.</div>
       <div class="mono" style="font-size:11px;color:var(--mut);margin-bottom:6px;line-height:1.45">${esc(CSV_HINT)}</div>
-      <textarea id="ng-csv" placeholder="name,type,text,cost&#10;Spark,unit,Deal 1 damage.,1" style="display:block;width:100%;min-height:95px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:12px/1.45 ui-monospace,Menlo,monospace"></textarea>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:12px"><a onclick="document.getElementById('ng-csv').value=CSV_EXAMPLE">load example</a><label class="btn" style="cursor:pointer;margin:0">&#8682; Upload CSV<input id="ng-file" type="file" accept=".csv,text/csv" style="display:none" onchange="ngFileLoad(this)"></label>${Object.entries(STARTER_DECKS).map(([k,d])=>`<a title="${esc(d.hint)}" onclick="document.getElementById('ng-csv').value=STARTER_DECKS['${k}'].csv">${esc(d.label)}</a>`).join("")}</div>
-    </details>
+      <textarea id="ng-csv" aria-label="CSV card data" placeholder="name,type,text,cost&#10;Spark,unit,Deal 1 damage.,1" style="display:block;width:100%;min-height:120px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:12px/1.45 ui-monospace,Menlo,monospace"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:12px"><button type="button" class="btn" onclick="document.getElementById('ng-csv').value=CSV_EXAMPLE">Load example</button><label class="btn" style="cursor:pointer;margin:0">&#8682; Upload CSV<input id="ng-file" type="file" accept=".csv,text/csv" style="display:none" onchange="ngFileLoad(this)"></label>${Object.entries(STARTER_DECKS).map(([k,d])=>`<button type="button" class="btn" title="${esc(d.hint)}" onclick="document.getElementById('ng-csv').value=STARTER_DECKS['${k}'].csv">${esc(d.label)}</button>`).join("")}</div>
+    </div>
+    <div id="ng-sheet-fields" style="display:none;border:1px solid var(--bd);background:var(--bg);border-radius:9px;padding:12px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:650;margin-bottom:3px">Use a Google Sheet as the working copy</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:8px;line-height:1.45">Paste a published tab URL. Forge imports one reviewed snapshot, then shows future Sheet edits as uncommitted game changes. Private Sheets connect from the Forge for Sheets sidebar after the project is created.</div>
+      <label style="display:block;font-size:12px;color:var(--mut)">Published Google Sheet URL
+        <input id="ng-sheet" type="url" placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=0" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+      <div style="font-size:11.5px;color:var(--mut);margin-top:7px">Private Sheet? Create the project, then open <b>Extensions → Forge → Open candidate panel</b> inside Google Sheets.</div>
+    </div>
     <label style="display:block;margin-bottom:18px;font-size:13px;color:var(--mut)">License
       <select id="ng-license" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:#fff;font:inherit"><option value="proprietary">Private draft — no reuse permission</option><option value="CC-BY-4.0">CC BY 4.0 — remix with credit</option><option value="CC-BY-SA-4.0">CC BY-SA 4.0 — remix with credit, stay open</option><option value="CC0-1.0">CC0 — public domain dedication</option></select>
       <span style="display:block;font-size:11.5px;margin-top:4px">You can open the work deliberately; Forge will not silently license your idea.</span></label>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" data-x>Cancel</button>
-      <button class="btn primary" id="ng-ok">Commit first playable direction</button>
+      <button class="btn primary" id="ng-ok">Create game and build first test</button>
     </div>`;
   ov.appendChild(box); document.body.appendChild(ov);
   const close=()=>ov.remove();
@@ -4105,6 +4151,7 @@ function newGameModal(){
 async function ngSubmit(close){
   const btn=document.getElementById("ng-ok"); if(!btn) return;
   const errEl=document.getElementById("ngErr"); errEl.style.display="none";
+  const mode=document.querySelector('input[name="ng-mode"]:checked')?.value||"idea";
   const title=(document.getElementById("ng-title").value||"").trim();
   const spark=(document.getElementById("ng-spark").value||"").trim();
   const experience=(document.getElementById("ng-experience").value||"").trim();
@@ -4112,33 +4159,45 @@ async function ngSubmit(close){
   const question=(document.getElementById("ng-question").value||"").trim();
   const anchor=(document.querySelector('input[name="ng-anchor"]:checked')?.value||"experience");
   const license=(document.getElementById("ng-license").value||"proprietary");
-  const raw=(document.getElementById("ng-csv").value||"").trim();
+  const raw=(document.getElementById("ng-csv")?.value||"").trim();
+  const sheetUrl=(document.getElementById("ng-sheet")?.value||"").trim();
   if(!title){ errEl.textContent="Title is required."; errEl.style.display=""; return; }
-  if(!spark){ errEl.textContent="Get the idea out of your head first — one rough sentence is enough."; errEl.style.display=""; return; }
-  if(!experience){ errEl.textContent="Describe how players should feel. This is the filter for later decisions."; errEl.style.display=""; return; }
-  if(!mvp){ errEl.textContent="Name the smallest thing you could put on a table and test."; errEl.style.display=""; return; }
-  const isSheet=/^https?:\/\//i.test(raw);
+  if(mode==="idea"&&!spark){ errEl.textContent="Get the idea out of your head first — one rough sentence is enough."; errEl.style.display=""; return; }
+  if(mode==="idea"&&!experience){ errEl.textContent="Describe how players should feel. This is the filter for later decisions."; errEl.style.display=""; return; }
+  if(mode==="idea"&&!mvp){ errEl.textContent="Name the smallest thing you could put on a table and test."; errEl.style.display=""; return; }
+  if(mode==="csv"&&!raw){ errEl.textContent="Paste card CSV, upload a .csv file, or load one of the examples."; errEl.style.display=""; return; }
+  if(mode==="sheet"&&!/^https:\/\/docs\.google\.com\/spreadsheets\//i.test(sheetUrl)){
+    errEl.textContent="Paste a Google Sheets tab URL beginning with https://docs.google.com/spreadsheets/."; errEl.style.display=""; return;
+  }
   const was=btn.textContent; btn.disabled=true; btn.textContent="Creating…";
   try{
-    const brief={schema_version:1,status:raw?"prototype":"idea",starting_point:anchor,spark,
-      design_intent:{player_experience:experience},mvp:{playable_slice:mvp}};
-    if(question) brief.mvp.question=question;
-    const body={title,brief,license}; if(raw && !isSheet) body.csv=raw;
+    let brief=null;
+    if(mode==="idea"){
+      brief={schema_version:1,status:"idea",starting_point:anchor,spark,
+        design_intent:{player_experience:experience},mvp:{playable_slice:mvp}};
+      if(question)brief.mvp.question=question;
+    }
+    const body={title,license}; if(brief)body.brief=brief; if(mode==="csv")body.csv=raw;
     const r=await fetch("/api/games",{method:"POST",headers:authHdr(),body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(r.status===201){
-      if(isSheet){
+      if(mode==="sheet"){
         btn.textContent="Connecting sheet…";
         try{
-          const sr=await fetch(`/api/games/${d.slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url:raw})});
+          const sr=await fetch(`/api/games/${d.slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url:sheetUrl})});
           const sd=await sr.json().catch(()=>({}));
-          if(sr.ok) await fetch(`/api/games/${d.slug}/sync/pull`,{method:"POST",headers:authHdr()});
+          if(sr.ok){
+            const pull=await fetch(`/api/games/${d.slug}/sync/pull`,{method:"POST",headers:authHdr()});
+            if(!pull.ok){const pd=await pull.json().catch(()=>({}));toast(`Sheet connected, but its first snapshot needs attention: ${esc(pd.error||pull.status)} — review it from Cards.`,9000);}
+          }
           else toast(`'${esc(d.slug)}' created, but connecting the sheet failed: ${esc(sd.error||sr.status)} — connect it later from the game page.`,9000);
         }catch(e){ toast(`'${esc(d.slug)}' created, but connecting the sheet failed — try again from the game page.`,9000); }
       }
       close();
-      toast(`<b>✓ First direction committed</b><br>${d.cards?`${esc(d.cards)} component card${d.cards===1?"":"s"} imported · `:""}now make only what the MVP needs.`);
-      setTimeout(()=>{ location.href=`/?t=${Date.now()}${d.url||`#/g/${d.slug}`}`; },1100); // reload -> hub rebakes with the new game
+      const outcome=mode==="idea"?"First direction committed":mode==="csv"?`${d.cards} card${d.cards===1?"":"s"} imported as one commit`:"Game created and Sheet working copy connected";
+      toast(`<b>✓ ${esc(outcome)}</b><br>${mode==="idea"?"Now build only what the first test needs.":mode==="csv"?"Review the cards, choose a design, then invite a collaborator.":"Review the imported candidate on Cards; later Sheet edits stay drafts until you commit them."}`);
+      const destination=d.url||`#/g/${d.slug}`;
+      setTimeout(()=>{ location.href=`/?t=${Date.now()}${destination}${mode==="idea"?"":"/cards"}`; },1100); // reload -> hub rebakes with the new game
     } else if(r.status===401){
       close(); _afterAuth=newGameModal; authOpen();
     } else if(r.status===409 || r.status===422){
