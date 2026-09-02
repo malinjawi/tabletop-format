@@ -99,6 +99,17 @@ After deployment verify `/healthz`, a login/logout cycle, a private-project
 404 while signed out, a Sheet dry run and commit, a PR approval/merge, and one
 release with PnP/TTS/TTC/project receipts.
 
+Start with the read-only probe (it creates no accounts or content):
+
+```sh
+FORGE_SMOKE_EXPECT_PROJECTS='community/cards-against-humanity,community/secret-hitler' \
+  node tools/alpha-readiness.mjs https://forge.example --production
+```
+
+Then run the mutating two-person path with disposable pilot accounts. Use the
+cohort protocol and success/stop thresholds in
+[`../docs/CONTROLLED-ALPHA-PILOT.md`](../docs/CONTROLLED-ALPHA-PILOT.md).
+
 ## 6. Backup and restore drill
 
 Back up before every Forgejo/database upgrade and daily during the alpha:

@@ -26,6 +26,7 @@
     "build:rulebook-publication": "node tools/build-rulebook-publication.mjs examples/_fixtures/netrunner-sg output/pdf/netrunner-sg-rulebook-publication",
     "setup:dev": "node tools/setup-dev.mjs",
     "doctor": "node tools/doctor.mjs",
+    "smoke:alpha": "node tools/alpha-readiness.mjs",
     "launch:gate": "./launch-gate.sh",
     "export:pnpink-proof": "node tools/export-pnpink.mjs examples/_fixtures/netrunner-sg tmp/pnpink-proof",
     "split:card-design": "node tools/split-layout-families.mjs",
