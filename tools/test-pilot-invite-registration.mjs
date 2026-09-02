@@ -73,14 +73,28 @@ try {
   const health = await (await fetch(`${origin}/healthz`)).json();
   assert.equal(health.registration, "invite");
   assert.equal(health.password_min, 8);
+  assert.match(health.policy_set, /^[a-f0-9]{64}$/);
+  const registrationPolicies = await request("GET", "/api/policies/registration");
+  assert.equal(registrationPolicies.status, 200);
+  assert.equal(registrationPolicies.body.policy_set, health.policy_set);
+  assert.equal(registrationPolicies.body.notice,
+    "I agree to the Forge Terms and Community Rules, and acknowledge the Privacy Notice.");
+  assert.deepEqual(registrationPolicies.body.links,
+    { terms: "/policies/terms", community: "/policies/community", privacy: "/policies/privacy" });
   const shell = await (await fetch(`${origin}/`)).text();
   assert.match(shell, /id="amInvite"/);
+  assert.match(shell, /id="amPolicyAccept"/);
   assert.match(shell, /body\.invite_code=inviteField/);
 
-  const invalid = await api({ handle: "intruder", email: "intruder@example.com",
-    password: "correct-horse-11", invite_code: "wrong-token" });
-  assert.equal(invalid.status, 403);
-  assert.equal(invalid.body.error, "invite is invalid or no longer available");
+  const unaccepted = await api({ handle: "amina", email: "amina@example.com",
+    password: "correct-horse-12", invite_code: token });
+  assert.equal(unaccepted.status, 422);
+  assert.equal(unaccepted.body.policy_set, health.policy_set);
+  const untouched = new DatabaseSync(dbPath);
+  assert.equal(untouched.prepare("SELECT redeemed_at FROM pilot_invites").get().redeemed_at, null,
+    "missing clickwrap cannot consume the invitation");
+  assert.equal(untouched.prepare("SELECT COUNT(*) AS n FROM users").get().n, 0);
+  untouched.close();
 
   browser = await chromium.launch({ executablePath: chrome, headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -90,10 +104,15 @@ try {
   await page.locator("#amSwitch").click();
   assert.notEqual(await page.locator("#amInvite").evaluate(element => getComputedStyle(element).display), "none");
   assert.equal(await page.locator("#amPass").getAttribute("placeholder"), "password (8+ chars)");
+  assert.ok(await page.locator("#amPolicies").isVisible());
+  assert.equal(await page.locator("#amPolicyAccept").isChecked(), false, "policy acceptance is never preselected");
+  assert.equal(await page.locator("#amSubmit").isDisabled(), true, "account creation waits for affirmative assent");
   await page.locator("#amHandle").fill("amina");
   await page.locator("#amEmail").fill("amina@example.com");
   await page.locator("#amPass").fill("correct-horse-12");
   await page.locator("#amInvite").fill(token);
+  await page.locator("#amPolicyAccept").check();
+  assert.equal(await page.locator("#amSubmit").isEnabled(), true);
   const registrationResponse = page.waitForResponse(response => response.url().endsWith("/api/auth/register"));
   await page.locator("#authModal button.primary").click();
   const browserRegistration = await registrationResponse;
@@ -101,6 +120,21 @@ try {
   await page.locator("#authArea").getByText("@amina").waitFor();
   assert.equal(await page.locator("#amInvite").inputValue(), "", "browser clears the bearer token immediately");
   assert.equal(await page.locator("#amPass").inputValue(), "", "browser clears the password immediately");
+  const receiptDb = new DatabaseSync(dbPath);
+  const receipt = receiptDb.prepare(
+    `SELECT a.method, a.application_build, a.policy_set_id, s.terms_text, s.privacy_text,
+            s.community_text, s.notice_text, s.terms_sha256
+     FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id`).get();
+  receiptDb.close();
+  assert.equal(receipt.method, "clickwrap");
+  assert.equal(receipt.application_build, "development");
+  assert.equal(receipt.policy_set_id, health.policy_set);
+  assert.match(receipt.terms_text, /Forge Pilot Operator/);
+  assert.match(receipt.privacy_text, /ops@forge\.test/);
+  assert.match(receipt.community_text, /Forge community rules/);
+  assert.equal(receipt.notice_text,
+    "I agree to the Forge Terms and Community Rules, and acknowledge the Privacy Notice.");
+  assert.match(receipt.terms_sha256, /^[a-f0-9]{64}$/);
   await browser.close(); browser = null;
 
   const oldLogin = await request("POST", "/api/auth/login", { body: {
@@ -108,6 +142,11 @@ try {
   } });
   assert.equal(oldLogin.status, 200);
   const oldSession = oldLogin.body.token;
+  const policyView = await request("GET", "/api/me", { token: oldSession });
+  assert.equal(policyView.status, 200);
+  assert.equal(policyView.body.policy_acceptances.length, 1);
+  assert.equal(policyView.body.policy_acceptances[0].policy_set_id, health.policy_set);
+  assert.equal(policyView.body.policy_acceptances[0].method, "clickwrap");
 
   const resetIssued = runAccountCli("reset", "--handle", "amina", "--hours", "1");
   assert.equal(resetIssued.status, 0, resetIssued.stderr);
@@ -202,15 +241,16 @@ try {
   assert.doesNotMatch(restoredStatus.stdout, /@|fpr_|[a-f0-9]{64}/i);
 
   const replay = await api({ handle: "replay", email: "replay@example.com",
-    password: "correct-horse-13", invite_code: token });
+    password: "correct-horse-13", invite_code: token,
+    accept_policies: true, policy_set: health.policy_set });
   assert.equal(replay.status, 403);
-  assert.equal(replay.body.error, invalid.body.error);
+  assert.equal(replay.body.error, "invite is invalid or no longer available");
 
   const listed = runCli("list");
   assert.equal(listed.status, 0, listed.stderr);
   assert.match(listed.stdout, /redeemed[\s\S]*Amina designer[\s\S]*amina/);
   assert.doesNotMatch(listed.stdout, /fpi_|[a-f0-9]{64}/i);
-  console.log("PILOT ACCOUNT ACCESS GREEN — single-use admission, recovery, suspension, and restoration are auditable and safe.");
+  console.log("PILOT ACCOUNT ACCESS GREEN — policy acceptance, single-use admission, recovery, suspension, and restoration are auditable and safe.");
 } finally {
   if (browser) await browser.close();
   if (server && !server.killed) server.kill("SIGTERM");

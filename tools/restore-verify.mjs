@@ -37,6 +37,15 @@ const bobLogin=await request("POST","/api/auth/login",{body:{handle:"bob",passwo
 assert(aliceLogin.response.status===200&&aliceLogin.data.token,"Alice can authenticate from restored identity state");
 assert(bobLogin.response.status===200&&bobLogin.data.token,"Bob can authenticate from restored identity state");
 const A=aliceLogin.data.token,B=bobLogin.data.token;
+const restoredAlice=(await request("GET","/api/me",{token:A})).data;
+const restoredBob=(await request("GET","/api/me",{token:B})).data;
+assert(restoredAlice.policy_acceptances?.length===1&&restoredBob.policy_acceptances?.length===1
+  &&restoredAlice.policy_acceptances[0].policy_set_id===health.data.policy_set
+  &&restoredBob.policy_acceptances[0].policy_set_id===health.data.policy_set
+  &&restoredAlice.policy_acceptances[0].method==="clickwrap"
+  &&/^[a-f0-9]{64}$/.test(restoredAlice.policy_acceptances[0].terms_sha256||""),
+  "exact account-policy receipts survived PostgreSQL backup and restore",
+  {alice:restoredAlice.policy_acceptances,bob:restoredBob.policy_acceptances});
 
 const catalog=(await request("GET","/api/games")).data;
 const original=catalog.find(game=>game.slug==="tidepool");

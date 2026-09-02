@@ -9,6 +9,7 @@
  */
 const PG = process.env.DB === "postgres";
 import { createHash } from "node:crypto";
+import { makePolicySet } from "../platform/policy-acceptance.mjs";
 const { openDb, q, newId } = PG
   ? await import("../platform/db-pg.mjs")
   : await import("../platform/db.mjs");
@@ -21,6 +22,9 @@ const assert = (c, m, d) => c ? ok(m) : die(m, d);
 const db = await openDb(PG ? undefined : ":memory:");
 const T = Date.now(); // unique-ify for reruns against a persistent pg
 const h = (s) => `${s}-${T % 100000}`;
+const policySet = makePolicySet({ terms: "Test terms v1", privacy: "Test privacy v1",
+  community: "Test community rules v1" });
+const acceptance = () => ({ id: newId("pa"), policy_set: policySet, application_build: `test-${T}` });
 
 // users
 const ana = { id: newId("u"), handle: h("ana"), email: `${h("ana")}@x.io`, pass_hash: "hash1" };
@@ -42,18 +46,22 @@ let invitations = await q.pilotInvites(db, inviteAt);
 assert(invitations.some(row => row.id === invite.id && row.status === "available"
   && !("token_hash" in row)), "pilot invite listing is available and never exposes its token digest");
 const invited = { id: newId("u"), handle: h("invited"), email: `${h("invited")}@x.io`, pass_hash: "invite-hash" };
-const redemption = await q.registerUserWithInvite(db, invited, invite.token_hash, inviteAt + 1);
+const redemption = await q.registerUserWithInvite(db, invited, invite.token_hash, acceptance(), inviteAt + 1);
 assert(redemption.id === invite.id && (await q.userById(db, invited.id)).handle === invited.handle,
   "valid pilot invite atomically creates its account");
 invitations = await q.pilotInvites(db, inviteAt + 2);
 assert(invitations.find(row => row.id === invite.id)?.status === "redeemed"
   && invitations.find(row => row.id === invite.id)?.redeemed_handle === invited.handle,
   "redeemed invitation records the account without retaining its raw token");
+const invitedPolicies = await q.policyAcceptancesByUser(db, invited.id);
+assert(invitedPolicies.length === 1 && invitedPolicies[0].policy_set_id === policySet.id
+  && invitedPolicies[0].method === "clickwrap" && invitedPolicies[0].application_build === `test-${T}`,
+  "invited account atomically records the exact policy set and acceptance method");
 let replayed = false;
 try {
   await q.registerUserWithInvite(db,
     { id: newId("u"), handle: h("replay"), email: `${h("replay")}@x.io`, pass_hash: "hash" },
-    invite.token_hash, inviteAt + 3);
+    invite.token_hash, acceptance(), inviteAt + 3);
 } catch (error) { replayed = error?.code === "FORGE_INVITE_INVALID"; }
 assert(replayed && !(await q.userByHandle(db, h("replay"))), "an invite cannot be replayed and creates no partial account");
 const expired = { id: newId("inv"), token_hash: digest(`expired:${T}`), label: null, cohort_id: h("beta"),
@@ -63,7 +71,7 @@ let expiryRejected = false;
 try {
   await q.registerUserWithInvite(db,
     { id: newId("u"), handle: h("expired"), email: `${h("expired")}@x.io`, pass_hash: "hash" },
-    expired.token_hash, inviteAt);
+    expired.token_hash, acceptance(), inviteAt);
 } catch (error) { expiryRejected = error?.code === "FORGE_INVITE_INVALID"; }
 assert(expiryRejected && (await q.pilotInvites(db, inviteAt)).find(row => row.id === expired.id)?.status === "expired",
   "expired invite is rejected and reported as expired");
@@ -75,7 +83,7 @@ let revocationRejected = false;
 try {
   await q.registerUserWithInvite(db,
     { id: newId("u"), handle: h("revoked"), email: `${h("revoked")}@x.io`, pass_hash: "hash" },
-    revoked.token_hash, inviteAt + 2);
+    revoked.token_hash, acceptance(), inviteAt + 2);
 } catch (error) { revocationRejected = error?.code === "FORGE_INVITE_INVALID"; }
 assert(revocationRejected && (await q.pilotInvites(db, inviteAt + 2)).find(row => row.id === revoked.id)?.status === "revoked",
   "revoked invite is rejected and reported as revoked");
@@ -85,7 +93,7 @@ await q.createPilotInvite(db, raced);
 const racers = [1, 2].map(number => ({ id: newId("u"), handle: h(`racer${number}`),
   email: `${h(`racer${number}`)}@x.io`, pass_hash: "hash" }));
 const raceResults = await Promise.allSettled(racers.map(user =>
-  Promise.resolve().then(() => q.registerUserWithInvite(db, user, raced.token_hash, inviteAt + 3))));
+  Promise.resolve().then(() => q.registerUserWithInvite(db, user, raced.token_hash, acceptance(), inviteAt + 3))));
 assert(raceResults.filter(result => result.status === "fulfilled").length === 1
   && raceResults.filter(result => result.status === "rejected" && result.reason?.code === "FORGE_INVITE_INVALID").length === 1
   && (await Promise.all(racers.map(user => q.userById(db, user.id)))).filter(Boolean).length === 1,

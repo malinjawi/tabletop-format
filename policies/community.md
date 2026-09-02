@@ -10,4 +10,4 @@ Build games with people, not at their expense.
 - Maintainers must apply review and jam rules consistently, document disqualification or takedown reasons, and provide an appeal/contact path.
 - Security reports, rights complaints, moderation reports, and appeals go to {{CONTACT}}.
 
-Moderation actions are recorded in an audit trail. Serious or repeated violations may remove content or alpha access.
+Moderation actions are recorded in an audit trail. Serious or repeated violations may remove content or beta access.

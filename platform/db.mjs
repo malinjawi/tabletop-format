@@ -12,6 +12,7 @@ import { readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
+import { validPolicySet } from "./policy-acceptance.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -44,11 +45,39 @@ function migrate(db) {
 
 export const newId = (prefix) => `${prefix}_${randomBytes(8).toString("hex")}`;
 
+function recordPolicyAcceptance(db, userId, acceptance, now) {
+  const set = acceptance?.policy_set;
+  if (!validPolicySet(set) || !acceptance?.id || !String(acceptance.application_build || "").trim())
+    throw Object.assign(new Error("exact policy acceptance is required"), { code: "FORGE_POLICY_REQUIRED" });
+  db.prepare(
+    `INSERT INTO policy_sets (id, terms_text, privacy_text, community_text, notice_text,
+       terms_sha256, privacy_sha256, community_sha256, notice_sha256, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO NOTHING`).run(set.id, set.terms_text, set.privacy_text, set.community_text,
+      set.notice_text, set.terms_sha256, set.privacy_sha256, set.community_sha256, set.notice_sha256, now);
+  db.prepare(
+    `INSERT INTO policy_acceptances (id, user_id, policy_set_id, accepted_at, method, application_build)
+     VALUES (?, ?, ?, ?, 'clickwrap', ?)`).run(acceptance.id, userId, set.id, now, acceptance.application_build);
+}
+
 /* ---- typed helpers (the only SQL surface the routes may touch) ---- */
 export const q = {
   createUser: (db, u) => db.prepare(
     `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`).run(u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, Date.now()),
+  createUserWithPolicyAcceptance: (db, u, acceptance, now = Date.now()) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.prepare(
+        `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, now);
+      recordPolicyAcceptance(db, u.id, acceptance, now);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
   createPilotInvite: (db, invite) => db.prepare(
     `INSERT INTO pilot_invites (id, token_hash, label, cohort_id, created_at, expires_at)
      VALUES (?, ?, ?, ?, ?, ?)`).run(invite.id, invite.token_hash, invite.label ?? null,
@@ -64,7 +93,7 @@ export const q = {
   revokePilotInvite: (db, id, now = Date.now()) => db.prepare(
     `UPDATE pilot_invites SET revoked_at = ?
      WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`).run(now, id),
-  registerUserWithInvite: (db, u, tokenHash, now = Date.now()) => {
+  registerUserWithInvite: (db, u, tokenHash, acceptance, now = Date.now()) => {
     db.exec("BEGIN IMMEDIATE");
     try {
       const invite = db.prepare(
@@ -77,6 +106,7 @@ export const q = {
       db.prepare(
         `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`).run(u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, now);
+      recordPolicyAcceptance(db, u.id, acceptance, now);
       const claimed = db.prepare(
         `UPDATE pilot_invites SET redeemed_at = ?, redeemed_by = ?
          WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > ?`)
@@ -148,6 +178,11 @@ export const q = {
   userByHandle: (db, h) => db.prepare("SELECT * FROM users WHERE handle = ?").get(h),
   userByEmail:  (db, e) => db.prepare("SELECT * FROM users WHERE email = ?").get(e),
   userById:     (db, id) => db.prepare("SELECT * FROM users WHERE id = ?").get(id),
+  policyAcceptancesByUser: (db, userId) => db.prepare(
+    `SELECT a.id, a.policy_set_id, a.accepted_at, a.method, a.application_build,
+            s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
+     FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
+     WHERE a.user_id = ? ORDER BY a.accepted_at DESC`).all(userId),
 
   accountAccessByHandle: (db, handle) => db.prepare(
     `SELECT id, handle, created_at, suspended_at, suspension_reason,

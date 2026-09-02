@@ -259,6 +259,12 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
     <input id="amResetToken" autocomplete="one-time-code" placeholder="one-use recovery token" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
     <input id="amPass" type="password" placeholder="password (8+ chars)" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
     <input id="amPassConfirm" type="password" placeholder="confirm new password" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
+    <div id="amPolicies" style="display:none;margin:10px 0 4px;padding:11px 12px;border:1px solid #b8cfe8;border-radius:8px;background:#f4f8fc;font-size:13px;line-height:1.4">
+      <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer">
+        <input id="amPolicyAccept" type="checkbox" onchange="syncAuthSubmit()" style="width:18px;height:18px;margin:1px 0 0;flex:none">
+        <span>I agree to the Forge <a href="/policies/terms" target="_blank" rel="noopener" style="color:#0969da;text-decoration:underline">Terms</a> and <a href="/policies/community" target="_blank" rel="noopener" style="color:#0969da;text-decoration:underline">Community Rules</a>, and acknowledge the <a href="/policies/privacy" target="_blank" rel="noopener" style="color:#0969da;text-decoration:underline">Privacy Notice</a>.</span>
+      </label>
+    </div>
     <button id="amSubmit" class="btn primary" style="width:100%;margin-top:10px" onclick="authSubmit()">Continue</button>
     <div style="font-size:13px;color:var(--mut);margin-top:12px;text-align:center">
       <a id="amSwitch" onclick="authMode(amMode==='login'?'register':'login')">Create an account instead</a>
@@ -298,7 +304,7 @@ new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(
 upgradePseudoLinks();
 /* ---- live mode + auth + stars (feature: accounts & stars end-to-end) ---- */
 let LIVE=false, ME=null, STARS={}, MYSTARS=new Set(), amMode="login", _afterAuth=null, CATALOG_LOADING=true;
-let REGISTRATION="open", PASSWORD_MIN=8;
+let REGISTRATION="open", PASSWORD_MIN=8, POLICY_SET="";
 let EXPLORE_QUERY="", EXPLORE_TOPIC="";
 // Browser sessions are HttpOnly cookies. JavaScript never reads or persists a
 // bearer token; API/connector clients can still request and use one directly.
@@ -307,6 +313,7 @@ async function refreshLive(){
   try {
     const h = await (await fetch("/healthz")).json(); LIVE = !!h.ok;
     REGISTRATION=String(h.registration||"open"); PASSWORD_MIN=Number(h.password_min)||8;
+    POLICY_SET=String(h.policy_set||"");
     if(!LIVE) return;
     const catalog = await (await fetch("/api/catalog?limit=24")).json();
     const gs = catalog.items||[]; CATALOG_LOADING=false;
@@ -327,6 +334,10 @@ function renderAuthArea(){
     : `<button class="btn" style="background:#e0632f;color:#fff;border:none" onclick="authOpen()">Sign in</button>`;
 }
 function authOpen(mode){ authMode(mode||"login"); document.getElementById("authModal").style.display="flex"; }
+function syncAuthSubmit(){
+  const submit=document.getElementById("amSubmit");
+  submit.disabled=amMode==="register"&&(!document.getElementById("amPolicyAccept").checked||!POLICY_SET);
+}
 function authMode(m){ amMode=m;
   const reset=m==="reset",register=m==="register";
   document.getElementById("amTitle").textContent = reset?"Reset password":m==="login"?"Sign in":"Create account";
@@ -336,26 +347,34 @@ function authMode(m){ amMode=m;
   document.getElementById("amInvite").style.display = register&&REGISTRATION==="invite"?"":"none";
   document.getElementById("amResetToken").style.display = reset?"":"none";
   document.getElementById("amPassConfirm").style.display = reset?"":"none";
+  document.getElementById("amPolicies").style.display = register?"":"none";
+  document.getElementById("amPolicyAccept").checked = false;
   document.getElementById("amPass").placeholder=reset?`new password (${PASSWORD_MIN}+ chars)`:`password (${PASSWORD_MIN}+ chars)`;
   document.getElementById("amSwitch").textContent = m==="login"?"Create an account instead":"Back to sign in";
   document.getElementById("amResetLink").style.display = m==="login"?"":"none";
   document.getElementById("amResetSep").style.display = m==="login"?"":"none";
   document.getElementById("amErr").style.display="none";
+  document.getElementById("amSubmit").textContent=register?"Create account":"Continue";
+  syncAuthSubmit();
 }
 async function authSubmit(){
   const mode=amMode,submit=document.getElementById("amSubmit");
   const passwordField=document.getElementById("amPass"), inviteField=document.getElementById("amInvite"),
     resetField=document.getElementById("amResetToken"),confirmField=document.getElementById("amPassConfirm"),err=document.getElementById("amErr");
   if(mode==="reset"&&passwordField.value!==confirmField.value){err.textContent="New passwords do not match.";err.style.display="";return;}
+  if(mode==="register"&&(!document.getElementById("amPolicyAccept").checked||!POLICY_SET)){
+    err.textContent="Review and accept the policies to create an account.";err.style.display="";return;
+  }
   const body={handle:document.getElementById("amHandle").value.trim(),
               password:passwordField.value};
   if(mode==="register"){
     body.email=document.getElementById("amEmail").value.trim();
+    body.accept_policies=true;body.policy_set=POLICY_SET;
     if(REGISTRATION==="invite")body.invite_code=inviteField.value.trim();
   }
   if(mode==="reset"){delete body.handle;body.reset_token=resetField.value.trim();}
   const endpoint=mode==="reset"?"password-reset":mode;
-  submit.disabled=true;submit.textContent=mode==="reset"?"Resetting…":"Checking…";err.style.display="none";
+  submit.disabled=true;submit.textContent=mode==="reset"?"Resetting…":mode==="register"?"Creating account…":"Checking…";err.style.display="none";
   const request=fetch(`/api/auth/${endpoint}`,{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify(body)});
   passwordField.value="";inviteField.value="";resetField.value="";confirmField.value="";
   try{
@@ -364,9 +383,12 @@ async function authSubmit(){
       if(mode==="reset"){authMode("login");toast("Password reset. Sign in with the new password.");return;}
       document.getElementById("authModal").style.display="none"; await refreshLive();
       if(_afterAuth){ const fn=_afterAuth; _afterAuth=null; fn(); }
-    }else{err.textContent=d.error??r.status;err.style.display="";}
+    }else{
+      if(r.status===409&&d.policy_set){POLICY_SET=String(d.policy_set);document.getElementById("amPolicyAccept").checked=false;}
+      err.textContent=d.error??r.status;err.style.display="";
+    }
   }catch(error){err.textContent="Forge could not be reached. Try again.";err.style.display="";}
-  finally{submit.disabled=false;submit.textContent="Continue";}
+  finally{submit.textContent=mode==="register"?"Create account":"Continue";syncAuthSubmit();}
 }
 async function signOut(){
   await fetch("/api/auth/logout",{method:"POST",headers:{"x-forge-browser":"1"}});

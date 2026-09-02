@@ -81,9 +81,15 @@ const PNG = Buffer.concat([Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64"), Buffer.alloc(300, 0)]);
 
+const health = await api("GET", "/healthz");
+assert(health.status === 200 && /^[a-f0-9]{64}$/.test(health.data.policy_set),
+  "registration advertises one exact policy set");
+const policyAcceptance = { accept_policies: true, policy_set: health.data.policy_set };
+
 console.log("== ACT 1: Alice hosts a game ==");
 const aliceReg = await api("POST", "/api/auth/register",
-  { body: { handle: "alice", email: "alice@tidepool.games", password: "correct-horse-1", invite_code: INVITES.alice } });
+  { body: { handle: "alice", email: "alice@tidepool.games", password: "correct-horse-1",
+    invite_code: INVITES.alice, ...policyAcceptance } });
 assert(aliceReg.status === 201 && aliceReg.data.token, "alice registers");
 const A = aliceReg.data.token;
 
@@ -99,6 +105,10 @@ assert(noAuth.status === 401, "anonymous cannot host games (401)");
 
 const me1 = await api("GET", "/api/me", { token: A });
 assert(me1.data.games.includes("tidepool"), "/api/me lists alice's game (SQL ledger)");
+assert(me1.data.policy_acceptances?.length === 1
+  && me1.data.policy_acceptances[0].policy_set_id === health.data.policy_set
+  && me1.data.policy_acceptances[0].method === "clickwrap",
+  "alice can inspect the exact policy-set receipt attached to her account");
 
 console.log("== ACT 2: Alice works on it ==");
 const art = await api("POST", "/api/games/tidepool/assets?path=assets/art/riptide.png",
@@ -146,7 +156,8 @@ assert(tts.ObjectStates[0].DeckIDs.length === 6 && tts.SaveName === "Tidepool",
 
 console.log("== ACT 3: Bob arrives ==");
 const bobReg = await api("POST", "/api/auth/register",
-  { body: { handle: "bob", email: "bob@example.com", password: "correct-horse-2", invite_code: INVITES.bob } });
+  { body: { handle: "bob", email: "bob@example.com", password: "correct-horse-2",
+    invite_code: INVITES.bob, ...policyAcceptance } });
 const B = bobReg.data.token;
 assert(bobReg.status === 201, "bob registers");
 
@@ -388,7 +399,8 @@ assert((await api("GET", "/api/notifications", { token: B })).data.unread === 0,
 
 console.log("== ACT 12: namespaced repository identity ==");
 const charlieReg = await api("POST", "/api/auth/register",
-  { body: { handle: "charlie", email: "charlie@tidepool.games", password: "correct-horse-3", invite_code: INVITES.charlie } });
+  { body: { handle: "charlie", email: "charlie@tidepool.games", password: "correct-horse-3",
+    invite_code: INVITES.charlie, ...policyAcceptance } });
 assert(charlieReg.status === 201 && charlieReg.data.token, "charlie registers");
 const sameName = await api("POST", "/api/games", { token: charlieReg.data.token,
   body: { title: "Tidepool", csv: ALICE_CSV } });

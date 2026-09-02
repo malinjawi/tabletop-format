@@ -17,6 +17,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
+import { validPolicySet } from "./policy-acceptance.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -51,12 +52,45 @@ export const newId = (prefix) => `${prefix}_${randomBytes(8).toString("hex")}`;
 const one = async (db, sql, args) => (await db.query(sql, args)).rows[0];
 const all = async (db, sql, args) => (await db.query(sql, args)).rows;
 
+async function recordPolicyAcceptance(db, userId, acceptance, now) {
+  const set = acceptance?.policy_set;
+  if (!validPolicySet(set) || !acceptance?.id || !String(acceptance.application_build || "").trim())
+    throw Object.assign(new Error("exact policy acceptance is required"), { code: "FORGE_POLICY_REQUIRED" });
+  await db.query(
+    `INSERT INTO policy_sets (id, terms_text, privacy_text, community_text, notice_text,
+       terms_sha256, privacy_sha256, community_sha256, notice_sha256, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     ON CONFLICT (id) DO NOTHING`, [set.id, set.terms_text, set.privacy_text, set.community_text,
+      set.notice_text, set.terms_sha256, set.privacy_sha256, set.community_sha256, set.notice_sha256, now]);
+  await db.query(
+    `INSERT INTO policy_acceptances (id, user_id, policy_set_id, accepted_at, method, application_build)
+     VALUES ($1, $2, $3, $4, 'clickwrap', $5)`,
+    [acceptance.id, userId, set.id, now, acceptance.application_build]);
+}
+
 /* ---- the q surface — 1:1 with db.mjs ---- */
 export const q = {
   createUser: (db, u) => db.query(
     `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, Date.now()]),
+  createUserWithPolicyAcceptance: async (db, u, acceptance, now = Date.now()) => {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, now]);
+      await recordPolicyAcceptance(client, u.id, acceptance, now);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
   createPilotInvite: (db, invite) => db.query(
     `INSERT INTO pilot_invites (id, token_hash, label, cohort_id, created_at, expires_at)
      VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -73,7 +107,7 @@ export const q = {
   revokePilotInvite: (db, id, now = Date.now()) => db.query(
     `UPDATE pilot_invites SET revoked_at = $1
      WHERE id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL`, [now, id]),
-  registerUserWithInvite: async (db, u, tokenHash, now = Date.now()) => {
+  registerUserWithInvite: async (db, u, tokenHash, acceptance, now = Date.now()) => {
     const client = await db.connect();
     try {
       await client.query("BEGIN");
@@ -90,6 +124,7 @@ export const q = {
         `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, now]);
+      await recordPolicyAcceptance(client, u.id, acceptance, now);
       const claimed = await client.query(
         `UPDATE pilot_invites SET redeemed_at = $1, redeemed_by = $2
          WHERE id = $3 AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > $4`,
@@ -173,6 +208,11 @@ export const q = {
   userByHandle: (db, h) => one(db, "SELECT * FROM users WHERE handle = $1", [h]),
   userByEmail:  (db, e) => one(db, "SELECT * FROM users WHERE email = $1", [e]),
   userById:     (db, id) => one(db, "SELECT * FROM users WHERE id = $1", [id]),
+  policyAcceptancesByUser: (db, userId) => all(db,
+    `SELECT a.id, a.policy_set_id, a.accepted_at, a.method, a.application_build,
+            s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
+     FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
+     WHERE a.user_id = $1 ORDER BY a.accepted_at DESC`, [userId]),
 
   accountAccessByHandle: (db, handle) => one(db,
     `SELECT id, handle, created_at, suspended_at, suspension_reason,

@@ -47,6 +47,7 @@ import { PROJECT_META, projectMetaBytes, publicProjectPath } from "./platform/pr
 import { collaborationFiles, collaborationPolicy, roleCapabilities, validCollaboratorRole } from "./platform/collaboration.mjs";
 import { RIGHTS_MANIFEST, auditRights, forkRightsManifest, parseRights, rightsManifestBytes,
   rightsReceiptBytes, setFileRight } from "./platform/rights.mjs";
+import { makePolicySet, POLICY_ACCEPTANCE_NOTICE } from "./platform/policy-acceptance.mjs";
 
 /* ---------- config ---------- */
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -65,6 +66,12 @@ const INVITE_MODE = process.env.FORGE_INVITE_MODE || (PRODUCTION ? "database" : 
 const SESSION_TTL = PRODUCTION ? 7 * 24 * 3600 * 1000 : SESSION_TTL_MS;
 const OPERATOR_NAME = process.env.FORGE_OPERATOR_NAME || "Forge local development";
 const CONTACT_EMAIL = process.env.FORGE_CONTACT_EMAIL || "support@example.invalid";
+const POLICY_FILES = { terms: "terms.md", privacy: "privacy.md", community: "community.md",
+  rights: "rights-and-takedown.md", support: "support.md" };
+const renderPolicy = name => readFileSync(join(ROOT, "policies", POLICY_FILES[name]), "utf8")
+  .replaceAll("{{OPERATOR}}", OPERATOR_NAME).replaceAll("{{CONTACT}}", CONTACT_EMAIL);
+const REGISTRATION_POLICY_SET = makePolicySet({ terms: renderPolicy("terms"),
+  privacy: renderPolicy("privacy"), community: renderPolicy("community") });
 if (PRODUCTION && !HTTPS) throw new Error("production requires an HTTPS FORGE_PUBLIC_ORIGIN (or FORGE_HTTPS=1)");
 if (PRODUCTION && REGISTRATION_MODE === "open") throw new Error("public registration cannot be open in the controlled beta");
 if (!new Set(["database", "shared"]).has(INVITE_MODE)) throw new Error("FORGE_INVITE_MODE must be database or shared");
@@ -230,7 +237,8 @@ async function uiGame(slug) {
 /* ---------- gateway + middleware ---------- */
 const gw = createGateway({ name: "forge-platform", version: "0.3", allowedOrigins: ALLOWED_ORIGINS,
   production: PRODUCTION, https: HTTPS, host: LISTEN_HOST,
-  health: { registration: REGISTRATION_MODE, password_min: PRODUCTION ? 12 : 8 } });
+  health: { registration: REGISTRATION_MODE, password_min: PRODUCTION ? 12 : 8,
+    policy_set: REGISTRATION_POLICY_SET.id } });
 const hits = new Map();
 gw.use((ctx) => { if (ctx.req.method === "OPTIONS") ctx.send(204, ""); });
 gw.use((ctx) => { // rate limit
@@ -530,15 +538,17 @@ function normalizePrSnapshot(value, fallbackRef = "HEAD") {
 
 /* ---------- routes: hub + live editor ---------- */
 gw.route("GET", "/", async (ctx) => ctx.send(200, await hubHtml(), "text/html; charset=utf-8"), "hub UI");
-const POLICY_FILES = { terms: "terms.md", privacy: "privacy.md", community: "community.md",
-  rights: "rights-and-takedown.md", support: "support.md" };
 gw.route("GET", "/policies/:name", async (ctx) => {
   const file = POLICY_FILES[ctx.params.name]; if (!file) return ctx.send(404, { error: "no such policy" });
-  const raw = readFileSync(join(ROOT, "policies", file), "utf8")
-    .replaceAll("{{OPERATOR}}", OPERATOR_NAME).replaceAll("{{CONTACT}}", CONTACT_EMAIL);
+  const raw = renderPolicy(ctx.params.name);
   const escaped = raw.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   ctx.send(200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Forge — ${ctx.params.name}</title><style>body{font:16px/1.6 system-ui;max-width:780px;margin:40px auto;padding:0 22px;color:#24292f}pre{white-space:pre-wrap;font:inherit}a{color:#0969da}</style><p><a href="/">← Forge</a></p><pre>${escaped}</pre>`, "text/html; charset=utf-8");
 }, "controlled-beta terms, privacy, community, rights, and support documents");
+gw.route("GET", "/api/policies/registration", async (ctx) => ctx.send(200, {
+  policy_set: REGISTRATION_POLICY_SET.id,
+  notice: POLICY_ACCEPTANCE_NOTICE,
+  links: { terms: "/policies/terms", community: "/policies/community", privacy: "/policies/privacy" },
+}), "current registration policy-set identifier and conspicuous clickwrap notice");
 const editorBuilt = new Map(); // slug -> {version}
 gw.route("GET", "/edit/:slug", async (ctx) => {
   // legacy path → the app's routed edit mode (editing lives INSIDE the SPA now)
@@ -651,9 +661,17 @@ function authResponse(ctx, code, token, user, body = {}) {
   ctx.send(code, { ...body, ...(apiToken ? { token } : {}), user });
 }
 gw.route("POST", "/api/auth/register", async (ctx) => {
-  let { handle, email, password, invite_code: inviteCode } = await json(ctx);
+  let { handle, email, password, invite_code: inviteCode,
+    accept_policies: acceptPolicies, policy_set: policySet } = await json(ctx);
   email = String(email || "").trim().toLowerCase();
   if (REGISTRATION_MODE === "closed") return ctx.send(403, { error: "registration is invite-only during the controlled beta" });
+  const policiesAccepted = acceptPolicies === true && policySet === REGISTRATION_POLICY_SET.id;
+  if (acceptPolicies === true && policySet !== REGISTRATION_POLICY_SET.id)
+    return ctx.send(409, { error: "policies changed; review and accept the current versions",
+      policy_set: REGISTRATION_POLICY_SET.id });
+  if (REGISTRATION_MODE === "invite" && !policiesAccepted)
+    return ctx.send(422, { error: "accept the Terms and Community Rules and acknowledge the Privacy Notice",
+      policy_set: REGISTRATION_POLICY_SET.id });
   if (REGISTRATION_MODE === "invite" && INVITE_MODE === "shared"
       && (!process.env.FORGE_INVITE_CODE || inviteCode !== process.env.FORGE_INVITE_CODE))
     return ctx.send(403, { error: "a valid invite code is required" });
@@ -663,11 +681,13 @@ gw.route("POST", "/api/auth/register", async (ctx) => {
   if ((password ?? "").length < minimum) return ctx.send(422, { error: `password: ${minimum}+ chars` });
   const id = newId("u");
   const user = { id, handle, email, pass_hash: hashPassword(password) };
+  const acceptance = policiesAccepted ? { id: newId("pa"), policy_set: REGISTRATION_POLICY_SET,
+    application_build: process.env.FORGE_BUILD_ID || "development" } : null;
   if (REGISTRATION_MODE === "invite" && INVITE_MODE === "database") {
     const candidate = String(inviteCode || "").trim();
     try {
       await q.registerUserWithInvite(db, user,
-        createHash("sha256").update(candidate).digest("hex"));
+        createHash("sha256").update(candidate).digest("hex"), acceptance);
     } catch (error) {
       if (error?.code === "FORGE_INVITE_INVALID")
         return ctx.send(403, { error: "invite is invalid or no longer available" });
@@ -678,7 +698,8 @@ gw.route("POST", "/api/auth/register", async (ctx) => {
   } else {
     if (await q.userByHandle(db, handle) || await q.userByEmail(db, email))
       return ctx.send(409, { error: "handle or email already registered" });
-    await q.createUser(db, user);
+    if (acceptance) await q.createUserWithPolicyAcceptance(db, user, acceptance);
+    else await q.createUser(db, user);
   }
   const token = newToken();
   try { await q.createSession(db, tokenDigest(token), id, SESSION_TTL); }
@@ -745,8 +766,9 @@ gw.route("GET", "/api/me", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   ctx.send(200, { id: u.id, handle: u.handle, email: u.email,
     claims: await q.claimsOf(db, u.id), starred: (await q.starredBy(db, u.id)).map(r => r.game_slug),
-    games: await q.gamesOwnedBy(db, u.id) });
-}, "who am I + claims + stars + owned games");
+    games: await q.gamesOwnedBy(db, u.id),
+    policy_acceptances: await q.policyAcceptancesByUser(db, u.id) });
+}, "who am I + claims + stars + owned games + policy receipts");
 /** @param {any} u @param {string} title @param {string|undefined} csv @param {string} authorStr
  * @param {{brief?: any, license?: string, csvImport?: any}} [options] */
 async function hostGame(u, title, csv, authorStr, options = {}) {
