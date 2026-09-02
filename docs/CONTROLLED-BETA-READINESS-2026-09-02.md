@@ -2,9 +2,9 @@
 
 Status: 2026-09-03
 
-Candidate commit: `e5e308cdd161f9b73169e1dce534e459f662ee8d`
+Candidate commit: `eef10171ebf5d485971311a16d8fd81c5076c8b3`
 
-Qualified local image: `sha256:45944cadadf425bea241aa9d89bcc357e64c49578c9341ae1c4afffa5778f609`
+Qualified local image: `sha256:5f30b460f29e2d9791a1d66ae967d027eefc18aa22febd2a6572f516ed82bd22`
 
 Decision: **HOLD for outside invitations. The software candidate is qualified;
 the deployed service and human product evidence do not exist yet.**
@@ -31,6 +31,8 @@ The strict gate at the candidate commit produced:
 - 13 adapter contracts: 5 stable, 8 explicitly limited;
 - 185 functional integration tests, including 37 assertions through the real
   Apps Script connector plus browser-executed sidebar recovery states;
+- 12 focused CSV mapping contract checks plus a real-browser noncanonical-header
+  import, 320-pixel layout check, and exact committed-receipt verification;
 - 18 deterministic private-beta add-on package checks covering origin locking,
   OAuth scopes, URL allowlisting, Git/source receipt integrity, and safe failure;
 - 92 local plus 92 protocol collaboration assertions, with 91 against real Forgejo in the production-image drill;
@@ -44,7 +46,7 @@ The strict gate at the candidate commit produced:
 The final line was:
 
 ```text
-PRODUCTION IMAGE QUALIFIED — sha256:45944cadadf425bea241aa9d89bcc357e64c49578c9341ae1c4afffa5778f609 records e5e308cdd161f9b73169e1dce534e459f662ee8d and reproduced the frozen release after restore.
+PRODUCTION IMAGE QUALIFIED — sha256:5f30b460f29e2d9791a1d66ae967d027eefc18aa22febd2a6572f516ed82bd22 records eef10171ebf5d485971311a16d8fd81c5076c8b3 and reproduced the frozen release after restore.
 ```
 
 The local developer service was restarted afterward and passed all 13 read-only
