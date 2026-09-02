@@ -17,6 +17,7 @@ import { readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:8420";
+const INVITE_CODE = process.env.FORGE_JOURNEY_INVITE_CODE || undefined;
 let step = 0, failed = 0;
 const ok = (msg) => console.log(`  ✓ ${String(++step).padStart(2)}  ${msg}`);
 const die = (msg, detail) => { console.error(`  ✗ FAIL @${step + 1}: ${msg}`, detail ?? ""); process.exit(1); };
@@ -77,7 +78,7 @@ const PNG = Buffer.concat([Buffer.from(
 
 console.log("== ACT 1: Alice hosts a game ==");
 const aliceReg = await api("POST", "/api/auth/register",
-  { body: { handle: "alice", email: "alice@tidepool.games", password: "correct-horse-1" } });
+  { body: { handle: "alice", email: "alice@tidepool.games", password: "correct-horse-1", invite_code: INVITE_CODE } });
 assert(aliceReg.status === 201 && aliceReg.data.token, "alice registers");
 const A = aliceReg.data.token;
 
@@ -139,7 +140,7 @@ assert(tts.ObjectStates[0].DeckIDs.length === 6 && tts.SaveName === "Tidepool",
 
 console.log("== ACT 3: Bob arrives ==");
 const bobReg = await api("POST", "/api/auth/register",
-  { body: { handle: "bob", email: "bob@example.com", password: "correct-horse-2" } });
+  { body: { handle: "bob", email: "bob@example.com", password: "correct-horse-2", invite_code: INVITE_CODE } });
 const B = bobReg.data.token;
 assert(bobReg.status === 201, "bob registers");
 
@@ -357,7 +358,7 @@ assert((await api("GET", "/api/notifications", { token: B })).data.unread === 0,
 
 console.log("== ACT 12: namespaced repository identity ==");
 const charlieReg = await api("POST", "/api/auth/register",
-  { body: { handle: "charlie", email: "charlie@tidepool.games", password: "correct-horse-3" } });
+  { body: { handle: "charlie", email: "charlie@tidepool.games", password: "correct-horse-3", invite_code: INVITE_CODE } });
 assert(charlieReg.status === 201 && charlieReg.data.token, "charlie registers");
 const sameName = await api("POST", "/api/games", { token: charlieReg.data.token,
   body: { title: "Tidepool", csv: ALICE_CSV } });

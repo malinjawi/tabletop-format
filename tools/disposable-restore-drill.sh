@@ -83,6 +83,7 @@ restore_origin="http://127.0.0.1:$restore_forgejo_port"
 gateway_origin="http://127.0.0.1:$gateway_port"
 postgres_password="postgres-$run_id"; forgejo_password="forgejo-$run_id"; platform_password="platform-$run_id"
 admin_user="launch-gate"; admin_password="disposable-$run_id-pass"
+journey_invite="restore-drill-$run_id-invite"
 
 mkdir -p "$scratch/secrets" "$scratch/backup" "$scratch/staging" "$scratch/restored-cache" "$scratch/restored-farm"
 chmod 700 "$scratch/secrets"
@@ -209,7 +210,7 @@ start_gateway(){
     --env CACHE_DIR=/app/data/cache --env FARM_DIR=/app/data/forge-farm \
     --env FORGE_HUB_PATH=/app/data/hub.html \
     --env FORGE_PUBLIC_ORIGIN="$gateway_origin" --env FORGE_ALLOWED_ORIGINS="$gateway_origin" \
-    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=closed \
+    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=invite --env FORGE_INVITE_CODE="$journey_invite" \
     --env FORGE_OPERATOR_NAME='Forge restore drill' --env FORGE_CONTACT_EMAIL=operator@forge.test \
     --env FORGE_BUILD_ID="$gateway_image" \
     "$gateway_image" /bin/sh -ec '
@@ -254,7 +255,7 @@ else
   source_gateway_args=(DB=postgres PG_URL="postgres://platform:$platform_password@127.0.0.1:$source_pg_port/platform")
 fi
 if ! env FORGE_URL="$source_origin" ADMIN_USER="$admin_user" ADMIN_PASS="$admin_password" \
-  FORGE_ALLOW_FIXTURE_DELETE=1 "${source_gateway_args[@]}" \
+  FORGE_ALLOW_FIXTURE_DELETE=1 FORGE_JOURNEY_INVITE_CODE="$journey_invite" "${source_gateway_args[@]}" \
   "$repo_dir/journey-forgejo.sh" > "$source_journey_log" 2>&1; then
   cat "$source_journey_log" >&2
   [ -z "$gateway_image" ] || docker logs "$source_gateway" >&2

@@ -98,6 +98,7 @@ fi
 
 if [ -n "${FORGE_EXISTING_GATEWAY_URL:-}" ]; then
   journey_command=(env FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN"
+    FORGE_JOURNEY_INVITE_CODE="${FORGE_JOURNEY_INVITE_CODE:-}"
     node tools/journey.mjs "$gateway_url")
 else
   journey_command=(env FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN"
