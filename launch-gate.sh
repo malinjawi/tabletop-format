@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# launch-gate.sh — one repeatable controlled-alpha release gate.
+# launch-gate.sh — one repeatable controlled-beta release gate.
 #
 # Local/CI (real Git + protocol-faithful Forge mock):
 #   ./launch-gate.sh
@@ -52,7 +52,7 @@ run "local two-user golden journey" ./journey.sh
 run "Forge protocol journey" ./journey-forgejo.sh
 run "bounded performance and concurrency" ./perf.sh
 run "production deployment contract" node tools/production-config-check.mjs
-run "single-use pilot invitation workflow" node tools/test-pilot-invite-registration.mjs
+run "single-use pilot admission and account recovery" node tools/test-pilot-invite-registration.mjs
 run "SQLite/PostgreSQL Store-2 conformance" ./store2-pg-test.sh
 
 deploy_preflight=0
@@ -114,7 +114,7 @@ if [ "${REQUIRE_DEPLOY_PREFLIGHT:-0}" = "1" ] && [ "$deploy_preflight" -ne 1 ]; 
   exit 1
 fi
 
-printf '\nCONTROLLED-ALPHA LAUNCH GATE GREEN'
+printf '\nCONTROLLED-BETA LAUNCH GATE GREEN'
 if [ "$production_backends" -eq 2 ]; then
   printf ' — including PostgreSQL and real Forgejo.\n'
 else

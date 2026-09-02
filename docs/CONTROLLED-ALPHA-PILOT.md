@@ -1,4 +1,4 @@
-# Forge controlled-alpha pilot
+# Forge controlled-beta pilot
 
 The first outside cohort is a product test, not a public launch. Invite exactly
 five tabletop creators and give them a stable HTTPS Forge instance. Arrange
@@ -111,3 +111,6 @@ operator cannot respond to support/moderation reports.
    script ID.
 7. Copy the pilot evidence template outside Git and invite exactly five people.
    Record only each invitation ID and status, never the bearer token.
+8. If account recovery is needed, issue a one-hour token with
+   `node tools/pilot-account.mjs reset --handle …`; record only its reset ID.
+   Confirm the old sessions stopped working after redemption.

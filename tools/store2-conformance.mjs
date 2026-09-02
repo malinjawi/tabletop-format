@@ -99,6 +99,53 @@ const dead = "d".repeat(64);
 await q.createSession(db, dead, ana.id, -1000);
 assert(!(await q.sessionUser(db, dead)), "expired session resolves to nothing");
 
+// operator-assisted password recovery (020) — only the newest reset works,
+// redemption changes the password and revokes every existing session.
+const resetAt = T + 2000;
+const reset1 = { id: newId("rst"), token_hash: digest(`reset-old:${T}`), user_id: ana.id,
+  created_at: resetAt, expires_at: resetAt + 60_000 };
+await q.issuePasswordReset(db, reset1, resetAt);
+let resets = await q.passwordResets(db, resetAt + 1);
+assert(resets.some(row => row.id === reset1.id && row.status === "available" && !("token_hash" in row)),
+  "password-reset audit is available without exposing its token digest");
+const reset2 = { id: newId("rst"), token_hash: digest(`reset-new:${T}`), user_id: ana.id,
+  created_at: resetAt + 2, expires_at: resetAt + 60_000 };
+await q.issuePasswordReset(db, reset2, resetAt + 2);
+resets = await q.passwordResets(db, resetAt + 3);
+assert(resets.find(row => row.id === reset1.id)?.status === "revoked"
+  && resets.find(row => row.id === reset2.id)?.status === "available",
+  "issuing a newer recovery token revokes the older outstanding token");
+let oldResetRejected = false;
+try { await q.resetPasswordWithToken(db, reset1.token_hash, "old-should-not-land", resetAt + 4); }
+catch (error) { oldResetRejected = error?.code === "FORGE_RESET_INVALID"; }
+assert(oldResetRejected && (await q.userById(db, ana.id)).pass_hash === "hash1",
+  "superseded recovery token cannot change the password");
+await q.resetPasswordWithToken(db, reset2.token_hash, "new-pass-hash", resetAt + 5);
+assert((await q.userById(db, ana.id)).pass_hash === "new-pass-hash" && !(await q.sessionUser(db, tok)),
+  "valid recovery atomically changes the password and revokes every session");
+let resetReplay = false;
+try { await q.resetPasswordWithToken(db, reset2.token_hash, "replay-hash", resetAt + 6); }
+catch (error) { resetReplay = error?.code === "FORGE_RESET_INVALID"; }
+assert(resetReplay && (await q.userById(db, ana.id)).pass_hash === "new-pass-hash",
+  "recovery token cannot be replayed");
+const expiredReset = { id: newId("rst"), token_hash: digest(`reset-expired:${T}`), user_id: ana.id,
+  created_at: resetAt + 7, expires_at: resetAt + 8 };
+await q.issuePasswordReset(db, expiredReset, resetAt + 7);
+let expiredResetRejected = false;
+try { await q.resetPasswordWithToken(db, expiredReset.token_hash, "expired-hash", resetAt + 9); }
+catch (error) { expiredResetRejected = error?.code === "FORGE_RESET_INVALID"; }
+assert(expiredResetRejected && (await q.passwordResets(db, resetAt + 9)).find(row => row.id === expiredReset.id)?.status === "expired",
+  "expired recovery token is rejected");
+const revokedReset = { id: newId("rst"), token_hash: digest(`reset-revoked:${T}`), user_id: ana.id,
+  created_at: resetAt + 10, expires_at: resetAt + 60_000 };
+await q.issuePasswordReset(db, revokedReset, resetAt + 10);
+await q.revokePasswordReset(db, revokedReset.id, resetAt + 11);
+let revokedResetRejected = false;
+try { await q.resetPasswordWithToken(db, revokedReset.token_hash, "revoked-hash", resetAt + 12); }
+catch (error) { revokedResetRejected = error?.code === "FORGE_RESET_INVALID"; }
+assert(revokedResetRejected && (await q.passwordResets(db, resetAt + 12)).find(row => row.id === revokedReset.id)?.status === "revoked",
+  "revoked recovery token is rejected");
+
 // games index (DA-3) + ownership
 const slug = h("game");
 const projectId = newId("p");

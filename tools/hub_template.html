@@ -251,22 +251,25 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(28,33,40,.6);z-index:70;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:12px;padding:26px 30px;width:340px">
     <h2 style="margin:0 0 4px" id="amTitle">Sign in</h2>
-    <p style="color:var(--mut);font-size:13px;margin:0 0 14px">Stars, forks, and claims need an account. Your games never do.</p>
+    <p id="amLead" style="color:var(--mut);font-size:13px;margin:0 0 14px">Stars, forks, and claims need an account. Your games never do.</p>
     <div id="amErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:8px"></div>
     <input id="amHandle" placeholder="handle" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
     <input id="amEmail" placeholder="email" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
     <input id="amInvite" autocomplete="one-time-code" placeholder="single-use invitation" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
+    <input id="amResetToken" autocomplete="one-time-code" placeholder="one-use recovery token" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
     <input id="amPass" type="password" placeholder="password (8+ chars)" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
-    <button class="btn primary" style="width:100%;margin-top:10px" onclick="authSubmit()">Continue</button>
+    <input id="amPassConfirm" type="password" placeholder="confirm new password" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
+    <button id="amSubmit" class="btn primary" style="width:100%;margin-top:10px" onclick="authSubmit()">Continue</button>
     <div style="font-size:13px;color:var(--mut);margin-top:12px;text-align:center">
       <a id="amSwitch" onclick="authMode(amMode==='login'?'register':'login')">Create an account instead</a>
+      <span id="amResetSep">·</span> <a id="amResetLink" onclick="authMode('reset')">Reset password</a>
       · <a onclick="_afterAuth=null;document.getElementById('authModal').style.display='none'">cancel</a>
     </div>
   </div>
 </div>
 <div id="view"></div>
 <footer style="max-width:1180px;margin:30px auto;padding:18px 24px;border-top:1px solid var(--bd);color:var(--mut);font-size:12px">
-  Forge controlled alpha · <a href="/policies/terms">Terms</a> · <a href="/policies/privacy">Privacy</a> ·
+  Forge controlled beta · <a href="/policies/terms">Terms</a> · <a href="/policies/privacy">Privacy</a> ·
   <a href="/policies/community">Community rules</a> · <a href="/policies/rights">Rights &amp; takedown</a> ·
   <a href="/policies/support">Support</a>
 </footer>
@@ -325,30 +328,45 @@ function renderAuthArea(){
 }
 function authOpen(mode){ authMode(mode||"login"); document.getElementById("authModal").style.display="flex"; }
 function authMode(m){ amMode=m;
-  document.getElementById("amTitle").textContent = m==="login"?"Sign in":"Create account";
-  document.getElementById("amEmail").style.display = m==="register"?"":"none";
-  document.getElementById("amInvite").style.display = m==="register"&&REGISTRATION==="invite"?"":"none";
-  document.getElementById("amPass").placeholder=`password (${PASSWORD_MIN}+ chars)`;
-  document.getElementById("amSwitch").textContent = m==="login"?"Create an account instead":"I have an account";
+  const reset=m==="reset",register=m==="register";
+  document.getElementById("amTitle").textContent = reset?"Reset password":m==="login"?"Sign in":"Create account";
+  document.getElementById("amLead").textContent = reset?"Ask the pilot operator for a one-use recovery token. Choosing a new password signs out every existing session.":"Stars, forks, and claims need an account. Your games never do.";
+  document.getElementById("amHandle").style.display = reset?"none":"";
+  document.getElementById("amEmail").style.display = register?"":"none";
+  document.getElementById("amInvite").style.display = register&&REGISTRATION==="invite"?"":"none";
+  document.getElementById("amResetToken").style.display = reset?"":"none";
+  document.getElementById("amPassConfirm").style.display = reset?"":"none";
+  document.getElementById("amPass").placeholder=reset?`new password (${PASSWORD_MIN}+ chars)`:`password (${PASSWORD_MIN}+ chars)`;
+  document.getElementById("amSwitch").textContent = m==="login"?"Create an account instead":"Back to sign in";
+  document.getElementById("amResetLink").style.display = m==="login"?"":"none";
+  document.getElementById("amResetSep").style.display = m==="login"?"":"none";
   document.getElementById("amErr").style.display="none";
 }
 async function authSubmit(){
-  const passwordField=document.getElementById("amPass"), inviteField=document.getElementById("amInvite");
+  const mode=amMode,submit=document.getElementById("amSubmit");
+  const passwordField=document.getElementById("amPass"), inviteField=document.getElementById("amInvite"),
+    resetField=document.getElementById("amResetToken"),confirmField=document.getElementById("amPassConfirm"),err=document.getElementById("amErr");
+  if(mode==="reset"&&passwordField.value!==confirmField.value){err.textContent="New passwords do not match.";err.style.display="";return;}
   const body={handle:document.getElementById("amHandle").value.trim(),
               password:passwordField.value};
-  if(amMode==="register"){
+  if(mode==="register"){
     body.email=document.getElementById("amEmail").value.trim();
     if(REGISTRATION==="invite")body.invite_code=inviteField.value.trim();
   }
-  const request=fetch(`/api/auth/${amMode}`,{method:"POST",
-    headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify(body)});
-  passwordField.value="";inviteField.value="";
-  const r=await request;
-  const d=await r.json();
-  if(r.ok){
-    document.getElementById("authModal").style.display="none"; await refreshLive();
-    if(_afterAuth){ const fn=_afterAuth; _afterAuth=null; fn(); } }
-  else { const e=document.getElementById("amErr"); e.textContent=d.error??r.status; e.style.display=""; }
+  if(mode==="reset"){delete body.handle;body.reset_token=resetField.value.trim();}
+  const endpoint=mode==="reset"?"password-reset":mode;
+  submit.disabled=true;submit.textContent=mode==="reset"?"Resetting…":"Checking…";err.style.display="none";
+  const request=fetch(`/api/auth/${endpoint}`,{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify(body)});
+  passwordField.value="";inviteField.value="";resetField.value="";confirmField.value="";
+  try{
+    const r=await request,d=await r.json();
+    if(r.ok){
+      if(mode==="reset"){authMode("login");toast("Password reset. Sign in with the new password.");return;}
+      document.getElementById("authModal").style.display="none"; await refreshLive();
+      if(_afterAuth){ const fn=_afterAuth; _afterAuth=null; fn(); }
+    }else{err.textContent=d.error??r.status;err.style.display="";}
+  }catch(error){err.textContent="Forge could not be reached. Try again.";err.style.display="";}
+  finally{submit.disabled=false;submit.textContent="Continue";}
 }
 async function signOut(){
   await fetch("/api/auth/logout",{method:"POST",headers:{"x-forge-browser":"1"}});

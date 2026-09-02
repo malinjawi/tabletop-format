@@ -1,4 +1,4 @@
-# Controlled-alpha deployment
+# Controlled-beta deployment
 
 Forge launches behind HTTPS as three digest-pinned services: the immutable
 gateway image, Forgejo (repository truth), and Postgres (identity/conversation
@@ -128,6 +128,24 @@ only to that participant. `list` shows available, redeemed, expired, and
 revoked records without exposing either the token or its digest. Invitations
 expire after seven days by default, can be shortened with `--hours`, and can
 never be replayed.
+
+If a participant loses access, issue a short-lived recovery token instead of
+editing the database or setting a password for them:
+
+```sh
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs reset --handle amina --hours 1
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs resets
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs revoke rst_0123456789abcdef
+```
+
+Send the one-use token to the named participant through the agreed pilot
+channel. They choose their own new password from **Sign in → Reset password**.
+Redemption revokes every existing session; issuing another token automatically
+revokes any older outstanding token. The database and audit listing retain
+only the digest, reset ID, account, timestamps, and status.
 
 Do not put a Forgejo admin password in the gateway environment. Rotate the
 service token by updating the secret file and recreating only the gateway.
@@ -275,5 +293,5 @@ generated hub are derived and deliberately excluded.
 Pause invitations if any of these occur: restore drill fails, private content
 is readable signed out, release receipts do not reproduce, export workers
 exceed quotas, the Sheets connector promotes a candidate that was not the one
-reviewed, or moderation/takedown contact is unavailable. The controlled alpha
+reviewed, or moderation/takedown contact is unavailable. The controlled beta
 is a learning launch, not permission to weaken those boundaries.

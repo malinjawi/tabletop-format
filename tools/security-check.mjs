@@ -44,7 +44,7 @@ ok(sessions.response.status === 200 && sessions.body.length === 1 && sessions.bo
 const created = await request("/api/games", { method: "POST", headers: { Cookie: cookie, "content-type": "application/json" },
   body: JSON.stringify({ title: "Private Security Fixture", license: "proprietary",
     csv: "id,name,type,text,quantity\nprivate_card,Private Card,card,Secret draft.,1\n" }) });
-ok(created.response.status === 201, "a private controlled-alpha project can be created");
+ok(created.response.status === 201, "a private controlled-beta project can be created");
 const slug = created.body.slug;
 const hidden = await request(`/api/games/${slug}/cards`), ownerRead = await request(`/api/games/${slug}/cards`, { headers: { Cookie: cookie } });
 const publicCatalog = await request("/api/catalog?limit=50");

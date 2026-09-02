@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Evaluate a five-person controlled-alpha record without collecting game text. */
+/** Evaluate a five-person controlled-beta record without collecting game text. */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";

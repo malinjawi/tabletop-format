@@ -66,7 +66,7 @@ const SESSION_TTL = PRODUCTION ? 7 * 24 * 3600 * 1000 : SESSION_TTL_MS;
 const OPERATOR_NAME = process.env.FORGE_OPERATOR_NAME || "Forge local development";
 const CONTACT_EMAIL = process.env.FORGE_CONTACT_EMAIL || "support@example.invalid";
 if (PRODUCTION && !HTTPS) throw new Error("production requires an HTTPS FORGE_PUBLIC_ORIGIN (or FORGE_HTTPS=1)");
-if (PRODUCTION && REGISTRATION_MODE === "open") throw new Error("public registration cannot be open in the controlled alpha");
+if (PRODUCTION && REGISTRATION_MODE === "open") throw new Error("public registration cannot be open in the controlled beta");
 if (!new Set(["database", "shared"]).has(INVITE_MODE)) throw new Error("FORGE_INVITE_MODE must be database or shared");
 if (PRODUCTION && REGISTRATION_MODE === "invite" && INVITE_MODE !== "database")
   throw new Error("production invite registration requires single-use database invitations");
@@ -538,7 +538,7 @@ gw.route("GET", "/policies/:name", async (ctx) => {
     .replaceAll("{{OPERATOR}}", OPERATOR_NAME).replaceAll("{{CONTACT}}", CONTACT_EMAIL);
   const escaped = raw.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   ctx.send(200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Forge — ${ctx.params.name}</title><style>body{font:16px/1.6 system-ui;max-width:780px;margin:40px auto;padding:0 22px;color:#24292f}pre{white-space:pre-wrap;font:inherit}a{color:#0969da}</style><p><a href="/">← Forge</a></p><pre>${escaped}</pre>`, "text/html; charset=utf-8");
-}, "controlled-alpha terms, privacy, community, rights, and support documents");
+}, "controlled-beta terms, privacy, community, rights, and support documents");
 const editorBuilt = new Map(); // slug -> {version}
 gw.route("GET", "/edit/:slug", async (ctx) => {
   // legacy path → the app's routed edit mode (editing lives INSIDE the SPA now)
@@ -653,10 +653,10 @@ function authResponse(ctx, code, token, user, body = {}) {
 gw.route("POST", "/api/auth/register", async (ctx) => {
   let { handle, email, password, invite_code: inviteCode } = await json(ctx);
   email = String(email || "").trim().toLowerCase();
-  if (REGISTRATION_MODE === "closed") return ctx.send(403, { error: "registration is invite-only during the controlled alpha" });
+  if (REGISTRATION_MODE === "closed") return ctx.send(403, { error: "registration is invite-only during the controlled beta" });
   if (REGISTRATION_MODE === "invite" && INVITE_MODE === "shared"
       && (!process.env.FORGE_INVITE_CODE || inviteCode !== process.env.FORGE_INVITE_CODE))
-    return ctx.send(403, { error: "a valid alpha invite code is required" });
+    return ctx.send(403, { error: "a valid invite code is required" });
   if (!validHandle(handle)) return ctx.send(422, { error: "handle: 2-32 chars, kebab-case" });
   if (!validEmail(email)) return ctx.send(422, { error: "invalid email" });
   const minimum = PRODUCTION ? 12 : 8;
@@ -684,6 +684,22 @@ gw.route("POST", "/api/auth/register", async (ctx) => {
   await q.createSession(db, tokenDigest(token), id, SESSION_TTL);
   authResponse(ctx, 201, token, { id, handle });
 }, "create account");
+gw.route("POST", "/api/auth/password-reset", async (ctx) => {
+  const { reset_token: resetToken, password } = await json(ctx);
+  const candidate = String(resetToken || "").trim();
+  if (!/^fpr_[A-Za-z0-9_-]{32}$/.test(candidate))
+    return ctx.send(403, { error: "reset is invalid or no longer available" });
+  const minimum = PRODUCTION ? 12 : 8;
+  if ((password ?? "").length < minimum) return ctx.send(422, { error: `password: ${minimum}+ chars` });
+  try {
+    await q.resetPasswordWithToken(db, tokenDigest(candidate), hashPassword(password));
+  } catch (error) {
+    if (error?.code === "FORGE_RESET_INVALID")
+      return ctx.send(403, { error: "reset is invalid or no longer available" });
+    throw error;
+  }
+  ctx.send(200, { reset: true, sessions_revoked: true });
+}, "redeem an operator-issued password reset");
 gw.route("POST", "/api/auth/login", async (ctx) => {
   const { handle, password } = await json(ctx), identity = String(handle || "").trim();
   const u = await q.userByHandle(db, identity) ?? await q.userByEmail(db, identity.toLowerCase());

@@ -23,10 +23,20 @@ const chrome = process.env.CHROME_PATH || [
 ].find(existsSync);
 const runCli = (...args) => spawnSync(process.execPath, ["tools/pilot-invite.mjs", ...args, "--db", dbPath],
   { cwd: root, encoding: "utf8", maxBuffer: 1024 * 1024 });
+const runAccountCli = (...args) => spawnSync(process.execPath, ["tools/pilot-account.mjs", ...args, "--db", dbPath],
+  { cwd: root, encoding: "utf8", maxBuffer: 1024 * 1024 });
 const api = async (body) => {
   const response = await fetch(`${origin}/api/auth/register`, {
     method: "POST", headers: { "content-type": "application/json", "x-forge-browser": "1" }, body: JSON.stringify(body),
   });
+  return { status: response.status, body: await response.json() };
+};
+const request = async (method, path, { body, token, browserRequest = false } = {}) => {
+  const response = await fetch(`${origin}${path}`, { method, headers: {
+    ...(body ? { "content-type": "application/json" } : {}),
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
+    ...(browserRequest ? { "x-forge-browser": "1" } : {}),
+  }, body: body ? JSON.stringify(body) : undefined });
   return { status: response.status, body: await response.json() };
 };
 
@@ -93,6 +103,64 @@ try {
   assert.equal(await page.locator("#amPass").inputValue(), "", "browser clears the password immediately");
   await browser.close(); browser = null;
 
+  const oldLogin = await request("POST", "/api/auth/login", { body: {
+    handle: "amina", password: "correct-horse-12",
+  } });
+  assert.equal(oldLogin.status, 200);
+  const oldSession = oldLogin.body.token;
+
+  const resetIssued = runAccountCli("reset", "--handle", "amina", "--hours", "1");
+  assert.equal(resetIssued.status, 0, resetIssued.stderr);
+  const resetToken = resetIssued.stdout.match(/(?:^|\s)(fpr_[A-Za-z0-9_-]{32})(?=\s|$)/m)?.[1];
+  assert.ok(resetToken, "operator CLI prints the one-time recovery token");
+  const resetDb = new DatabaseSync(dbPath);
+  const storedReset = resetDb.prepare("SELECT token_hash FROM password_reset_tokens").get();
+  resetDb.close();
+  assert.match(storedReset.token_hash, /^[a-f0-9]{64}$/);
+  assert.notEqual(storedReset.token_hash, resetToken, "database keeps only the recovery-token digest");
+
+  const invalidReset = await request("POST", "/api/auth/password-reset", { body: {
+    reset_token: "not-a-reset", password: "correct-horse-14",
+  }, browserRequest: true });
+  assert.equal(invalidReset.status, 403);
+  assert.equal(invalidReset.body.error, "reset is invalid or no longer available");
+
+  browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const recoveryPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await recoveryPage.goto(`${origin}/`, { waitUntil: "networkidle" });
+  await recoveryPage.locator("#authArea button").click();
+  await recoveryPage.locator("#amResetLink").click();
+  assert.ok(await recoveryPage.locator("#amResetToken").isVisible());
+  assert.ok(await recoveryPage.locator("#amPassConfirm").isVisible());
+  await recoveryPage.locator("#amResetToken").fill(resetToken);
+  await recoveryPage.locator("#amPass").fill("correct-horse-14");
+  await recoveryPage.locator("#amPassConfirm").fill("correct-horse-14");
+  const resetResponse = recoveryPage.waitForResponse(response => response.url().endsWith("/api/auth/password-reset"));
+  await recoveryPage.locator("#authModal button.primary").click();
+  const browserReset = await resetResponse;
+  assert.equal(browserReset.status(), 200, await browserReset.text());
+  assert.equal(await recoveryPage.locator("#amResetToken").inputValue(), "");
+  assert.equal(await recoveryPage.locator("#amPass").inputValue(), "");
+  assert.ok(await recoveryPage.locator("#amHandle").isVisible(), "successful recovery returns to sign in");
+  await browser.close(); browser = null;
+
+  assert.equal((await request("GET", "/api/me", { token: oldSession })).status, 401,
+    "password recovery revokes the old bearer session");
+  assert.equal((await request("POST", "/api/auth/login", { body: {
+    handle: "amina", password: "correct-horse-12",
+  } })).status, 401, "old password stops working");
+  assert.equal((await request("POST", "/api/auth/login", { body: {
+    handle: "amina", password: "correct-horse-14",
+  } })).status, 200, "new password works");
+  const resetReplay = await request("POST", "/api/auth/password-reset", { body: {
+    reset_token: resetToken, password: "correct-horse-15",
+  }, browserRequest: true });
+  assert.equal(resetReplay.status, 403);
+  const resetList = runAccountCli("resets");
+  assert.equal(resetList.status, 0, resetList.stderr);
+  assert.match(resetList.stdout, /redeemed[\s\S]*amina/);
+  assert.doesNotMatch(resetList.stdout, /fpr_|[a-f0-9]{64}/i);
+
   const replay = await api({ handle: "replay", email: "replay@example.com",
     password: "correct-horse-13", invite_code: token });
   assert.equal(replay.status, 403);
@@ -102,7 +170,7 @@ try {
   assert.equal(listed.status, 0, listed.stderr);
   assert.match(listed.stdout, /redeemed[\s\S]*Amina designer[\s\S]*amina/);
   assert.doesNotMatch(listed.stdout, /fpi_|[a-f0-9]{64}/i);
-  console.log("PILOT INVITE REGISTRATION GREEN — issue once, reject invalid, redeem atomically, reject replay, audit safely.");
+  console.log("PILOT ACCOUNT ACCESS GREEN — single-use admission and operator-assisted recovery work safely in the browser.");
 } finally {
   if (browser) await browser.close();
   if (server && !server.killed) server.kill("SIGTERM");

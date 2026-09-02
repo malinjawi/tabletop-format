@@ -1,4 +1,4 @@
-# Controlled-alpha production profile. Every image reference is supplied by
+# Controlled-beta production profile. Every image reference is supplied by
 # digest in .env; credentials are mounted from deploy/.secrets, never written
 # into this file or exposed to the gateway container as Forgejo admin basics.
 

@@ -69,9 +69,10 @@ inputs are recorded in
 ./e2e.sh                                             # 185-check functional integration gate
 ./journey.sh                                         # 92-assertion two-user golden path
 ./perf.sh                                            # bounded scale + concurrent-write smoke
-./launch-gate.sh                                     # all mandatory controlled-alpha gates
+./launch-gate.sh                                     # all mandatory controlled-beta gates
 ./demo.sh                                            # the whole loop, one command, narrated
 node tools/pilot-invite.mjs create --db data/platform.db --label "Pilot creator" --cohort beta-01  # expiring single-use admission
+node tools/pilot-account.mjs reset --db data/platform.db --handle pilot-creator  # one-use assisted password recovery
 node tools/new-game.mjs my-game --title "My Game" --license proprietary --brief brief.json  # idea -> valid game dir
 node tools/import-csv.mjs cards.csv my-game --title "My Game"   # spreadsheet -> valid game dir, zero deps
 node tools/import-nrdb.mjs nrdb-data my-game --title "My Game"  # NRDB/Alsciende-family JSON -> valid game dir, zero deps

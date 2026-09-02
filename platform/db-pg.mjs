@@ -107,6 +107,63 @@ export const q = {
       client.release();
     }
   },
+  issuePasswordReset: async (db, reset, now = Date.now()) => {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `UPDATE password_reset_tokens SET revoked_at = $1
+         WHERE user_id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL`, [now, reset.user_id]);
+      await client.query(
+        `INSERT INTO password_reset_tokens (id, token_hash, user_id, created_at, expires_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [reset.id, reset.token_hash, reset.user_id, reset.created_at, reset.expires_at]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+  passwordResets: (db, now = Date.now()) => all(db,
+    `SELECT r.id, r.created_at, r.expires_at, r.revoked_at, r.redeemed_at, u.handle,
+            CASE WHEN r.redeemed_at IS NOT NULL THEN 'redeemed'
+                 WHEN r.revoked_at IS NOT NULL THEN 'revoked'
+                 WHEN r.expires_at <= $1 THEN 'expired' ELSE 'available' END AS status
+     FROM password_reset_tokens r JOIN users u ON u.id = r.user_id
+     ORDER BY r.created_at DESC`, [now]),
+  revokePasswordReset: (db, id, now = Date.now()) => db.query(
+    `UPDATE password_reset_tokens SET revoked_at = $1
+     WHERE id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL`, [now, id]),
+  resetPasswordWithToken: async (db, tokenHash, passHash, now = Date.now()) => {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const selected = await client.query(
+        `SELECT id, user_id FROM password_reset_tokens
+         WHERE token_hash = $1 AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > $2
+         FOR UPDATE`, [tokenHash, now]);
+      const reset = selected.rows[0];
+      if (!reset) throw Object.assign(new Error("reset is invalid or no longer available"),
+        { code: "FORGE_RESET_INVALID" });
+      await client.query("UPDATE users SET pass_hash = $1 WHERE id = $2", [passHash, reset.user_id]);
+      await client.query("DELETE FROM sessions WHERE user_id = $1", [reset.user_id]);
+      const claimed = await client.query(
+        `UPDATE password_reset_tokens SET redeemed_at = $1
+         WHERE id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > $3`,
+        [now, reset.id, now]);
+      if (claimed.rowCount !== 1) throw Object.assign(new Error("reset is invalid or no longer available"),
+        { code: "FORGE_RESET_INVALID" });
+      await client.query("COMMIT");
+      return { id: reset.id, user_id: reset.user_id };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
   userByHandle: (db, h) => one(db, "SELECT * FROM users WHERE handle = $1", [h]),
   userByEmail:  (db, e) => one(db, "SELECT * FROM users WHERE email = $1", [e]),
   userById:     (db, id) => one(db, "SELECT * FROM users WHERE id = $1", [id]),

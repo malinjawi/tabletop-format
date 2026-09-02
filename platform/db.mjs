@@ -85,6 +85,54 @@ export const q = {
       throw error;
     }
   },
+  issuePasswordReset: (db, reset, now = Date.now()) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.prepare(
+        `UPDATE password_reset_tokens SET revoked_at = ?
+         WHERE user_id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`).run(now, reset.user_id);
+      db.prepare(
+        `INSERT INTO password_reset_tokens (id, token_hash, user_id, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?)`).run(reset.id, reset.token_hash, reset.user_id, reset.created_at, reset.expires_at);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+  passwordResets: (db, now = Date.now()) => db.prepare(
+    `SELECT r.id, r.created_at, r.expires_at, r.revoked_at, r.redeemed_at, u.handle,
+            CASE WHEN r.redeemed_at IS NOT NULL THEN 'redeemed'
+                 WHEN r.revoked_at IS NOT NULL THEN 'revoked'
+                 WHEN r.expires_at <= ? THEN 'expired' ELSE 'available' END AS status
+     FROM password_reset_tokens r JOIN users u ON u.id = r.user_id
+     ORDER BY r.created_at DESC`).all(now),
+  revokePasswordReset: (db, id, now = Date.now()) => db.prepare(
+    `UPDATE password_reset_tokens SET revoked_at = ?
+     WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`).run(now, id),
+  resetPasswordWithToken: (db, tokenHash, passHash, now = Date.now()) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const reset = db.prepare(
+        `SELECT id, user_id FROM password_reset_tokens
+         WHERE token_hash = ? AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > ?`).get(tokenHash, now);
+      if (!reset) throw Object.assign(new Error("reset is invalid or no longer available"),
+        { code: "FORGE_RESET_INVALID" });
+      db.prepare("UPDATE users SET pass_hash = ? WHERE id = ?").run(passHash, reset.user_id);
+      db.prepare("DELETE FROM sessions WHERE user_id = ?").run(reset.user_id);
+      const claimed = db.prepare(
+        `UPDATE password_reset_tokens SET redeemed_at = ?
+         WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > ?`)
+        .run(now, reset.id, now);
+      if (claimed.changes !== 1) throw Object.assign(new Error("reset is invalid or no longer available"),
+        { code: "FORGE_RESET_INVALID" });
+      db.exec("COMMIT");
+      return { id: reset.id, user_id: reset.user_id };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
   userByHandle: (db, h) => db.prepare("SELECT * FROM users WHERE handle = ?").get(h),
   userByEmail:  (db, e) => db.prepare("SELECT * FROM users WHERE email = ?").get(e),
   userById:     (db, id) => db.prepare("SELECT * FROM users WHERE id = ?").get(id),
