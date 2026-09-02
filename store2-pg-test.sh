@@ -39,10 +39,21 @@ if command -v docker >/dev/null 2>&1; then
   echo "== leg 2: PRODUCTION driver (postgres:16-alpine on :$PGPORT) =="
   if docker run -d --rm --name "$CN" -e POSTGRES_PASSWORD=confpass -e POSTGRES_DB=platform \
       -p "$PGPORT:5432" postgres:16-alpine >/dev/null 2>&1; then
-    for _ in $(seq 1 60); do
-      docker exec "$CN" pg_isready -U postgres -q 2>/dev/null && break
-      sleep 0.5
+    stable=0
+    for _ in $(seq 1 120); do
+      if docker exec "$CN" pg_isready -U postgres -d platform -q 2>/dev/null; then
+        stable=$((stable + 1))
+        [ "$stable" -lt 3 ] || break
+      else
+        stable=0
+      fi
+      sleep 0.25
     done
+    if [ "$stable" -lt 3 ]; then
+      echo "Disposable PostgreSQL did not remain ready for three consecutive probes." >&2
+      docker logs "$CN" >&2 || true
+      exit 1
+    fi
     DB=postgres PG_URL="postgres://postgres:confpass@127.0.0.1:$PGPORT/platform" node tools/store2-conformance.mjs
     echo ""
     echo "STORE-2 GREEN ON BOTH DRIVERS — the Postgres swap is a config change."
