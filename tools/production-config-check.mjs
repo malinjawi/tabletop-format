@@ -31,6 +31,10 @@ const dockerfile=readFileSync(resolve(ROOT,"Dockerfile.prod"),"utf8");
 ok(/^CMD \["node", "server\.mjs", "--port", "8420"\]$/m.test(dockerfile)
   && !/^ENTRYPOINT /m.test(dockerfile),
   "image defaults to Node without overriding the Compose secret-loading command");
+ok(dockerfile.includes("test -f /etc/debian_version")
+  && dockerfile.includes("ARG FORGE_SOURCE_REVISION")
+  && dockerfile.includes('org.opencontainers.image.revision="${FORGE_SOURCE_REVISION}"'),
+  "image requires a compatible Debian base and records its exact source revision");
 ok(env.STORE1==="forgejo" && env.DB==="postgres" && env.FORGE_URL==="http://forgejo:3000",
   "production uses Forgejo and PostgreSQL rather than local stores");
 ok(env.FORGE_HUB_PATH==="/app/data/hub.html" && env.CACHE_DIR?.startsWith("/app/data/")

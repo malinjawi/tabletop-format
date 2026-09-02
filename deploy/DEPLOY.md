@@ -11,8 +11,10 @@ Resolve and record a Node base-image digest, then build from the clean release
 commit. The build context excludes games, exports, local data and secrets.
 
 ```sh
+release_commit=$(git rev-parse HEAD)
 docker build \
-  --build-arg NODE_IMAGE='node:22-bookworm-slim@sha256:<verified-digest>' \
+  --build-arg NODE_IMAGE='node:24-bookworm-slim@sha256:<verified-digest>' \
+  --build-arg FORGE_SOURCE_REVISION="$release_commit" \
   -f Dockerfile.prod -t registry.example/forge/platform:<release> .
 docker push registry.example/forge/platform:<release>
 docker buildx imagetools inspect registry.example/forge/platform:<release>
@@ -25,6 +27,9 @@ backup-tested migration; it is not bundled into an application deploy.
 The current recovery profile is qualified on Forgejo 15.x and PostgreSQL 16.x;
 `FORGEJO_VERSION` and `POSTGRES_MAJOR` make that compatibility decision explicit
 and the host preflight verifies both values against the selected image metadata.
+The gateway build fails unless it receives a source revision and stores that
+commit in the standard OCI revision label. Build only from a clean commit; the
+registry digest and revision label together identify the exact shipped source.
 
 ## 2. Create configuration and secrets
 
