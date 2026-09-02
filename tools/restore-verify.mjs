@@ -52,7 +52,11 @@ assert(history.some(commit=>commit.author==="bob"),"Git history still credits Bo
 
 const asset=await request("GET","/api/games/tidepool/assets/art/riptide.png",{token:A});
 assert(asset.response.ok&&Buffer.isBuffer(asset.data)&&asset.data.length>200,
-  "LFS-backed artwork materializes after restore");
+  "LFS-backed artwork materializes after restore",{
+    status:asset.response.status,
+    type:asset.response.headers.get("content-type"),
+    body:Buffer.isBuffer(asset.data)?asset.data.toString("utf8",0,300):asset.data,
+  });
 
 const prs=(await request("GET","/api/games/tidepool/prs",{token:A})).data;
 assert(prs.length===1&&prs[0].status==="merged"&&prs[0].author_handle==="bob",

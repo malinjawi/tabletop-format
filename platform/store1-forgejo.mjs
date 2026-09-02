@@ -189,7 +189,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       const { owner, slug: repoSlug } = repoOf(slug), prepared = [];
       for (const f of files) {
         if (f.content !== null && f.path.startsWith("assets/") && !isPointer(Buffer.from(f.content))) {
-          const up = await uploadAsset(lfsUrl(owner, repoSlug), f.path, Buffer.from(f.content), await lfsAuthorization());
+          const up = await uploadAsset(lfsUrl(owner, repoSlug), f.path, Buffer.from(f.content), await lfsAuthorization(), base);
           prepared.push({ ...f, content: up.pointer });
         } else prepared.push(f);
       }
@@ -233,8 +233,8 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
         const res = await commitFiles(dest, files, message, author);
         // carry LFS objects across: pointers were committed verbatim; move the blobs too
         for (const f of files.filter(f => isPointer(f.content))) {
-          const bytes = await downloadAsset(lfsUrl(srcOwner, source.slug), f.content.toString(), await lfsAuthorization());
-          await uploadAsset(lfsUrl(forker, project.slug), f.path, bytes, await lfsAuthorization());
+          const bytes = await downloadAsset(lfsUrl(srcOwner, source.slug), f.content.toString(), await lfsAuthorization(), base);
+          await uploadAsset(lfsUrl(forker, project.slug), f.path, bytes, await lfsAuthorization(), base);
         }
         return res;
       } finally { cleanup(); }
@@ -299,7 +299,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
 
     async putAsset(slug, rel, buf, author, extraFiles = []) {
       const { owner: o, slug: repoSlug } = repoOf(slug);
-      const up = await uploadAsset(lfsUrl(o, repoSlug), rel, buf, await lfsAuthorization());
+      const up = await uploadAsset(lfsUrl(o, repoSlug), rel, buf, await lfsAuthorization(), base);
       const { sha } = await commitFiles(slug, [{ path: rel, content: up.pointer }, ...extraFiles],
         `assets: add ${rel} (LFS)`, author);
       return { mode: "lfs", oid: up.oid, sha };
@@ -307,7 +307,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     async getAsset(slug, rel) {
       const buf = await store.readFile(slug, rel);
       if (!buf) return null;
-      if (isPointer(buf)) { const repo = repoOf(slug); return downloadAsset(lfsUrl(repo.owner, repo.slug), buf.toString(), await lfsAuthorization()); }
+      if (isPointer(buf)) { const repo = repoOf(slug); return downloadAsset(lfsUrl(repo.owner, repo.slug), buf.toString(), await lfsAuthorization(), base); }
       return buf;
     },
 
@@ -335,7 +335,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
         });
         for (const p of (existsSync(join(dir, "assets")) ? walk(join(dir, "assets")) : [])) {
           const b = readFileSync(p);
-          if (isPointer(b)) writeFileSync(p, await downloadAsset(lfsUrl(o, repoSlug), b.toString(), await lfsAuthorization()));
+          if (isPointer(b)) writeFileSync(p, await downloadAsset(lfsUrl(o, repoSlug), b.toString(), await lfsAuthorization(), base));
         }
       }
       return { dir, cleanup: () => rmSync(tmp, { recursive: true, force: true }) };

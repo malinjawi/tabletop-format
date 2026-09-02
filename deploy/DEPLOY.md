@@ -101,7 +101,9 @@ service token by updating the secret file and recreating only the gateway.
 Forge uses that same token for LFS: it resolves the token owner through
 Forgejo's authenticated `/user` API, then sends the username and token with
 HTTP Basic authentication. No account password or second identity setting is
-needed.
+needed. Forgejo is configured with `LFS_SERVE_DIRECT=false`, so LFS action URLs
+remain Forgejo-proxied; the gateway routes those actions over the private
+`http://forgejo:3000` network path instead of depending on public-DNS hairpinning.
 
 ## 4. Preflight the actual host and TLS edge
 

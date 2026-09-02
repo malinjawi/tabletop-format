@@ -45,8 +45,17 @@ async function batch(lfsUrl, operation, objects, auth) {
   return res.json();
 }
 
+function actionHref(href, actionOrigin) {
+  if (!actionOrigin) return href;
+  const target = new URL(href, actionOrigin);
+  const internal = new URL(actionOrigin);
+  target.protocol = internal.protocol;
+  target.host = internal.host;
+  return target.toString();
+}
+
 /** Upload a buffer; returns {oid, size, pointer}. Skips upload if server already has it (dedup). */
-export async function uploadAsset(lfsUrl, filename, buffer, auth) {
+export async function uploadAsset(lfsUrl, filename, buffer, auth, actionOrigin = null) {
   assertAssetAllowed(filename, buffer.length);
   const { oid, size, pointer } = makePointer(buffer);
   const rsp = await batch(lfsUrl, "upload", [{ oid, size }], auth);
@@ -54,7 +63,7 @@ export async function uploadAsset(lfsUrl, filename, buffer, auth) {
   if (obj?.error) throw new Error(`LFS: ${obj.error.message}`);
   const action = obj?.actions?.upload;
   if (action) { // absent action = server already has the object (content-addressed dedup)
-    const up = await fetch(action.href, {
+    const up = await fetch(actionHref(action.href, actionOrigin), {
       method: "PUT",
       headers: { "Content-Type": "application/octet-stream", ...(action.header ?? {}) },
       body: buffer,
@@ -62,7 +71,7 @@ export async function uploadAsset(lfsUrl, filename, buffer, auth) {
     if (!up.ok) throw new Error(`LFS upload PUT failed: ${up.status}`);
     const verify = obj.actions?.verify;
     if (verify) {
-      const v = await fetch(verify.href, { method: "POST",
+      const v = await fetch(actionHref(verify.href, actionOrigin), { method: "POST",
         headers: { "Content-Type": "application/vnd.git-lfs+json", ...(verify.header ?? {}) },
         body: JSON.stringify({ oid, size }) });
       if (!v.ok) throw new Error(`LFS verify failed: ${v.status}`);
@@ -72,12 +81,12 @@ export async function uploadAsset(lfsUrl, filename, buffer, auth) {
 }
 
 /** Download by pointer text or {oid,size}; returns Buffer, sha-verified. */
-export async function downloadAsset(lfsUrl, pointerOrObj, auth) {
+export async function downloadAsset(lfsUrl, pointerOrObj, auth, actionOrigin = null) {
   const { oid, size } = typeof pointerOrObj === "string" ? parsePointer(pointerOrObj) : pointerOrObj;
   const rsp = await batch(lfsUrl, "download", [{ oid, size }], auth);
   const action = rsp.objects?.[0]?.actions?.download;
   if (!action) throw new Error("LFS: no download action returned");
-  const res = await fetch(action.href, { headers: action.header ?? {} });
+  const res = await fetch(actionHref(action.href, actionOrigin), { headers: action.header ?? {} });
   if (!res.ok) throw new Error(`LFS download failed: ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   const gotOid = createHash("sha256").update(buf).digest("hex");

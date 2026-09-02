@@ -316,8 +316,14 @@ if ! curl -fsS "$gateway_origin/healthz" >/dev/null; then
   if [ -n "$gateway_image" ]; then docker logs "$gateway_container" >&2; else tail -80 "$scratch/restored-gateway.log" >&2; fi
   exit 1
 fi
-FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
-  node "$repo_dir/tools/restore-verify.mjs" "$gateway_origin"
+if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
+  node "$repo_dir/tools/restore-verify.mjs" "$gateway_origin"; then
+  if [ -n "$gateway_image" ]; then
+    printf '\n== Failed gateway container log ==\n' >&2
+    docker logs "$gateway_container" >&2
+  fi
+  exit 1
+fi
 
 if [ -n "$gateway_image" ]; then
   printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; the exact release image rebuilt Store 3 and exact released bytes.\n'
