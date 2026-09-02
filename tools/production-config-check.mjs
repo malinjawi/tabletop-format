@@ -37,6 +37,8 @@ ok(dockerfile.includes("test -f /etc/debian_version")
   "image requires a compatible Debian base and records its exact source revision");
 ok(dockerfile.includes("mkdir -p /app/data && chown node:node /app/data"),
   "image seeds the writable data-volume mountpoint for the unprivileged runtime user");
+ok(/apt-get install[\s\S]*\bchromium\b/.test(dockerfile),
+  "image includes the headless Chromium runtime required by card and rulebook renderers");
 ok(env.STORE1==="forgejo" && env.DB==="postgres" && env.FORGE_URL==="http://forgejo:3000",
   "production uses Forgejo and PostgreSQL rather than local stores");
 ok(env.FORGE_HUB_PATH==="/app/data/hub.html" && env.CACHE_DIR?.startsWith("/app/data/")

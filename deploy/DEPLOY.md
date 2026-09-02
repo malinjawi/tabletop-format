@@ -30,6 +30,9 @@ and the host preflight verifies both values against the selected image metadata.
 The gateway build fails unless it receives a source revision and stores that
 commit in the standard OCI revision label. Build only from a clean commit; the
 registry digest and revision label together identify the exact shipped source.
+The image includes Chromium because card faces and designed rulebooks are
+rendered from the same HTML/CSS engine used by the browser UI; an image that can
+serve the API but cannot regenerate those assets is not a valid release image.
 Before promotion, pass the built image's immutable local image ID (or registry
 digest) as `FORGE_GATEWAY_TEST_IMAGE` to the strict launch gate. The recovery
 drill rejects an image whose OCI revision is not the candidate `HEAD`, boots it

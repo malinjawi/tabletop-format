@@ -50,10 +50,12 @@ network="$prefix-net"
 source_pg="$prefix-source-db"; source_forgejo="$prefix-source-forgejo"
 restore_pg="$prefix-restore-db"; restore_forgejo="$prefix-restore-forgejo"
 restore_helper="$prefix-restore-helper"
+source_gateway="$prefix-source-gateway"
 gateway_container="$prefix-gateway"
 source_pg_volume="$prefix-source-pg"; source_forgejo_volume="$prefix-source-forgejo-data"
 restore_pg_volume="$prefix-restore-pg"; restore_forgejo_volume="$prefix-restore-forgejo-data"
 secret_volume="$prefix-secrets"
+source_gateway_volume="$prefix-source-gateway-data"
 gateway_volume="$prefix-gateway-data"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/forge-restore-drill.XXXXXX")"
 gateway_pid=""
@@ -61,8 +63,8 @@ gateway_pid=""
 cleanup(){
   status=$?
   [ -n "$gateway_pid" ] && kill "$gateway_pid" >/dev/null 2>&1 || true
-  docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$restore_helper" "$gateway_container" >/dev/null 2>&1 || true
-  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$secret_volume" "$gateway_volume" >/dev/null 2>&1 || true
+  docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$restore_helper" "$source_gateway" "$gateway_container" >/dev/null 2>&1 || true
+  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$secret_volume" "$source_gateway_volume" "$gateway_volume" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   if [ "${FORGE_KEEP_RESTORE_DRILL:-0}" = "1" ]; then
     printf 'restore drill evidence retained at %s\n' "$scratch" >&2
@@ -177,6 +179,55 @@ start_forgejo(){
     "$forgejo_image" >/dev/null
   wait_forgejo "$container" "$origin"
 }
+mint_forge_token(){
+  local origin="$1" name="$2"
+  curl -fsS -u "$admin_user:$admin_password" -X POST -H 'Content-Type: application/json' \
+    -d "{\"name\":\"$name\",\"scopes\":[\"all\"]}" \
+    "$origin/api/v1/users/$admin_user/tokens" \
+    | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).sha1||''))"
+}
+write_gateway_secrets(){
+  local token="$1"
+  docker run --rm --volume "$secret_volume:/secrets" \
+    --env FORGE_TOKEN_VALUE="$token" --env PLATFORM_PASSWORD_VALUE="$platform_password" \
+    "$utility_image" sh -eu -c '
+      umask 077
+      printf "%s\n" "$FORGE_TOKEN_VALUE" > /secrets/forge-token
+      printf "%s\n" "$PLATFORM_PASSWORD_VALUE" > /secrets/platform-db-password
+      chown 1000:1000 /secrets/forge-token /secrets/platform-db-password
+      chmod 0400 /secrets/forge-token /secrets/platform-db-password
+    '
+}
+start_gateway(){
+  local container="$1" volume="$2" database_host="$3" forgejo_host="$4"
+  docker run --detach --name "$container" --network "$network" \
+    --publish "127.0.0.1:$gateway_port:8420" --read-only --tmpfs /tmp:size=536870912,mode=1777 \
+    --volume "$volume:/app/data" --volume "$secret_volume:/run/secrets:ro" \
+    --env STORE1=forgejo --env FORGE_URL="http://$forgejo_host:3000" \
+    --env DB=postgres --env PGHOST="$database_host" --env PGPORT=5432 \
+    --env PGDATABASE=platform --env PGUSER=platform \
+    --env CACHE_DIR=/app/data/cache --env FARM_DIR=/app/data/forge-farm \
+    --env FORGE_HUB_PATH=/app/data/hub.html \
+    --env FORGE_PUBLIC_ORIGIN="$gateway_origin" --env FORGE_ALLOWED_ORIGINS="$gateway_origin" \
+    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=closed \
+    --env FORGE_OPERATOR_NAME='Forge restore drill' --env FORGE_CONTACT_EMAIL=operator@forge.test \
+    --env FORGE_BUILD_ID="$gateway_image" \
+    "$gateway_image" /bin/sh -ec '
+      export FORGE_TOKEN="$(cat /run/secrets/forge-token)"
+      export PGPASSWORD="$(cat /run/secrets/platform-db-password)"
+      exec node server.mjs --port 8420
+    ' >/dev/null
+  for _attempt in $(seq 1 120); do
+    curl -fsS "$gateway_origin/healthz" >/dev/null 2>&1 && return 0
+    if ! docker container inspect "$container" --format '{{.State.Running}}' 2>/dev/null | grep -qx true; then
+      docker logs "$container" >&2
+      return 1
+    fi
+    sleep 0.25
+  done
+  docker logs "$container" >&2
+  return 1
+}
 
 printf '== Build source state on real Forgejo + PostgreSQL ==\n'
 start_postgres "$source_pg" "$source_pg_volume" "$source_pg_port"
@@ -192,16 +243,31 @@ if ! admin_create_output="$(docker exec --user 1000 "$source_forgejo" forgejo ad
 fi
 printf '  ✓ disposable administrator created\n'
 source_journey_log="$scratch/source-journey.log"
-if ! FORGE_URL="$source_origin" ADMIN_USER="$admin_user" ADMIN_PASS="$admin_password" \
-  FORGE_ALLOW_FIXTURE_DELETE=1 DB=postgres \
-  PG_URL="postgres://platform:$platform_password@127.0.0.1:$source_pg_port/platform" \
+if [ -n "$gateway_image" ]; then
+  source_gateway_token="$(mint_forge_token "$source_origin" source-gateway)"
+  [ -n "$source_gateway_token" ] || { printf 'could not mint source gateway token\n' >&2; exit 1; }
+  docker volume create "$source_gateway_volume" >/dev/null
+  write_gateway_secrets "$source_gateway_token"
+  start_gateway "$source_gateway" "$source_gateway_volume" "$source_pg" "$source_forgejo"
+  source_gateway_args=(FORGE_EXISTING_GATEWAY_URL="$gateway_origin")
+else
+  source_gateway_args=(DB=postgres PG_URL="postgres://platform:$platform_password@127.0.0.1:$source_pg_port/platform")
+fi
+if ! env FORGE_URL="$source_origin" ADMIN_USER="$admin_user" ADMIN_PASS="$admin_password" \
+  FORGE_ALLOW_FIXTURE_DELETE=1 "${source_gateway_args[@]}" \
   "$repo_dir/journey-forgejo.sh" > "$source_journey_log" 2>&1; then
   cat "$source_journey_log" >&2
+  [ -z "$gateway_image" ] || docker logs "$source_gateway" >&2
   exit 1
 fi
 tail -n 4 "$source_journey_log"
 
 printf '\n== Freeze writes and create synchronized backup ==\n'
+if [ -n "$gateway_image" ]; then
+  docker stop "$source_gateway" >/dev/null
+  docker rm "$source_gateway" >/dev/null
+  docker volume rm "$source_gateway_volume" >/dev/null
+fi
 docker stop "$source_forgejo" >/dev/null
 docker run --rm --user 1000 --network "$network" \
   --volume "$source_forgejo_volume:/data" \
@@ -258,40 +324,13 @@ if ! doctor_output="$(docker exec --user 1000 "$restore_forgejo" forgejo doctor 
 fi
 printf '  ✓ Forgejo doctor accepted restored repository and configuration state\n'
 
-forge_token="$(curl -fsS -u "$admin_user:$admin_password" -X POST -H 'Content-Type: application/json' \
-  -d '{"name":"restore-verifier","scopes":["all"]}' \
-  "$restore_origin/api/v1/users/$admin_user/tokens" \
-  | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).sha1||''))")"
+forge_token="$(mint_forge_token "$restore_origin" restore-verifier)"
 [ -n "$forge_token" ] || { printf 'could not mint restored Forgejo token\n' >&2; exit 1; }
 
 if [ -n "$gateway_image" ]; then
   docker volume create "$gateway_volume" >/dev/null
-  docker run --rm --volume "$secret_volume:/secrets" \
-    --env FORGE_TOKEN_VALUE="$forge_token" --env PLATFORM_PASSWORD_VALUE="$platform_password" \
-    "$utility_image" sh -eu -c '
-      umask 077
-      printf "%s\n" "$FORGE_TOKEN_VALUE" > /secrets/forge-token
-      printf "%s\n" "$PLATFORM_PASSWORD_VALUE" > /secrets/platform-db-password
-      chown 1000:1000 /secrets/forge-token /secrets/platform-db-password
-      chmod 0400 /secrets/forge-token /secrets/platform-db-password
-    '
-  docker run --detach --name "$gateway_container" --network "$network" \
-    --publish "127.0.0.1:$gateway_port:8420" --read-only --tmpfs /tmp:size=536870912,mode=1777 \
-    --volume "$gateway_volume:/app/data" --volume "$secret_volume:/run/secrets:ro" \
-    --env STORE1=forgejo --env FORGE_URL="http://$restore_forgejo:3000" \
-    --env DB=postgres --env PGHOST="$restore_pg" --env PGPORT=5432 \
-    --env PGDATABASE=platform --env PGUSER=platform \
-    --env CACHE_DIR=/app/data/cache --env FARM_DIR=/app/data/forge-farm \
-    --env FORGE_HUB_PATH=/app/data/hub.html \
-    --env FORGE_PUBLIC_ORIGIN=https://forge.restore.test --env FORGE_ALLOWED_ORIGINS=https://forge.restore.test \
-    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=closed \
-    --env FORGE_OPERATOR_NAME='Forge restore drill' --env FORGE_CONTACT_EMAIL=operator@forge.test \
-    --env FORGE_BUILD_ID="$gateway_image" \
-    "$gateway_image" /bin/sh -ec '
-      export FORGE_TOKEN="$(cat /run/secrets/forge-token)"
-      export PGPASSWORD="$(cat /run/secrets/platform-db-password)"
-      exec node server.mjs --port 8420
-    ' >/dev/null
+  write_gateway_secrets "$forge_token"
+  start_gateway "$gateway_container" "$gateway_volume" "$restore_pg" "$restore_forgejo"
 else
   if find "$scratch/restored-cache" -type f -print -quit | grep -q .; then
     printf 'restored Store 3 must begin empty\n' >&2; exit 1
@@ -304,17 +343,12 @@ else
     node "$repo_dir/server.mjs" --port "$gateway_port" > "$scratch/restored-gateway.log" 2>&1 &
   gateway_pid=$!
 fi
-for _attempt in $(seq 1 120); do
-  curl -fsS "$gateway_origin/healthz" >/dev/null 2>&1 && break
-  if [ -n "$gateway_image" ] && ! docker container inspect "$gateway_container" --format '{{.State.Running}}' 2>/dev/null | grep -qx true; then
-    docker logs "$gateway_container" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-if ! curl -fsS "$gateway_origin/healthz" >/dev/null; then
-  if [ -n "$gateway_image" ]; then docker logs "$gateway_container" >&2; else tail -80 "$scratch/restored-gateway.log" >&2; fi
-  exit 1
+if [ -z "$gateway_image" ]; then
+  for _attempt in $(seq 1 120); do
+    curl -fsS "$gateway_origin/healthz" >/dev/null 2>&1 && break
+    sleep 0.25
+  done
+  curl -fsS "$gateway_origin/healthz" >/dev/null || { tail -80 "$scratch/restored-gateway.log" >&2; exit 1; }
 fi
 if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
   node "$repo_dir/tools/restore-verify.mjs" "$gateway_origin"; then

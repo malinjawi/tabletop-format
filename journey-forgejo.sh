@@ -68,9 +68,11 @@ else
   sleep 0.8
 fi
 
-# the journey OWNS whatever platform DB it is pointed at: reset for a clean run
-# (persistent Postgres keeps alice/bob between runs; sqlite scratch never did)
-if [ -n "${PG_URL:-}" ]; then
+# The journey OWNS a directly supplied platform DB and resets it for a clean
+# run. An existing gateway already owns its connection and must be started
+# against a fresh database by its caller instead of having tables dropped from
+# underneath it.
+if [ -n "${PG_URL:-}" ] && [ -z "${FORGE_EXISTING_GATEWAY_URL:-}" ]; then
   PG_URL="$PG_URL" node --input-type=module -e "
 const {default:pg}=await import('pg');
 const p=new pg.Pool({connectionString:process.env.PG_URL});
@@ -79,17 +81,30 @@ await p.end(); console.log('journey: platform postgres reset (migrations will re
 "
 fi
 
-SPORT=$(( (RANDOM % 2000) + 46000 ))
-STORE1=forgejo FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_BASIC="$FORGE_BASIC" \
-  DB="${DB:-}" PG_URL="${PG_URL:-}" \
-  DB_PATH="$SCRATCH/platform.db" CACHE_DIR="$SCRATCH/cache" FARM_DIR="$SCRATCH/farm" \
-  FORGE_NOW="2026-09-10T12:00:00Z" node server.mjs --port $SPORT > "$SCRATCH/server.log" 2>&1 &
-SPID=$!
-for _ in $(seq 1 120); do curl -fsS "http://127.0.0.1:$SPORT/healthz" >/dev/null 2>&1 && break; sleep .5; done
-curl -fsS "http://127.0.0.1:$SPORT/healthz" >/dev/null
+if [ -n "${FORGE_EXISTING_GATEWAY_URL:-}" ]; then
+  gateway_url="${FORGE_EXISTING_GATEWAY_URL%/}"
+  curl -fsS "$gateway_url/healthz" >/dev/null
+else
+  SPORT=$(( (RANDOM % 2000) + 46000 ))
+  STORE1=forgejo FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_BASIC="$FORGE_BASIC" \
+    DB="${DB:-}" PG_URL="${PG_URL:-}" \
+    DB_PATH="$SCRATCH/platform.db" CACHE_DIR="$SCRATCH/cache" FARM_DIR="$SCRATCH/farm" \
+    FORGE_NOW="2026-09-10T12:00:00Z" node server.mjs --port $SPORT > "$SCRATCH/server.log" 2>&1 &
+  SPID=$!
+  gateway_url="http://localhost:$SPORT"
+  for _ in $(seq 1 120); do curl -fsS "$gateway_url/healthz" >/dev/null 2>&1 && break; sleep .5; done
+  curl -fsS "$gateway_url/healthz" >/dev/null
+fi
 
-if FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_ALLOW_CACHE_LOSS_TEST=1 \
-  FORGE_TEST_CACHE_DIR="$SCRATCH/cache" node tools/journey.mjs "http://localhost:$SPORT"; then
+if [ -n "${FORGE_EXISTING_GATEWAY_URL:-}" ]; then
+  journey_command=(env FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN"
+    node tools/journey.mjs "$gateway_url")
+else
+  journey_command=(env FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN"
+    FORGE_ALLOW_CACHE_LOSS_TEST=1 FORGE_TEST_CACHE_DIR="$SCRATCH/cache"
+    node tools/journey.mjs "$gateway_url")
+fi
+if "${journey_command[@]}"; then
   echo ""
   if [ "$FORGE_MODE" = "live" ]; then
     echo "LIVE FORGEJO JOURNEY GREEN — same assertions as dev on a real Forgejo server."
@@ -98,7 +113,7 @@ if FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_ALLOW_CACHE_LOSS_TEST
   fi
 else
   RC=$?
-  echo "--- server.log (tail) ---"; tail -25 "$SCRATCH/server.log"
+  if [ -n "$SPID" ]; then echo "--- server.log (tail) ---"; tail -25 "$SCRATCH/server.log"; fi
   [ -n "$FPID" ] && { echo "--- forge.log (tail) ---"; tail -10 "$SCRATCH/forge.log"; }
   exit $RC
 fi
