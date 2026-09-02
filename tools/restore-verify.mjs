@@ -7,6 +7,7 @@
 import { createHash } from "node:crypto";
 
 const BASE=(process.argv[2]||"").replace(/\/$/,"");
+const EXPECTED_REPOSITORY_ORIGIN=String(process.env.FORGE_EXPECTED_REPOSITORY_ORIGIN||"").replace(/\/$/,"");
 if(!/^http:\/\/127\.0\.0\.1:\d+$/.test(BASE)){
   console.error("usage: node tools/restore-verify.mjs http://127.0.0.1:<disposable-port>");
   process.exit(2);
@@ -42,6 +43,9 @@ const original=catalog.find(game=>game.slug==="tidepool");
 const fork=catalog.find(game=>game.slug==="tidepool-bob");
 assert(original?.owner_handle==="alice"&&original.stars===1,"original ownership and star count survived");
 assert(fork?.owner_handle==="bob"&&fork.forked_from==="tidepool","fork ownership and lineage survived");
+const projectView=(await request("GET","/api/games/tidepool/ui")).data;
+assert(!EXPECTED_REPOSITORY_ORIGIN || projectView.repository?.clone_url===`${EXPECTED_REPOSITORY_ORIGIN}/alice/tidepool.git`,
+  "restored project exposes its real standard Git remote, not a placeholder",projectView.repository);
 
 const cards=(await request("GET","/api/games/tidepool/cards")).data;
 assert(cards.find(card=>card.id==="riptide")?.attributes?.cost===4,"Alice's semantic card edit survived in Git");

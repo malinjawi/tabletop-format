@@ -93,6 +93,10 @@ read -r source_pg_port source_forgejo_port restore_pg_port restore_forgejo_port 
 source_origin="http://127.0.0.1:$source_forgejo_port"
 restore_origin="http://127.0.0.1:$restore_forgejo_port"
 gateway_origin="http://127.0.0.1:$gateway_port"
+# The gateway is reached directly over loopback in this disposable drill, but
+# project views must still carry the external root HTTPS Git origin required by
+# production. It need not resolve here; restore-verify asserts the exact link.
+gateway_git_origin="https://git.forge.restore.test"
 postgres_password="postgres-$run_id"; forgejo_password="forgejo-$run_id"; platform_password="platform-$run_id"
 admin_user="launch-gate"; admin_password="disposable-$run_id-pass"
 journey_invite="restore-drill-$run_id-invite"
@@ -266,6 +270,7 @@ start_gateway(){
     --env CACHE_DIR=/app/data/cache --env FARM_DIR=/app/data/forge-farm \
     --env FORGE_HUB_PATH=/app/data/hub.html \
     --env FORGE_PUBLIC_ORIGIN="$gateway_origin" --env FORGE_ALLOWED_ORIGINS="$gateway_origin" \
+    --env FORGEJO_PUBLIC_ORIGIN="$gateway_git_origin" \
     --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=invite --env FORGE_INVITE_CODE="$journey_invite" \
     --env FORGE_OPERATOR_NAME='Forge restore drill' --env FORGE_CONTACT_EMAIL=operator@forge.test \
     --env FORGE_BUILD_ID="$gateway_image" \
@@ -425,6 +430,7 @@ else
     FORGE_BASIC="$admin_user:$admin_password" DB=postgres \
     PG_URL="postgres://platform:$platform_password@127.0.0.1:$restore_pg_port/platform" \
     CACHE_DIR="$scratch/restored-cache" FARM_DIR="$scratch/restored-farm" \
+    FORGEJO_PUBLIC_ORIGIN="$gateway_git_origin" \
     FORGE_HUB_PATH="$scratch/restored-hub.html" FORGE_REGISTRATION_MODE=closed \
     node "$repo_dir/server.mjs" --port "$gateway_port" > "$scratch/restored-gateway.log" 2>&1 &
   gateway_pid=$!
@@ -437,6 +443,7 @@ if [ -z "$gateway_image" ]; then
   curl -fsS "$gateway_origin/healthz" >/dev/null || { tail -80 "$scratch/restored-gateway.log" >&2; exit 1; }
 fi
 if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
+  FORGE_EXPECTED_REPOSITORY_ORIGIN="$gateway_git_origin" \
   node "$repo_dir/tools/restore-verify.mjs" "$gateway_origin"; then
   if [ -n "$gateway_image" ]; then
     printf '\n== Failed gateway container log ==\n' >&2

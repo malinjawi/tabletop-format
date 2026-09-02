@@ -93,7 +93,13 @@ The deck checker closes the stewardship loop: publish a dated restriction
 document and every deck in the community can re-verify itself —
 `'Wildfire' is RESTRICTED to 1 copy; deck has 2 → ILLEGAL`.
 
-## Git for board games (the point of all this)
+## Game-aware collaboration over Git
+
+Forge does not compete with GitHub or Forgejo at storing arbitrary repositories.
+It keeps standard Git underneath and adds the tabletop-specific layer: semantic
+card and component diffs, visual review, rights-aware release gates, reproducible
+print/tabletop builds, and browser workflows for collaborators who do not use a
+Git client. A complete portable source project can leave Forge at any time.
 
 Your game is a repo, and the tools speak designer, not git:
 

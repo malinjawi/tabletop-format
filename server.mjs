@@ -110,6 +110,14 @@ const execFileAsync = promisify(execFile);
 const STORE1 = process.env.STORE1 ?? "local";
 if (PRODUCTION && STORE1 !== "forgejo") throw new Error("production requires STORE1=forgejo");
 if (PRODUCTION && !process.env.FORGE_TOKEN) throw new Error("production requires a scoped FORGE_TOKEN");
+const FORGEJO_PUBLIC_ORIGIN = String(process.env.FORGEJO_PUBLIC_ORIGIN || "").trim().replace(/\/+$/, "");
+if (PRODUCTION && STORE1 === "forgejo") {
+  let forgejoOrigin = null;
+  try { forgejoOrigin = new URL(FORGEJO_PUBLIC_ORIGIN); } catch {}
+  if (!forgejoOrigin || forgejoOrigin.protocol !== "https:" || forgejoOrigin.pathname !== "/"
+    || forgejoOrigin.username || forgejoOrigin.password || forgejoOrigin.search || forgejoOrigin.hash)
+    throw new Error("production requires an absolute root HTTPS FORGEJO_PUBLIC_ORIGIN");
+}
 const store = STORE1 === "forgejo"
   ? (await import("./platform/store1-forgejo.mjs")).createForgejoStore({
       root: ROOT, forgeUrl: process.env.FORGE_URL, token: process.env.FORGE_TOKEN,
@@ -801,6 +809,12 @@ const catalogSummary = g => ({ slug: g.slug, project_id: g.project_id, namespace
   prs: [], releases: [], updated: g.updated_at ? new Date(Number(g.updated_at)).toISOString().slice(0, 10) : "",
   stars: g.stars, forked_from: g.forked_from ?? null, owner_handle: g.owner_handle ?? null,
   _summary: true });
+const repositoryLinks = game => {
+  if (STORE1 !== "forgejo" || !FORGEJO_PUBLIC_ORIGIN || !game?.namespace || !game?.repo_slug) return null;
+  const path = `${encodeURIComponent(game.namespace)}/${encodeURIComponent(game.repo_slug)}`;
+  return { provider: "Forgejo", web_url: `${FORGEJO_PUBLIC_ORIGIN}/${path}`,
+    clone_url: `${FORGEJO_PUBLIC_ORIGIN}/${path}.git` };
+};
 gw.route("GET", "/api/games", async (ctx) => {
   const u = await authedUser(ctx), visible = [];
   for (const g of await q.listGames(db))
@@ -852,7 +866,7 @@ gw.route("GET", "/api/games/:slug/ui", async (ctx) => {
       date: new Date(Number(release.created_at)).toISOString().slice(0, 10),
       author: release.author_handle || "",
     }));
-    ctx.send(200, { ...game, releases });
+    ctx.send(200, { ...game, releases, repository: repositoryLinks(game) });
   }
   catch (error) { ctx.send(500, { error: "could not load this project view", detail: error.message }); }
 }, "lazy full project view, cached by exact repository commit");
@@ -862,7 +876,8 @@ gw.route("GET", "/api/projects/:namespace/:slug", async (ctx) => {
   ctx.send(200, { project_id: game.project_id, namespace: game.namespace,
     slug: game.repo_slug, storage_key: game.slug,
     api: `/api/games/${encodeURIComponent(game.slug)}`,
-    path: publicProjectPath({ namespace: game.namespace, slug: game.repo_slug }) });
+    path: publicProjectPath({ namespace: game.namespace, slug: game.repo_slug }),
+    repository: repositoryLinks(game) });
 }, "resolve the public owner/slug identity to an immutable project id");
 gw.route("GET", "/api/projects/:namespace/:slug/cards", async (ctx) => {
   const game = await q.gameByProject(db, ctx.params.namespace, ctx.params.slug);

@@ -47,8 +47,9 @@ ok(env.FORGE_HUB_PATH==="/app/data/hub.html" && env.CACHE_DIR?.startsWith("/app/
 ok(env.FORGE_BUILD_ID===gateway.image&&/@sha256:/.test(env.FORGE_BUILD_ID||""),
   "release build identity records the digest-pinned gateway image");
 ok(env.FORGE_HTTPS==="1" && /^https:\/\//.test(env.FORGE_PUBLIC_ORIGIN||"")
+  && /^https:\/\//.test(env.FORGEJO_PUBLIC_ORIGIN||"")
   && env.FORGE_ALLOWED_ORIGINS===env.FORGE_PUBLIC_ORIGIN,
-  "HTTPS and exact-origin browser writes are enforced");
+  "Forge and its visible Git remote use HTTPS, with exact-origin browser writes enforced");
 ok(env.FORGE_REGISTRATION_MODE!=="open" && env.FORGE_INVITE_CODE,
   "controlled-alpha registration is invite-only");
 ok(!("FORGE_TOKEN" in env) && !("PGPASSWORD" in env),

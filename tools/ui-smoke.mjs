@@ -101,6 +101,9 @@ try {
   });
   await page.goto(origin, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Topic filters").waitFor();
+  assert(await page.getByLabel("How Forge helps").isVisible()
+    && await page.getByText("Review the actual game", { exact: true }).isVisible(),
+    "Explore explains the game-aware layer before exposing repository mechanics");
 
   const pseudoLink = page.locator(".gcard h3 a").first();
   assert(await pseudoLink.getAttribute("role") === "link" && await pseudoLink.getAttribute("tabindex") === "0",
@@ -170,6 +173,12 @@ try {
   const imported = await page.evaluate(async()=>await (await fetch("/api/games/onboarding-smoke-game/ui")).json());
   assert(imported.ncards === 2 && imported.namespace === "onboarding-smoke",
     "a stranger can import CSV as an owned two-card first commit through the UI");
+  assert(imported.repository === null, "local projects do not advertise a fake hosted Git remote");
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await page.getByRole("button", { name: /Portable source project/ }).waitFor();
+  const overviewText=await page.locator("body").innerText();
+  assert(!overviewText.includes("forge.example") && overviewText.includes("does not trap the project"),
+    "project overview proves source portability without placeholder clone commands");
   const sourceAfter={head:sourceGit(["rev-parse","HEAD"]),status:sourceGit(["status","--porcelain"])};
   assert(sourceAfter.head===sourceBefore.head && sourceAfter.status===sourceBefore.status,
     "mutating browser smoke leaves the source checkout untouched");

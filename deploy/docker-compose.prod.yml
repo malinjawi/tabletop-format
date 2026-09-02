@@ -41,6 +41,9 @@ services:
       # is intentionally read-only, so derived UI must live on the data volume.
       FORGE_HUB_PATH: /app/data/hub.html
       FORGE_PUBLIC_ORIGIN: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
+      # Exposed only as a public repository/link origin in project views. The
+      # gateway still uses the private FORGE_URL above for API and Git traffic.
+      FORGEJO_PUBLIC_ORIGIN: ${FORGEJO_PUBLIC_ORIGIN:?set the public HTTPS Forgejo URL}
       FORGE_BUILD_ID: ${FORGE_GATEWAY_IMAGE:?set the digest-pinned gateway image}
       FORGE_ALLOWED_ORIGINS: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
       FORGE_HTTPS: "1"
