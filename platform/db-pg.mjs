@@ -213,6 +213,12 @@ export const q = {
             s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
      FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
      WHERE a.user_id = $1 ORDER BY a.accepted_at DESC`, [userId]),
+  policyAcceptanceEvidenceByUser: (db, userId) => all(db,
+    `SELECT a.id, a.policy_set_id, a.accepted_at, a.method, a.application_build,
+            s.terms_text, s.privacy_text, s.community_text, s.notice_text,
+            s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
+     FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
+     WHERE a.user_id = $1 ORDER BY a.accepted_at DESC`, [userId]),
 
   accountAccessByHandle: (db, handle) => one(db,
     `SELECT id, handle, created_at, suspended_at, suspension_reason,

@@ -465,6 +465,26 @@ if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
 fi
 
 if [ -n "$gateway_image" ]; then
+  if ! restored_policy="$(docker exec --env PGPASSWORD="$platform_password" "$gateway_container" \
+    node tools/pilot-account.mjs policy --handle alice --require-current 2>&1)"; then
+    printf '%s\n' "$restored_policy" >&2
+    exit 1
+  fi
+else
+  if ! restored_policy="$(DB=postgres \
+    PG_URL="postgres://platform:$platform_password@127.0.0.1:$restore_pg_port/platform" \
+    node "$repo_dir/tools/pilot-account.mjs" policy --handle alice --require-current 2>&1)"; then
+    printf '%s\n' "$restored_policy" >&2
+    exit 1
+  fi
+fi
+if ! grep -q $'\tverified-current\t' <<<"$restored_policy"; then
+  printf 'restored operator policy evidence did not match the current rendered set\n%s\n' "$restored_policy" >&2
+  exit 1
+fi
+printf '  ✓ operator independently verified Alice policy receipt against the restored build\n'
+
+if [ -n "$gateway_image" ]; then
   printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized repository, database%s backup restored into fresh services; the exact release image rebuilt Store 3 and exact released bytes.\n' "$([ -n "$s3_image" ] && printf ', and S3 object' || true)"
 else
   printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; Store 3 rebuilt exact released bytes.\n'

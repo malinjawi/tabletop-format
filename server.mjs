@@ -47,7 +47,8 @@ import { PROJECT_META, projectMetaBytes, publicProjectPath } from "./platform/pr
 import { collaborationFiles, collaborationPolicy, roleCapabilities, validCollaboratorRole } from "./platform/collaboration.mjs";
 import { RIGHTS_MANIFEST, auditRights, forkRightsManifest, parseRights, rightsManifestBytes,
   rightsReceiptBytes, setFileRight } from "./platform/rights.mjs";
-import { makePolicySet, POLICY_ACCEPTANCE_NOTICE } from "./platform/policy-acceptance.mjs";
+import { loadRegistrationPolicySet, POLICY_ACCEPTANCE_NOTICE,
+  renderPolicyText } from "./platform/policy-acceptance.mjs";
 
 /* ---------- config ---------- */
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -68,10 +69,11 @@ const OPERATOR_NAME = process.env.FORGE_OPERATOR_NAME || "Forge local developmen
 const CONTACT_EMAIL = process.env.FORGE_CONTACT_EMAIL || "support@example.invalid";
 const POLICY_FILES = { terms: "terms.md", privacy: "privacy.md", community: "community.md",
   rights: "rights-and-takedown.md", support: "support.md" };
-const renderPolicy = name => readFileSync(join(ROOT, "policies", POLICY_FILES[name]), "utf8")
-  .replaceAll("{{OPERATOR}}", OPERATOR_NAME).replaceAll("{{CONTACT}}", CONTACT_EMAIL);
-const REGISTRATION_POLICY_SET = makePolicySet({ terms: renderPolicy("terms"),
-  privacy: renderPolicy("privacy"), community: renderPolicy("community") });
+const renderPolicy = name => renderPolicyText(
+  readFileSync(join(ROOT, "policies", POLICY_FILES[name]), "utf8"),
+  { operator: OPERATOR_NAME, contact: CONTACT_EMAIL });
+const REGISTRATION_POLICY_SET = loadRegistrationPolicySet(join(ROOT, "policies"),
+  { operator: OPERATOR_NAME, contact: CONTACT_EMAIL });
 if (PRODUCTION && !HTTPS) throw new Error("production requires an HTTPS FORGE_PUBLIC_ORIGIN (or FORGE_HTTPS=1)");
 if (PRODUCTION && REGISTRATION_MODE === "open") throw new Error("public registration cannot be open in the controlled beta");
 if (!new Set(["database", "shared"]).has(INVITE_MODE)) throw new Error("FORGE_INVITE_MODE must be database or shared");

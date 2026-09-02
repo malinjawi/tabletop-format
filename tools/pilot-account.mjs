@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Operator-assisted account recovery and access control for a controlled beta. */
 import { createHash, randomBytes } from "node:crypto";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { loadRegistrationPolicySet, validPolicySet } from "../platform/policy-acceptance.mjs";
 
 const args = process.argv.slice(2), command = args[0];
 const option = (name, fallback = null) => {
@@ -10,10 +11,11 @@ const option = (name, fallback = null) => {
 };
 const fail = message => { throw new Error(message); };
 const iso = value => value == null ? "—" : new Date(Number(value)).toISOString();
+const cell = value => String(value ?? "—").replace(/[\t\r\n]+/g, " ");
 
 async function main() {
-  if (!new Set(["reset", "resets", "revoke", "suspend", "restore", "status"]).has(command))
-    fail("use reset --handle HANDLE, resets, revoke rst_…, suspend --handle HANDLE --reason TEXT, restore --handle HANDLE --reason TEXT, or status --handle HANDLE");
+  if (!new Set(["reset", "resets", "revoke", "suspend", "restore", "status", "policy"]).has(command))
+    fail("use reset --handle HANDLE, resets, revoke rst_…, suspend --handle HANDLE --reason TEXT, restore --handle HANDLE --reason TEXT, status --handle HANDLE, or policy --handle HANDLE [--require-current]");
   const pgUrl = option("--pg-url", process.env.PG_URL || null);
   const dbPath = option("--db", process.env.DB_PATH || null);
   const postgres = !!pgUrl || process.env.DB === "postgres";
@@ -71,6 +73,33 @@ async function main() {
       for (const event of events)
         console.log([event.id, event.action, iso(event.created_at), event.operator_name, event.reason].join("\t"));
     }
+  } else if (command === "policy") {
+    const handle = String(option("--handle", "") || "").trim();
+    if (!handle) fail("policy requires --handle");
+    const user = await q.userByHandle(db, handle);
+    if (!user) fail("account not found");
+    const receipts = await q.policyAcceptanceEvidenceByUser(db, user.id);
+    if (!receipts.length) fail("account has no policy acceptance receipt");
+    const current = loadRegistrationPolicySet(join(resolve(import.meta.dirname, ".."), "policies"), {
+      operator: option("--operator", process.env.FORGE_OPERATOR_NAME || "Forge local development"),
+      contact: option("--contact", process.env.FORGE_CONTACT_EMAIL || "support@example.invalid"),
+    });
+    for (const receipt of receipts) {
+      const set = { id: receipt.policy_set_id, terms_text: receipt.terms_text,
+        privacy_text: receipt.privacy_text, community_text: receipt.community_text,
+        notice_text: receipt.notice_text, terms_sha256: receipt.terms_sha256,
+        privacy_sha256: receipt.privacy_sha256, community_sha256: receipt.community_sha256,
+        notice_sha256: receipt.notice_sha256 };
+      if (!validPolicySet(set) || receipt.method !== "clickwrap")
+        fail(`policy receipt integrity check failed for ${receipt.id}`);
+    }
+    if (args.includes("--require-current") && !receipts.some(receipt => receipt.policy_set_id === current.id))
+      fail("account has no receipt for the current rendered policy set");
+    console.log("handle\treceipt\tstatus\taccepted\tpolicy set\tapplication build");
+    for (const receipt of receipts) console.log([
+      handle, receipt.id, receipt.policy_set_id === current.id ? "verified-current" : "verified-prior",
+      iso(receipt.accepted_at), receipt.policy_set_id, cell(receipt.application_build),
+    ].join("\t"));
   } else {
     const handle = String(option("--handle", "") || "").trim();
     const reason = String(option("--reason", "") || "").trim();

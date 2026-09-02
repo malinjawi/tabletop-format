@@ -9,7 +9,7 @@
  */
 const PG = process.env.DB === "postgres";
 import { createHash } from "node:crypto";
-import { makePolicySet } from "../platform/policy-acceptance.mjs";
+import { makePolicySet, validPolicySet } from "../platform/policy-acceptance.mjs";
 const { openDb, q, newId } = PG
   ? await import("../platform/db-pg.mjs")
   : await import("../platform/db.mjs");
@@ -25,6 +25,9 @@ const h = (s) => `${s}-${T % 100000}`;
 const policySet = makePolicySet({ terms: "Test terms v1", privacy: "Test privacy v1",
   community: "Test community rules v1" });
 const acceptance = () => ({ id: newId("pa"), policy_set: policySet, application_build: `test-${T}` });
+assert(validPolicySet(makePolicySet({ terms: "Historic terms", privacy: "Historic privacy",
+  community: "Historic community", notice: "Historic registration notice." })),
+  "stored policy integrity does not depend on the notice text in the current application build");
 
 // users
 const ana = { id: newId("u"), handle: h("ana"), email: `${h("ana")}@x.io`, pass_hash: "hash1" };
@@ -57,6 +60,13 @@ const invitedPolicies = await q.policyAcceptancesByUser(db, invited.id);
 assert(invitedPolicies.length === 1 && invitedPolicies[0].policy_set_id === policySet.id
   && invitedPolicies[0].method === "clickwrap" && invitedPolicies[0].application_build === `test-${T}`,
   "invited account atomically records the exact policy set and acceptance method");
+const invitedEvidence = await q.policyAcceptanceEvidenceByUser(db, invited.id);
+assert(invitedEvidence.length === 1 && validPolicySet({ id: invitedEvidence[0].policy_set_id,
+  terms_text: invitedEvidence[0].terms_text, privacy_text: invitedEvidence[0].privacy_text,
+  community_text: invitedEvidence[0].community_text, notice_text: invitedEvidence[0].notice_text,
+  terms_sha256: invitedEvidence[0].terms_sha256, privacy_sha256: invitedEvidence[0].privacy_sha256,
+  community_sha256: invitedEvidence[0].community_sha256, notice_sha256: invitedEvidence[0].notice_sha256 }),
+  "operator evidence surface can cryptographically verify the stored policy snapshot");
 let replayed = false;
 try {
   await q.registerUserWithInvite(db,

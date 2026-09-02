@@ -183,6 +183,12 @@ export const q = {
             s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
      FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
      WHERE a.user_id = ? ORDER BY a.accepted_at DESC`).all(userId),
+  policyAcceptanceEvidenceByUser: (db, userId) => db.prepare(
+    `SELECT a.id, a.policy_set_id, a.accepted_at, a.method, a.application_build,
+            s.terms_text, s.privacy_text, s.community_text, s.notice_text,
+            s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
+     FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
+     WHERE a.user_id = ? ORDER BY a.accepted_at DESC`).all(userId),
 
   accountAccessByHandle: (db, handle) => db.prepare(
     `SELECT id, handle, created_at, suspended_at, suspension_reason,

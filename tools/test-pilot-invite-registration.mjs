@@ -147,6 +147,29 @@ try {
   assert.equal(policyView.body.policy_acceptances.length, 1);
   assert.equal(policyView.body.policy_acceptances[0].policy_set_id, health.policy_set);
   assert.equal(policyView.body.policy_acceptances[0].method, "clickwrap");
+  const operatorPolicy = runAccountCli("policy", "--handle", "amina",
+    "--operator", "Forge Pilot Operator", "--contact", "ops@forge.test", "--require-current");
+  assert.equal(operatorPolicy.status, 0, operatorPolicy.stderr);
+  assert.match(operatorPolicy.stdout, /amina\tpa_[a-f0-9]{16}\tverified-current\t/);
+  assert.match(operatorPolicy.stdout, new RegExp(health.policy_set));
+  assert.doesNotMatch(operatorPolicy.stdout, /terms|community rules|ops@forge\.test|amina@example\.com/i,
+    "operator receipt view exposes metadata, not policy bodies or account email");
+  const stalePolicy = runAccountCli("policy", "--handle", "amina",
+    "--operator", "Forge Pilot Operator", "--contact", "different@forge.test", "--require-current");
+  assert.equal(stalePolicy.status, 2);
+  assert.match(stalePolicy.stderr, /no receipt for the current rendered policy set/);
+
+  const tampered = new DatabaseSync(dbPath);
+  tampered.prepare("UPDATE policy_sets SET terms_text = terms_text || ' tampered'").run();
+  tampered.close();
+  const corruptPolicy = runAccountCli("policy", "--handle", "amina",
+    "--operator", "Forge Pilot Operator", "--contact", "ops@forge.test");
+  assert.equal(corruptPolicy.status, 2);
+  assert.match(corruptPolicy.stderr, /policy receipt integrity check failed/);
+  const repaired = new DatabaseSync(dbPath);
+  repaired.prepare("UPDATE policy_sets SET terms_text = ? WHERE id = ?")
+    .run(receipt.terms_text, receipt.policy_set_id);
+  repaired.close();
 
   const resetIssued = runAccountCli("reset", "--handle", "amina", "--hours", "1");
   assert.equal(resetIssued.status, 0, resetIssued.stderr);
