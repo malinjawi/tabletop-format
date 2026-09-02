@@ -93,7 +93,10 @@ export function auditRights(root, { sourceSha = null } = {}) {
     const license = String(right?.license || ""), status = right?.status || "unknown";
     if (BLOCKED_LICENSES.has(license.toLowerCase())) blockers.push(`${path}: license '${license || "missing"}'`);
     if (status === "unknown") blockers.push(`${path}: rights status is unknown`);
-    if (status === "permission-only" && right.redistribution !== "allowed") blockers.push(`${path}: redistribution permission is not documented`);
+    if (["licensed", "permission-only"].includes(status) && !right?.source)
+      blockers.push(`${path}: licensed source or permission record is missing`);
+    if (right?.redistribution !== "allowed")
+      blockers.push(`${path}: redistribution is '${right?.redistribution || "not documented"}'`);
     if (!Array.isArray(right?.copyright) || !right.copyright.length) blockers.push(`${path}: copyright/credit is missing`);
     const bytes = readFileSync(join(root, path));
     files.push({ path, sha256: digest(bytes), license, status,

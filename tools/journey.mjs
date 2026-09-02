@@ -108,7 +108,8 @@ const artBack = await api("GET", "/api/games/tidepool/assets/art/riptide.png", {
 assert(artBack.status === 200 && Buffer.compare(artBack.data, PNG) === 0,
   "GET asset materializes from LFS — bytes identical round-trip");
 const artAssign = await api("PUT", "/api/games/tidepool/art", { token: A,
-  body: { printing_id: "p_riptide_core", art: "assets/art/riptide.png", artist: "Alice", license: "CC-BY-4.0" } });
+  body: { printing_id: "p_riptide_core", art: "assets/art/riptide.png", artist: "Alice",
+    license: "CC-BY-4.0", rights_status: "original", redistribution: "allowed" } });
 assert(artAssign.status === 200 && artAssign.data.art === "assets/art/riptide.png",
   "alice assigns the uploaded art to the riptide printing with credit", artAssign.data);
 const pj = JSON.parse(await repoRead("tidepool", "components/printings.json"));
@@ -188,9 +189,13 @@ assert(prOpen.status === 201 && prOpen.data.changes.some(c => c.card === "moon_j
 const prId = prOpen.data.id;
 const noMerge = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: B });
 assert(noMerge.status === 403, "bob CANNOT merge into alice's game (owner-only rule)");
+const bobPrView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { token: B })).data;
+assert(bobPrView.access?.is_author && bobPrView.access.can_close && !bobPrView.access.can_review && !bobPrView.access.can_merge,
+  "the proposal contract gives bob only the actions he can actually take");
 const prView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { token: A })).data;
 assert(prView.author === "bob" && prView.status === "open" && prView.conflicts.length === 0
-  && prView.mergeable === false && prView.required_approvals === 1,
+  && prView.mergeable === false && prView.required_approvals === 1
+  && prView.access?.can_review && prView.access.can_merge && prView.access.can_close,
   "alice reviews: bob's PR is conflict-free but protected until one approval");
 const bobReview = await api("POST", `/api/games/tidepool/prs/${prId}/review`, { token: B, body: { verdict: "approve" } });
 assert(bobReview.status === 403, "bob can't review — he's the proposer, not a maintainer (403)");
@@ -272,6 +277,14 @@ const bd = (await api("GET", "/api/games/tidepool/diff")).data;
 assert(Array.isArray(bd.changes) && bd.from && bd.to && bd.from !== bd.to, "balance-diff compares two versions of the cards (from/to pinned)");
 
 console.log("== ACT 9: releases — cut a citable, immutable version ==");
+const releaseReady = await api("GET", "/api/games/tidepool/releases/preflight", { token: A });
+assert(releaseReady.status === 200 && releaseReady.data.ready && releaseReady.data.access.can_release
+  && releaseReady.data.checks.every(check => check.pass),
+  "release preflight tells alice this exact version is ready before render work starts");
+const releaseBob = await api("GET", "/api/games/tidepool/releases/preflight", { token: B });
+assert(releaseBob.status === 200 && releaseBob.data.candidate_ready && !releaseBob.data.ready
+  && !releaseBob.data.access.can_release,
+  "the same preflight explains that a contributor cannot publish the owner's release");
 const relBad = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "not a tag!" } });
 assert(relBad.status === 422, "a malformed tag is rejected (422)");
 const relBob = await api("POST", "/api/games/tidepool/releases", { token: B, body: { tag: "v0.1" } });
@@ -279,14 +292,26 @@ assert(relBob.status === 403, "only the owner can cut a release (403)");
 const unknownAsset = await api("POST", "/api/games/tidepool/assets?path=assets/art/unclassified.png", { token: A, raw: PNG });
 assert(unknownAsset.status === 200 && unknownAsset.data.rights_status === "unknown",
   "an upload without a rights declaration is committed as private-only/unknown");
+const releaseBlockedPreview = await api("GET", "/api/games/tidepool/releases/preflight", { token: A });
+assert(releaseBlockedPreview.status === 200 && !releaseBlockedPreview.data.ready
+  && releaseBlockedPreview.data.rights.blockers.some(value => /unclassified/.test(value)),
+  "release preflight names the exact file that needs a declaration");
 const rightsBlocked = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1" } });
 assert(rightsBlocked.status === 422 && rightsBlocked.data.rights?.blockers?.some(value => /unclassified/.test(value)),
   "unknown file rights block release before exports or a Git tag are created");
+const incompleteRights = await api("PUT", "/api/games/tidepool/rights", { token: A, body: {
+  path: "assets/art/unclassified.png", status: "licensed", license: "CC-BY-4.0",
+  copyright: ["Someone Else"], redistribution: "allowed" } });
+assert(incompleteRights.status === 422 && /source or permission/.test(incompleteRights.data.error),
+  "a licensed-file claim cannot omit its source or permission record");
 const declareRights = await api("PUT", "/api/games/tidepool/rights", { token: A, body: {
   path: "assets/art/unclassified.png", status: "original", license: "CC-BY-4.0",
   copyright: ["Alice"], redistribution: "allowed" } });
 assert(declareRights.status === 200 && declareRights.data.rights.publishable,
   "the owner records an auditable per-file declaration and clears the gate");
+const releaseReadyAgain = await api("GET", "/api/games/tidepool/releases/preflight", { token: A });
+assert(releaseReadyAgain.status === 200 && releaseReadyAgain.data.ready,
+  "release readiness turns green immediately after the rights commit");
 const rel = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1", title: "First cut" } });
 assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").startsWith("- ")
   && rel.data.repository_tag?.annotated && rel.data.repository_tag?.protected

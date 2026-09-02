@@ -159,6 +159,7 @@ try {
   await page.getByRole("radio", { name: /Import CSV/ }).check();
   await page.getByLabel("Working title").fill("Onboarding Smoke Game");
   await page.getByLabel("CSV card data").fill(`name,type,text,cost\nSpark,unit,Deal 1 damage.,1\nGuard,unit,Prevent 1 damage.,2`);
+  await page.getByLabel("License").selectOption("CC-BY-4.0");
   await page.getByRole("button", { name: "Import cards as first commit" }).click();
   try {
     await page.waitForURL(/#\/g\/onboarding-smoke\/onboarding-smoke-game\/cards$/,
@@ -174,6 +175,109 @@ try {
   assert(imported.ncards === 2 && imported.namespace === "onboarding-smoke",
     "a stranger can import CSV as an owned two-card first commit through the UI");
   assert(imported.repository === null, "local projects do not advertise a fake hosted Git remote");
+
+  // The art flow must collect provenance before bytes enter the repository;
+  // cancelling the declaration therefore cannot leave an unknown-rights file.
+  await page.locator("#pane").getByRole("button", { name: /Edit cards/ }).click();
+  await page.getByRole("heading", { name: /Editing cards/ }).waitFor();
+  const chooserPromise=page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: /Art/ }).click();
+  const chooser=await chooserPromise;
+  await chooser.setFiles({ name:"spark.png", mimeType:"image/png", buffer:Buffer.concat([
+    Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==","base64"),Buffer.alloc(300)]) });
+  await page.getByRole("heading", { name:/Credit the art for Spark/ }).waitFor();
+  assert(await page.getByLabel("Artist, creator, or copyright holder").inputValue()==="onboarding-smoke",
+    "art onboarding starts with explicit creator credit instead of assuming a license");
+  await page.getByLabel(/I confirm this declaration is accurate/).check();
+  const artAssigned=page.waitForResponse(response=>response.request().method()==="PUT"&&new URL(response.url()).pathname.endsWith("/art"));
+  await page.getByRole("button", { name:"Record rights & continue" }).click();
+  assert((await artAssigned).ok(), "art bytes, credit, license, and redistribution are assigned through the browser");
+  const artRights=await page.evaluate(async()=>await (await fetch("/api/games/onboarding-smoke-game/rights")).json());
+  assert(artRights.publishable && artRights.files.some(file=>file.path==="assets/art/spark.png"&&file.copyright.includes("onboarding-smoke")),
+    "the uploaded art is release-cleared and credited in the repository rights ledger");
+
+  await page.locator("details.more-tabs summary").click();
+  await page.locator("details.more-tabs .repo-menu a").filter({hasText:"Releases"}).click();
+  await page.getByText(/^Release readiness/).waitFor();
+  assert(await page.getByText("READY", { exact:true }).isVisible()
+    && await page.getByRole("button", { name:"Cut this exact release" }).isVisible(),
+    "the owner sees a preflighted exact version before starting an expensive release build");
+
+  // An old/API/imported asset can still arrive without rights. The release UI
+  // must name it, withhold the release action, and provide the repair path.
+  const unknownUpload=await page.evaluate(async(bytes)=>{
+    const response=await fetch("/api/games/onboarding-smoke-game/assets?path=assets%2Fart%2Funclassified.png",{
+      method:"POST",body:new Uint8Array(bytes)});
+    return {status:response.status,body:await response.json()};
+  },[...Buffer.concat([Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==","base64"),Buffer.alloc(300)])]);
+  assert(unknownUpload.status===200&&unknownUpload.body.rights_status==="unknown",
+    "legacy/imported unknown-rights files remain fail-closed");
+  await page.locator("nav.tabs > a").filter({hasText:"Cards"}).click();
+  await page.locator("details.more-tabs summary").click();
+  await page.locator("details.more-tabs .repo-menu a").filter({hasText:"Releases"}).click();
+  await page.getByText("BLOCKED", { exact:true }).waitFor();
+  const declareButton=page.getByRole("button", { name:"Declare assets/art/unclassified.png" });
+  assert(await declareButton.isVisible() && await page.getByRole("button", { name:"Cut this exact release" }).count()===0,
+    "release readiness names the blocking file and withholds the publish action");
+  await declareButton.click();
+  await page.getByLabel(/I confirm this declaration is accurate/).check();
+  await page.getByRole("button", { name:"Record rights & continue" }).click();
+  await page.getByText("READY", { exact:true }).waitFor();
+  assert(await page.getByRole("button", { name:"Cut this exact release" }).isVisible(),
+    "the owner can repair a rights blocker without leaving the release workflow");
+
+  // Build a real Bob proposal through the public contract, then verify the
+  // browser presents only the actions each person is authorized to perform.
+  const api=async(method,path,token,body)=>{
+    const response=await fetch(origin+path,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),
+      ...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined});
+    return {status:response.status,data:await response.json()};
+  };
+  const bobRegistration=await api("POST","/api/auth/register",null,{handle:"bob",email:"bob@example.invalid",password:"password123"});
+  assert(bobRegistration.status===201&&bobRegistration.data.token,"second pilot participant can create an account");
+  const bobToken=bobRegistration.data.token;
+  const bobFork=await api("POST","/api/games/onboarding-smoke-game/fork",bobToken,{ref:"HEAD"});
+  const bobCards=await api("GET",`/api/games/${bobFork.data.slug}/cards`,bobToken);
+  bobCards.data.find(card=>card.id==="spark").text="Deal 2 damage after review.";
+  const bobEdit=await api("PUT",`/api/games/${bobFork.data.slug}/cards`,bobToken,bobCards.data);
+  const bobProposal=await api("POST","/api/games/onboarding-smoke-game/prs",bobToken,{
+    from:bobFork.data.slug,title:"Tune Spark after playtest"});
+  assert(bobFork.status===201&&bobEdit.status===200&&bobProposal.status===201,
+    "the collaborator's independent edition becomes a semantic proposal");
+
+  const proposalUrl=`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/suggestions`;
+  await page.goto(proposalUrl,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"View game changes"}).click();
+  await page.getByRole("button",{name:"✓ Approve"}).waitFor();
+  assert(await page.getByRole("button",{name:"Merge after approval"}).isDisabled()
+    && await page.getByRole("button",{name:"✎ Request changes"}).isVisible(),
+    "the owner sees review controls while merge stays locked behind approval");
+
+  const bobContext=await browser.newContext({viewport:{width:390,height:844}}),bobPage=await bobContext.newPage();
+  await bobPage.goto(origin,{waitUntil:"domcontentloaded"});
+  const bobLogin=await bobPage.evaluate(async()=>{
+    const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},
+      body:JSON.stringify({handle:"bob",password:"password123"})});return response.status;
+  });
+  assert(bobLogin===200,"collaborator can sign into an independent browser session");
+  await bobPage.goto(proposalUrl,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"View game changes"}).click();
+  await bobPage.getByText(/A maintainer must review it/).waitFor();
+  assert(await bobPage.getByRole("button",{name:"Close"}).isVisible()
+    && await bobPage.getByRole("button",{name:/Approve|Merge/}).count()===0,
+    "the proposer sees close and discussion, never unauthorized approve or merge controls");
+
+  await page.getByRole("button",{name:"✓ Approve"}).click();
+  const mergeButton=page.getByRole("button",{name:/Merge — commits as bob/});
+  await mergeButton.waitFor();
+  const mergeResponse=page.waitForResponse(response=>response.request().method()==="POST"&&new URL(response.url()).pathname.endsWith(`/prs/${bobProposal.data.id}/merge`));
+  await mergeButton.click();
+  assert((await mergeResponse).ok(),"the owner approves and merges the visual proposal through the browser");
+  const mergedCards=await api("GET","/api/games/onboarding-smoke-game/cards",null);
+  assert(mergedCards.data.find(card=>card.id==="spark").text==="Deal 2 damage after review.",
+    "the accepted browser proposal lands exactly and preserves the collaborator's authored content");
+  await bobContext.close();
+
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await page.getByRole("button", { name: /Portable source project/ }).waitFor();
   const overviewText=await page.locator("body").innerText();
@@ -184,7 +288,7 @@ try {
     "mutating browser smoke leaves the source checkout untouched");
   assert(errors.length === 0, "Explore produces no browser errors", errors.join(" | "));
 
-  console.log("\nUI SMOKE GREEN — onboarding, CSV import, lazy catalog, facets, search, narrow layout, and touch targets verified.");
+  console.log("\nUI SMOKE GREEN — onboarding, CSV/art rights, two-person review, release readiness, portability, narrow layout, and discovery verified.");
 } finally {
   if (browser) await browser.close();
   server.kill("SIGTERM");

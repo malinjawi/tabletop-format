@@ -3800,9 +3800,15 @@ function assetUpload(slug,existingEncoded=""){
   input.onchange=async()=>{const file=input.files?.[0];if(!file)return;let path=existing;
     if(!path){const safe=file.name.replace(/[^A-Za-z0-9._-]+/g,"-");const v=await askForm("Add a reusable asset",[{name:"path",label:"Repository path",value:`assets/uploads/${safe}`,placeholder:"assets/art/example.png"}],"Commit asset");path=v?.path?.trim();if(!path)return;}
     if(!path.startsWith("assets/")||path.includes("..")){prNote("Asset path must stay under assets/",true);return;}
-    prNote(existing?"Replacing asset and creating a commit…":"Uploading asset and creating a commit…");
-    const r=await fetch(`/api/games/${encodeURIComponent(slug)}/assets?path=${encodeURIComponent(path)}`,{method:"POST",headers:edToken(),body:file});const d=await r.json().catch(()=>({}));
-    if(r.ok){$("#modal").classList.remove("on");prNote(`Committed ${d.commit} · ${path}`);setTimeout(()=>location.reload(),900);}else prNote(d.error||"Asset upload failed",true);
+    const rights=await assetRightsForm(existing?`Confirm rights for ${path}`:`Credit ${file.name}`,{
+      creator:ME?.handle||"",license:G(slug)?.license||"CC-BY-4.0",status:"original",redistribution:"allowed"});
+    if(!rights)return;
+    prNote(existing?"Replacing asset with its rights declaration…":"Uploading asset with its rights declaration…");
+    const params=new URLSearchParams({path,creator:rights.creator,license:rights.license,
+      rights_status:rights.status,redistribution:rights.redistribution});
+    if(rights.source)params.set("source",rights.source);
+    const r=await fetch(`/api/games/${encodeURIComponent(slug)}/assets?${params}`,{method:"POST",headers:edToken(),body:file});const d=await r.json().catch(()=>({}));
+    if(r.ok){$("#modal").classList.remove("on");prNote(`Committed ${d.commit} · ${rights.creator} · ${rights.license}`);setTimeout(()=>location.reload(),900);}else prNote(d.error||"Asset upload failed",true);
   };input.click();
 }
 /* ---------- exports: same data, every table ---------- */
@@ -3927,15 +3933,20 @@ function edArt(){
     const f=inp.files[0]; if(!f) return;
     const ext=(f.name.split(".").pop()||"png").toLowerCase();
     const path=`assets/art/${c.id}.${ext}`;
-    toast("Uploading art…");
-    const up=await fetch(`/api/games/${ED.slug}/assets?path=${encodeURIComponent(path)}`,{method:"POST",body:f});
+    const rights=await assetRightsForm(`Credit the art for ${c.name}`,{
+      creator:ME?.handle||"",license:G(ED.slug)?.license||"CC-BY-4.0",status:"original",redistribution:"allowed"});
+    if(!rights)return;
+    toast("Uploading art with its rights declaration…");
+    const params=new URLSearchParams({path,creator:rights.creator,license:rights.license,
+      rights_status:rights.status,redistribution:rights.redistribution});
+    if(rights.source)params.set("source",rights.source);
+    const up=await fetch(`/api/games/${ED.slug}/assets?${params}`,{method:"POST",body:f});
     if(!up.ok){ toast("Upload failed: "+(((await up.json().catch(()=>({}))).error)||up.status)); return; }
-    const av=await askForm("Credit the artist",[{name:"artist",label:"Artist / credit (optional)"}],"Assign art"); if(av===null) return;
-    const artist=(av.artist||"").trim();
-    const body={printing_id:`p_${c.id}_core`,art:path}; if(artist){ body.artist=artist; body.license="CC-BY-4.0"; }
+    const body={printing_id:`p_${c.id}_core`,art:path,artist:rights.creator,license:rights.license,
+      source:rights.source||undefined,rights_status:rights.status,redistribution:rights.redistribution};
     const r=await fetch(`/api/games/${ED.slug}/art`,{method:"PUT",headers:authHdr(),body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
-    if(r.ok) toast(`Art assigned to ${c.name}${artist?` · credited to ${artist}`:""}`);
+    if(r.ok) toast(`Art assigned to ${c.name} · credited to ${rights.creator} · ${rights.license}`);
     else toast("Assign failed: "+(d.error||r.status));
   };
   inp.click();
@@ -4002,6 +4013,47 @@ function askForm(title, fields, okLabel){
     box.querySelector("[data-ok]").onclick=()=>{const o={};box.querySelectorAll("[data-n]").forEach(i=>o[i.dataset.n]=i.value.trim());done(o);};
     box.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.tagName==="INPUT")box.querySelector("[data-ok]").click();if(e.key==="Escape")done(null);});
     const f0=box.querySelector("input"); if(f0)setTimeout(()=>f0.focus(),30);
+  });
+}
+function assetRightsForm(title,defaults={}){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div");
+    ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:240;display:flex;align-items:center;justify-content:center;padding:20px";
+    const box=document.createElement("div");
+    box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:500px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+    const status=defaults.status||"original",sharing=defaults.redistribution||"allowed";
+    box.innerHTML=`<h3 style="margin:0 0 5px;font-size:18px">${esc(title)}</h3>
+      <p style="margin:0 0 15px;color:var(--mut);font-size:12.5px;line-height:1.5">Credit and permission travel with this file through editions, proposals, and releases. Forge will block a release if these rights are unknown.</p>
+      <div data-err style="display:none;color:var(--red);font-size:12px;margin-bottom:10px"></div>
+      <label style="display:block;margin-bottom:11px;font-size:13px;color:var(--mut)">Artist, creator, or copyright holder
+        <input data-n="creator" value="${esc(defaults.creator||"")}" placeholder="Name or studio that must be credited" style="display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">
+        <label style="font-size:13px;color:var(--mut)">Why may this be used?<select data-n="status" style="display:block;width:100%;margin-top:4px;padding:9px;border:1px solid var(--bd);border-radius:8px;background:#fff;font:inherit">
+          ${[["original","I created it"],["commissioned","Commissioned for this game"],["licensed","Licensed from someone else"],["public-domain","Public domain / CC0"],["permission-only","Specific permission only"]].map(([v,l])=>`<option value="${v}" ${status===v?"selected":""}>${l}</option>`).join("")}</select></label>
+        <label style="font-size:13px;color:var(--mut)">Redistribution<select data-n="redistribution" style="display:block;width:100%;margin-top:4px;padding:9px;border:1px solid var(--bd);border-radius:8px;background:#fff;font:inherit">
+          ${[["allowed","Allowed in releases"],["restricted","Restricted"],["private-only","Private proof only"]].map(([v,l])=>`<option value="${v}" ${sharing===v?"selected":""}>${l}</option>`).join("")}</select></label>
+      </div>
+      <label style="display:block;margin:11px 0;font-size:13px;color:var(--mut)">License or permission identifier
+        <input data-n="license" value="${esc(defaults.license||"")}" placeholder="e.g. CC-BY-4.0 or custom permission" style="display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+      <label style="display:block;margin-bottom:12px;font-size:13px;color:var(--mut)">Source or permission record <span style="font-weight:400">(recommended for licensed work)</span>
+        <input data-n="source" value="${esc(defaults.source||"")}" placeholder="URL, invoice, contract, or internal reference" style="display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;margin:13px 0"><input data-confirm type="checkbox" style="margin-top:2px"> <span>I confirm this declaration is accurate and I am allowed to use the file under these terms.</span></label>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>Record rights &amp; continue</button></div>`;
+    ov.appendChild(box);document.body.appendChild(ov);
+    const done=value=>{ov.remove();resolve(value);};
+    box.querySelector("[data-x]").onclick=()=>done(null);
+    ov.addEventListener("mousedown",event=>{if(event.target===ov)done(null);});
+    box.addEventListener("keydown",event=>{if(event.key==="Escape")done(null);});
+    box.querySelector("[data-ok]").onclick=()=>{
+      const value=Object.fromEntries([...box.querySelectorAll("[data-n]")].map(input=>[input.dataset.n,input.value.trim()]));
+      const error=box.querySelector("[data-err]");
+      const licensed=["licensed","permission-only"].includes(value.status);
+      const message=!value.creator?"Name the creator or copyright holder.":!value.license?"Enter the license or permission identifier.":
+        licensed&&!value.source?"Add the source or permission record for licensed work.":!box.querySelector("[data-confirm]").checked?"Confirm the declaration before continuing.":"";
+      if(message){error.textContent=message;error.style.display="";return;}
+      done(value);
+    };
+    setTimeout(()=>box.querySelector('[data-n="creator"]')?.focus(),30);
   });
 }
 async function reload(){ location.reload(); }
@@ -5010,10 +5062,13 @@ async function prDetail(slug,id){
     ?`<div class="chg" style="color:#b35900"><b>⚠ conflicts:</b> both sides changed ${allConflicts.map(esc).join(", ")} — resolve in the fork first</div>`:"";
   const revs=pr.reviews||[];
   const reviewsHtml=revs.length?`<div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">${revs.map(r=>`<span class="revbadge ${r.verdict}">${r.verdict==="approve"?"✓":"✎"} ${esc(r.reviewer_handle)} ${r.verdict==="approve"?"approved":"requested changes"}</span>`).join("")}</div>`:"";
-  const reviewRow=pr.status==="open"&&ME?`<div style="margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" onclick="reviewPr('${slug}','${id}','approve')">✓ Approve</button><button class="btn" onclick="reviewPr('${slug}','${id}','request_changes')">✎ Request changes</button>${reviewsHtml}</div>`:reviewsHtml;
-  const actions=pr.status==="open"&&ME?`<div class="mergebar">
-      <button class="btn primary" onclick="mergePr('${slug}','${id}')">Merge — commits as ${esc(pr.author)}</button>
-      <button class="btn" onclick="closePr('${slug}','${id}')">Close</button>
+  const access=pr.access||{}, checks=(pr.checks||[]).filter(check=>check.pass!==null);
+  const checksHtml=pr.status==="open"?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin:10px 0">${checks.map(check=>`<span class="badge" style="color:${check.pass?'var(--grn)':'#9a6700'}">${check.pass?'✓':'○'} ${esc(check.detail)}</span>`).join("")}</div>`:"";
+  const reviewRow=pr.status==="open"&&access.can_review?`<div style="margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" onclick="reviewPr('${slug}','${id}','approve')">✓ Approve</button><button class="btn" onclick="reviewPr('${slug}','${id}','request_changes')">✎ Request changes</button>${reviewsHtml}</div>`
+    :reviewsHtml+(pr.status==="open"&&access.is_author?`<div class="mut" style="font-size:12px;margin:8px 0">This is your proposal. A maintainer must review it; you cannot approve or merge it yourself.</div>`:"");
+  const actions=pr.status==="open"&&(access.can_merge||access.can_close)?`<div class="mergebar">
+      ${access.can_merge?`<button class="btn primary" ${pr.mergeable?`onclick="mergePr('${slug}','${id}')"`:'disabled title="Complete the review checks first"'}>${pr.mergeable?`Merge — commits as ${esc(pr.author)}`:"Merge after approval"}</button>`:""}
+      ${access.can_close?`<button class="btn" onclick="closePr('${slug}','${id}')">Close</button>`:""}
       <span style="color:var(--mut);font-size:13px">Accepted changes keep ${esc(pr.author)}'s name in the history.</span></div>`
     :(pr.status==="merged"?`<div class="mergebar"><span style="color:var(--mut)">merged as <code>${esc(pr.merge_sha||"")}</code></span></div>`:"");
   const discussion=`<div style="margin-top:14px"><div class="mut" style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Discussion</div>${commentThread(pr.comments)}
@@ -5021,7 +5076,7 @@ async function prDetail(slug,id){
       <div style="margin-top:6px"><button class="btn" onclick="commentPr('${slug}','${id}')">Comment</button></div>`:``}</div>`;
   const pc=pr.printing_changes||{added:[],changed:[],removed:[]},pt=(pc.added.length+pc.changed.length+pc.removed.length);
   const printingDiff=pt?`<div class="box" style="margin:10px 0"><div class="bh">Printing records <span class="count">${pt}</span></div><div class="bb"><div class="chg">Added ${pc.added.length} · changed ${pc.changed.length} · removed ${pc.removed.length}</div></div></div>`:"";
-  box.innerHTML=visualDiff+(pr.changes||[]).map(chgHtml).join("")+printingDiff+assetDiff+conflictNote+reviewRow+discussion+actions;
+  box.innerHTML=visualDiff+(pr.changes||[]).map(chgHtml).join("")+printingDiff+assetDiff+conflictNote+checksHtml+reviewRow+discussion+actions;
 }
 async function commentPr(slug,id){
   const el=$(`#prc-${id}`); const body=(el.value||"").trim(); if(!body)return;
@@ -5092,9 +5147,26 @@ function releases(g){
   :"<div class='emptystate'>No releases yet — <code>fmt release &lt;game&gt; 1.0.0</code></div>";
 }
 async function liveReleases(g){
-  let rels; try{ rels=await (await fetch(`/api/games/${g.slug}/releases`)).json(); }catch{ return; }
+  let rels,preflight;
+  try{
+    const [rr,pr]=await Promise.all([fetch(`/api/games/${g.slug}/releases`),fetch(`/api/games/${g.slug}/releases/preflight`)]);
+    rels=await rr.json();preflight=await pr.json();
+    if(!rr.ok||!pr.ok)throw new Error(preflight.error||`request failed (${rr.status}/${pr.status})`);
+  }catch(error){$("#pane").innerHTML=`<div class="emptystate">Could not check releases.<br><span class="mut">${esc(error.message)}</span></div>`;return;}
   if(!Array.isArray(rels)) return;
-  const cut=(typeof ME!=="undefined"&&ME)?`<div style="margin-bottom:16px"><button class="btn primary" onclick="cutRelease('${g.slug}')">🏷 Cut a release</button></div>`:"";
+  const labels={validation:"Game source",license:"License & attribution",rights:"File rights"};
+  const checks=(preflight.checks||[]).map(check=>`<div class="kv"><b>${check.pass?'✓':'○'} ${esc(labels[check.key]||check.key)}</b><span style="color:${check.pass?'var(--grn)':'#9a6700'}">${esc(check.detail)}</span></div>`).join("");
+  const blockerPaths=[...new Set((preflight.rights?.blockers||[]).map(releaseBlockerPath).filter(Boolean))];
+  const blockerList=(preflight.rights?.blockers||[]).slice(0,12).map(message=>`<li>${esc(message)}</li>`).join("");
+  const access=preflight.access||{}, ready=preflight.ready;
+  const action=ready?`<button class="btn primary" onclick="cutRelease('${g.slug}')">🏷 Cut this exact release</button>`
+    :access.can_release&&blockerPaths.length?`<div style="display:flex;gap:7px;flex-wrap:wrap">${blockerPaths.map(path=>`<button class="btn" onclick="declareReleaseRight('${g.slug}','${encodeURIComponent(path)}')">Declare ${esc(path)}</button>`).join("")}</div>`
+    :!access.can_release?`<span class="mut" style="font-size:12.5px">Only this game's owner can publish a release. Contributors propose changes; maintainers review them.</span>`
+    :`<span class="mut" style="font-size:12.5px">Resolve the failed check before Forge starts any release build.</span>`;
+  const readiness=`<div class="box" style="margin-bottom:16px;border-color:${ready?'#b8d9cb':'#d6c8a5'}"><div class="bh" style="display:flex;align-items:center;gap:8px">Release readiness <span class="badge" style="margin-left:auto;color:${ready?'var(--grn)':'#9a6700'}">${ready?'READY':'BLOCKED'}</span></div><div class="bb">
+    <p style="margin:0 0 10px;font-size:13px;line-height:1.5">Forge checked the exact current version <code>${esc((preflight.ref||"").slice(0,12))}</code> before rendering anything. A release freezes source, credit, rights, print files, and tabletop packages together.</p>${checks}
+    ${blockerList?`<details style="margin:10px 0"><summary style="cursor:pointer;font-size:12.5px;color:#9a6700">Why release is blocked</summary><ul style="font-size:12px;line-height:1.5;margin:7px 0 0;padding-left:20px">${blockerList}</ul></details>`:""}
+    <div style="margin-top:12px">${action}</div></div></div>`;
   const dl=(sha,file,label)=>`<a class="btn" style="text-decoration:none" href="/cache/exports/${g.slug}/${sha}/${file}">⤓ ${label}</a>`;
   const body=rels.length?rels.map(r=>`
     <div class="rel"><h3>🏷 ${esc(r.tag)} <span style="color:var(--mut);font-weight:400;font-size:13px">pinned <code>${esc(r.sha)}</code>${r.author_handle?` · ${esc(r.author_handle)}`:""}</span></h3>
@@ -5102,7 +5174,23 @@ async function liveReleases(g){
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${dl(r.sha,"print-ready.zip","Print-ready")}${dl(r.sha,"pnp.pdf","PnP PDF")}${dl(r.sha,"table-v3.vtt","Playable VTT")}${dl(r.sha,"tts.json","TTS mod")}${dl(r.sha,g.slug+"-ttc.zip","TTC pack")}</div>
     <div style="color:var(--mut);font-size:12px;margin-top:8px">Frozen forever — content-addressed by sha, these bytes never change.</div></div>`).join("")
     :"<div class='emptystate'>No releases yet — cut one to freeze a citable version.</div>";
-  $("#pane").innerHTML=cut+body;
+  $("#pane").innerHTML=readiness+body;
+}
+function releaseBlockerPath(message){
+  const path=String(message||"").split(":",1)[0].trim();
+  return /^(?:assets|components|decks|design|rules|setups|templates|forge\/imports)\//.test(path)||["game.yaml","CREDITS.md","CODEOWNERS"].includes(path)?path:null;
+}
+async function declareReleaseRight(slug,encoded){
+  const path=decodeURIComponent(encoded),rights=await assetRightsForm(`Declare rights for ${path}`,{
+    creator:ME?.handle||"",license:G(slug)?.license||"CC-BY-4.0",status:"original",redistribution:"allowed"});
+  if(!rights)return;
+  prNote(`Recording rights for ${path}…`);
+  const r=await fetch(`/api/games/${slug}/rights`,{method:"PUT",headers:authHdr(),body:JSON.stringify({
+    path,status:rights.status,license:rights.license,copyright:[rights.creator],redistribution:rights.redistribution,
+    source:rights.source||undefined})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){prNote(`Rights committed at ${d.commit}`);liveReleases(G(slug));}
+  else prNote(d.error||"could not record rights",true);
 }
 async function cutRelease(slug){
   if(!ME){ toast("Sign in to cut a release"); return; }
@@ -5112,7 +5200,7 @@ async function cutRelease(slug){
   const r=await fetch(`/api/games/${slug}/releases`,{method:"POST",headers:authHdr(),body:JSON.stringify({tag:v.tag,title:v.title})});
   const d=await r.json();
   if(r.status===201){ toast(`Released ${d.tag} — pinned to ${d.sha}`); liveReleases(G(slug)); }
-  else toast(d.error||"couldn't cut release");
+  else{toast(d.error||"couldn't cut release");liveReleases(G(slug));}
 }
 
 function logPlaytest(slug){

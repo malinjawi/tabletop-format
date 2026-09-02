@@ -1245,7 +1245,7 @@ gw.route("PUT", "/api/games/:slug/art", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
-  const { printing_id, art, artist, license, source } = await json(ctx);
+  const { printing_id, art, artist, license, source, rights_status, redistribution } = await json(ctx);
   if (!printing_id) return ctx.send(422, { error: "printing_id required" });
   if (art && (!art.startsWith("assets/") || art.includes(".."))) return ctx.send(422, { error: "art must be a path under assets/ (upload it first via POST /assets)" });
   const printings = JSON.parse((await store.readFile(slug, "components/printings.json")).toString());
@@ -1268,12 +1268,19 @@ gw.route("PUT", "/api/games/:slug/art", async (ctx) => {
   const v = await validateCandidate(slug, "components/printings.json", content);
   if (!v.ok) return ctx.send(422, { error: "printings failed validation", report: v.report });
   const writes = [{ path: "components/printings.json", content }];
-  if (art && (artist || license || source)) {
+  if (art && (artist || license || source || rights_status || redistribution)) {
     const game = await q.gameBySlug(db, slug);
+    const status = String(rights_status || (license ? "licensed" : "original"));
+    if (!["original", "commissioned", "licensed", "public-domain", "permission-only", "generated"].includes(status))
+      return ctx.send(422, { error: "invalid art rights status" });
+    if (["licensed", "permission-only"].includes(status) && !source)
+      return ctx.send(422, { error: "licensed art requires a source or permission record" });
+    const sharing = String(redistribution || (status === "permission-only" ? "private-only" : "allowed"));
+    if (!["allowed", "restricted", "private-only"].includes(sharing))
+      return ctx.send(422, { error: "invalid art redistribution status" });
     const currentRights = await store.readFile(slug, RIGHTS_MANIFEST);
     const rights = setFileRight(currentRights, art, { license: license || game?.license || "unknown",
-      status: license ? "licensed" : "original", copyright: [artist || u.handle],
-      redistribution: license ? "allowed" : "restricted", source },
+      status, copyright: [artist || u.handle], redistribution: sharing, source },
     { license: game?.license || "unknown", owner: game?.owner_handle || u.handle, status: "unknown" });
     writes.push({ path: RIGHTS_MANIFEST, content: rightsReceiptBytes(rights) });
   }
@@ -1419,12 +1426,15 @@ gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
   const status = ctx.url.searchParams.get("rights_status") || "unknown";
   const allowedStatuses = new Set(["original", "commissioned", "licensed", "public-domain", "permission-only", "unknown"]);
   if (!allowedStatuses.has(status)) return ctx.send(422, { error: "rights_status is invalid" });
+  const rightsSource = ctx.url.searchParams.get("source") || undefined;
+  if (["licensed", "permission-only"].includes(status) && !rightsSource)
+    return ctx.send(422, { error: "licensed assets require a source or permission record" });
   const game = await q.gameBySlug(db, slug), creator = ctx.url.searchParams.get("creator") || u.handle;
   const license = ctx.url.searchParams.get("license") || game?.license || "unknown";
   const rights = setFileRight(await store.readFile(slug, RIGHTS_MANIFEST), rel,
     { license, status, copyright: [creator],
       redistribution: ctx.url.searchParams.get("redistribution") || (status === "unknown" ? "private-only" : "allowed"),
-      source: ctx.url.searchParams.get("source") || undefined },
+      source: rightsSource },
     { license: game?.license || "unknown", owner: game?.owner_handle || u.handle, status: "unknown" });
   const { mode, oid, sha } = await store.putAsset(slug, rel, buf, `${u.handle} <${u.email}>`,
     [{ path: RIGHTS_MANIFEST, content: rightsReceiptBytes(rights) }]);
@@ -1455,6 +1465,8 @@ gw.route("PUT", "/api/games/:slug/rights", async (ctx) => {
     return ctx.send(422, { error: "invalid rights status" });
   const copyright = Array.isArray(body.copyright) ? body.copyright.map(value => String(value).trim()).filter(Boolean) : [];
   if (!copyright.length) return ctx.send(422, { error: "at least one copyright holder or credit is required" });
+  if (["licensed", "permission-only"].includes(status) && !String(body.source || "").trim())
+    return ctx.send(422, { error: "licensed files require a source or permission record" });
   const redistribution = String(body.redistribution || (status === "unknown" ? "private-only" : "allowed"));
   if (!["allowed", "restricted", "private-only"].includes(redistribution))
     return ctx.send(422, { error: "invalid redistribution status" });
@@ -1710,6 +1722,10 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
   const allConflicts = [...conflicts, ...printingMerge.conflicts, ...fileMerge.conflicts];
   const policy = await prPolicy(slug);
   const review = reviewState(policy, await q.reviewsFor(db, pr.id), allConflicts);
+  const viewer = await authedUser(ctx);
+  const viewerCanReview = !!viewer && pr.author_id !== viewer.id && await canReview(viewer, slug);
+  const viewerCanMerge = !!viewer && await canAdmin(viewer, slug);
+  const viewerCanClose = !!viewer && (viewerCanMerge || pr.author_id === viewer.id);
   ctx.send(200, { id: pr.id, to: pr.to_slug, from: pr.from_slug, title: pr.title, body: pr.body,
     author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
     changes, printing_changes, before_cards, after_cards, file_changes, rights_diff,
@@ -1718,6 +1734,8 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
       || repoFileChanges(base.files, current.files).length > 0,
     conflicts, printing_conflicts: printingMerge.conflicts, file_conflicts: fileMerge.conflicts,
     policy, ...review,
+    access: { signed_in: !!viewer, can_comment: !!viewer, can_review: viewerCanReview,
+      can_merge: viewerCanMerge, can_close: viewerCanClose, is_author: !!viewer && pr.author_id === viewer.id },
     comments: await q.commentsFor(db, "pr", pr.id) });
 }, "PR detail: semantic card and reusable-file diff + live three-way conflict check + discussion");
 gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
@@ -2511,6 +2529,36 @@ gw.route("POST", "/api/games/:slug/sync/pull", async (ctx) => {
 
 /* ---------- routes: releases (citable, immutable versions) ---------- */
 const TAG_RE = /^v[0-9][0-9A-Za-z._-]{0,31}$/;
+async function releasePreflight(slug, user) {
+  const sha = await store.headSha(slug);
+  const source = await store.materialize(slug, sha);
+  let rights, licenses, validation;
+  try {
+    rights = auditRights(source.dir, { sourceSha: sha });
+    licenses = py("check_licenses.py", [source.dir]);
+    validation = py("validate.py", [source.dir]);
+  } finally { source.cleanup(); }
+  const publicReport = result => `${result.stdout || ""}\n${result.stderr || ""}`.trim().split("\n")
+    .map(line => line.replaceAll(source.dir, "<exact project snapshot>"))
+    .filter(line => line && !/DeprecationWarning|jsonschema\.RefResolver|^\s*resolver\s*=/.test(line));
+  const licenseReport = publicReport(licenses);
+  const validationReport = publicReport(validation);
+  const checks = [
+    { key: "validation", pass: validation.status === 0,
+      detail: validation.status === 0 ? "game source validates" : (validationReport[0] || "game validation failed") },
+    { key: "license", pass: licenses.status === 0,
+      detail: licenses.status === 0 ? "project license and attribution pass" : (licenseReport[0] || "license/provenance check failed") },
+    { key: "rights", pass: rights.publishable,
+      detail: rights.publishable ? `${rights.files.length} source files have release declarations`
+        : `${rights.blockers.length} rights blocker${rights.blockers.length === 1 ? "" : "s"}` },
+  ];
+  const candidateReady = checks.every(check => check.pass);
+  const canRelease = await canAdmin(user, slug, { releases: true });
+  return { ref: sha, candidate_ready: candidateReady, ready: candidateReady && canRelease,
+    access: { signed_in: !!user, can_release: canRelease }, checks,
+    validation: { ok: validation.status === 0, report: validationReport },
+    license: { ok: licenses.status === 0, report: licenseReport }, rights };
+}
 function artifactReceipt(dir) {
   const files = [];
   const walk = (path) => {
@@ -2537,6 +2585,15 @@ gw.route("GET", "/api/games/:slug/releases", async (ctx) => {
         file_count: rights.files?.length || 0, blockers: rights.blockers || [] } : null };
   }));
 }, "list a game's releases (citable versions)");
+gw.route("GET", "/api/games/:slug/releases/preflight", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const result = await releasePreflight(slug, await authedUser(ctx));
+  ctx.send(200, { ref: result.ref, ready: result.ready, candidate_ready: result.candidate_ready,
+    access: result.access, checks: result.checks, validation: result.validation, license: result.license,
+    rights: { publishable: result.rights.publishable, blockers: result.rights.blockers,
+      warnings: result.rights.warnings, file_count: result.rights.files.length,
+      manifest_sha256: result.rights.manifest_sha256 } });
+}, "fast release readiness: permission + exact source validation + license + per-file rights, before render work starts");
 gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const r = await q.releaseByTag(db, slug, ctx.params.tag);
@@ -2565,16 +2622,11 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const { tag, title } = await json(ctx);
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must start with v and a number, for example v1.0" });
   if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
-  const sha = await store.headSha(slug);
-  const source = await store.materialize(slug, sha);
-  let rights, legacyRights;
-  try {
-    rights = auditRights(source.dir, { sourceSha: sha });
-    legacyRights = py("check_licenses.py", [source.dir]);
-  }
-  finally { source.cleanup(); }
-  if (legacyRights.status !== 0) return ctx.send(422, { error: "release blocked by license/provenance checks",
-    report: `${legacyRights.stdout || ""}\n${legacyRights.stderr || ""}`.trim().split("\n") });
+  const preflight = await releasePreflight(slug, u), sha = preflight.ref, rights = preflight.rights;
+  if (!preflight.validation.ok) return ctx.send(422, { error: "release blocked by game validation",
+    report: preflight.validation.report });
+  if (!preflight.license.ok) return ctx.send(422, { error: "release blocked by license/provenance checks",
+    report: preflight.license.report });
   if (!rights.publishable) return ctx.send(422, { error: "release blocked by repository rights", rights });
   const prev = (await q.releasesFor(db, slug))[0];
   const hist = await store.history(slug, "components/cards.json", 30);
