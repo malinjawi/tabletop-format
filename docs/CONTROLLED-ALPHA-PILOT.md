@@ -105,7 +105,11 @@ operator cannot respond to support/moderation reports.
 5. Confirm the operator/contact policy text, record the release commit and
    image digests, then issue one expiring single-use invitation per named pilot
    with `node tools/pilot-invite.mjs create`. Revoke any invitation that will
-   not be delivered; never retain its raw token in the evidence sheet.
+   not be delivered; never retain its raw token in the evidence sheet. Before
+   beginning the product journey, confirm the participant saw the unchecked
+   policy control and that their `/api/me` response contains exactly one
+   `clickwrap` receipt for the deployed `/healthz` `policy_set`; record only
+   that set identifier and acceptance time, never account credentials.
 6. Package and install one pinned Google Sheets connector, complete its live
    qualification, and record its deployment evidence without exposing the raw
    script ID.

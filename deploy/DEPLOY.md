@@ -127,7 +127,20 @@ The create command prints a high-entropy bearer token exactly once. Deliver it
 only to that participant. `list` shows available, redeemed, expired, and
 revoked records without exposing either the token or its digest. Invitations
 expire after seven days by default, can be shortened with `--hours`, and can
-never be replayed.
+never be replayed. Finalize `FORGE_OPERATOR_NAME` and `FORGE_CONTACT_EMAIL`
+before issuing invitations: those values are rendered into the policy text and
+therefore change its exact policy-set identifier.
+
+Registration shows direct links to the Terms, Community Rules, and Privacy
+Notice beside an unchecked control. The account button remains disabled until
+the participant affirmatively accepts the current set. The server rejects a
+missing or stale policy set, and writes the invitation redemption, account, and
+acceptance in one transaction. Each receipt retains the exact rendered text,
+four content hashes, visible notice, server timestamp, account, and gateway
+build; `/api/me` returns its identifiers and hashes to that participant. A
+failed acceptance leaves the invitation available. These receipts are included
+in the normal PostgreSQL backup and verified by the restore drill. They are
+operational evidence, not a substitute for jurisdiction-specific legal review.
 
 If a participant loses access, issue a short-lived recovery token instead of
 editing the database or setting a password for them:
