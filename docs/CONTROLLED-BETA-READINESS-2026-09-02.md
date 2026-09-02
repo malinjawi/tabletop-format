@@ -1,8 +1,10 @@
 # Forge controlled-beta readiness audit
 
-Status: 2026-09-02  
-Candidate commit: `ccc883cc36a05e9b7c1d7e5e9bec45cacf146896`  
-Qualified local image: `sha256:92f53df9c5cad7276e4150a5d71bee9e9f06667a0a08f401779449ea84fe8d15`
+Status: 2026-09-02
+
+Candidate commit: `bdce7cfe9f7af58b0a16f54a255bbe81eedfe8ec`
+
+Qualified local image: `sha256:7df136716cdca17869ac64ea9ee320a33bbfef4ec79adda0c3c50776c2c3036b`
 
 Decision: **HOLD for outside invitations. The software candidate is qualified;
 the deployed service and human product evidence do not exist yet.**
@@ -16,9 +18,9 @@ use the product without developer coaching.
 
 | Planned outcome | Authoritative current evidence | Verdict |
 |---|---|---|
-| Reproducible and maintainable application | `.github/workflows/quality.yml` defines a SHA-pinned two-leg gate. `deploy/qualified-images.env` pins six multi-platform dependencies. `npm run test:production-image` built the source-labelled candidate and passed 85 real Forgejo/PostgreSQL/S3 journey assertions plus a fresh-service restore. The strict clean-tree `launch-gate.sh` completed. | **Software PASS; operating evidence missing.** GitHub `main` is still at `956ea85869a1dfacec456871eb9191b4a33d0001`; the candidate and this audit remain local, so hosted CI has not run them and no registry digest has been promoted. |
+| Reproducible and maintainable application | `.github/workflows/quality.yml` defines a SHA-pinned two-leg gate. `deploy/qualified-images.env` pins six multi-platform dependencies. `npm run test:production-image` built the source-labelled candidate and passed 85 real Forgejo/PostgreSQL/S3 journey assertions plus a fresh-service restore. The strict clean-tree `launch-gate.sh` completed, and the production dependency audit reports zero vulnerabilities after updating `qs` to 6.16.0. | **Software PASS; operating evidence missing.** The candidate and this audit remain local, so hosted CI has not run them and no registry digest has been promoted. |
 | Self-serve Sheets/CSV onboarding | Browser smoke created an owned two-card game from CSV without direct API use. The functional suite passed the real `Code.gs` sign-in, private-tab attach, dirty indicator, candidate check, atomic commit, stale-review guard, and export behavior. | **CSV PASS locally; Sheets deployment incomplete.** Google-hosted Apps Script needs the final stable HTTPS origin. The connector has not completed its live journey against this exact deployed candidate. |
-| Polished two-person contribution-to-release flow | Both local and protocol journeys passed 86 assertions: independent edition, isolated edits, semantic/file/visual proposal, protected review, proposer-authored merge, rights-blocked release, exact downloads, notifications, and later release reproduction. The same core journey passed against real Forgejo during image recovery. Responsive browser smoke passed at 320 and 390 px. | **Functional PASS; usability unproven.** Automated actors are not evidence that unaffiliated creators understand the flow. The required five-person record currently returns `HOLD` with 0/5 completions. |
+| Polished two-person contribution-to-release flow | Both local and protocol journeys passed 86 assertions: independent edition, isolated edits, semantic/file/visual proposal, protected review, proposer-authored merge, rights-blocked release, exact downloads, notifications, and later release reproduction. The same core journey passed against real Forgejo during image recovery. Responsive browser smoke passed at 320 and 390 px. The product now describes Forge as the game-aware review and release layer over portable Git source, and local projects no longer advertise a fake hosted remote. | **Functional PASS; usability unproven.** Automated actors are not evidence that unaffiliated creators understand the flow. The required five-person record currently returns `HOLD` with 0/5 completions. |
 | Enforceable rights and production-ready pilot operations | Unknown asset rights block release before tag/export creation; per-file declarations, hashes, protected tags, and receipts survive restore. Production startup is invite-only and HTTPS-only. `deploy/backup.sh` now freezes writes and independently snapshots Forgejo, both PostgreSQL databases, and the remote LFS bucket. The disposable drill removed and restored S3 LFS, then reproduced every frozen release byte through the exact candidate image. | **Mechanism PASS; real operations incomplete.** Policies still need a named operator/contact, the actual host/R2 online preflight and off-host restore evidence are absent, and no operator has accepted on-call responsibility. |
 
 ## Exact internal qualification result
@@ -33,13 +35,13 @@ The strict gate at the candidate commit produced:
 - five bounded performance/concurrency checks;
 - 29 production topology, secret, image, CI, and recovery invariants;
 - one remote S3 LFS object independently backed up and restored;
-- 51 post-restore checks, including exact PnP, press/A4/Letter, TTC, TTS,
+- 52 post-restore checks, including the real restored Git remote and exact PnP, press/A4/Letter, TTC, TTS,
   portable-project, card-sheet, back, and rights-receipt bytes.
 
 The final line was:
 
 ```text
-CONTROLLED-ALPHA LAUNCH GATE GREEN — including PostgreSQL and real Forgejo.
+PRODUCTION IMAGE QUALIFIED — sha256:7df136716cdca17869ac64ea9ee320a33bbfef4ec79adda0c3c50776c2c3036b records bdce7cfe9f7af58b0a16f54a255bbe81eedfe8ec and reproduced the frozen release after restore.
 ```
 
 The local developer service was restarted afterward and passed all 13 read-only
