@@ -7,6 +7,9 @@
 # Add production-backend conformance against dedicated disposable services:
 #   FORGE_CONFORMANCE_PG_URL=postgres://... \
 #   FORGEJO_TEST_IMAGE=codeberg.org/forgejo/forgejo@sha256:... \
+#   POSTGRES_TEST_IMAGE=postgres@sha256:... \
+#   ALPINE_TEST_IMAGE=alpine@sha256:... \
+#   FORGE_RESTORE_DRILL=1 \
 #   REQUIRE_PRODUCTION_BACKENDS=1 ./launch-gate.sh
 #
 # FORGE_CONFORMANCE_PG_URL must name a dedicated test database. The Store-2
@@ -71,8 +74,20 @@ else
   printf '\nSKIP real Forgejo conformance: set FORGE_LIVE_URL plus test-admin credentials, or FORGEJO_TEST_IMAGE to a digest-pinned image.\n'
 fi
 
+restore_drill=0
+if [ "${FORGE_RESTORE_DRILL:-0}" = "1" ]; then
+  run "disposable synchronized backup/restore drill" ./tools/disposable-restore-drill.sh
+  restore_drill=1
+else
+  printf '\nSKIP disaster-recovery proof: set FORGE_RESTORE_DRILL=1 plus digest-pinned Forgejo, Postgres, and Alpine images.\n'
+fi
+
 if [ "${REQUIRE_PRODUCTION_BACKENDS:-0}" = "1" ] && [ "$production_backends" -ne 2 ]; then
   printf '\nFAIL: production backend evidence required, but PostgreSQL and live Forgejo were not both supplied.\n' >&2
+  exit 1
+fi
+if [ "${REQUIRE_RESTORE_DRILL:-0}" = "1" ] && [ "$restore_drill" -ne 1 ]; then
+  printf '\nFAIL: release policy requires the disposable backup/restore drill.\n' >&2
   exit 1
 fi
 

@@ -41,6 +41,7 @@ services:
       # is intentionally read-only, so derived UI must live on the data volume.
       FORGE_HUB_PATH: /app/data/hub.html
       FORGE_PUBLIC_ORIGIN: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
+      FORGE_BUILD_ID: ${FORGE_GATEWAY_IMAGE:?set the digest-pinned gateway image}
       FORGE_ALLOWED_ORIGINS: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
       FORGE_HTTPS: "1"
       FORGE_TRUST_PROXY: "1"
@@ -74,6 +75,9 @@ services:
       - forgejo-data:/data
     secrets:
       - forge_db_password
+      - forgejo_secret_key
+      - forgejo_internal_token
+      - forgejo_oauth2_jwt_secret
       - lfs_jwt_secret
       - r2_access_key
       - r2_secret_key
@@ -87,7 +91,16 @@ services:
       FORGEJO__database__HOST: db:5432
       FORGEJO__database__NAME: forgejo
       FORGEJO__database__USER: forgejo
-      FORGEJO__database__PASSWD__FILE: /run/secrets/forge_db_password
+      FORGEJO__database__PASSWD_URI: file:/run/secrets/forge_db_password
+      # These values encrypt account data and sign internal/OAuth traffic.
+      # They are part of the recovery identity of the installation: rotate by
+      # an explicit key-migration procedure, never by recreating a container.
+      # The container's environment-to-ini loader reads these files and
+      # overwrites any generated app.ini values on every start.
+      FORGEJO__security__SECRET_KEY__FILE: /run/secrets/forgejo_secret_key
+      FORGEJO__security__INTERNAL_TOKEN__FILE: /run/secrets/forgejo_internal_token
+      FORGEJO__oauth2__JWT_SIGNING_ALGORITHM: HS256
+      FORGEJO__oauth2__JWT_SECRET__FILE: /run/secrets/forgejo_oauth2_jwt_secret
       FORGEJO__server__LFS_START_SERVER: "true"
       FORGEJO__server__LFS_JWT_SECRET__FILE: /run/secrets/lfs_jwt_secret
       FORGEJO__lfs__STORAGE_TYPE: minio
@@ -134,6 +147,9 @@ secrets:
   pg_super_password: { file: ./.secrets/pg-super-password }
   forge_db_password: { file: ./.secrets/forge-db-password }
   platform_db_password: { file: ./.secrets/platform-db-password }
+  forgejo_secret_key: { file: ./.secrets/forgejo-secret-key }
+  forgejo_internal_token: { file: ./.secrets/forgejo-internal-token }
+  forgejo_oauth2_jwt_secret: { file: ./.secrets/forgejo-oauth2-jwt-secret }
   lfs_jwt_secret: { file: ./.secrets/lfs-jwt-secret }
   r2_access_key: { file: ./.secrets/r2-access-key }
   r2_secret_key: { file: ./.secrets/r2-secret-key }

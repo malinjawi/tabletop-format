@@ -21,6 +21,7 @@ import json, re, sys, shutil
 from pathlib import Path
 
 import yaml
+from deterministic_archive import write_directory_zip
 from render_support import card_size_mm, render_faces
 
 
@@ -126,8 +127,8 @@ def main():
         + f"items = [\n    {items}\n]\n")
 
     # ---- distributable zip (unzip into TabletopClub/assets/) ----
-    zip_base = out_root / f"{slug}-ttc"
-    shutil.make_archive(str(zip_base), "zip", root_dir=out_root, base_dir=sanitize(title))
+    zip_path = out_root / f"{slug}-ttc.zip"
+    write_directory_zip(zip_path, pack, sanitize(title))
 
     n_faces = len(stack_items)
     n_unique = len(used)

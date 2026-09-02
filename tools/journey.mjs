@@ -13,7 +13,8 @@
  * Run via journey.sh (sets up scratch repo + LFS mock + server).
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:8420";
 let step = 0, failed = 0;
@@ -289,6 +290,8 @@ const rel = await api("POST", "/api/games/tidepool/releases", { token: A, body: 
 assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").startsWith("- ")
   && rel.data.repository_tag?.annotated && rel.data.repository_tag?.protected
   && rel.data.artifacts?.some(item => item.name === "forge-rights-receipt.json")
+  && rel.data.build?.format === "forge-release-build"
+  && rel.data.build?.public_origin === BASE
   && rel.data.rights?.publishable && rel.data.rights?.source_sha === rel.data.sha,
   "alice cuts v0.1 → required artifacts, protected tag, and a per-file rights receipt", rel.data);
 const actualTag = await releaseTag("tidepool", "v0.1");
@@ -297,7 +300,8 @@ assert(actualTag.annotated && actualTag.target.startsWith(rel.data.sha),
 const relList = (await api("GET", "/api/games/tidepool/releases")).data;
 assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha
   && relList[0].tag_annotated && relList[0].tag_protected && relList[0].artifacts.length >= 6
-  && relList[0].rights?.publishable && relList[0].rights?.file_count > 0,
+  && relList[0].rights?.publishable && relList[0].rights?.file_count > 0
+  && relList[0].build?.public_origin === BASE,
   "releases list shows the pinned version and its immutable receipt");
 const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
 assert(relDet.repository_tag.verified_now, "release detail re-verifies the protected annotated tag against Store 1");
@@ -305,6 +309,14 @@ assert(relDet.rights?.publishable && relDet.rights.files.some(file => file.path 
   "release detail preserves the exact rights and hash of every shipped source file");
 const frozen = await api("GET", relDet.downloads.ttc);
 assert(frozen.status === 200, "the frozen TTC download serves at the pinned sha — a citable, immutable version");
+if(process.env.FORGE_ALLOW_CACHE_LOSS_TEST==="1"){
+  const cacheRoot=resolve(process.env.FORGE_TEST_CACHE_DIR||"");
+  if(!cacheRoot||cacheRoot==="/")die("cache-loss test requires a narrow FORGE_TEST_CACHE_DIR");
+  rmSync(join(cacheRoot,"exports","tidepool",rel.data.sha),{recursive:true,force:true});
+  const rebuilt=await api("GET",relDet.downloads.ttc);
+  assert(rebuilt.status===200&&rebuilt.headers.get("cache-control")?.includes("immutable"),
+    "losing derived Store 3 triggers an exact released-artifact rebuild from the pinned Git SHA");
+}
 
 const jamRel = await api("POST", `/api/games/${jamJoin.data.slug}/releases`, { token: A,
   body: { tag: "v0.1", title: "Spark Jam submission" } });

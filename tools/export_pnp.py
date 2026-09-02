@@ -5,7 +5,7 @@ Reads rendered faces (run render_cards.py first), lays out a 3x3 grid per
 US Letter page at 300dpi with crop marks, honors printing quantities,
 appends a card-back page. Output: exports/<game-id>-pnp.pdf
 """
-import argparse, json, math
+import argparse, json, math, time
 from pathlib import Path
 
 import yaml
@@ -232,8 +232,10 @@ def main():
         pages = platform_pnp_pages(game_dir, game, layout,
                                    {printing["id"]: printing for printing in printings}, faces)
         out.parent.mkdir(parents=True, exist_ok=True)
+        fixed_pdf_time = time.gmtime(315532800)
         pages[0].save(out, "PDF", save_all=True, append_images=pages[1:],
-                      resolution=DPI, quality=95, subsampling=0)
+                      resolution=DPI, quality=95, subsampling=0,
+                      creationDate=fixed_pdf_time, modDate=fixed_pdf_time)
         print(f"PnP PDF: Forge-composed {len(pages)}-page platform edition from versioned faces/assets -> {out}")
         return
     card_w_mm, card_h_mm = card_size_mm(game_dir)
@@ -287,8 +289,10 @@ def main():
     # made small decks tens of megabytes. These faces already originate as
     # high-quality raster PnP assets; 4:4:4 JPEG at quality 95 preserves tiny
     # card text at 300 dpi while keeping the imposed PDF practical to share.
+    fixed_pdf_time = time.gmtime(315532800)
     pages[0].save(out, "PDF", save_all=True, append_images=pages[1:],
-                  resolution=DPI, quality=95, subsampling=0)
+                  resolution=DPI, quality=95, subsampling=0,
+                  creationDate=fixed_pdf_time, modDate=fixed_pdf_time)
     back_note = " + 1 back page" if not args.no_back else ""
     face_pages = len(pages) - (0 if args.no_back else 1)
     print(f"PnP PDF: {len(slots)} cards at {card_w_mm:g}x{card_h_mm:g}mm "

@@ -15,9 +15,10 @@ import json
 import random
 import subprocess
 import sys
-import zipfile
 import zlib
 from pathlib import Path
+
+from deterministic_archive import write_deterministic_zip
 
 ROOT = Path(__file__).resolve().parent.parent
 VTT_STATE_VERSION = 24
@@ -402,10 +403,9 @@ def main():
         package_state = build_state(game_dir, setup, package_resolver, args.ref)
         package_assets = package_resolver.assets
     package_encoded = json.dumps(package_state, indent=2, ensure_ascii=False) + "\n"
-    with zipfile.ZipFile(package_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-        archive.writestr("0.json", package_encoded)
-        for name, data in package_assets.items():
-            archive.writestr(f"assets/{name}", data)
+    write_deterministic_zip(package_path,
+                            [("0.json", package_encoded.encode("utf-8"))]
+                            + [(f"assets/{name}", data) for name, data in package_assets.items()])
 
     card_count = sum(1 for widget in state.values() if isinstance(widget, dict) and widget.get("type") == "card")
     print(f"VTT state: {json_path}")

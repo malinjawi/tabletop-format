@@ -116,11 +116,18 @@ await q.enterJam(db, { jam_id: "jam1", game_slug: slug, user_id: ana.id, qualifi
 je = await q.jamEntriesFor(db, "jam1");
 assert(je.length === 2 && Number(je.find(e => e.game_slug === slug).qualified) === 0, "re-enter updates qualification (upsert: one row per game per jam)");
 
-// releases (006) — citable immutable versions
-await q.createRelease(db, { game_slug: slug, tag: "v1.0", sha: "abc1234", title: "First cut", notes: "initial", author_id: ana.id });
+// releases (006) — citable immutable versions, including the non-tree build
+// inputs needed to reproduce externally linked packages after cache loss.
+const releaseBuild = JSON.stringify({ format: "forge-release-build", version: 1,
+  public_origin: "https://play.example.invalid", build_id: "image@sha256:abc" });
+await q.createRelease(db, { game_slug: slug, tag: "v1.0", sha: "abc1234", title: "First cut",
+  notes: "initial", author_id: ana.id, build_json: releaseBuild });
 let rels = await q.releasesFor(db, slug);
 assert(rels.length === 1 && rels[0].tag === "v1.0" && rels[0].author_handle === ana.handle, "releasesFor lists tagged releases with author");
-assert((await q.releaseByTag(db, slug, "v1.0")).sha === "abc1234", "releaseByTag resolves the pinned sha");
+assert(rels[0].build_json === releaseBuild, "releasesFor preserves the frozen release build identity");
+const releaseByTag = await q.releaseByTag(db, slug, "v1.0");
+assert(releaseByTag.sha === "abc1234" && releaseByTag.build_json === releaseBuild,
+  "releaseByTag resolves the pinned sha and build identity");
 let dupRel = false;
 try { await q.createRelease(db, { game_slug: slug, tag: "v1.0", sha: "z", author_id: ana.id }); } catch { dupRel = true; }
 assert(dupRel, "duplicate tag rejected (one release per tag per game)");

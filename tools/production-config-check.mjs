@@ -36,6 +36,8 @@ ok(env.STORE1==="forgejo" && env.DB==="postgres" && env.FORGE_URL==="http://forg
 ok(env.FORGE_HUB_PATH==="/app/data/hub.html" && env.CACHE_DIR?.startsWith("/app/data/")
   && env.FARM_DIR?.startsWith("/app/data/"),
   "all gateway-generated files live on its writable data volume");
+ok(env.FORGE_BUILD_ID===gateway.image&&/@sha256:/.test(env.FORGE_BUILD_ID||""),
+  "release build identity records the digest-pinned gateway image");
 ok(env.FORGE_HTTPS==="1" && /^https:\/\//.test(env.FORGE_PUBLIC_ORIGIN||"")
   && env.FORGE_ALLOWED_ORIGINS===env.FORGE_PUBLIC_ORIGIN,
   "HTTPS and exact-origin browser writes are enforced");
@@ -53,6 +55,20 @@ ok(config.networks?.backend?.internal===true && Object.keys(db.networks||{}).len
 ok(forgejo.environment?.FORGEJO__service__DISABLE_REGISTRATION==="true"
   && forgejo.environment?.FORGEJO__security__INSTALL_LOCK==="true",
   "Forgejo cannot become a second uncontrolled account surface");
+const forgejoRecoverySecrets={
+  forgejo_secret_key:["FORGEJO__security__SECRET_KEY__FILE","/run/secrets/forgejo_secret_key"],
+  forgejo_internal_token:["FORGEJO__security__INTERNAL_TOKEN__FILE","/run/secrets/forgejo_internal_token"],
+  forgejo_oauth2_jwt_secret:["FORGEJO__oauth2__JWT_SECRET__FILE","/run/secrets/forgejo_oauth2_jwt_secret"],
+  lfs_jwt_secret:["FORGEJO__server__LFS_JWT_SECRET__FILE","/run/secrets/lfs_jwt_secret"],
+};
+ok(Object.entries(forgejoRecoverySecrets).every(([source,[key,value]])=>
+  forgejo.environment?.[key]===value && forgejo.secrets?.some(secret=>secret.source===source)),
+  "Forgejo encryption, internal, OAuth, and LFS keys are file-backed recovery inputs");
+ok(forgejo.environment?.FORGEJO__oauth2__JWT_SIGNING_ALGORITHM==="HS256",
+  "OAuth token signing has no untracked generated private-key dependency");
+ok(forgejo.environment?.FORGEJO__database__PASSWD_URI==="file:/run/secrets/forge_db_password"
+  && !Object.keys(forgejo.environment||{}).some(key=>key.endsWith("PASSWD__FILE")),
+  "Forgejo keeps its database password out of generated app.ini");
 ok(Array.isArray(gateway.secrets) && gateway.secrets.some(secret=>secret.source==="forge_token")
   && gateway.secrets.some(secret=>secret.source==="platform_db_password"),
   "gateway credentials are file-mounted secrets");

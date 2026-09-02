@@ -209,14 +209,14 @@ export const q = {
 
   createRelease: (db, r) => db.query(
     `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at,
-       tag_object_sha, tag_annotated, tag_protected, artifacts_json, rights_json)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+       tag_object_sha, tag_annotated, tag_protected, artifacts_json, rights_json, build_json)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
     [r.game_slug, r.tag, r.sha, r.title ?? null, r.notes ?? null, r.author_id ?? null, Date.now(),
       r.tag_object_sha ?? null, r.tag_annotated ? 1 : 0, r.tag_protected ? 1 : 0,
-      r.artifacts_json ?? null, r.rights_json ?? null]),
+      r.artifacts_json ?? null, r.rights_json ?? null, r.build_json ?? null]),
   releasesFor: (db, slug) => all(db,
     `SELECT rl.tag, rl.sha, rl.title, rl.created_at, rl.tag_object_sha,
-            rl.tag_annotated, rl.tag_protected, rl.artifacts_json, rl.rights_json, u.handle AS author_handle
+            rl.tag_annotated, rl.tag_protected, rl.artifacts_json, rl.rights_json, rl.build_json, u.handle AS author_handle
      FROM releases rl LEFT JOIN users u ON u.id = rl.author_id WHERE rl.game_slug = $1 ORDER BY rl.created_at DESC`, [slug]),
   releaseByTag: (db, slug, tag) => one(db,
     `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id

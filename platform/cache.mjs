@@ -89,6 +89,13 @@ const doneName = (gameSlug, kind) => ({ pnp: "pnp.pdf", print: "print-ready.zip"
   ttc: `${gameSlug}-ttc.zip`, vtt: vttArtifactName("vtt"), project: projectArtifactName(gameSlug),
   nandeck: nandeckArtifactName(gameSlug), rulebook: "rulebook-build.json",
   publication: "publication-build.json" })[kind];
+export function exportReady(gameSlug, ref, kind) {
+  const done=doneName(gameSlug,kind);
+  if(!done)return false;
+  const outDir=join(CACHE_DIR,"exports",gameSlug,ref);
+  const marker=join(outDir,`.complete-${kind}-v${exporterVersion(kind)}.json`);
+  return existsSync(marker)&&existsSync(join(outDir,done));
+}
 const walkFiles = (root, dir = root) => readdirSync(dir).flatMap(name => {
   const file = join(dir, name), stat = statSync(file);
   return stat.isDirectory() ? walkFiles(root, file) : [{ file, name: relative(root, file).replaceAll("\\", "/"), stat }];
@@ -100,7 +107,7 @@ export async function ensureExport(gameRel, gameSlug, ref, kind, { publicOrigin 
   const outDir = join(CACHE_DIR, "exports", gameSlug, ref), done = doneName(gameSlug, kind);
   if (!done) throw new Error(`unknown export kind '${kind}'`);
   const marker = join(outDir, `.complete-${kind}-v${exporterVersion(kind)}.json`);
-  if (existsSync(marker) && existsSync(join(outDir, done))) return { dir: outDir, hit: true,
+  if (exportReady(gameSlug, ref, kind)) return { dir: outDir, hit: true,
     manifest: JSON.parse(readFileSync(marker, "utf8")) };
   const key = `${gameSlug}@${ref}:${kind}:v${exporterVersion(kind)}`;
   if (exportInflight.has(key)) return exportInflight.get(key);

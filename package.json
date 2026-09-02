@@ -29,6 +29,7 @@
     "smoke:alpha": "node tools/alpha-readiness.mjs",
     "test:production-config": "node tools/production-config-check.mjs",
     "test:forgejo:disposable": "./tools/disposable-forgejo-check.sh",
+    "test:restore:disposable": "./tools/disposable-restore-drill.sh",
     "launch:gate": "./launch-gate.sh",
     "export:pnpink-proof": "node tools/export-pnpink.mjs examples/_fixtures/netrunner-sg tmp/pnpink-proof",
     "split:card-design": "node tools/split-layout-families.mjs",

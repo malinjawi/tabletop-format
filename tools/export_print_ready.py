@@ -20,10 +20,10 @@ import math
 import shutil
 import subprocess
 import tempfile
-import zipfile
 from pathlib import Path
 
 import yaml
+from deterministic_archive import write_deterministic_zip
 from PIL import Image
 from reportlab.lib.colors import HexColor, black
 from reportlab.lib.pagesizes import A4, LETTER
@@ -256,7 +256,7 @@ def print_at_home_pdf(output, page_size, slots, trim_jpegs, back_jpeg,
             image_cache[key] = ImageReader(key)
         return image_cache[key]
 
-    pdf = canvas.Canvas(str(output), pagesize=page_size, pageCompression=1)
+    pdf = canvas.Canvas(str(output), pagesize=page_size, pageCompression=1, invariant=1)
     pdf.setTitle(f"{title} - print at home")
     pdf.setAuthor("Forge")
     pdf.setSubject(f"Exact version {ref}; {trim_w_mm:g} x {trim_h_mm:g} mm trim")
@@ -295,7 +295,7 @@ def press_pdf(output, bleed_paths, bleed_jpegs, trim_w_mm, trim_h_mm,
     trim_x = margin + bleed_mm * mm
     trim_y = margin + bleed_mm * mm
     trim_w, trim_h = trim_w_mm * mm, trim_h_mm * mm
-    pdf = canvas.Canvas(str(output), pagesize=(page_w, page_h), pageCompression=1)
+    pdf = canvas.Canvas(str(output), pagesize=(page_w, page_h), pageCompression=1, invariant=1)
     pdf.setTitle(f"{title} - press faces (sRGB)")
     pdf.setAuthor("Forge")
     pdf.setSubject(f"Exact version {ref}; 300 DPI sRGB; {bleed_mm:g} mm bleed")
@@ -354,10 +354,7 @@ def private_notice(game_dir):
 
 
 def zip_package(zip_path, package_root, files):
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED,
-                         compresslevel=6) as archive:
-        for path, arcname in files:
-            archive.write(path, arcname)
+    write_deterministic_zip(zip_path, [(arcname, path) for path, arcname in files])
 
 
 def main():

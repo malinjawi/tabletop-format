@@ -11,6 +11,14 @@ permission state, and at least one LFS-backed release all work together.
 - Use the exact image IDs recorded in `manifest.txt` for the first restore.
 - Never point the drill at the production databases, volumes, Forgejo origin,
   or LFS bucket. Never reuse the production platform service token.
+- Restore copies of `forgejo-secret-key`, `forgejo-internal-token`,
+  `forgejo-oauth2-jwt-secret`, and `lfs-jwt-secret` from the encrypted secret
+  backup. These are installation identity, not disposable credentials. Do not
+  rotate them as part of the drill.
+- Keep the public release/download origin under operational control. TTS and
+  VTT packages embed it; Forge persists the release origin and build identity
+  so regeneration can remain byte-exact, but abandoning that DNS name would
+  still strand links inside already-downloaded play packages.
 - Keep the restored service private; its copied user sessions and password
   hashes are production-sensitive.
 
@@ -19,8 +27,10 @@ permission state, and at least one LFS-backed release all work together.
 1. Verify `SHA256SUMS`, `unzip -t forgejo.zip`, and `pg_restore --list` for both
    database dumps before provisioning anything.
 2. Create a separate environment file with new origins, invite code, database
-   secrets, Forgejo service token, project name, ports, and `R2_LFS_BUCKET`.
-   Create that empty bucket with credentials scoped only to it.
+   passwords, Forgejo service token, project name, ports, and `R2_LFS_BUCKET`.
+   Copy the four recovery-critical Forgejo secrets listed above into the
+   drill's isolated secret directory. Create the empty bucket with credentials
+   scoped only to it.
 3. Start only the fresh PostgreSQL service. Drop/recreate its empty `platform`
    and `forgejo` databases, then restore `platform.dump` and `forgejo.dump`
    with `pg_restore --clean --if-exists --no-owner`. The independent dump is
@@ -28,9 +38,14 @@ permission state, and at least one LFS-backed release all work together.
 4. Expand `forgejo.zip` in a private staging directory. Populate the fresh
    Forgejo volume using the container layout: `repos/` goes to
    `/data/git/repositories`, `data/lfs/` is copied into the isolated LFS bucket,
-   and the remaining `data/` content goes under `/data/gitea`. Retain the fresh
-   environment-generated `app.ini` so production origins and credentials are
-   not resurrected from the archive. Ownership must be UID/GID 1000.
+   and the remaining `data/` content goes under `/data/gitea`. Do not restore
+   `data/conf/app.ini`; the drill Compose file rebuilds configuration for the
+   drill origins and databases while pointing at restored copies of the same
+   encryption/signing secret files. Ownership must be UID/GID 1000. Pre-create
+   `/data/git/.ssh`, `/data/gitea/conf`, `/data/gitea/log`, and `/data/ssh` as
+   UID/GID 1000 (`.ssh` mode `0700`); otherwise the container entrypoint may see
+   the restored parent ownership, skip its recursive repair, and then create
+   root-owned runtime directories that Forgejo cannot use.
 5. Start Forgejo with the recorded image. Run
    `forgejo doctor check --all --log-file /tmp/doctor.log`, create a new scoped
    platform token, place it in the drill secret file, then start the gateway.

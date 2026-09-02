@@ -88,7 +88,8 @@ SPID=$!
 for _ in $(seq 1 120); do curl -fsS "http://127.0.0.1:$SPORT/healthz" >/dev/null 2>&1 && break; sleep .5; done
 curl -fsS "http://127.0.0.1:$SPORT/healthz" >/dev/null
 
-if FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" node tools/journey.mjs "http://localhost:$SPORT"; then
+if FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_ALLOW_CACHE_LOSS_TEST=1 \
+  FORGE_TEST_CACHE_DIR="$SCRATCH/cache" node tools/journey.mjs "http://localhost:$SPORT"; then
   echo ""
   if [ "$FORGE_MODE" = "live" ]; then
     echo "LIVE FORGEJO JOURNEY GREEN — same assertions as dev on a real Forgejo server."
