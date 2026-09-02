@@ -143,16 +143,16 @@ services:
     networks: [backend]
 
 secrets:
-  forge_token: { file: ./.secrets/forge-token }
-  pg_super_password: { file: ./.secrets/pg-super-password }
-  forge_db_password: { file: ./.secrets/forge-db-password }
-  platform_db_password: { file: ./.secrets/platform-db-password }
-  forgejo_secret_key: { file: ./.secrets/forgejo-secret-key }
-  forgejo_internal_token: { file: ./.secrets/forgejo-internal-token }
-  forgejo_oauth2_jwt_secret: { file: ./.secrets/forgejo-oauth2-jwt-secret }
-  lfs_jwt_secret: { file: ./.secrets/lfs-jwt-secret }
-  r2_access_key: { file: ./.secrets/r2-access-key }
-  r2_secret_key: { file: ./.secrets/r2-secret-key }
+  forge_token: { file: "${FORGE_SECRET_DIR:-./.secrets}/forge-token" }
+  pg_super_password: { file: "${FORGE_SECRET_DIR:-./.secrets}/pg-super-password" }
+  forge_db_password: { file: "${FORGE_SECRET_DIR:-./.secrets}/forge-db-password" }
+  platform_db_password: { file: "${FORGE_SECRET_DIR:-./.secrets}/platform-db-password" }
+  forgejo_secret_key: { file: "${FORGE_SECRET_DIR:-./.secrets}/forgejo-secret-key" }
+  forgejo_internal_token: { file: "${FORGE_SECRET_DIR:-./.secrets}/forgejo-internal-token" }
+  forgejo_oauth2_jwt_secret: { file: "${FORGE_SECRET_DIR:-./.secrets}/forgejo-oauth2-jwt-secret" }
+  lfs_jwt_secret: { file: "${FORGE_SECRET_DIR:-./.secrets}/lfs-jwt-secret" }
+  r2_access_key: { file: "${FORGE_SECRET_DIR:-./.secrets}/r2-access-key" }
+  r2_secret_key: { file: "${FORGE_SECRET_DIR:-./.secrets}/r2-secret-key" }
 
 networks:
   edge: {}

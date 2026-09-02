@@ -1,0 +1,60 @@
+{
+  "format": "forge-pilot-cohort",
+  "version": 1,
+  "cohort_id": "alpha-01",
+  "candidate": {
+    "commit": "0000000",
+    "gateway_image": "registry.example/forge/platform@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "forgejo_image": "codeberg.org/forgejo/forgejo@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "postgres_image": "postgres@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "origin": "https://forge.example",
+    "preflight_evidence": "/encrypted/off-host/evidence/preflight.json",
+    "restore_drill_passed": false
+  },
+  "operator": {
+    "name": "Assign before inviting anyone",
+    "contact": "forge-support@example.com",
+    "on_call_confirmed": false
+  },
+  "participants": [
+    { "id": "p1", "role": "creator", "journey_complete": false, "unassisted": false, "would_reuse": "unsure" },
+    { "id": "p2", "role": "collaborator", "journey_complete": false, "unassisted": false, "would_reuse": "unsure" },
+    { "id": "p3", "role": "creator", "journey_complete": false, "unassisted": false, "would_reuse": "unsure" },
+    { "id": "p4", "role": "collaborator", "journey_complete": false, "unassisted": false, "would_reuse": "unsure" },
+    { "id": "p5", "role": "production", "journey_complete": false, "unassisted": false, "would_reuse": "unsure" }
+  ],
+  "runs": [
+    {
+      "id": "run-a",
+      "participant_ids": ["p1", "p2", "p5"],
+      "status": "not-started",
+      "milestones": [],
+      "integrity": {
+        "private_source_leak": false,
+        "sheet_candidate_mismatch": false,
+        "credit_lost": false,
+        "rights_unknown_shipped": false,
+        "export_budget_exceeded": false,
+        "release_reproduced": false
+      }
+    },
+    {
+      "id": "run-b",
+      "participant_ids": ["p3", "p4", "p5"],
+      "status": "not-started",
+      "milestones": [],
+      "integrity": {
+        "private_source_leak": false,
+        "sheet_candidate_mismatch": false,
+        "credit_lost": false,
+        "rights_unknown_shipped": false,
+        "export_budget_exceeded": false,
+        "release_reproduced": false
+      }
+    }
+  ],
+  "stop_conditions": [
+    { "condition": "restore drill failed", "triggered": false },
+    { "condition": "operator unavailable", "triggered": false }
+  ]
+}

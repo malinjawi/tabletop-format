@@ -29,16 +29,37 @@ backup-tested migration; it is not bundled into an application deploy.
 cd deploy
 cp .env.example .env
 mkdir -m 700 .secrets
-for name in pg-super-password forge-db-password platform-db-password lfs-jwt-secret; do
+for name in pg-super-password forge-db-password platform-db-password; do
   openssl rand -base64 32 > ".secrets/$name"
   chmod 600 ".secrets/$name"
 done
+
+set -a
+. ./.env
+set +a
+for pair in \
+  forgejo-secret-key:SECRET_KEY \
+  forgejo-internal-token:INTERNAL_TOKEN \
+  forgejo-oauth2-jwt-secret:JWT_SECRET \
+  lfs-jwt-secret:LFS_JWT_SECRET; do
+  file="${pair%%:*}"
+  kind="${pair#*:}"
+  docker run --rm --entrypoint forgejo "$FORGEJO_IMAGE" generate secret "$kind" > ".secrets/$file"
+  chmod 600 ".secrets/$file"
+done
 ```
+
+The secret command names above are the supported Forgejo CLI surface; do not
+substitute generic random strings for installation keys without checking the
+running major version's [Forgejo CLI documentation](https://forgejo.org/docs/latest/admin/command-line/).
 
 Create `.secrets/r2-access-key` and `.secrets/r2-secret-key` from a credential
 limited to the Forge LFS bucket. Create an empty `.secrets/forge-token` for the
 first boot. Fill `.env`, including the exact HTTPS origins and a rotating alpha
 invite code. Neither `.env` nor `.secrets/` is tracked by Git.
+`FORGE_SECRET_DIR` may be an absolute path when secrets are mounted from an
+encrypted host volume; relative paths resolve from `deploy/`, exactly as Compose
+does.
 
 ## 3. First boot and scoped Forgejo service account
 
@@ -64,7 +85,35 @@ docker compose -f docker-compose.prod.yml up -d
 Do not put a Forgejo admin password in the gateway environment. Rotate the
 service token by updating the secret file and recreating only the gateway.
 
-## 4. Edge contract
+## 4. Preflight the actual host and TLS edge
+
+Install Caddy on the host, copy `Caddyfile.example` to its configuration, and
+load the values from `.env`. Caddy is the only public process; Compose keeps
+Forge and Forgejo on loopback. Before first boot, the service token may be the
+documented empty file:
+
+```sh
+node deploy/preflight.mjs --env deploy/.env --first-boot
+```
+
+After the scoped Forgejo token exists and DNS is live, run the online preflight.
+It verifies DNS/TLS and HSTS, both service health endpoints, and a signed,
+read-only list request to the configured R2 bucket. It never prints secret
+values. Keep its evidence beside the restore-drill record, not in Git:
+
+```sh
+node deploy/preflight.mjs --env deploy/.env --online \
+  --evidence /encrypted/off-host/evidence/forge-preflight-$(date -u +%Y%m%dT%H%M%SZ).json
+```
+
+Caddy expands `{$NAME}` variables before parsing and automatically supplies the
+forwarded host/protocol headers used here; see the official
+[Caddyfile environment-variable](https://caddyserver.com/docs/caddyfile-tutorial#environment-variables)
+and [reverse-proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
+documentation. The R2 check uses its documented S3 endpoint, `auto` region, and
+`ListObjectsV2` support from the [R2 S3 compatibility reference](https://developers.cloudflare.com/r2/api/s3/api/).
+
+## 5. Edge contract
 
 Terminate TLS at the host proxy/CDN and forward the Forge origin to
 `127.0.0.1:8420` and the Git/Forgejo origin to
@@ -79,7 +128,7 @@ application refuses production startup with HTTP, local Store-1, missing
 Forge credentials, or open registration. Browser sessions are HttpOnly,
 Secure, SameSite cookies; connector sessions remain revocable bearer tokens.
 
-## 5. Release gate
+## 6. Release gate
 
 Run the single release gate against the exact release commit before deploying:
 
@@ -89,6 +138,15 @@ FORGE_REQUIRE_CLEAN_TREE=1 \
 FORGE_CONFORMANCE_PG_URL='postgres://…/forge_conformance' \
 FORGEJO_TEST_IMAGE='codeberg.org/forgejo/forgejo@sha256:<tested-digest>' \
 REQUIRE_PRODUCTION_BACKENDS=1 \
+./launch-gate.sh
+```
+
+On the actual host, make the same gate require the offline deployment preflight
+(or add `FORGE_DEPLOY_ONLINE=1` after DNS/TLS is live):
+
+```sh
+FORGE_DEPLOY_ENV=deploy/.env \
+REQUIRE_DEPLOY_PREFLIGHT=1 \
 ./launch-gate.sh
 ```
 
@@ -123,8 +181,10 @@ FORGE_SMOKE_EXPECT_PROJECTS='community/cards-against-humanity,community/secret-h
 Then run the mutating two-person path with disposable pilot accounts. Use the
 cohort protocol and success/stop thresholds in
 [`../docs/CONTROLLED-ALPHA-PILOT.md`](../docs/CONTROLLED-ALPHA-PILOT.md).
+The first cohort is exactly five people; its evidence remains outside Git and
+is evaluated with `npm run pilot:report -- /path/to/cohort.json`.
 
-## 6. Backup and restore drill
+## 7. Backup and restore drill
 
 Forgejo's supported consistency model for PostgreSQL plus S3-compatible object
 storage requires a short write outage. Do not take three independent live
@@ -132,7 +192,10 @@ copies and call them one backup. Announce a maintenance window, then run:
 
 ```sh
 cd deploy
-FORGE_BACKUP_ACK_DOWNTIME=1 ./backup.sh /encrypted/off-host/staging
+set -a
+. ./.env
+set +a
+FORGE_BACKUP_ACK_DOWNTIME=1 ./backup.sh "$FORGE_BACKUP_DESTINATION"
 ```
 
 The script stops the gateway and Forgejo, creates a Forgejo archive (including
@@ -148,7 +211,7 @@ lock reduce accidental deletion risk but are not a backup. Follow
 database volumes, ports, and LFS bucket. Store-3 render/export cache and the
 generated hub are derived and deliberately excluded.
 
-## 7. Operational stop conditions
+## 8. Operational stop conditions
 
 Pause invitations if any of these occur: restore drill fails, private content
 is readable signed out, release receipts do not reproduce, export workers

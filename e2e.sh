@@ -124,6 +124,9 @@ for t in tools/*.mjs tools/lib/*.mjs; do node --check "$t" 2>/dev/null || bad "s
 ok "all .mjs tools pass node --check"
 check "source-overlay editor field contract" node tools/source-overlay-field-audit.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "versioned adapter contracts" node tools/check-adapters.mjs
+check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint
+check "strict production host preflight" node tools/test-deploy-preflight.mjs
+check "five-person pilot decision contract" node tools/test-pilot-report.mjs
 check "production source package contracts" node tools/test-source-assets.mjs
 check "source-packaged Secret Hitler validates" node tools/validate.mjs examples/secret-hitler
 check "source-packaged Secret Hitler validates (python)" python3 tools/validate.py examples/secret-hitler

@@ -72,5 +72,13 @@ ok(forgejo.environment?.FORGEJO__database__PASSWD_URI==="file:/run/secrets/forge
 ok(Array.isArray(gateway.secrets) && gateway.secrets.some(secret=>secret.source==="forge_token")
   && gateway.secrets.some(secret=>secret.source==="platform_db_password"),
   "gateway credentials are file-mounted secrets");
+const edge=readFileSync(resolve(ROOT,"deploy/Caddyfile.example"),"utf8");
+ok(edge.includes("{$FORGE_PUBLIC_ORIGIN}") && edge.includes("127.0.0.1:8420")
+  && edge.includes("{$FORGEJO_PUBLIC_ORIGIN}") && edge.includes("127.0.0.1:3000")
+  && edge.includes("email {$ACME_EMAIL}"),
+  "host TLS proxy has explicit Forge, Forgejo, and certificate-contact routes");
+const template=readFileSync(resolve(ROOT,"deploy/.env.example"),"utf8");
+ok(/^ACME_EMAIL=.+/m.test(template) && /^FORGE_BACKUP_DESTINATION=\/.+/m.test(template),
+  "deployment template requires TLS alerts and an explicit off-host backup target");
 
 console.log(`\nPRODUCTION CONFIG GREEN — ${checks} deployability and isolation checks passed.`);

@@ -1,9 +1,10 @@
 # Forge controlled-alpha pilot
 
-The first outside cohort is a product test, not a public launch. Invite 5–10
-tabletop designers across three small teams and give them a stable HTTPS Forge
-instance. Do not coach the main task unless a participant is completely
-blocked; record where that happens.
+The first outside cohort is a product test, not a public launch. Invite exactly
+five tabletop creators and give them a stable HTTPS Forge instance. Arrange
+them into two creator/collaborator runs; the fifth production-minded participant
+joins both runs so every person uses the product. Do not coach the main task
+unless a participant is completely blocked; record where that happens.
 
 ## Promise under test
 
@@ -17,10 +18,10 @@ source files can already live in a Forge repository.
 
 ## Cohort and roles
 
-- 2–3 working tabletop designers bringing a small original prototype.
-- 2–3 collaborators who did not create the prototype.
-- 1–2 production-minded testers who routinely use Sheets, CSV, image editors,
-  or print-and-play files.
+- 2 working tabletop designers, each bringing a small original prototype.
+- 2 collaborators who did not create those prototypes.
+- 1 production-minded tester who routinely uses Sheets, CSV, image editors,
+  or print-and-play files and participates in both runs.
 - One named Forge operator owns support, moderation, and rights reports for the
   full invitation window.
 
@@ -57,17 +58,29 @@ Record events and outcomes, never unpublished game text:
 - exact artifact downloaded;
 - time to each milestone, error category, and whether human help was required.
 
+Copy `deploy/pilot-cohort.example.json` outside the repository and update that
+private record during the sessions using only pseudonymous participant IDs.
+Evaluate it with:
+
+```sh
+npm run pilot:report -- /encrypted/off-host/evidence/alpha-01.json
+```
+
+The report is deliberately fail-closed: an integrity stop condition produces
+`HOLD` even when completion numbers look good.
+
 Afterward ask only: what did you expect to happen, where did you lose trust,
 what tool would you return to instead, and would you use Forge for the next
 iteration of this same game?
 
 ## Success threshold
 
-Proceed to a second cohort only if at least four of five tested pairs complete
-the full journey, at least three do so without developer intervention, every
-release is reproducible from its receipt, no private source leaks, and at least
-half say they would use Forge again on the same project. Fix the largest common
-drop-off before adding integrations or opening a public jam.
+Proceed to a second cohort only if at least four of five participants complete
+their assigned journey, at least three do so without developer intervention,
+both paired runs reach a reproducible release, no integrity stop condition is
+triggered, and at least three of five say they would use Forge again on the same
+project. Fix the largest common drop-off before adding integrations or opening
+a public jam.
 
 ## Stop conditions
 
@@ -82,7 +95,9 @@ operator cannot respond to support/moderation reports.
 1. Deploy one digest-pinned candidate behind HTTPS and complete the documented
    three-store restore drill.
 2. Run `node tools/alpha-readiness.mjs https://forge.example --production`.
-3. Execute one internal two-person journey on the deployed build.
-4. Rotate the invite code, confirm the operator/contact policy text, and record
+3. Run `node deploy/preflight.mjs --env deploy/.env --online` and retain its
+   secret-free evidence next to the restore record.
+4. Execute one internal two-person journey on the deployed build.
+5. Rotate the invite code, confirm the operator/contact policy text, and record
    the release commit and image digests.
-5. Invite only the cohort size the operator can personally support.
+6. Copy the pilot evidence template outside Git and invite exactly five people.

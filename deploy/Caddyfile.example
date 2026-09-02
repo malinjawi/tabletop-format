@@ -1,0 +1,18 @@
+{
+	email {$ACME_EMAIL}
+	admin 127.0.0.1:2019
+}
+
+{$FORGE_PUBLIC_ORIGIN} {
+	encode zstd gzip
+	header -Server
+	reverse_proxy 127.0.0.1:8420
+}
+
+{$FORGEJO_PUBLIC_ORIGIN} {
+	header -Server
+	reverse_proxy 127.0.0.1:3000 {
+		# Do not buffer Git/LFS request or response bodies at the edge.
+		flush_interval -1
+	}
+}

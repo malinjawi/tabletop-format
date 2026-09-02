@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/pilot-cohort.schema.json",
+  "title": "Forge controlled-alpha pilot evidence",
+  "type": "object",
+  "required": ["format", "version", "cohort_id", "candidate", "operator", "participants", "runs", "stop_conditions"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "forge-pilot-cohort" },
+    "version": { "const": 1 },
+    "cohort_id": { "$ref": "#/$defs/id" },
+    "candidate": {
+      "type": "object",
+      "required": ["commit", "gateway_image", "forgejo_image", "postgres_image", "origin", "preflight_evidence", "restore_drill_passed"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" },
+        "gateway_image": { "$ref": "#/$defs/image" },
+        "forgejo_image": { "$ref": "#/$defs/image" },
+        "postgres_image": { "$ref": "#/$defs/image" },
+        "origin": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "preflight_evidence": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "restore_drill_passed": { "type": "boolean" }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "required": ["name", "contact", "on_call_confirmed"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "contact": { "type": "string", "format": "email" },
+        "on_call_confirmed": { "type": "boolean" }
+      }
+    },
+    "participants": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "journey_complete", "unassisted", "would_reuse"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "role": { "enum": ["creator", "collaborator", "production"] },
+          "journey_complete": { "type": "boolean" },
+          "unassisted": { "type": "boolean" },
+          "would_reuse": { "enum": ["yes", "no", "unsure"] },
+          "notes": { "type": "string", "maxLength": 500 }
+        }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/run" }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["condition", "triggered"],
+        "additionalProperties": false,
+        "properties": {
+          "condition": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "triggered": { "type": "boolean" },
+          "detail": { "type": "string", "maxLength": 500 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "image": { "type": "string", "pattern": "^[^\\s]+@sha256:[a-f0-9]{64}$" },
+    "milestone": {
+      "type": "object",
+      "required": ["name", "status", "help_required"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["import-committed", "proof-downloaded", "edition-proposed", "proposal-merged", "release-downloaded", "release-reproduced"] },
+        "status": { "enum": ["complete", "blocked", "not-started"] },
+        "elapsed_minutes": { "type": "number", "minimum": 0, "maximum": 1440 },
+        "help_required": { "type": "boolean" },
+        "error_category": { "enum": ["none", "auth", "import", "sheets", "render", "rights", "git", "review", "release", "export", "navigation", "other"] },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "run": {
+      "type": "object",
+      "required": ["id", "participant_ids", "status", "milestones", "integrity"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "participant_ids": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "status": { "enum": ["completed", "blocked", "in-progress", "not-started"] },
+        "milestones": { "type": "array", "items": { "$ref": "#/$defs/milestone" } },
+        "integrity": {
+          "type": "object",
+          "required": ["private_source_leak", "sheet_candidate_mismatch", "credit_lost", "rights_unknown_shipped", "export_budget_exceeded", "release_reproduced"],
+          "additionalProperties": false,
+          "properties": {
+            "private_source_leak": { "type": "boolean" },
+            "sheet_candidate_mismatch": { "type": "boolean" },
+            "credit_lost": { "type": "boolean" },
+            "rights_unknown_shipped": { "type": "boolean" },
+            "export_budget_exceeded": { "type": "boolean" },
+            "release_reproduced": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

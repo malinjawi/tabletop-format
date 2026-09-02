@@ -53,6 +53,17 @@ run "bounded performance and concurrency" ./perf.sh
 run "production deployment contract" node tools/production-config-check.mjs
 run "SQLite/PostgreSQL Store-2 conformance" ./store2-pg-test.sh
 
+deploy_preflight=0
+if [ -n "${FORGE_DEPLOY_ENV:-}" ]; then
+  preflight_args=(--env "$FORGE_DEPLOY_ENV")
+  [ "${FORGE_DEPLOY_ONLINE:-0}" != "1" ] || preflight_args+=(--online)
+  [ -z "${FORGE_DEPLOY_EVIDENCE:-}" ] || preflight_args+=(--evidence "$FORGE_DEPLOY_EVIDENCE")
+  run "actual production host preflight" node deploy/preflight.mjs "${preflight_args[@]}"
+  deploy_preflight=1
+else
+  printf '\nSKIP actual host preflight: set FORGE_DEPLOY_ENV, and FORGE_DEPLOY_ONLINE=1 after DNS is live.\n'
+fi
+
 production_backends=1
 
 if [ -n "${FORGE_LIVE_URL:-}" ]; then
@@ -88,6 +99,10 @@ if [ "${REQUIRE_PRODUCTION_BACKENDS:-0}" = "1" ] && [ "$production_backends" -ne
 fi
 if [ "${REQUIRE_RESTORE_DRILL:-0}" = "1" ] && [ "$restore_drill" -ne 1 ]; then
   printf '\nFAIL: release policy requires the disposable backup/restore drill.\n' >&2
+  exit 1
+fi
+if [ "${REQUIRE_DEPLOY_PREFLIGHT:-0}" = "1" ] && [ "$deploy_preflight" -ne 1 ]; then
+  printf '\nFAIL: release policy requires the actual production host preflight.\n' >&2
   exit 1
 fi
 
