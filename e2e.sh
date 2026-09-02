@@ -155,6 +155,7 @@ done
 
 say ""
 say "== importers =="
+check "reviewed CSV column mapping" node tools/test-csv-mapping.mjs
 check "csv import" node tools/import-csv.mjs examples/harbor-nine.csv "$SCRATCH/out-csv" --title "CSV Game"
 check "csv round-trip validates" python3 tools/validate.py "$SCRATCH/out-csv"
 check "nrdb import" node tools/import-nrdb.mjs examples/nrdb-fixture "$SCRATCH/out-nrdb" --title "NRDB Game"

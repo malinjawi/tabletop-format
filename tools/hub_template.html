@@ -4141,10 +4141,79 @@ Double Draw,wildcard,Draw two extra cards this turn.
 Accent Challenge,prompt,Speak in a different accent until your next turn.
 Grand Finale,wildcard,Everyone applauds — the round is over.` }
 };
+const CSV_TARGETS=[
+  ["ignore","Ignore this column"],["id","Permanent card ID"],["name","Card name"],
+  ["type","Card type"],["text","Rules text"],["subtypes","Subtypes"],
+  ["keywords","Keywords"],["deck_limit","Deck limit"],["set","Set"],
+  ["collector_number","Collector number"],["quantity","Print quantity"],
+  ["artist","Artist credit"],["flavor_text","Flavor text"],
+];
+let NG_CSV_PREVIEW=null;
+function ngCsvSet(value){
+  const el=document.getElementById("ng-csv"); if(!el)return;
+  el.value=String(value||""); ngCsvChanged();
+}
+function ngCsvChanged(){
+  NG_CSV_PREVIEW=null;
+  const host=document.getElementById("ng-csv-preview");
+  if(host)host.innerHTML=`<span class="mut">Review the columns before Forge can create the first commit.</span>`;
+  const button=document.getElementById("ng-ok");
+  if(button&&document.querySelector('input[name="ng-mode"]:checked')?.value==="csv"){
+    button.disabled=true; button.textContent="Review CSV to continue";
+  }
+}
+function ngCsvMappingKey(mapping){
+  return "forge.csv.mapping.v1:"+encodeURIComponent(mapping.map(item=>item.source.trim().toLowerCase()).join("|")).slice(0,600);
+}
+function ngCsvStoredTargets(mapping){
+  try{const value=JSON.parse(localStorage.getItem(ngCsvMappingKey(mapping))||"null");return Array.isArray(value)&&value.length===mapping.length?value:null;}catch{return null;}
+}
+function ngCsvRemember(preview){
+  try{localStorage.setItem(ngCsvMappingKey(preview.mapping),JSON.stringify(preview.mapping.map(item=>item.target)));}catch{}
+}
+function ngCsvTargetOptions(item){
+  const options=[...CSV_TARGETS];
+  const custom=[item.target,item.suggested_target].find(value=>value?.startsWith("attributes."));
+  if(custom) options.push([custom,`Custom field · ${custom.slice(11)}`]);
+  return options.map(([value,label])=>`<option value="${esc(value)}" ${value===item.target?"selected":""}>${esc(label)}</option>`).join("");
+}
+function ngCsvRender(preview){
+  const host=document.getElementById("ng-csv-preview"); if(!host)return;
+  const errors=(preview.errors||[]).map(message=>`<div style="color:var(--red);margin-top:4px">✕ ${esc(message)}</div>`).join("");
+  const warnings=(preview.warnings||[]).map(message=>`<div style="color:#7a5510;margin-top:4px">△ ${esc(message)}</div>`).join("");
+  const cards=(preview.cards||[]).map(card=>`<tr><td>${esc(card.id)}</td><td><b>${esc(card.name)}</b></td><td>${esc(card.type)}</td><td>${esc(Object.entries(card.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(", ")||"—")}</td></tr>`).join("");
+  host.innerHTML=`
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px"><b>Column mapping</b><span class="badge" style="color:${preview.can_import?"var(--grn)":"var(--red)"};border-color:currentColor">${preview.can_import?`${preview.rows_importable} cards ready`:"Needs attention"}</span></div>
+    <div style="display:grid;gap:6px">${preview.mapping.map(item=>`<label style="display:grid;grid-template-columns:minmax(0,.85fr) 12px minmax(0,1.15fr);align-items:center;gap:7px;font-size:12px"><span title="${esc((item.samples||[]).join(" · "))}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${esc(item.source)}</b>${item.samples?.length?`<br><span class="mut">${esc(item.samples.slice(0,2).join(" · "))}</span>`:""}</span><span class="mut">→</span><select data-ng-csv-target data-index="${item.index}" onchange="ngCsvMappingChanged()" style="min-width:0;width:100%;padding:7px;border:1px solid var(--bd);border-radius:7px;background:#fff;font:inherit">${ngCsvTargetOptions(item)}</select></label>`).join("")}</div>
+    <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--bd);font-size:11.5px"><b>${preview.identity_safe?"✓ Permanent IDs will survive renames":"△ Forge will generate IDs from names"}</b>${preview.identity_safe?"":" — add the generated IDs to your working sheet before a later re-import."}${errors}${warnings}</div>
+    ${cards?`<div style="overflow:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="text-align:left">ID</th><th style="text-align:left">Name</th><th style="text-align:left">Type</th><th style="text-align:left">Custom fields</th></tr></thead><tbody>${cards}</tbody></table></div>`:""}`;
+  const button=document.getElementById("ng-ok");
+  if(button){button.disabled=!preview.can_import;button.textContent=preview.can_import?"Import reviewed cards as first commit":"Fix mapping to continue";}
+}
+async function ngCsvReview(targets=null,skipStored=false){
+  const raw=(document.getElementById("ng-csv")?.value||"").trim(), review=document.getElementById("ng-csv-review"), host=document.getElementById("ng-csv-preview");
+  if(!raw){if(host)host.innerHTML=`<span style="color:var(--red)">Paste CSV, upload a file, or load an example first.</span>`;return null;}
+  if(review){review.disabled=true;review.textContent="Checking…";}
+  if(host)host.innerHTML=`<span class="mut">Mapping columns and validating the exact import…</span>`;
+  try{
+    const response=await fetch("/api/imports/csv/preview",{method:"POST",headers:authHdr(),body:JSON.stringify({csv:raw,...(targets?{mapping:targets}:{})})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||`preview failed (${response.status})`);
+    if(!targets&&!skipStored){const stored=ngCsvStoredTargets(data.mapping||[]);if(stored)return await ngCsvReview(stored,true);}
+    NG_CSV_PREVIEW=data;if(data.can_import)ngCsvRemember(data);ngCsvRender(data);return data;
+  }catch(error){
+    NG_CSV_PREVIEW=null;if(host)host.innerHTML=`<span style="color:var(--red)">${esc(error.message||"Could not review this CSV")}</span>`;
+    const button=document.getElementById("ng-ok");if(button){button.disabled=true;button.textContent="Review CSV to continue";}return null;
+  }finally{if(review){review.disabled=false;review.textContent="Review columns";}}
+}
+function ngCsvMappingChanged(){
+  const selects=[...document.querySelectorAll("[data-ng-csv-target]")].sort((a,b)=>Number(a.dataset.index)-Number(b.dataset.index));
+  ngCsvReview(selects.map(select=>select.value),true);
+}
 function ngFileLoad(inp){
   const f=inp.files&&inp.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{ const el=document.getElementById("ng-csv"); if(el) el.value=String(r.result||""); };
+  r.onload=()=>ngCsvSet(r.result);
   r.readAsText(f);
 }
 function ngMode(mode){
@@ -4152,12 +4221,16 @@ function ngMode(mode){
   if(brief)brief.style.display=mode==="idea"?"":"none";
   if(csv)csv.style.display=mode==="csv"?"":"none";
   if(sheet)sheet.style.display=mode==="sheet"?"":"none";
-  if(button)button.textContent=mode==="idea"?"Create game and build first test":mode==="csv"?"Import cards as first commit":"Create game and connect Sheet";
+  if(button){
+    button.textContent=mode==="idea"?"Create game and build first test":mode==="csv"?(NG_CSV_PREVIEW?.can_import?"Import reviewed cards as first commit":"Review CSV to continue"):"Create game and connect Sheet";
+    button.disabled=mode==="csv"&&!NG_CSV_PREVIEW?.can_import;
+  }
   document.querySelectorAll("[data-ng-mode]").forEach(label=>label.style.borderColor=label.querySelector("input")?.checked?"var(--acc)":"var(--bd)");
 }
 function newGameModal(){
   if(typeof LIVE==="undefined" || !LIVE){ toast("Creating a game needs the live platform — run <code>node server.mjs</code>."); return; }
   if(!ME){ _afterAuth=newGameModal; authOpen(); return; }
+  NG_CSV_PREVIEW=null;
   const ov=document.createElement("div"); ov.id="ngModal";
   ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
   const box=document.createElement("div");
@@ -4189,8 +4262,9 @@ function newGameModal(){
       <div style="font-size:13px;font-weight:650;margin-bottom:3px">Import a card table</div>
       <div style="font-size:12px;color:var(--mut);margin-bottom:7px;line-height:1.45">Paste CSV or upload a file. Forge previews and validates it before the first commit; the original file remains yours.</div>
       <div class="mono" style="font-size:11px;color:var(--mut);margin-bottom:6px;line-height:1.45">${esc(CSV_HINT)}</div>
-      <textarea id="ng-csv" aria-label="CSV card data" placeholder="name,type,text,cost&#10;Spark,unit,Deal 1 damage.,1" style="display:block;width:100%;min-height:120px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:12px/1.45 ui-monospace,Menlo,monospace"></textarea>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:12px"><button type="button" class="btn" onclick="document.getElementById('ng-csv').value=CSV_EXAMPLE">Load example</button><label class="btn" style="cursor:pointer;margin:0">&#8682; Upload CSV<input id="ng-file" type="file" accept=".csv,text/csv" style="display:none" onchange="ngFileLoad(this)"></label>${Object.entries(STARTER_DECKS).map(([k,d])=>`<button type="button" class="btn" title="${esc(d.hint)}" onclick="document.getElementById('ng-csv').value=STARTER_DECKS['${k}'].csv">${esc(d.label)}</button>`).join("")}</div>
+      <textarea id="ng-csv" aria-label="CSV card data" oninput="ngCsvChanged()" placeholder="name,type,text,cost&#10;Spark,unit,Deal 1 damage.,1" style="display:block;width:100%;min-height:120px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:12px/1.45 ui-monospace,Menlo,monospace"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:12px"><button type="button" class="btn" onclick="ngCsvSet(CSV_EXAMPLE)">Load example</button><label class="btn" style="cursor:pointer;margin:0">&#8682; Upload CSV<input id="ng-file" type="file" accept=".csv,text/csv" style="display:none" onchange="ngFileLoad(this)"></label>${Object.entries(STARTER_DECKS).map(([k,d])=>`<button type="button" class="btn" title="${esc(d.hint)}" onclick="ngCsvSet(STARTER_DECKS['${k}'].csv)">${esc(d.label)}</button>`).join("")}<button type="button" class="btn primary" id="ng-csv-review" onclick="ngCsvReview()">Review columns</button></div>
+      <div id="ng-csv-preview" style="margin-top:10px;padding:10px;border:1px solid var(--bd);border-radius:8px;background:#fff;font-size:12px"><span class="mut">Review the columns before Forge can create the first commit.</span></div>
     </div>
     <div id="ng-sheet-fields" style="display:none;border:1px solid var(--bd);background:var(--bg);border-radius:9px;padding:12px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:650;margin-bottom:3px">Use a Google Sheet as the working copy</div>
@@ -4232,6 +4306,7 @@ async function ngSubmit(close){
   if(mode==="idea"&&!experience){ errEl.textContent="Describe how players should feel. This is the filter for later decisions."; errEl.style.display=""; return; }
   if(mode==="idea"&&!mvp){ errEl.textContent="Name the smallest thing you could put on a table and test."; errEl.style.display=""; return; }
   if(mode==="csv"&&!raw){ errEl.textContent="Paste card CSV, upload a .csv file, or load one of the examples."; errEl.style.display=""; return; }
+  if(mode==="csv"&&!NG_CSV_PREVIEW?.can_import){ errEl.textContent="Review the CSV columns and resolve the mapping first."; errEl.style.display=""; await ngCsvReview(); return; }
   if(mode==="sheet"&&!/^https:\/\/docs\.google\.com\/spreadsheets\//i.test(sheetUrl)){
     errEl.textContent="Paste a Google Sheets tab URL beginning with https://docs.google.com/spreadsheets/."; errEl.style.display=""; return;
   }
@@ -4243,7 +4318,7 @@ async function ngSubmit(close){
         design_intent:{player_experience:experience},mvp:{playable_slice:mvp}};
       if(question)brief.mvp.question=question;
     }
-    const body={title,license}; if(brief)body.brief=brief; if(mode==="csv")body.csv=raw;
+    const body={title,license}; if(brief)body.brief=brief; if(mode==="csv"){body.csv=raw;body.csv_mapping=NG_CSV_PREVIEW.mapping.map(item=>item.target);}
     const r=await fetch("/api/games",{method:"POST",headers:authHdr(),body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(r.status===201){

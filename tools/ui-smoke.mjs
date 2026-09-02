@@ -237,9 +237,25 @@ try {
   await page.getByRole("button", { name: "Bring or start a game" }).click();
   await page.getByRole("radio", { name: /Import CSV/ }).check();
   await page.getByLabel("Working title").fill("Onboarding Smoke Game");
-  await page.getByLabel("CSV card data").fill(`name,type,text,cost\nSpark,unit,Deal 1 damage.,1\nGuard,unit,Prevent 1 damage.,2`);
+  await page.getByLabel("CSV card data").fill(`Card Key,Card Title,Category,Rules,Energy\nspark-01,Spark,unit,Deal 1 damage.,1\nguard-02,Guard,unit,Prevent 1 damage.,2`);
+  assert(await page.getByRole("button", { name: "Review CSV to continue" }).isDisabled(),
+    "CSV cannot become a commit before its columns are reviewed");
+  await page.getByRole("button", { name: "Review columns" }).click();
+  await page.getByText("2 cards ready", { exact: true }).waitFor();
+  const mappedTargets=await page.locator("[data-ng-csv-target]").evaluateAll(selects=>selects.map(select=>select.value));
+  assert(mappedTargets.join(",")==="id,name,type,text,attributes.energy",
+    "unfamiliar CSV headers map visibly to stable IDs, canonical fields, and typed custom data",JSON.stringify(mappedTargets));
+  assert(await page.getByText(/Permanent IDs will survive renames/).isVisible()
+    && await page.getByRole("button", { name: "Import reviewed cards as first commit" }).isEnabled(),
+    "valid mapped CSV exposes its rename safety and enables the exact reviewed commit");
+  await page.setViewportSize({width:320,height:844});
+  const csvMobile=await page.evaluate(()=>{const modal=document.getElementById("ngModal"),box=modal?.firstElementChild;
+    return {page:document.documentElement.scrollWidth,viewport:innerWidth,boxScroll:box?.scrollWidth,boxWidth:box?.clientWidth};});
+  assert(csvMobile.page<=csvMobile.viewport&&csvMobile.boxScroll<=csvMobile.boxWidth,
+    "reviewed CSV mapping fits a 320px screen without horizontal scrolling",JSON.stringify(csvMobile));
+  await page.setViewportSize({width:390,height:844});
   await page.getByLabel("License").selectOption("CC-BY-4.0");
-  await page.getByRole("button", { name: "Import cards as first commit" }).click();
+  await page.getByRole("button", { name: "Import reviewed cards as first commit" }).click();
   try {
     await page.waitForURL(/#\/g\/onboarding-smoke\/onboarding-smoke-game\/cards$/,
       { timeout: 20_000, waitUntil: "domcontentloaded" });
@@ -253,6 +269,13 @@ try {
   const imported = await page.evaluate(async()=>await (await fetch("/api/games/onboarding-smoke-game/ui")).json());
   assert(imported.ncards === 2 && imported.namespace === "onboarding-smoke",
     "a stranger can import CSV as an owned two-card first commit through the UI");
+  const importedCards=await page.evaluate(async()=>await (await fetch("/api/games/onboarding-smoke-game/cards")).json());
+  assert(importedCards[0].id==="spark_01"&&importedCards[0].attributes?.energy===1&&importedCards[1].text==="Prevent 1 damage.",
+    "the committed cards exactly match the reviewed mapping and inferred field types",JSON.stringify(importedCards));
+  const csvReceipt=JSON.parse(readFileSync(join(gamesRoot,"onboarding-smoke-game","forge","imports","csv.json"),"utf8"));
+  assert(csvReceipt.adapter.version===3&&csvReceipt.source.columns[1]==="Card Title"
+    &&csvReceipt.promotion.mapping[4].target==="attributes.energy"&&csvReceipt.result.identity_safe,
+    "the repository preserves original columns, reviewed mapping, and identity result in its import receipt");
   assert(imported.repository === null, "local projects do not advertise a fake hosted Git remote");
 
   // The art flow must collect provenance before bytes enter the repository;
@@ -272,8 +295,8 @@ try {
   await page.getByRole("button", { name:"Record rights & continue" }).click();
   assert((await artAssigned).ok(), "art bytes, credit, license, and redistribution are assigned through the browser");
   const artRights=await page.evaluate(async()=>await (await fetch("/api/games/onboarding-smoke-game/rights")).json());
-  assert(artRights.publishable && artRights.files.some(file=>file.path==="assets/art/spark.png"&&file.copyright.includes("onboarding-smoke")),
-    "the uploaded art is release-cleared and credited in the repository rights ledger");
+  assert(artRights.publishable && artRights.files.some(file=>file.path==="assets/art/spark_01.png"&&file.copyright.includes("onboarding-smoke")),
+    "the uploaded art is release-cleared and credited in the repository rights ledger",JSON.stringify(artRights));
 
   await page.locator("details.more-tabs summary").click();
   await page.locator("details.more-tabs .repo-menu a").filter({hasText:"Releases"}).click();
@@ -317,7 +340,7 @@ try {
   const bobToken=bobRegistration.data.token;
   const bobFork=await api("POST","/api/games/onboarding-smoke-game/fork",bobToken,{ref:"HEAD"});
   const bobCards=await api("GET",`/api/games/${bobFork.data.slug}/cards`,bobToken);
-  bobCards.data.find(card=>card.id==="spark").text="Deal 2 damage after review.";
+  bobCards.data.find(card=>card.id==="spark_01").text="Deal 2 damage after review.";
   const bobEdit=await api("PUT",`/api/games/${bobFork.data.slug}/cards`,bobToken,bobCards.data);
   const bobProposal=await api("POST","/api/games/onboarding-smoke-game/prs",bobToken,{
     from:bobFork.data.slug,title:"Tune Spark after playtest"});
@@ -353,7 +376,7 @@ try {
   await mergeButton.click();
   assert((await mergeResponse).ok(),"the owner approves and merges the visual proposal through the browser");
   const mergedCards=await api("GET","/api/games/onboarding-smoke-game/cards",null);
-  assert(mergedCards.data.find(card=>card.id==="spark").text==="Deal 2 damage after review.",
+  assert(mergedCards.data.find(card=>card.id==="spark_01").text==="Deal 2 damage after review.",
     "the accepted browser proposal lands exactly and preserves the collaborator's authored content");
   await bobContext.close();
 

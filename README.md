@@ -66,8 +66,8 @@ inputs are recorded in
 [`docs/CONTROLLED-BETA-READINESS-2026-09-02.md`](docs/CONTROLLED-BETA-READINESS-2026-09-02.md).
 
 ```
-./e2e.sh                                             # 172-check functional integration gate
-./journey.sh                                         # 85-assertion two-user golden path
+./e2e.sh                                             # 185-check functional integration gate
+./journey.sh                                         # 92-assertion two-user golden path
 ./perf.sh                                            # bounded scale + concurrent-write smoke
 ./launch-gate.sh                                     # all mandatory controlled-alpha gates
 ./demo.sh                                            # the whole loop, one command, narrated
@@ -137,6 +137,15 @@ speak; the contracts are proven here against plain git first.
 `demo.sh` runs: import a designer's CSV → validate → render → PnP PDF + TTS mod →
 apply a balance patch → semantic diff. Spreadsheet to playable-and-printable in
 under a minute, with version control semantics at the end.
+
+The browser CSV path accepts ordinary designer headers rather than demanding a
+Forge-shaped file. Before project creation it shows every source-column mapping,
+three representative normalized cards, inferred custom-field types, ignored
+columns, and whether permanent IDs can survive renames. The create action stays
+disabled until that exact mapping validates. Forge then commits the normalized
+snapshot and a receipt containing the original source hash, original headers,
+reviewed mapping, normalization hash, warnings, and identity result. Mapping
+choices are remembered by header shape without retaining unpublished CSV rows.
 
 The validator enforces what schemas alone can't: every printing points at a real card
 and set, banned cards exist, attributes match their declared types, symbols in card

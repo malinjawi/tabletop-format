@@ -30,6 +30,7 @@ import { createGateway, readBody } from "./platform/gateway.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { jamQualify } from "./tools/lib/jamcheck.mjs";
 import { csvToCards, normalizeSheetUrl } from "./tools/lib/cardcsv.mjs";
+import { prepareCsvImport, publicCsvPreview } from "./tools/lib/csv-mapping.mjs";
 import { fingerprintCsv, sheetCardsFromBase, sheetPrintingsFromBase, sheetPrintingsFromTable, mergeSheetState } from "./tools/lib/sheetsync.mjs";
 import { assertAssetAllowed, MAX_ASSET_BYTES } from "./tools/lib/limits.mjs";
 import { inspectAsset, inspectSvg } from "./platform/media-security.mjs";
@@ -699,9 +700,10 @@ gw.route("GET", "/api/me", async (ctx) => {
     games: await q.gamesOwnedBy(db, u.id) });
 }, "who am I + claims + stars + owned games");
 /** @param {any} u @param {string} title @param {string|undefined} csv @param {string} authorStr
- * @param {{brief?: any, license?: string}} [options] */
+ * @param {{brief?: any, license?: string, csvImport?: any}} [options] */
 async function hostGame(u, title, csv, authorStr, options = {}) {
-  const { brief, license = "CC-BY-4.0" } = options;
+  const { brief, license = "CC-BY-4.0", csvImport = null } = options;
+  const effectiveCsvImport = csv?.trim() ? (csvImport ?? prepareCsvImport(csv)) : null;
   const repoSlug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
   if (!repoSlug) return { error: { code: 422, body: { error: "title does not produce a valid project slug" } } };
   const existing = await q.gameByProject(db, u.handle, repoSlug);
@@ -743,9 +745,15 @@ async function hostGame(u, title, csv, authorStr, options = {}) {
     if (csv?.trim()) {
       const cards = JSON.parse(readFileSync(join(tmp, "game", "components/cards.json"), "utf8"));
       const receipt = { format: "forge-import-receipt", version: 1,
-        adapter: { id: "csv-cards", version: 2, mode: "snapshot-import" },
-        source: { sha256: createHash("sha256").update(csv).digest("hex"), bytes: Buffer.byteLength(csv) },
-        imported_by: u.handle, imported_at: new Date().toISOString(), result: { cards: cards.length } };
+        adapter: { id: "csv-cards", version: 3, mode: "snapshot-import" },
+        source: { sha256: effectiveCsvImport.source_hash,
+          bytes: effectiveCsvImport.source_bytes,
+          columns: effectiveCsvImport.mapping.map(item => item.source) },
+        promotion: { mapping: effectiveCsvImport.mapping.map(({ index, source, target }) => ({ index, source, target })),
+          normalized_sha256: effectiveCsvImport.normalized_hash },
+        imported_by: u.handle, imported_at: new Date().toISOString(),
+        result: { cards: cards.length, identity_safe: effectiveCsvImport.identity_safe,
+          warnings: effectiveCsvImport.warnings } };
       mkdirSync(join(tmp, "game", "forge", "imports"), { recursive: true });
       writeFileSync(join(tmp, "game", "forge", "imports", "csv.json"), JSON.stringify(receipt, null, 2) + "\n");
     }
@@ -761,15 +769,27 @@ async function hostGame(u, title, csv, authorStr, options = {}) {
     return { slug: storageKey, repo_slug: repoSlug, namespace: u.handle, project_id: projectId, sha };
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
+gw.route("POST", "/api/imports/csv/preview", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const { csv, mapping } = await json(ctx);
+  if (typeof csv !== "string" || !csv.trim()) return ctx.send(422, { error: "paste or upload CSV to review" });
+  ctx.send(200, publicCsvPreview(prepareCsvImport(csv, mapping)));
+}, "map and validate a CSV without creating a project");
 gw.route("POST", "/api/games", async (ctx) => {
   // THE HOSTING VERB: start from intent or bring structured components; both
   // leave as a hosted, owned, validated, versioned game.
   const u = await requireAuth(ctx); if (!u) return;
-  const { title, csv, brief, license } = await json(ctx);
+  const { title, csv, csv_mapping: csvMapping, brief, license } = await json(ctx);
   if (!title?.trim()) return ctx.send(422, { error: "title required" });
   if (brief != null && (typeof brief !== "object" || Array.isArray(brief)))
     return ctx.send(422, { error: "brief must be an object" });
-  const r = await hostGame(u, title.trim(), csv, await authorOf(ctx), { brief, license });
+  let csvImport = null, normalizedCsv = csv;
+  if (typeof csv === "string" && csv.trim()) {
+    csvImport = prepareCsvImport(csv, csvMapping ?? null);
+    if (!csvImport.can_import) return ctx.send(422, { error: "CSV mapping is not ready", report: csvImport.errors });
+    normalizedCsv = csvImport.normalized_csv;
+  }
+  const r = await hostGame(u, title.trim(), normalizedCsv, await authorOf(ctx), { brief, license, csvImport });
   if (r.error) return ctx.send(r.error.code, r.error.body);
   ctx.send(201, { slug: r.slug, repo_slug: r.repo_slug, namespace: r.namespace,
     project_id: r.project_id, owner: u.handle, commit: r.sha,

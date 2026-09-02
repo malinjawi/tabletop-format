@@ -21,6 +21,7 @@
     "test:adapters": "node tools/check-adapters.mjs",
     "test:security": "node tools/security-check.mjs",
     "test:ui": "node tools/ui-smoke.mjs",
+    "test:csv-mapping": "node tools/test-csv-mapping.mjs",
     "test:nandeck": "node tools/test-nandeck-layout.mjs",
     "test:rulebook-publication": "node tools/test-rulebook-publication.mjs",
     "build:rulebook-publication": "node tools/build-rulebook-publication.mjs examples/_fixtures/netrunner-sg output/pdf/netrunner-sg-rulebook-publication",
