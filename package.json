@@ -28,6 +28,7 @@
     "doctor": "node tools/doctor.mjs",
     "smoke:alpha": "node tools/alpha-readiness.mjs",
     "test:production-config": "node tools/production-config-check.mjs",
+    "test:source-assets": "node tools/test-source-assets.mjs",
     "test:forgejo:disposable": "./tools/disposable-forgejo-check.sh",
     "test:restore:disposable": "./tools/disposable-restore-drill.sh",
     "launch:gate": "./launch-gate.sh",

@@ -167,6 +167,17 @@ a print PDF, web book, preflight receipt, and deterministic source package at
 the exact game commit. See
 [`docs/rulebook-publications.md`](docs/rulebook-publications.md).
 
+### Production source packages
+
+`assets/manifest.json` groups the actual editable inputs behind a game—card
+families, native 2D documents, rulebook publications, boards, audio, fonts,
+table setups, and optional 3D models. Forge verifies every declared path,
+hashes the package inputs, shows the owning editor and import/export direction,
+and carries declared source bytes through the portable project format. Native
+files remain byte-preserved rather than falsely “converted.” Distribution is
+still enforced per file by `forge/rights.json`. See
+[`docs/source-asset-packages.md`](docs/source-asset-packages.md).
+
 ### Source-backed PnP faces
 
 When a community publishes composed PnP faces but not editable production files,

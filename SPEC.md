@@ -52,6 +52,7 @@ playtests/*.json             optional  session logs [playtest] (version_ref → 
 community.yaml               optional  governance/contributors/roadmap [community]
 CHANGELOG.md · CREDITS.md    optional  committed conveniences (regenerable by fmt)
 assets/**                    optional  SOURCE art only — LFS-tracked (§6)
+assets/manifest.json         optional  production source packages + editor/target contracts
 templates/layout.yaml        optional  declarative Forge layout
 templates/production.json    optional  shared SVG/native-editor field-binding contract
 templates/source-overlay.yaml optional immutable-face patch map for narrow PnP proofs
@@ -100,7 +101,11 @@ rules identity) · `printing` (appearance; per-asset provenance) · `token` · `
 
 ## 7. Binary & LFS policy (LOCKED)
 
-- LFS pattern: `assets/**` only. Allowed types: png, jpg, webp, svg, ogg, mp3, woff2.
+- LFS pattern: `assets/**` only. Browser uploads accept raster/vector art,
+  audio, fonts, and explicitly declared native production/model sources
+  (`afdesign`, `afpub`, `idml`, `sla`, `kra`, `ora`, `xcf`, `blend`, glTF,
+  OBJ, and STL). Opaque native sources are stored and reviewed as bytes; Forge
+  never executes them or claims to merge their internal object graphs.
   Per-file soft cap 25 MB (platform-enforced), repo soft cap 2 GB at v1.
 - **Only source assets.** Sprite sheets, PDFs, TTS saves, renders → `exports/`
   (gitignored) and the derived cache; committing them is a validation warning.
@@ -171,6 +176,16 @@ zero-dependency `git clone` (NF1) outranks LFS purity at this size; LFS activate
 platform hosting per §7; (b) `fmt fork` now auto-commits the §9 attribution block
 when `game.yaml` is at repo root (the one-game-one-repo model), and validators warn
 on dangling asset references.
+
+### 2026-09-02 — Production source packages
+
+Added `assets/manifest.json` (`forge-source-assets` v1) so a repository can name
+the authoritative editable packages behind cards, books, boards, audio, fonts,
+table setups, and optional 3D pieces. Each package pins its adapter direction,
+source files, previews, release targets, distribution boundary, and deterministic
+input hash. Native formats remain opaque versioned source; portable Forge/SVG/
+HTML representations remain preferred when a real round trip is available.
+The existing per-file rights manifest still decides whether bytes may ship.
 
 ### 2026-07-28 — §7 landmine is version-dependent (spike evidence)
 The Phase-1 spike against Forgejo 11 observed the contents API **honoring**

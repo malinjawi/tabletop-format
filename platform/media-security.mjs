@@ -71,5 +71,30 @@ export function inspectAsset(path, value) {
   if (ext === "mp3" && !(buf.subarray(0, 3).toString("ascii") === "ID3" || (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0)))
     fail("file extension says MP3 but bytes do not");
   if (ext === "woff2" && buf.subarray(0, 4).toString("ascii") !== "wOF2") fail("file extension says WOFF2 but bytes do not");
+  if (ext === "glb") {
+    if (buf.length < 20 || buf.subarray(0, 4).toString("ascii") !== "glTF" || buf.readUInt32LE(4) !== 2
+      || buf.readUInt32LE(8) !== buf.length) fail("file extension says GLB but bytes are not a complete glTF 2 binary");
+  }
+  if (ext === "gltf") {
+    let document; try { document = JSON.parse(buf.toString("utf8")); } catch { fail("file extension says glTF but bytes are not JSON"); }
+    if (document?.asset?.version !== "2.0") fail("Forge currently accepts glTF 2.0 source only");
+    for (const ref of [...(document.buffers || []), ...(document.images || [])].map(item => item?.uri).filter(Boolean))
+      if (/^(?:https?:|file:|\/\/)/i.test(ref) || String(ref).split(/[\\/]/).includes(".."))
+        fail("glTF dependencies must be relative files inside the game source package");
+  }
+  if (ext === "stl") {
+    const binaryTriangles = buf.length >= 84 ? buf.readUInt32LE(80) : -1;
+    const binary = binaryTriangles >= 0 && 84 + binaryTriangles * 50 === buf.length;
+    const text = binary ? "" : buf.toString("utf8").trim();
+    if (!binary && !(text.startsWith("solid") && /endsolid(?:\s+[^\r\n]*)?$/i.test(text)))
+      fail("file extension says STL but bytes are neither binary STL nor ASCII STL");
+  }
+  if (ext === "obj") {
+    const text = buf.toString("utf8");
+    if (!/^v\s+-?(?:\d|\.)/m.test(text)) fail("OBJ source has no vertex records");
+    for (const match of text.matchAll(/^mtllib\s+(.+)$/gm))
+      if (/^(?:https?:|file:|\/)/i.test(match[1].trim()) || match[1].split(/[\\/]/).includes(".."))
+        fail("OBJ material references must stay inside the game source package");
+  }
   return { kind: ext };
 }

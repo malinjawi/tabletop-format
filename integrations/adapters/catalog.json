@@ -42,6 +42,13 @@
     "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "tools/export-pnpink.mjs"
   },
   {
+    "id": "versioned-source-packages", "name": "Versioned production source packages", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["native-2d-sources", "rulebook-sources", "boards", "audio", "fonts", "3d-models", "preview-proxies"], "tested_upstream": "SVG, Affinity, IDML, Scribus, Blender, glTF 2.0, OBJ, and STL source files carried as versioned bytes",
+    "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["Forge preserves proprietary native files byte-for-byte but does not claim to parse or merge their internal object graphs.", "External references remain links and must declare their own distribution boundary; Hero Forge models, for example, cannot be redistributed through a public Forge release."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 26214400, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "assets/manifest.json"
+  },
+  {
     "id": "pnp-pdf", "name": "Print-and-play PDF", "version": 2, "stage": "artifact-export", "status": "stable",
     "capabilities": ["export"], "components": ["cards", "backs"], "tested_upstream": "PDF 1.4+ viewers/printers",
     "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["PDF is an output; edit canonical data and templates instead."] },

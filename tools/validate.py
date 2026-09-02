@@ -14,6 +14,8 @@ from design_engines import MANIFEST as DESIGN_ENGINES_MANIFEST, load_design_engi
 
 SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
 BASE = "https://spec.example.dev/schemas/"
+SOURCE_ASSETS_MANIFEST = "assets/manifest.json"
+SOURCE_ASSET_ROOTS = {"assets", "templates", "rules", "setups", "boards", "components", "design"}
 
 game_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
 if not game_dir:
@@ -82,6 +84,9 @@ community = load("community.yaml")
 if community is not None: check("community", community, "community.yaml")
 rights_manifest = load("forge/rights.json")
 if rights_manifest is not None: check("rights", rights_manifest, "forge/rights.json")
+source_assets_manifest = load(SOURCE_ASSETS_MANIFEST)
+if source_assets_manifest is not None:
+    check("source-assets", source_assets_manifest, SOURCE_ASSETS_MANIFEST)
 layout = load("templates/layout.yaml")
 if layout is not None: check("layout", layout, "templates/layout.yaml")
 card_design_manifest = load(CARD_DESIGN_MANIFEST)
@@ -162,6 +167,40 @@ for arr, label in [(cards,"card"),(printings,"printing"),(sets_,"set"),(formats,
     dupes(arr, label)
 
 card_ids = {c["id"] for c in cards}
+
+if isinstance(source_assets_manifest, dict):
+    packages = source_assets_manifest.get("packages")
+    packages = packages if isinstance(packages, list) else []
+    package_ids = set()
+    root = game_dir.resolve()
+    for package in packages:
+        if not isinstance(package, dict):
+            continue
+        package_id = package.get("id", "?")
+        if package_id in package_ids:
+            err(f"{SOURCE_ASSETS_MANIFEST}: duplicate source package id '{package_id}'")
+        package_ids.add(package_id)
+        files = (package.get("source_files") or []) + (package.get("previews") or [])
+        if not package.get("source_files") and not package.get("external"):
+            err(f"{SOURCE_ASSETS_MANIFEST} package '{package_id}': package has neither source files nor an external reference")
+        for record in files:
+            if not isinstance(record, dict):
+                continue
+            rel = record.get("path")
+            parts = rel.split("/") if isinstance(rel, str) else []
+            safe = bool(parts) and parts[0] in SOURCE_ASSET_ROOTS and not Path(rel).is_absolute()
+            safe = safe and "\\" not in rel and all(part not in ("", ".", "..") for part in parts)
+            if not safe:
+                err(f"{SOURCE_ASSETS_MANIFEST} package '{package_id}': source path is not an allowed game-relative source: {rel}")
+                continue
+            path = (root / rel).resolve()
+            try:
+                path.relative_to(root)
+            except ValueError:
+                err(f"{SOURCE_ASSETS_MANIFEST} package '{package_id}': source path escapes the game: {rel}")
+                continue
+            if (not path.exists() or not path.is_file()) and not record.get("optional"):
+                err(f"{SOURCE_ASSETS_MANIFEST} package '{package_id}': missing required source file: {rel}")
 
 if rulebook_publication:
     setup_ids = {setup["id"] for setup in setups}

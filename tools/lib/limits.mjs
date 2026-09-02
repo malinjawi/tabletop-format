@@ -6,7 +6,8 @@
 export const MAX_ASSET_BYTES = 25 * 1024 * 1024;      // 25 MB per file (SPEC §7)
 export const REPO_SOFT_CAP_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB per repo at v1
 export const ALLOWED_ASSET_EXT = new Set(
-  ["png", "jpg", "jpeg", "webp", "svg", "ogg", "mp3", "woff2"]);
+  ["png", "jpg", "jpeg", "webp", "svg", "ogg", "mp3", "wav", "m4a", "woff2", "woff", "ttf", "otf",
+   "stl", "obj", "mtl", "gltf", "glb", "blend", "afdesign", "afpub", "idml", "sla", "kra", "ora", "xcf"]);
 export const LFS_TRACK_PATTERN = "assets/**";          // the only LFS path (SPEC §7)
 
 export function assertAssetAllowed(filename, byteLength) {

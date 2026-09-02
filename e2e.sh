@@ -124,6 +124,9 @@ for t in tools/*.mjs tools/lib/*.mjs; do node --check "$t" 2>/dev/null || bad "s
 ok "all .mjs tools pass node --check"
 check "source-overlay editor field contract" node tools/source-overlay-field-audit.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "versioned adapter contracts" node tools/check-adapters.mjs
+check "production source package contracts" node tools/test-source-assets.mjs
+check "source-packaged Secret Hitler validates" node tools/validate.mjs examples/secret-hitler
+check "source-packaged Secret Hitler validates (python)" python3 tools/validate.py examples/secret-hitler
 
 # A declared source-backed field is the editable part of an immutable source
 # face. Its value must be allowed to diverge from the baseline so the editor can
@@ -388,6 +391,13 @@ SRVPID=$!
 wait_server "$PORT" "$SCRATCH/srv.log" || bad "platform server startup"
 NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;d=json.load(sys.stdin);slugs={g['slug'] for g in d};assert {'ember','harbor-nine'}<=slugs;assert 'netrunner-urbp' not in slugs;print(len(d))" 2>/dev/null)
 [ -n "$NGAMES" ] && ok "catalog shows rights-cleared demos and hides unverified imports ($NGAMES public games)" || bad "server discovery" "public/private rights boundary is wrong"
+curl -s "localhost:$PORT/api/games/secret-hitler/repository/assets" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['source_packages']['summary']['ready']==4
+assert any(p['id']=='card-production' and p['ready'] for p in d['source_packages']['packages'])
+assert any(x['path']=='templates/card-design/manifest.yaml' and x['packages'][0]['id']=='card-production' for x in d['items'])
+" && ok "source packages connect editor contracts to exact repository assets" || bad "source package repository API"
 curl -s "localhost:$PORT/api/games/ember/cards" | python3 -c "
 import json,sys
 cards=json.load(sys.stdin)

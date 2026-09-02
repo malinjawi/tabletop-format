@@ -37,6 +37,7 @@ import { analyzeForgeProject, diffRows, mergeRows } from "./tools/lib/forge-proj
 import { analyzeNandeckImport, parseNandeckScript } from "./tools/lib/nandeck-layout.mjs";
 import { loadRulebookPipeline, rulebookPipelineMetadata } from "./tools/lib/rulebook-pipeline.mjs";
 import { loadRulebookPublication, rulebookPublicationMetadata } from "./tools/lib/rulebook-publication.mjs";
+import { SOURCE_ASSETS_MANIFEST, loadSourceAssets, sourceAssetMetadata } from "./tools/lib/source-assets.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, tokenDigest, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
 import * as cache from "./platform/cache.mjs";
@@ -85,6 +86,7 @@ const RATE = { windowMs: 60_000, max: 120 };
 const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
                svg: "image/svg+xml", ogg: "audio/ogg", mp3: "audio/mpeg", ttf: "font/ttf",
                otf: "font/otf", woff: "font/woff", woff2: "font/woff2",
+               stl: "model/stl", obj: "model/obj", mtl: "text/plain", gltf: "model/gltf+json", glb: "model/gltf-binary",
                pdf: "application/pdf", json: "application/json", yaml: "text/yaml", yml: "text/yaml",
                md: "text/markdown", txt: "text/plain", css: "text/css", csv: "text/csv", html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8",
                zip: "application/zip", vtt: "application/zip" };
@@ -361,7 +363,8 @@ async function validateCandidate(slug, relPath, content, extra = {}) {
  * setups. These paths are first-class game source. The helpers below provide
  * one safe, renderer-neutral inventory used by the Assets tab and by PRs. */
 const REUSABLE_ROOTS = ["assets/", "templates/", "setups/", "rules/"];
-const REVIEWED_EXACT = new Set(["game.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST]);
+const REVIEWED_EXACT = new Set(["game.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST,
+  SOURCE_ASSETS_MANIFEST]);
 const REVIEWED_PREFIXES = [
   "components/", "decks/", "formats/", "sets/", "design/",
   "forge/imports/", "forge/jams/",
@@ -371,6 +374,8 @@ const REPO_TEXT_EXTS = new Set(["svg", "json", "yaml", "yml", "md", "txt", "css"
 const REPO_IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "webp", "svg"]);
 const REPO_FONT_EXTS = new Set(["ttf", "otf", "woff", "woff2"]);
 const REPO_AUDIO_EXTS = new Set(["ogg", "mp3", "wav", "m4a"]);
+const REPO_MODEL_EXTS = new Set(["stl", "obj", "mtl", "gltf", "glb", "blend"]);
+const REPO_NATIVE_EXTS = new Set(["afdesign", "afpub", "idml", "sla", "kra", "ora", "xcf"]);
 const repoExt = (path) => path.toLowerCase().split(".").pop();
 const isReusablePath = (path) => typeof path === "string"
   && !path.startsWith("/") && !path.includes("..") && REUSABLE_ROOTS.some(root => path.startsWith(root));
@@ -394,6 +399,8 @@ function repoCategory(path) {
   if (REVIEWED_EXACT.has(path) || REVIEWED_PREFIXES.some(prefix => path.startsWith(prefix))) return "Governance & receipts";
   if (path === "rules/pipeline.yaml") return "Rulebook pipeline";
   if (path.startsWith("rules/native/")) return "Native rulebook source";
+  if (REPO_MODEL_EXTS.has(ext)) return "3D models & miniatures";
+  if (REPO_NATIVE_EXTS.has(ext)) return "Native editor source";
   if (path.startsWith("templates/card-design/families/")) return "Card family templates";
   if (path.startsWith("templates/card-design/components/")) return "Card design components";
   if (path.startsWith("templates/card-design/")) return "Card design system";
@@ -412,6 +419,8 @@ function repoKind(path) {
   if (REPO_IMAGE_EXTS.has(ext)) return "image";
   if (REPO_FONT_EXTS.has(ext)) return "font";
   if (REPO_AUDIO_EXTS.has(ext)) return "audio";
+  if (REPO_MODEL_EXTS.has(ext)) return "model";
+  if (REPO_NATIVE_EXTS.has(ext)) return "native-source";
   if (isRepoText(path)) return path.startsWith("templates/") ? "template" : "text";
   return "binary";
 }
@@ -1302,19 +1311,30 @@ gw.route("GET", "/api/games/:slug/repository/assets", async (ctx) => {
   const searchable = all.filter(item => isRepoText(item.path) && item.size <= 2_000_000)
     .map(item => { try { return { path: item.path, text: readFileSync(item.full, "utf8") }; } catch { return null; } })
     .filter(Boolean);
+  let sourcePackages = null;
+  try { sourcePackages = loadSourceAssets(dir); }
+  catch (error) { return ctx.send(422, { error: `${SOURCE_ASSETS_MANIFEST}: ${error.message}` }); }
+  const packageByPath = new Map();
+  for (const pack of sourcePackages?.packages || [])
+    for (const file of [...pack.source_files, ...pack.previews]) {
+      const links = packageByPath.get(file.path) || [];
+      links.push({ id: pack.id, label: pack.label, role: file.role, primary: !!file.primary });
+      packageByPath.set(file.path, links);
+    }
   const items = reusable.map(item => {
     const used_by = searchable.filter(source => source.path !== item.path && source.text.includes(item.path))
       .map(source => source.path).slice(0, 12);
     return { path: item.path, name: item.path.split("/").pop(), size: item.size,
       extension: repoExt(item.path), category: repoCategory(item.path), kind: repoKind(item.path),
       previewable: REPO_IMAGE_EXTS.has(repoExt(item.path)) || REPO_AUDIO_EXTS.has(repoExt(item.path)),
-      editable: isRepoText(item.path), used_by,
+      editable: isRepoText(item.path), used_by, packages: packageByPath.get(item.path) || [],
       url: `/api/games/${encodeURIComponent(slug)}/repository/file/${item.path.split("/").map(encodeURIComponent).join("/")}` };
   }).sort((a, b) => a.category.localeCompare(b.category) || a.path.localeCompare(b.path));
   const categories = Object.entries(items.reduce((out, item) => {
     out[item.category] = (out[item.category] || 0) + 1; return out;
   }, {})).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
   ctx.send(200, { slug, commit: await store.headSha(slug), count: items.length, categories, items,
+    source_packages: sourceAssetMetadata(sourcePackages),
     access: { signed_in: !!u, can_write: await canWrite(u, slug), requires_fork: !!u && !await canWrite(u, slug) } });
 }, "inventory every reusable repository asset with category, usage, and editability");
 

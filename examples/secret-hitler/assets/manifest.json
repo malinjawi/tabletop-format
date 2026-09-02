@@ -1,0 +1,92 @@
+{
+  "format": "forge-source-assets",
+  "version": 1,
+  "packages": [
+    {
+      "id": "card-production",
+      "label": "Editable card production system",
+      "kind": "card-design",
+      "status": "active",
+      "adapter": {
+        "id": "forge-native",
+        "version": 1,
+        "direction": "round-trip",
+        "application": "Forge card design"
+      },
+      "distribution": "release",
+      "targets": ["browser", "print", "tabletop-simulator", "tabletop-club", "archive"],
+      "source_files": [
+        { "path": "templates/card-design/manifest.yaml", "role": "family registry", "primary": true },
+        { "path": "templates/card-design/system.yaml", "role": "shared design system" },
+        { "path": "templates/card-design/components/foundation.yaml", "role": "shared frame component" },
+        { "path": "templates/card-design/families/ballot.yaml", "role": "ballot family" },
+        { "path": "templates/card-design/families/party.yaml", "role": "party family" },
+        { "path": "templates/card-design/families/pile-marker.yaml", "role": "pile marker family" },
+        { "path": "templates/card-design/families/placard.yaml", "role": "placard family" },
+        { "path": "templates/card-design/families/policy.yaml", "role": "policy family" },
+        { "path": "templates/card-design/families/role.yaml", "role": "secret role family" }
+      ],
+      "previews": [
+        { "path": "assets/official-pnp/source-faces/p_role_hitler.png", "role": "visual reference" }
+      ],
+      "instructions": "Edit the family or shared component, review every affected card, then commit the source change with its visual diff."
+    },
+    {
+      "id": "learn-to-play-book",
+      "label": "Learn-to-play publication",
+      "kind": "rulebook",
+      "status": "active",
+      "adapter": {
+        "id": "forge-publication",
+        "version": 1,
+        "direction": "round-trip",
+        "application": "Forge publication designer"
+      },
+      "distribution": "release",
+      "targets": ["browser", "print", "rulebook", "archive"],
+      "source_files": [
+        { "path": "rules/publications/manifest.json", "role": "publication registry" },
+        { "path": "rules/publications/learn-to-play/publication.json", "role": "page layout and content", "primary": true },
+        { "path": "rules/rules.md", "role": "rules prose" }
+      ],
+      "instructions": "Edit portable page objects in Forge; native publisher files may be added beside the publication and declared here."
+    },
+    {
+      "id": "official-pnp-reference",
+      "label": "Publisher print-and-play reference",
+      "kind": "reference",
+      "status": "active",
+      "adapter": {
+        "id": "publisher-pdf-reference",
+        "version": 1,
+        "direction": "reference-only",
+        "application": "PDF viewer"
+      },
+      "distribution": "reference-only",
+      "targets": ["print", "archive"],
+      "source_files": [
+        { "path": "assets/official-pnp/manifest.json", "role": "pinned source receipt", "primary": true },
+        { "path": "assets/official-pnp/Secret_Hitler_Print_and_Play.pdf", "role": "publisher reference PDF" }
+      ],
+      "instructions": "Use this as a provenance and visual reference. Forge releases are rebuilt from editable platform source, not by replacing this PDF."
+    },
+    {
+      "id": "standard-table",
+      "label": "Standard playable setup",
+      "kind": "table-setup",
+      "status": "active",
+      "adapter": {
+        "id": "forge-setup",
+        "version": 1,
+        "direction": "native",
+        "application": "Forge table setup"
+      },
+      "distribution": "release",
+      "targets": ["tabletop-simulator", "tabletop-club", "virtualtabletop", "archive"],
+      "source_files": [
+        { "path": "setups/standard-table.yaml", "role": "seats, zones, decks, and starting placements", "primary": true }
+      ],
+      "instructions": "Change the setup once; tabletop exports regenerate the ready-to-play table at the same commit."
+    }
+  ]
+}

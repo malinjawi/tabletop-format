@@ -29,6 +29,7 @@
       "additionalProperties": false
     },
     "engines": { "type": ["object", "null"] },
+    "source_packages": { "type": ["object", "null"] },
     "adapters": {
       "type": "array",
       "items": {

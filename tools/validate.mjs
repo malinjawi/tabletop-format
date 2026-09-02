@@ -17,6 +17,7 @@ import { CARD_DESIGN_MANIFEST, cardMatchesFamily } from "./lib/card-design.mjs";
 import { DESIGN_ENGINES_MANIFEST, loadDesignEngines } from "./lib/design-engines.mjs";
 import { RULEBOOK_PIPELINE_MANIFEST, loadRulebookPipeline } from "./lib/rulebook-pipeline.mjs";
 import { RULEBOOK_PUBLICATIONS_MANIFEST, loadRulebookPublication } from "./lib/rulebook-publication.mjs";
+import { SOURCE_ASSETS_MANIFEST, loadSourceAssets } from "./lib/source-assets.mjs";
 
 const SCHEMA_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "schemas");
 const gameDir = process.argv[2];
@@ -154,6 +155,13 @@ if (rulebookPublicationsManifest != null) {
 }
 const rightsManifest = load("forge/rights.json");
 if (rightsManifest != null) checkSchema("rights", rightsManifest, "forge/rights.json");
+const sourceAssetsManifest = load(SOURCE_ASSETS_MANIFEST);
+let sourceAssets = null;
+if (sourceAssetsManifest != null) {
+  checkSchema("source-assets", sourceAssetsManifest, SOURCE_ASSETS_MANIFEST);
+  try { sourceAssets = loadSourceAssets(gameDir); }
+  catch (cause) { err(`${SOURCE_ASSETS_MANIFEST}: ${cause.message}`); }
+}
 
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {
@@ -198,6 +206,10 @@ if (rulebookPublication) {
     if (!setupIds.has(id)) err(`${rulebookPublication.source_path}: setup '${id}' not found`);
   for (const asset of [...usedAssets, ...(document.dependencies?.fonts || [])])
     if (!existsSync(join(gameDir, asset))) err(`${rulebookPublication.source_path}: linked file '${asset}' not found`);
+}
+if (sourceAssets) {
+  for (const pack of sourceAssets.packages)
+    for (const issue of pack.issues) err(`${SOURCE_ASSETS_MANIFEST} package '${pack.id}': ${issue}`);
 }
 if (cardDesign) {
   const familyIds = new Set(cardDesign.families.map(family => family.id));

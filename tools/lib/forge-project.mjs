@@ -11,6 +11,7 @@ import { designEnginesMetadata, loadDesignEngines } from "./design-engines.mjs";
 import { deterministicZip, readZip } from "./deterministic-zip.mjs";
 import { csvToTable, tableToCsv } from "./interchange-table.mjs";
 import { buildNandeckProject } from "./nandeck-layout.mjs";
+import { SOURCE_ASSETS_MANIFEST, loadSourceAssets, sourceAssetMetadata } from "./source-assets.mjs";
 
 export const FORGE_PROJECT_FORMAT = "forge-design-project";
 export const FORGE_PROJECT_VERSION = 1;
@@ -127,12 +128,14 @@ export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = 
   const cards = JSON.parse(readFileSync(gamePath(gameDir, "components/cards.json"), "utf8"));
   const printings = JSON.parse(readFileSync(gamePath(gameDir, "components/printings.json"), "utf8"));
   const cardTable = tableToCsv(cards, "cards"), printingTable = tableToCsv(printings, "printings");
-  const entries = new Map(), files = [];
+  const entries = new Map(), files = [], projectAdded = new Set();
 
   const addProjectFile = (sourcePath, content, role) => {
+    if (projectAdded.has(sourcePath)) return;
     const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
     addEntry(entries, `project/${sourcePath}`, buffer);
     files.push(fileRecord(sourcePath, buffer, role));
+    projectAdded.add(sourcePath);
   };
   addProjectFile("game.yaml", gameYaml, "game-metadata");
   addProjectFile("components/cards.json", jsonBytes(cards), "canonical-cards");
@@ -158,12 +161,23 @@ export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = 
       }
     }
   }
+  const sourcePackages = loadSourceAssets(gameDir);
+  const packageAssetRefs = new Set();
+  if (sourcePackages) {
+    addProjectFile(SOURCE_ASSETS_MANIFEST, readFileSync(gamePath(gameDir, SOURCE_ASSETS_MANIFEST)), "source-package-manifest");
+    for (const pack of sourcePackages.packages) for (const record of [...pack.source_files, ...pack.previews]) {
+      if (!record.exists) continue;
+      if (record.path.startsWith("assets/")) packageAssetRefs.add(record.path);
+      addProjectFile(record.path, readFileSync(gamePath(gameDir, record.path)),
+        ["model-3d", "miniature"].includes(pack.kind) ? "3d-source" : "native-production-source");
+    }
+  }
   if (withArt) collectAssetRefs(printings, assetRefs);
   // Asset references are discovered from every portable structured source,
   // including tokens and setups. Card face art retains the existing opt-in
   // --with-art behavior.
   for (const rel of [...assetRefs].sort()) {
-    if (!withArt && (printingAssetRefs.has(rel) || rel.startsWith("assets/source-faces/"))) continue;
+    if (!withArt && !packageAssetRefs.has(rel) && (printingAssetRefs.has(rel) || rel.startsWith("assets/source-faces/"))) continue;
     const path = gamePath(gameDir, rel, "asset");
     if (existsSync(path) && lstatSync(path).isFile()) addProjectFile(rel, readFileSync(path), withArt ? "referenced-asset" : "design-asset");
   }
@@ -191,6 +205,7 @@ export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = 
     game: { id: game.id || basename(gameDir), title: game.title || game.id || basename(gameDir), version: game.version || "" },
     source: { generated_at: "deterministic", with_art: withArt, hash: "", ...(sourceRef ? { ref: sourceRef } : {}) },
     engines,
+    source_packages: sourceAssetMetadata(sourcePackages),
     adapters,
     tables: {
       cards: { editable_path: "editable/cards.csv", base_path: "base/components/cards.json", project_path: "project/components/cards.json", id: "id", columns: cardTable.columns },
