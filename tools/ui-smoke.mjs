@@ -88,6 +88,85 @@ try {
     "catalog ignores stale index rows whose repositories no longer exist");
 
   browser = await chromium.launch({ executablePath: chrome, headless: true });
+
+  // Exercise the Google-hosted sidebar as a user sees it. Apps Script itself is
+  // covered by sheets-addon-check.mjs; this browser mock verifies the client
+  // state machine without requiring a live Google account in CI.
+  const addonPage = await browser.newPage({ viewport: { width: 320, height: 760 } });
+  const addonErrors = [];
+  addonPage.on("pageerror", error => addonErrors.push(error.message));
+  await addonPage.addInitScript(() => {
+    let state = { origin:"", game:"", source_id:"sheet:cards=73;printings=-", configured_source_id:"",
+      dirty_at:"", has_token:false, user_handle:"", sheet_name:"Cards", spreadsheet_name:"Pilot cards",
+      tabs:[{id:73,name:"Cards"},{id:74,name:"Printings"}], tab_mapping:{cards:73,printings:null}, pending_connection:null };
+    window.__forgeAddonCalls = [];
+    const asyncCall = fn => setTimeout(fn, 0);
+    const runner = () => {
+      let success = () => {}, failure = () => {};
+      const api = {
+        withSuccessHandler(fn){ success=fn; return api; },
+        withFailureHandler(fn){ failure=fn; return api; },
+        getForgeState(){ asyncCall(()=>success(structuredClone(state))); },
+        testForgeConnection(input){
+          window.__forgeAddonCalls.push({name:"test",input});
+          if (/localhost|127\.0\.0\.1/.test(input.origin)) return asyncCall(()=>failure({message:"Google Sheets cannot reach localhost. Use a public HTTPS Forge URL."}));
+          const pending={origin:input.origin,game:input.game,cards_tab:Number(input.cards_tab),
+            printings_tab:input.printings_tab===""?null:Number(input.printings_tab),verified_at:new Date().toISOString()};
+          state={...state,has_token:true,user_handle:"pilot-editor",pending_connection:pending};
+          asyncCall(()=>success({state:structuredClone(state),connection:{ok:true,origin:input.origin,game:input.game,
+            version:"0.1.0",role:"owner",can_write:true,can_release:true}}));
+        },
+        saveForgeSettings(input){
+          window.__forgeAddonCalls.push({name:"attach",input});
+          state={...state,origin:input.origin,game:input.game,configured_source_id:state.source_id,
+            has_token:true,user_handle:"pilot-editor",pending_connection:null};
+          asyncCall(()=>success({state:structuredClone(state),result:{connected:true,source_mode:"addon"}}));
+        },
+        getForgePulse(){ asyncCall(()=>success({dirty_at:state.dirty_at,source_id:state.source_id,
+          configured_source_id:state.configured_source_id,has_token:state.has_token})); },
+        checkForgeCandidate(){ asyncCall(()=>success({state:structuredClone(state),stale_local:false,result:{status:"clean",
+          preview:{head_sha:"abcdef1234567890"},counts:{cards:0,modified:0,added:0,removed:0,printings:0},
+          changes:[],warnings:[],candidate_cards:[],validation:{ok:true},can_commit:false}})); },
+        signOutForge(){ state={...state,has_token:false,user_handle:"",pending_connection:null}; asyncCall(()=>success(structuredClone(state))); },
+        detachForgeWorkingCopy(){ state={...state,origin:"",game:"",configured_source_id:"",pending_connection:null}; asyncCall(()=>success({state:structuredClone(state),result:{connected:false}})); },
+        commitForgeCandidate(){ asyncCall(()=>failure({message:"No candidate in this UI setup test"})); },
+      };
+      return api;
+    };
+    window.google={script:{}};
+    Object.defineProperty(window.google.script,"run",{get:runner});
+  });
+  const addonHtml=readFileSync(join(ROOT,"integrations","google-sheets","Sidebar.html"),"utf8");
+  await addonPage.goto(`data:text/html;charset=utf-8,${encodeURIComponent(addonHtml)}`,{waitUntil:"domcontentloaded"});
+  await addonPage.getByText("Not checked yet.",{exact:false}).waitFor();
+  assert(await addonPage.locator("#attach").isDisabled()
+    && await addonPage.getByText(/localhost and private-network URLs cannot work here/).isVisible(),
+    "Sheets sidebar prevents an unverified attachment and explains why local Forge is unreachable from Google");
+  await addonPage.locator("#origin").fill("http://localhost:4897");
+  await addonPage.locator("#game").fill("pilot-game");
+  await addonPage.locator("#handle").fill("pilot-editor");
+  await addonPage.locator("#password").fill("password123");
+  await addonPage.getByRole("button",{name:"Test & sign in"}).click();
+  await addonPage.getByText(/cannot reach localhost/).waitFor();
+  assert(await addonPage.getByRole("button",{name:"Fix connection"}).isVisible(),
+    "a failed endpoint check becomes an in-place recovery path instead of a stuck sidebar");
+  await addonPage.locator("#origin").fill("https://forge.example.test");
+  await addonPage.getByRole("button",{name:"Test & sign in"}).click();
+  await addonPage.getByText(/access confirmed/).waitFor();
+  assert(!await addonPage.locator("#attach").isDisabled() && await addonPage.locator("#password").inputValue()==="",
+    "successful verification enables attachment and clears the password field");
+  await addonPage.getByRole("button",{name:"Attach working copy"}).click();
+  await addonPage.getByRole("link",{name:/Open this game in Forge/}).waitFor();
+  assert((await addonPage.getByRole("link",{name:/Open this game in Forge/}).getAttribute("href"))
+    ==="https://forge.example.test/#g/pilot-game/cards",
+    "attached sidebar returns the editor to the exact Forge game");
+  await addonPage.getByRole("button",{name:"Connection"}).click();
+  await addonPage.getByRole("button",{name:"← Back to candidate"}).click();
+  assert(await addonPage.getByRole("button",{name:"Check draft changes"}).isVisible(),
+    "connection settings always return to the active candidate");
+  assert(addonErrors.length===0,"Sheets sidebar produces no browser errors",addonErrors.join(" | "));
+  await addonPage.close();
+
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));

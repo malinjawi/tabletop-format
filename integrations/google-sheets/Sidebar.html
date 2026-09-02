@@ -25,27 +25,37 @@
     .face{position:relative;flex:0 0 116px;min-height:158px;border:1px solid #c6ccd2;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 2px 7px #1f23281a}
     .face .name{padding:7px 26px 6px 7px;background:#e9eef3;font-weight:700}.face .badge{position:absolute;right:6px;top:5px;background:#34495e;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-weight:700}
     .face .type{padding:4px 7px;border-bottom:1px solid #d8dee4;color:#57606a;font-size:10px;text-transform:uppercase}.face .text{padding:8px 7px;white-space:pre-wrap;font-size:11px}.absent{display:grid;place-items:center;color:#8c959f;border-style:dashed}
-    .error{color:#b42318;white-space:pre-wrap}.ok{color:#1a7f37}.hidden{display:none}.spin{opacity:.6;pointer-events:none}
+    .error{color:#b42318;white-space:pre-wrap}.ok{color:#1a7f37}.hidden{display:none}.spin{opacity:.72;pointer-events:none}
+    .notice{border-radius:7px;padding:9px 10px;margin:9px 0;font-size:11px}.notice.info{background:#ddf4ff;color:#0550ae}.notice.warn{background:#fff8c5;color:#633c01}.notice.good{background:#dafbe1;color:#116329}
+    .step{display:flex;gap:8px;align-items:flex-start;margin:10px 0}.step-no{width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#eaeef2;color:#57606a;font-weight:700;flex:none}
+    .working{position:sticky;top:0;z-index:3;background:#fff8c5;border:1px solid #d4a72c;border-radius:7px;padding:8px 10px;margin-bottom:10px;color:#633c01}
+    a.action{display:inline-block;margin-top:7px;color:#0969da;font-weight:600;text-decoration:none}
   </style>
 </head>
 <body>
   <h1>Forge candidate</h1>
   <div class="sub" id="sheet-label">Loading this Sheet…</div>
+  <div class="working hidden" id="working"><b id="working-title">Working…</b><div class="muted" id="working-detail"></div></div>
 
   <div class="box" id="settings">
     <div class="row" style="margin-top:0;align-items:center;justify-content:space-between">
       <div class="big">Connection</div>
       <button class="hidden" id="settings-back" onclick="hideSettings()">← Back to candidate</button>
     </div>
-    <label>Forge URL<input id="origin" placeholder="https://forge.example"></label>
+    <div class="step"><span class="step-no">1</span><div><b>Choose the Forge project</b><div class="muted">The private Sheet stays in Google until you commit a reviewed candidate.</div></div></div>
+    <label>Public Forge URL<input id="origin" placeholder="https://forge.example"></label>
+    <div class="notice warn">Google runs this connector outside your computer. <b>localhost and private-network URLs cannot work here.</b> For local Forge, use its published Sheet/CSV importer; private tabs require a stable public HTTPS Forge URL.</div>
     <label>Game slug<input id="game" placeholder="netrunner-sg"></label>
     <label>Cards tab<select id="cards-tab"></select></label>
     <label>Printings tab (optional)<select id="printings-tab"><option value="">Use printing columns in Cards tab</option></select></label>
     <div class="muted">Map stable <b>id</b> rows. A separate Printings tab also needs <b>card_id</b>. Other tabs remain normal Sheet notes and calculations.</div>
+    <div class="step"><span class="step-no">2</span><div><b>Verify your account</b><div class="muted">Forge confirms that the server is reachable and you can commit to this game before changing the connection.</div></div></div>
     <label>Forge handle or email<input id="handle" autocomplete="username" placeholder="Your Forge account"></label>
     <label>Forge password<input id="password" type="password" autocomplete="current-password" placeholder="Used once to sign in; never stored"></label>
+    <div class="notice info" id="connection-check">Not checked yet. Test this exact URL, game, account, and tab mapping first.</div>
     <div class="row">
-      <button class="primary" onclick="saveSettings()">Save / attach this tab</button>
+      <button id="test-connection" onclick="testConnection()">Test &amp; sign in</button>
+      <button class="primary" id="attach" onclick="saveSettings()" disabled>Attach working copy</button>
       <button class="hidden" id="sign-out" onclick="signOut()">Sign out</button>
       <button class="hidden" id="detach" onclick="detachTab()">Detach tab</button>
     </div>
@@ -55,7 +65,8 @@
     <div class="watch"><div class="watch-state"><span class="pulse" id="watch-pulse"></span><div><div class="big" id="watch-title">Live diff starting…</div><div class="muted" id="watch-detail">Watching this tab for edits</div></div></div><button id="watch-toggle" onclick="toggleLiveDiff()">Pause</button></div>
     <div class="status" id="status"><span class="dot"></span><div><div class="big" id="status-title">Not checked</div><div class="muted" id="status-detail">Sheet edits are saved by Google. Check what has not entered Forge.</div></div></div>
     <div id="results"></div>
-    <div class="row"><button class="primary" onclick="checkCandidate()">Check draft changes</button><button onclick="showSettings()">Settings</button></div>
+    <a class="action" id="open-game" href="#" target="_blank" rel="noopener">Open this game in Forge ↗</a>
+    <div class="row"><button class="primary" onclick="checkCandidate()">Check draft changes</button><button onclick="showSettings()">Connection</button></div>
     <div id="commit-form" class="hidden">
       <label>Commit message<textarea id="message" rows="2" placeholder="What is this candidate trying to change?"></textarea></label>
       <label>Other contributors<input id="contributors" placeholder="Names or Forge handles, comma separated"></label>
@@ -64,31 +75,52 @@
     </div>
   </div>
   <div class="error" id="error"></div>
+  <div class="row hidden" id="recover"><button onclick="showSettings()">Fix connection</button><button onclick="retryCurrent()">Try again</button></div>
 
   <script>
-    let state=null, preview=null, checking=false, pendingCheck=false;
-    let liveDiff=true, pulseTimer=null, refreshTimer=null, lastDirtyAt="";
+    let state=null, preview=null, checking=false, pendingCheck=false, connectionProof=null;
+    let liveDiff=true, pulseTimer=null, refreshTimer=null, lastDirtyAt="", slowTimer=null, lastAction=null;
     const POLL_MS=2000, EDIT_DEBOUNCE_MS=900;
     const el=id=>document.getElementById(id);
-    function busy(on){document.body.classList.toggle("spin",on);}
-    function fail(err){busy(false);el("error").textContent=err&&err.message?err.message:String(err||"Unknown error");}
+    function busy(on,title,detail){
+      clearTimeout(slowTimer);document.body.classList.toggle("spin",on);el("working").classList.toggle("hidden",!on);
+      if(!on)return;
+      el("working-title").textContent=title||"Working…";el("working-detail").textContent=detail||"Waiting for Google Apps Script.";
+      slowTimer=setTimeout(()=>{
+        el("working-title").textContent="Still waiting for Google…";
+        el("working-detail").textContent="A local address or expired tunnel is a common cause. Your Sheet has not been committed; the request will return with a recoverable error.";
+      },12000);
+    }
+    function fail(err){busy(false);el("error").textContent=err&&err.message?err.message:String(err||"Unknown error");el("recover").classList.remove("hidden");}
+    function clearError(){el("error").textContent="";el("recover").classList.add("hidden");}
     function connected(){return !!(state&&state.origin&&state.game&&state.has_token);}
     function init(s){
       state=s; el("sheet-label").textContent=`${s.spreadsheet_name} · ${s.sheet_name}`;
-      el("origin").value=s.origin||""; el("game").value=s.game||"";el("handle").value=s.user_handle||"";
+      const pending=s.pending_connection||{};
+      el("origin").value=s.origin||pending.origin||""; el("game").value=s.game||pending.game||"";el("handle").value=s.user_handle||"";
       const options=(s.tabs||[]).map(tab=>`<option value="${tab.id}">${esc(tab.name)}</option>`).join("");
-      el("cards-tab").innerHTML=options;el("cards-tab").value=String((s.tab_mapping||{}).cards||"");
+      el("cards-tab").innerHTML=options;el("cards-tab").value=String(pending.cards_tab||(s.tab_mapping||{}).cards||"");
       el("printings-tab").innerHTML=`<option value="">Use printing columns in Cards tab</option>${options}`;
-      el("printings-tab").value=String((s.tab_mapping||{}).printings||"");
+      el("printings-tab").value=String(pending.printings_tab||(s.tab_mapping||{}).printings||"");
       const ready=!!(s.origin&&s.game&&s.has_token);
       el("settings").classList.toggle("hidden",ready); el("candidate").classList.toggle("hidden",!ready);
       el("settings-back").classList.toggle("hidden",!ready);
       el("sign-out").classList.toggle("hidden",!s.has_token);
       el("detach").classList.toggle("hidden",!ready);
+      el("open-game").href=ready?`${s.origin}/#g/${encodeURIComponent(s.game)}/cards`:"#";
+      const resumable=!ready&&s.has_token&&pending.origin&&pending.game;
+      connectionProof=resumable?pending:null;el("attach").disabled=!resumable;
+      el("connection-check").className=`notice ${resumable?"good":"info"}`;
+      el("connection-check").innerHTML=resumable?"✓ Connection and commit access were verified earlier. You can resume by attaching this working copy.":"Not checked yet. Test this exact URL, game, account, and tab mapping first.";
       if(ready&&s.dirty_at){el("status").className="status dirty";el("status-title").textContent="Draft may have uncommitted game changes";}
       lastDirtyAt=s.dirty_at||"";
       startLiveDiff();
       if(ready) scheduleCandidateCheck(180);
+    }
+    function connectionInput(){return {origin:el("origin").value.trim().replace(/\/+$/,""),game:el("game").value.trim(),cards_tab:el("cards-tab").value,printings_tab:el("printings-tab").value,handle:el("handle").value,password:el("password").value};}
+    function proofMatches(){const x=connectionInput(),p=connectionProof;return !!p&&p.origin===x.origin&&p.game===x.game&&String(p.cards_tab)===String(x.cards_tab)&&String(p.printings_tab==null?"":p.printings_tab)===String(x.printings_tab);}
+    function invalidateConnectionProof(){
+      if(!proofMatches()){connectionProof=null;el("attach").disabled=true;el("connection-check").className="notice info";el("connection-check").textContent="Connection details changed. Test this exact setup again before attaching.";}
     }
     function showSettings(){
       el("password").value="";
@@ -141,25 +173,33 @@
         pulseTimer=setTimeout(pollForgePulse,5000);
       }).getForgePulse();
     }
+    function testConnection(){
+      lastAction=testConnection;clearError();busy(true,"Checking Forge…","Testing the public server, signing in, and verifying commit access.");
+      google.script.run.withSuccessHandler(x=>{
+        busy(false);state=x.state;connectionProof=x.state.pending_connection;el("password").value="";el("attach").disabled=false;
+        el("sign-out").classList.remove("hidden");el("connection-check").className="notice good";
+        el("connection-check").innerHTML=`✓ Forge ${esc(x.connection.version||"")} is reachable. ${esc(x.connection.role||"Editor")} access confirmed for <b>${esc(x.connection.game)}</b>.`;
+      }).withFailureHandler(fail).testForgeConnection(connectionInput());
+    }
     function saveSettings(){
-      busy(true);el("error").textContent="";
+      if(!proofMatches()){invalidateConnectionProof();return;}
+      lastAction=saveSettings;clearError();busy(true,"Attaching working copy…","Sending one private Sheet snapshot to establish the reviewed Git baseline.");
       google.script.run.withSuccessHandler(x=>{busy(false);el("password").value="";init(x.state);}).withFailureHandler(fail)
-        .saveForgeSettings({origin:el("origin").value,game:el("game").value,cards_tab:el("cards-tab").value,
-          printings_tab:el("printings-tab").value,handle:el("handle").value,password:el("password").value});
+        .saveForgeSettings(connectionInput());
     }
     function signOut(){
-      busy(true);el("error").textContent="";
+      lastAction=signOut;clearError();busy(true,"Signing out…");
       google.script.run.withSuccessHandler(s=>{busy(false);el("password").value="";init(s);}).withFailureHandler(fail).signOutForge();
     }
     function detachTab(){
       if(!confirm("Detach this Sheet tab from Forge? Existing Forge commits are not deleted."))return;
-      busy(true);el("error").textContent="";
+      lastAction=detachTab;clearError();busy(true,"Detaching working copy…");
       google.script.run.withSuccessHandler(x=>{busy(false);preview=null;init(x.state);}).withFailureHandler(fail).detachForgeWorkingCopy();
     }
     function checkCandidate(automatic){
       if(checking){pendingCheck=true;return;}
-      checking=true;pendingCheck=false;clearTimeout(refreshTimer);el("error").textContent="";el("commit-form").classList.add("hidden");
-      if(!automatic)busy(true);watcherUi("checking","Building a semantic and visual candidate in Forge");
+      checking=true;pendingCheck=false;clearTimeout(refreshTimer);clearError();el("commit-form").classList.add("hidden");
+      lastAction=()=>checkCandidate(false);if(!automatic)busy(true,"Checking draft changes…","Building a semantic and visual candidate from this exact Sheet snapshot.");watcherUi("checking","Building a semantic and visual candidate in Forge");
       google.script.run.withSuccessHandler(x=>{
         checking=false;busy(false);state=x.state;lastDirtyAt=state.dirty_at||"";renderResult(x.result);
         if(x.stale_local){
@@ -205,7 +245,7 @@
       if(r.status==="changes"&&r.can_commit){el("commit-form").classList.remove("hidden");el("message").value=r.summary||"";}
     }
     function commitCandidate(){
-      busy(true);el("error").textContent="";
+      lastAction=commitCandidate;clearError();busy(true,"Committing exact candidate…","Forge is rechecking the Sheet fingerprint and repository head before writing history.");
       google.script.run.withSuccessHandler(x=>{
         busy(false);state=x.state;lastDirtyAt=state.dirty_at||"";preview=null;el("commit-form").classList.add("hidden");
         el("status").className="status "+(x.stale_local?"dirty":"clean");el("status-title").textContent=`Committed ${String(x.result.commit||"").slice(0,8)}`;
@@ -215,6 +255,8 @@
       }).withFailureHandler(fail)
         .commitForgeCandidate({preview,commit_message:el("message").value,contributors:el("contributors").value});
     }
+    function retryCurrent(){clearError();if(lastAction)lastAction();}
+    ["origin","game","cards-tab","printings-tab"].forEach(id=>el(id).addEventListener("input",invalidateConnectionProof));
     google.script.run.withSuccessHandler(init).withFailureHandler(fail).getForgeState();
   </script>
 </body>

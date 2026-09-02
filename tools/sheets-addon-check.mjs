@@ -27,6 +27,9 @@ const ok = (condition, message) => {
 };
 
 const sidebar = readFileSync(join(ROOT, "integrations/google-sheets/Sidebar.html"), "utf8");
+const sidebarScript = sidebar.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
+new Function(sidebarScript);
+ok(!!sidebarScript, "sidebar client JavaScript parses as a complete program");
 ok(sidebar.includes('id="settings-back"') && sidebar.includes("← Back to candidate") &&
   sidebar.includes('onclick="hideSettings()"'), "connection settings always provide a return to the candidate");
 ok(sidebar.includes("getForgePulse()") && sidebar.includes("POLL_MS=2000") &&
@@ -34,6 +37,12 @@ ok(sidebar.includes("getForgePulse()") && sidebar.includes("POLL_MS=2000") &&
   "sidebar polls the cheap edit marker and renders field-level live diffs");
 ok(sidebar.includes('id="cards-tab"') && sidebar.includes('id="printings-tab"'),
   "connection maps Cards and optional Printings tabs explicitly");
+ok(sidebar.includes('id="test-connection"') && sidebar.includes('id="attach"') &&
+  sidebar.includes("testForgeConnection(connectionInput())"),
+  "sidebar verifies reachability and commit access before enabling attachment");
+ok(sidebar.includes("localhost and private-network URLs cannot work here") &&
+  sidebar.includes('id="working"') && sidebar.includes('id="recover"'),
+  "sidebar explains the Google-to-localhost boundary and exposes slow/error recovery states");
 
 const api = async (path, options = {}) => {
   const response = await fetch(origin + path, options);
@@ -114,6 +123,7 @@ const context = vm.createContext({
   RegExp,
   Error,
   encodeURIComponent,
+  FORGE_TEST_ALLOW_LOOPBACK: false,
   PropertiesService: {
     getDocumentProperties: () => propertyStore(docValues),
     getUserProperties: () => propertyStore(userValues),
@@ -127,10 +137,37 @@ const context = vm.createContext({
 vm.runInContext(readFileSync(join(ROOT, "integrations/google-sheets/Code.gs"), "utf8"), context,
   { filename: "integrations/google-sheets/Code.gs" });
 
-const attached = context.saveForgeSettings({ origin, game: game.slug, handle: "addon-tester", password });
+let rejectedLoopback = false;
+try { context.testForgeConnection({ origin, game: game.slug, handle: "addon-tester", password }); }
+catch (error) { rejectedLoopback = /cannot reach localhost/i.test(error.message); }
+ok(rejectedLoopback && !userValues.has("FORGE_ACCESS_TOKEN"),
+  "the shipped connector rejects localhost before credentials or Sheet state are changed");
+context.FORGE_TEST_ALLOW_LOOPBACK = true;
+const verified = context.testForgeConnection({ origin, game: game.slug, handle: "addon-tester", password,
+  cards_tab: 73, printings_tab: "" });
+ok(verified.connection.ok && verified.connection.can_write && verified.connection.game === game.slug,
+  "connection check proves Forge health, identity, target game, and commit access");
+ok(![...docValues.values(), ...userValues.values()].includes(password), "Forge password is never stored during connection verification");
+const resumed = context.getForgeState();
+ok(resumed.pending_connection?.origin === origin && resumed.pending_connection?.cards_tab === 73 && resumed.has_token,
+  "verified setup survives sidebar closure without changing the shared document connection");
+ok(!docValues.has("FORGE_ORIGIN") && !docValues.has("FORGE_GAME_SLUG"),
+  "connection verification does not mutate the Sheet's shared Forge connection");
+const validInitialRows = sheetRows;
+sheetRows = [["id", "name", "type", "text", "cost"]];
+let rejectedEmptyAttach = false;
+try { context.saveForgeSettings({ origin, game: game.slug, handle: "addon-tester", password: "",
+  cards_tab: 73, printings_tab: "" }); }
+catch (error) { rejectedEmptyAttach = /could not read any cards/i.test(error.message); }
+ok(rejectedEmptyAttach && !docValues.has("FORGE_ORIGIN") && userValues.has("FORGE_PENDING_CONNECTION"),
+  "failed attachment rolls shared settings back and preserves the resumable verified setup");
+sheetRows = validInitialRows;
+const attached = context.saveForgeSettings({ origin, game: game.slug, handle: "addon-tester", password: "",
+  cards_tab: 73, printings_tab: "" });
 ok(attached.result.connected && attached.result.source_mode === "addon", "real Code.gs signs in and attaches the active private tab");
 ok(![...docValues.values(), ...userValues.values()].includes(password), "Forge password is never stored in document or user properties");
 ok(userValues.has("FORGE_ACCESS_TOKEN") && !docValues.has("FORGE_ACCESS_TOKEN"), "session token is user-private, not shared in the Sheet");
+ok(!userValues.has("FORGE_PENDING_CONNECTION"), "successful attachment clears the resumable setup proof");
 ok(!docValues.has("FORGE_DIRTY_AT"), "establishing the working-copy baseline clears the dirty hint");
 
 const firstToken = userValues.get("FORGE_ACCESS_TOKEN");
@@ -212,5 +249,18 @@ ok(detached.result.connected === false && !docValues.has("FORGE_ORIGIN") && !doc
 const signedOut = context.signOutForge();
 ok(!signedOut.has_token && !userValues.has("FORGE_ACCESS_TOKEN") && !userValues.has("FORGE_HANDLE"),
   "sign out removes the editor's personal Forge credentials");
+
+const networkMessage = context.forgeNetworkError_("https://expired.example", new Error("DNS error: host not found")).message;
+ok(/could not be reached from Google/i.test(networkMessage) && /expired tunnel/i.test(networkMessage),
+  "DNS failures become actionable Google-hosting guidance instead of raw exceptions");
+await api("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" },
+  body: JSON.stringify({ handle: "addon-outsider", email: "addon-outsider@example.test", password }) });
+let rejectedOutsider = false;
+try { context.testForgeConnection({ origin, game: game.slug, handle: "addon-outsider", password,
+  cards_tab: 73, printings_tab: "" }); }
+catch (error) { rejectedOutsider = /does not have commit access/i.test(error.message); }
+ok(rejectedOutsider && !userValues.has("FORGE_PENDING_CONNECTION") && !docValues.has("FORGE_ORIGIN"),
+  "connection check rejects a valid account without commit access before touching shared Sheet state");
+context.signOutForge();
 
 console.log(`\nADD-ON GREEN — ${checks} checks executed through the real Code.gs connector.`);

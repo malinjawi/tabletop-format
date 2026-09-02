@@ -16,7 +16,8 @@ const FORGE_DOC_KEYS = {
 const FORGE_TOKEN_KEY = "FORGE_ACCESS_TOKEN";
 const FORGE_TOKEN_ORIGIN_KEY = "FORGE_ACCESS_TOKEN_ORIGIN";
 const FORGE_HANDLE_KEY = "FORGE_HANDLE";
-const FORGE_USER_KEYS = [FORGE_TOKEN_KEY, FORGE_TOKEN_ORIGIN_KEY, FORGE_HANDLE_KEY];
+const FORGE_PENDING_CONNECTION_KEY = "FORGE_PENDING_CONNECTION";
+const FORGE_USER_KEYS = [FORGE_TOKEN_KEY, FORGE_TOKEN_ORIGIN_KEY, FORGE_HANDLE_KEY, FORGE_PENDING_CONNECTION_KEY];
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("Forge")
@@ -85,6 +86,8 @@ function forgeSettings_() {
   const doc = PropertiesService.getDocumentProperties();
   const user = PropertiesService.getUserProperties();
   const mapping = forgeTabMapping_(), tabs = forgeSheets_().map(entry => ({ id: entry.id, name: entry.name }));
+  let pendingConnection = null;
+  try { pendingConnection = JSON.parse(user.getProperty(FORGE_PENDING_CONNECTION_KEY) || "null"); } catch (_) {}
   return {
     origin: doc.getProperty(FORGE_DOC_KEYS.origin) || "",
     game: doc.getProperty(FORGE_DOC_KEYS.game) || "",
@@ -97,6 +100,7 @@ function forgeSettings_() {
     spreadsheet_name: SpreadsheetApp.getActiveSpreadsheet().getName(),
     tabs,
     tab_mapping: mapping,
+    pending_connection: pendingConnection,
   };
 }
 
@@ -117,6 +121,113 @@ function getForgePulse() {
   };
 }
 
+function forgeAllowsLoopbackForTests_() {
+  return typeof FORGE_TEST_ALLOW_LOOPBACK !== "undefined" && FORGE_TEST_ALLOW_LOOPBACK === true;
+}
+
+function forgeOrigin_(value) {
+  const origin = String(value || "").trim().replace(/\/+$/, "");
+  const secure = /^https:\/\/[^/]+/i.test(origin);
+  const loopback = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+  if (loopback && !forgeAllowsLoopbackForTests_())
+    throw new Error("Google Sheets runs this connector on Google's servers, so it cannot reach localhost. Use a stable public HTTPS Forge URL. For local development, import a published Sheet or CSV from Forge instead.");
+  if (!secure && !(loopback && forgeAllowsLoopbackForTests_()))
+    throw new Error("Forge URL must be a public https:// address that Google Sheets can reach.");
+  return origin;
+}
+
+function forgeGameSlug_(value) {
+  const game = String(value || "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/i.test(game))
+    throw new Error("Enter the Forge game slug, such as netrunner-sg.");
+  return game;
+}
+
+function forgeNetworkError_(origin, error) {
+  const detail = String(error && error.message ? error.message : error || "Network request failed");
+  if (/dns|resolve|host not found|address unavailable|timed?\s*out|connection refused|network|fetch failed/i.test(detail))
+    return new Error(`Forge could not be reached from Google at ${origin}. Apps Script runs on Google's servers: localhost, private-network addresses, and expired tunnel URLs will not work. Use a stable public HTTPS Forge URL, then try again.`);
+  return new Error(`Forge could not be reached at ${origin}. ${detail}`);
+}
+
+function forgeFetch_(origin, path, options) {
+  try { return UrlFetchApp.fetch(`${origin}${path}`, Object.assign({ muteHttpExceptions: true }, options || {})); }
+  catch (error) { throw forgeNetworkError_(origin, error); }
+}
+
+function forgeResponseJson_(response) {
+  const status = response.getResponseCode();
+  let body;
+  try { body = JSON.parse(response.getContentText() || "{}"); }
+  catch (_) { body = { error: response.getContentText() || `Forge returned HTTP ${status}` }; }
+  return { status, body };
+}
+
+function forgeAccessAt_(origin, game, token) {
+  const parsed = forgeResponseJson_(forgeFetch_(origin, `/api/games/${encodeURIComponent(game)}/access`, {
+    method: "get", headers: { Authorization: `Bearer ${token}` },
+  }));
+  if (parsed.status === 401) {
+    clearForgeCredentials_();
+    throw new Error("Your Forge sign-in expired. Sign in again, then retry the connection check.");
+  }
+  if (parsed.status < 200 || parsed.status >= 300)
+    throw new Error(parsed.body.error || `Forge access check returned HTTP ${parsed.status}`);
+  if (!parsed.body.canWrite)
+    throw new Error("This Forge account does not have commit access to that game. Create your own edition in Forge, or ask the game owner for editor access, then try again.");
+  return parsed.body;
+}
+
+/** Verify the exact endpoint, account, game, and editor permission before any
+ * document connection is changed. A successful proof is user-private and lets
+ * setup resume after the sidebar is closed; no password is retained. */
+function testForgeConnection(input) {
+  input = input || {};
+  const origin = forgeOrigin_(input.origin);
+  const game = forgeGameSlug_(input.game);
+  const user = PropertiesService.getUserProperties();
+  user.deleteProperty(FORGE_PENDING_CONNECTION_KEY);
+  const health = forgeResponseJson_(forgeFetch_(origin, "/healthz", { method: "get" }));
+  if (health.status < 200 || health.status >= 300 || !health.body.ok)
+    throw new Error(health.body.error || `Forge health check returned HTTP ${health.status}`);
+
+  const handle = String(input.handle || "").trim();
+  const password = String(input.password || "");
+  let token = user.getProperty(FORGE_TOKEN_KEY);
+  if (!token || user.getProperty(FORGE_TOKEN_ORIGIN_KEY) !== origin) {
+    if (!handle || !password)
+      throw new Error("Forge is reachable. Enter your Forge handle/email and password to verify commit access. The password is never stored.");
+    const login = forgeLogin_(origin, handle, password);
+    token = login.token;
+    user.setProperties({
+      [FORGE_TOKEN_KEY]: token,
+      [FORGE_TOKEN_ORIGIN_KEY]: origin,
+      [FORGE_HANDLE_KEY]: login.user && login.user.handle ? login.user.handle : handle,
+    });
+  }
+  const access = forgeAccessAt_(origin, game, token);
+  const cardsTab = Number(input.cards_tab || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getSheetId());
+  const printingsTab = input.printings_tab === "" || input.printings_tab == null ? null : Number(input.printings_tab);
+  const tabIds = forgeSheets_().map(tab => tab.id);
+  if (tabIds.indexOf(cardsTab) < 0) throw new Error("Choose an existing Cards tab.");
+  if (printingsTab != null && tabIds.indexOf(printingsTab) < 0) throw new Error("Choose an existing Printings tab.");
+  if (printingsTab === cardsTab) throw new Error("Cards and Printings must use different tabs, or leave Printings blank.");
+  const pending = { origin, game, cards_tab: cardsTab, printings_tab: printingsTab,
+    verified_at: new Date().toISOString() };
+  user.setProperty(FORGE_PENDING_CONNECTION_KEY, JSON.stringify(pending));
+  return { state: forgeSettings_(), connection: { ok: true, origin, game,
+    version: health.body.version || "", role: access.role || (access.isOwner ? "owner" : "editor"),
+    can_write: true, can_release: !!access.canRelease } };
+}
+
+function forgePendingMatches_(origin, game, cardsTab, printingsTab) {
+  let pending = null;
+  try { pending = JSON.parse(PropertiesService.getUserProperties().getProperty(FORGE_PENDING_CONNECTION_KEY) || "null"); }
+  catch (_) {}
+  return !!pending && pending.origin === origin && pending.game === game && Number(pending.cards_tab) === Number(cardsTab)
+    && (pending.printings_tab == null ? null : Number(pending.printings_tab)) === (printingsTab == null ? null : Number(printingsTab));
+}
+
 /** Delete only the marker represented by the snapshot we just processed. An
  * onEdit that lands during a Forge request writes a newer marker which must
  * remain dirty and trigger another candidate check. */
@@ -128,23 +239,21 @@ function clearForgeDirtyRevision_(revision) {
 
 function saveForgeSettings(input) {
   input = input || {};
-  const origin = String(input.origin || "").trim().replace(/\/+$/, "");
-  const game = String(input.game || "").trim();
+  const origin = forgeOrigin_(input.origin);
+  const game = forgeGameSlug_(input.game);
   const handle = String(input.handle || "").trim();
   const password = String(input.password || "");
   const tabs = forgeSheets_(), tabIds = tabs.map(tab => tab.id);
   const cardsTab = Number(input.cards_tab || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getSheetId());
   const printingsTab = input.printings_tab === "" || input.printings_tab == null ? null : Number(input.printings_tab);
-  const secureOrigin = /^https:\/\//i.test(origin);
-  const localDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
-  if (!secureOrigin && !localDevOrigin) throw new Error("Forge URL must use https:// (loopback http:// is accepted only by the local test harness).");
-  if (!/^[a-z0-9][a-z0-9-]{0,63}$/i.test(game)) throw new Error("Enter the Forge game slug, such as netrunner-sg.");
   if (tabIds.indexOf(cardsTab) < 0) throw new Error("Choose an existing Cards tab.");
   if (printingsTab != null && tabIds.indexOf(printingsTab) < 0) throw new Error("Choose an existing Printings tab.");
   if (printingsTab === cardsTab) throw new Error("Cards and Printings must use different tabs, or leave Printings blank.");
+  if (!forgePendingMatches_(origin, game, cardsTab, printingsTab))
+    testForgeConnection({ origin, game, cards_tab: cardsTab, printings_tab: printingsTab, handle, password });
   const user = PropertiesService.getUserProperties();
   const tokenMatchesOrigin = user.getProperty(FORGE_TOKEN_KEY) && user.getProperty(FORGE_TOKEN_ORIGIN_KEY) === origin;
-  if (password || !tokenMatchesOrigin) {
+  if (!tokenMatchesOrigin) {
     if (!handle || !password) throw new Error("Enter your Forge handle/email and password. The password is sent only to Forge login and is never stored in the Sheet or script properties.");
     const login = forgeLogin_(origin, handle, password);
     user.setProperties({
@@ -154,6 +263,8 @@ function saveForgeSettings(input) {
     });
   }
   const doc = PropertiesService.getDocumentProperties();
+  const previous = {};
+  Object.keys(FORGE_DOC_KEYS).forEach(name => { previous[name] = doc.getProperty(FORGE_DOC_KEYS[name]); });
   doc.setProperty(FORGE_DOC_KEYS.mapping, JSON.stringify({ cards: cardsTab, printings: printingsTab }));
   doc.setProperties({
     [FORGE_DOC_KEYS.origin]: origin,
@@ -161,7 +272,18 @@ function saveForgeSettings(input) {
     [FORGE_DOC_KEYS.source]: forgeSheetIdentity_(),
     [FORGE_DOC_KEYS.dirty]: new Date().toISOString(),
   });
-  return attachForgeWorkingCopy();
+  try {
+    const attached = attachForgeWorkingCopy();
+    user.deleteProperty(FORGE_PENDING_CONNECTION_KEY);
+    return attached;
+  } catch (error) {
+    Object.keys(FORGE_DOC_KEYS).forEach(name => {
+      const key = FORGE_DOC_KEYS[name];
+      if (previous[name] == null) doc.deleteProperty(key);
+      else doc.setProperty(key, previous[name]);
+    });
+    throw error;
+  }
 }
 
 function clearForgeCredentials_() {
@@ -176,16 +298,12 @@ function signOutForge() {
 }
 
 function forgeLogin_(origin, handle, password) {
-  const response = UrlFetchApp.fetch(`${origin}/api/auth/login`, {
+  const response = forgeFetch_(origin, "/api/auth/login", {
     method: "post",
     contentType: "application/json",
     payload: JSON.stringify({ handle, password, api_token: true }),
-    muteHttpExceptions: true,
   });
-  const status = response.getResponseCode();
-  let body;
-  try { body = JSON.parse(response.getContentText() || "{}"); }
-  catch (_) { body = {}; }
+  const { status, body } = forgeResponseJson_(response);
   if (status !== 200 || !body.token) throw new Error(body.error || `Forge login returned HTTP ${status}`);
   return body;
 }
@@ -202,11 +320,8 @@ function forgeRequest_(path, method, payload) {
     muteHttpExceptions: true,
   };
   if (payload !== undefined) options.payload = JSON.stringify(payload);
-  const response = UrlFetchApp.fetch(`${state.origin}${path}`, options);
-  const status = response.getResponseCode();
-  let body;
-  try { body = JSON.parse(response.getContentText() || "{}"); }
-  catch (_) { body = { error: response.getContentText() || `Forge returned HTTP ${status}` }; }
+  const response = forgeFetch_(state.origin, path, options);
+  const { status, body } = forgeResponseJson_(response);
   if (status < 200 || status >= 300) {
     if (status === 401) {
       clearForgeCredentials_();

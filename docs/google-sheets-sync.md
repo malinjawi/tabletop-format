@@ -29,12 +29,18 @@ two-way synchronization:
 This boundary is the feature. It lets a team use Sheets, a Forge editor, CSV, or
 another future adapter without weakening reviewable game history.
 
-## Verification status — 2026-09-01
+## Verification status — 2026-09-03
 
 - The real `Code.gs` connector passes the disposable-server harness, including
-  login, explicit Cards + optional Printings tab mapping, unrelated-tab
-  isolation, clean/dirty detection, visual candidate data, exact-token commit,
-  credit, session expiry, server-side sign-out revocation, and detach behavior.
+  public-origin validation, health and write-access checks, resumable setup,
+  transactional attachment rollback, login, explicit Cards + optional
+  Printings tab mapping, unrelated-tab isolation, clean/dirty detection, visual
+  candidate data, exact-token commit, credit, session expiry, server-side
+  sign-out revocation, and detach behavior.
+- A headless Chrome journey executes the actual sidebar client. It proves that
+  attachment stays disabled until verification, localhost gets an actionable
+  recovery path, the password field clears after sign-in, the exact Forge game
+  link opens after attachment, and Connection always returns to the candidate.
 - A real bound Google Apps Script project loaded the three integration files,
   produced the custom **Forge** menu, completed Google's OAuth flow in Chrome,
   and opened the candidate sidebar in a real Sheet.
@@ -42,10 +48,13 @@ another future adapter without weakening reviewable game history.
   reviewed a candidate, and created attributed Forge commit `c40b809` while
   recording the exact Sheet fingerprint and repository base SHA.
 
-The connector boundary is therefore proven end to end. A controlled alpha can use
-the bound-script installer against the production HTTPS origin. Open distribution
-still requires a packaged and verified Google Workspace add-on; manual script
-copying remains an alpha installer, not a consumer release path.
+The connector boundary is therefore proven end to end. The earlier live smoke
+used a disposable tunnel and does not qualify the current candidate or a durable
+beta deployment. A controlled beta can use the bound-script package only after
+the final stable HTTPS origin exists and the live journey is repeated. Open
+distribution still requires a packaged and verified Google Workspace add-on;
+manual script copying remains an operator-assisted installer, not a consumer
+release path.
 
 Two surfaces use the same backend contract:
 
@@ -134,11 +143,20 @@ after the Sheet has changed again.
 3. Reload the Sheet, then choose **Forge → Open candidate panel**.
 4. Complete Google's first-run consent in a regular browser. The manifest asks
    only for this spreadsheet, container UI, and outbound HTTPS request scopes.
-5. Enter a stable HTTPS Forge origin and game slug, choose the Cards tab and an
-   optional Printings tab, then sign in with your Forge account. Short-lived
-   tunnel URLs are suitable only for disposable tests.
-6. Attach the mapping, check its draft changes, review validation/diffs, add a
-   commit message and contributors, then commit the exact candidate.
+5. Enter a stable public HTTPS Forge origin and game slug, then choose the Cards
+   tab and an optional Printings tab. Apps Script runs on Google's servers and
+   cannot reach `localhost` or a private LAN address. For local Forge, use the
+   Cards-page published Sheet/CSV importer instead. Short-lived tunnels are
+   suitable only for disposable tests.
+6. Choose **Test & sign in**. Forge checks `/healthz`, authenticates without
+   storing the password, and verifies commit access to the exact game. A green
+   check can be resumed after closing and reopening the sidebar.
+7. Choose **Attach working copy**. The initial private snapshot establishes the
+   merge baseline atomically; if attachment fails, the Sheet's previous shared
+   connection is restored.
+8. Check draft changes, review validation/diffs, add a commit message and
+   contributors, then commit the exact candidate. Use **Open this game in
+   Forge** to continue into cards, releases, or playtests.
 
 The game/source identity lives in document properties shared with Sheet editors.
 The password is sent directly to Forge's login endpoint and never stored; the
@@ -157,17 +175,20 @@ review.
 ## Automated connector test
 
 `tools/sheets-addon-check.mjs` executes the real `Code.gs` against a disposable
-Forge server with a small mock of the Apps Script host. The main `e2e.sh` suite
-runs it automatically and covers sign-in, private-tab attachment, password/token
-storage boundaries, password-free token reuse, clean and dirty status,
-polled live-diff hints, edit-during-check race protection, validation/preview
-data, exact candidate commit, resulting cards and printings, committed import
-receipt, attribution, unrelated-tab isolation, expired-session cleanup, safe
-detach, and server-side sign-out revocation.
+Forge server with a small mock of the Apps Script host. Its 37 assertions run in
+the main `e2e.sh` suite and cover public-origin rejection, reachability, write
+access, sign-in, resumable verification, attachment rollback, private-tab
+attachment, password/token storage boundaries, password-free token reuse, clean
+and dirty status, polled live-diff hints, edit-during-check race protection,
+validation/preview data, exact candidate commit, resulting cards and printings,
+committed import receipt, attribution, unrelated-tab isolation, expired-session
+cleanup, safe detach, and server-side sign-out revocation. `tools/ui-smoke.mjs`
+separately runs the actual sidebar HTML and state transitions in Chrome.
 
 Sources are limited to 5 MB. Production sources must use HTTPS; redirect targets
-are checked as well. Loopback HTTP is accepted only when Forge itself is running
-on loopback so the test Sheet server can exercise the complete path.
+are checked as well. The shipped connector rejects loopback before sending
+credentials or changing document state. Its disposable harness enables loopback
+explicitly so it can exercise the complete server contract in isolation.
 
 ## Product boundary
 

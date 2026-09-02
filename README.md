@@ -154,7 +154,11 @@ keep renamed cards attached to their histories. See
 [`docs/google-sheets-sync.md`](docs/google-sheets-sync.md) for the boundary and
 installation instructions. The connector contract, real `Code.gs` harness, and
 a Google-hosted private-Sheet OAuth → attributed commit smoke test are green.
-A stable HTTPS deployment and packaged Workspace add-on remain production gates.
+The sidebar now verifies the public endpoint and commit access before attachment,
+preserves a resumable setup without storing the password, rolls back a failed
+attachment, and gives dead localhost/tunnel connections an explicit recovery
+path. A stable HTTPS deployment, current live-Sheet qualification, and packaged
+Workspace add-on remain production gates.
 
 ### Production templates
 
