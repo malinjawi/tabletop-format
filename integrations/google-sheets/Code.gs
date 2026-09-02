@@ -17,6 +17,9 @@ const FORGE_TOKEN_KEY = "FORGE_ACCESS_TOKEN";
 const FORGE_TOKEN_ORIGIN_KEY = "FORGE_ACCESS_TOKEN_ORIGIN";
 const FORGE_HANDLE_KEY = "FORGE_HANDLE";
 const FORGE_PENDING_CONNECTION_KEY = "FORGE_PENDING_CONNECTION";
+// The packaging tool replaces this empty value in an operator-owned beta
+// bundle. Keeping it blank preserves the developer/bound-script workflow.
+const FORGE_DEPLOYMENT_ORIGIN = "";
 const FORGE_USER_KEYS = [FORGE_TOKEN_KEY, FORGE_TOKEN_ORIGIN_KEY, FORGE_HANDLE_KEY, FORGE_PENDING_CONNECTION_KEY];
 
 function onOpen() {
@@ -96,6 +99,8 @@ function forgeSettings_() {
     dirty_at: doc.getProperty(FORGE_DOC_KEYS.dirty) || "",
     has_token: !!user.getProperty(FORGE_TOKEN_KEY),
     user_handle: user.getProperty(FORGE_HANDLE_KEY) || "",
+    default_origin: FORGE_DEPLOYMENT_ORIGIN,
+    origin_locked: !!FORGE_DEPLOYMENT_ORIGIN,
     sheet_name: SpreadsheetApp.getActiveSheet().getName(),
     spreadsheet_name: SpreadsheetApp.getActiveSpreadsheet().getName(),
     tabs,

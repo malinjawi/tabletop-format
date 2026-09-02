@@ -7,11 +7,11 @@
   "additionalProperties": false,
   "properties": {
     "format": { "const": "forge-pilot-cohort" },
-    "version": { "const": 1 },
+    "version": { "const": 2 },
     "cohort_id": { "$ref": "#/$defs/id" },
     "candidate": {
       "type": "object",
-      "required": ["commit", "gateway_image", "forgejo_image", "postgres_image", "origin", "preflight_evidence", "restore_drill_passed"],
+      "required": ["commit", "gateway_image", "forgejo_image", "postgres_image", "origin", "preflight_evidence", "restore_drill_passed", "sheets_connector"],
       "additionalProperties": false,
       "properties": {
         "commit": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" },
@@ -20,7 +20,20 @@
         "postgres_image": { "$ref": "#/$defs/image" },
         "origin": { "type": "string", "format": "uri", "pattern": "^https://" },
         "preflight_evidence": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "restore_drill_passed": { "type": "boolean" }
+        "restore_drill_passed": { "type": "boolean" },
+        "sheets_connector": {
+          "type": "object",
+          "required": ["distribution", "script_id_sha256", "script_version", "package_receipt", "live_journey_passed", "resulting_commit"],
+          "additionalProperties": false,
+          "properties": {
+            "distribution": { "enum": ["test-deployment", "private-marketplace", "public-marketplace"] },
+            "script_id_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "script_version": { "type": "integer", "minimum": 1 },
+            "package_receipt": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "live_journey_passed": { "type": "boolean" },
+            "resulting_commit": { "type": ["string", "null"], "pattern": "^[a-f0-9]{7,64}$" }
+          }
+        }
       }
     },
     "operator": {

@@ -365,6 +365,7 @@ say ""
 say "== git porcelain (scratch repo) =="
 export GIT_AUTHOR_NAME=e2e GIT_COMMITTER_NAME=e2e GIT_AUTHOR_EMAIL=e2e@test GIT_COMMITTER_EMAIL=e2e@test
 git init -qb main "$SCRATCH" && git -C "$SCRATCH" add -A && git -C "$SCRATCH" commit -qm "init"
+check "operator-ready Google Sheets add-on package" node tools/test-sheets-addon-package.mjs
 python3 - <<EOF
 import json
 p='$SCRATCH/examples/ember/components/cards.json'

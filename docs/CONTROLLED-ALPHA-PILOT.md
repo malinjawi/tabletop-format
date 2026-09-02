@@ -58,7 +58,9 @@ Record events and outcomes, never unpublished game text:
 - exact artifact downloaded;
 - time to each milestone, error category, and whether human help was required.
 
-Copy `deploy/pilot-cohort.example.json` outside the repository and update that
+Build and qualify the pinned connector using
+[`google-sheets-deployment.md`](google-sheets-deployment.md). Copy
+`deploy/pilot-cohort.example.json` outside the repository and update that
 private record during the sessions using only pseudonymous participant IDs.
 Evaluate it with:
 
@@ -75,7 +77,9 @@ iteration of this same game?
 
 ## Success threshold
 
-Proceed to a second cohort only if at least four of five participants complete
+Proceed to a second cohort only if the recorded Apps Script version has created
+one attributed private-Sheet commit against the deployed candidate, at least
+four of five participants complete
 their assigned journey, at least three do so without developer intervention,
 both paired runs reach a reproducible release, no integrity stop condition is
 triggered, and at least three of five say they would use Forge again on the same
@@ -100,4 +104,7 @@ operator cannot respond to support/moderation reports.
 4. Execute one internal two-person journey on the deployed build.
 5. Rotate the invite code, confirm the operator/contact policy text, and record
    the release commit and image digests.
-6. Copy the pilot evidence template outside Git and invite exactly five people.
+6. Package and install one pinned Google Sheets connector, complete its live
+   qualification, and record its deployment evidence without exposing the raw
+   script ID.
+7. Copy the pilot evidence template outside Git and invite exactly five people.

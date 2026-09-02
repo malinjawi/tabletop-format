@@ -51,6 +51,10 @@ const thresholds = [
   { name: "complete paired runs", ok: completedRuns >= 2, result: `${completedRuns}/2` },
   { name: "would reuse Forge", ok: reuse >= Math.ceil(participants / 2), result: `${reuse}/${participants}; need ${Math.ceil(participants / 2)}` },
   { name: "restore drill", ok: document.candidate.restore_drill_passed, result: document.candidate.restore_drill_passed ? "passed" : "not passed" },
+  { name: "Sheets connector live", ok: document.candidate.sheets_connector.live_journey_passed && !!document.candidate.sheets_connector.resulting_commit,
+    result: document.candidate.sheets_connector.live_journey_passed && document.candidate.sheets_connector.resulting_commit
+      ? `${document.candidate.sheets_connector.distribution} v${document.candidate.sheets_connector.script_version} → ${document.candidate.sheets_connector.resulting_commit}`
+      : "no qualified private-Sheet commit" },
   { name: "operator on call", ok: document.operator.on_call_confirmed, result: document.operator.on_call_confirmed ? "confirmed" : "not confirmed" },
   { name: "integrity stop conditions", ok: stop.length === 0, result: stop.length ? stop.join("; ") : "none triggered" },
   { name: "record integrity", ok: failures.length === 0, result: failures.length ? failures.join("; ") : "valid" },

@@ -158,7 +158,9 @@ The sidebar now verifies the public endpoint and commit access before attachment
 preserves a resumable setup without storing the password, rolls back a failed
 attachment, and gives dead localhost/tunnel connections an explicit recovery
 path. A stable HTTPS deployment, current live-Sheet qualification, and packaged
-Workspace add-on remain production gates.
+Workspace installation remain production gates. Operators build the pinned,
+checksummed private-beta source with `npm run package:sheets-addon`; see
+[`docs/google-sheets-deployment.md`](docs/google-sheets-deployment.md).
 
 ### Production templates
 

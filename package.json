@@ -30,6 +30,8 @@
     "test:production-config": "node tools/production-config-check.mjs",
     "test:production-preflight": "node tools/test-deploy-preflight.mjs",
     "test:source-assets": "node tools/test-source-assets.mjs",
+    "package:sheets-addon": "node tools/package-sheets-addon.mjs",
+    "test:sheets-package": "node tools/test-sheets-addon-package.mjs",
     "deploy:preflight": "node deploy/preflight.mjs --env deploy/.env --online",
     "pilot:report": "node tools/pilot-report.mjs",
     "test:pilot-report": "node tools/test-pilot-report.mjs",
@@ -48,11 +50,12 @@
     "ajv": "^8.17.0",
     "ajv-formats": "^3.0.0",
     "js-yaml": "^4.1.0",
-    "playwright-core": "^1.55.0",
     "pg": "8.23.0",
+    "playwright-core": "^1.55.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@google/clasp": "3.4.1",
     "@types/node": "26.4.0",
     "@types/pg": "8.23.1",
     "typescript": "7.0.2"

@@ -50,11 +50,13 @@ another future adapter without weakening reviewable game history.
 
 The connector boundary is therefore proven end to end. The earlier live smoke
 used a disposable tunnel and does not qualify the current candidate or a durable
-beta deployment. A controlled beta can use the bound-script package only after
-the final stable HTTPS origin exists and the live journey is repeated. Open
-distribution still requires a packaged and verified Google Workspace add-on;
-manual script copying remains an operator-assisted installer, not a consumer
-release path.
+beta deployment. `npm run package:sheets-addon` now produces an immutable,
+checksummed operator package that embeds the final Forge origin, adds its
+required URL fetch allowlist, and targets an explicit Apps Script project through
+the pinned `clasp` CLI. A controlled beta can install that exact test deployment
+after the final stable HTTPS origin exists and the live journey is repeated.
+Open distribution still requires Google OAuth verification and Marketplace
+review. See [`google-sheets-deployment.md`](google-sheets-deployment.md).
 
 Two surfaces use the same backend contract:
 

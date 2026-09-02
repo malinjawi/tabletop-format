@@ -28,6 +28,10 @@ const chrome = process.env.CHROME_PATH || chromeCandidates.find(existsSync);
 chrome ? pass("Chromium renderer", chrome) : fail("Chromium renderer", "set CHROME_PATH or install Chrome/Chromium");
 const nandeck = process.env.NANDECK_PATH;
 pass("nanDECK adapter", nandeck ? `external app declared at ${nandeck}` : "script import/export ready; external app optional and not run by Forge");
+const claspPath = process.platform === "win32" ? join(root, "node_modules", ".bin", "clasp.cmd") : join(root, "node_modules", ".bin", "clasp");
+const clasp = command(claspPath, ["--version"]);
+clasp.status === 0 ? pass("Google Sheets deployer", `clasp ${clasp.stdout.trim()}`)
+  : fail("Google Sheets deployer", "missing; run npm ci before packaging the private Editor add-on");
 
 for (const row of rows) console.log(`${row.ok ? "✓" : "✗"} ${row.name}: ${row.detail}`);
 const failures = rows.filter(row => !row.ok);

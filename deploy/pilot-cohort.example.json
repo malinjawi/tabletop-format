@@ -1,6 +1,6 @@
 {
   "format": "forge-pilot-cohort",
-  "version": 1,
+  "version": 2,
   "cohort_id": "alpha-01",
   "candidate": {
     "commit": "0000000",
@@ -9,7 +9,15 @@
     "postgres_image": "postgres@sha256:0000000000000000000000000000000000000000000000000000000000000000",
     "origin": "https://forge.example",
     "preflight_evidence": "/encrypted/off-host/evidence/preflight.json",
-    "restore_drill_passed": false
+    "restore_drill_passed": false,
+    "sheets_connector": {
+      "distribution": "test-deployment",
+      "script_id_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "script_version": 1,
+      "package_receipt": "/encrypted/off-host/evidence/forge-sheets/forge-deployment.json",
+      "live_journey_passed": false,
+      "resulting_commit": null
+    }
   },
   "operator": {
     "name": "Assign before inviting anyone",

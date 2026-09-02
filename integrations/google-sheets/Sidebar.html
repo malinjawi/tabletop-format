@@ -44,7 +44,7 @@
     </div>
     <div class="step"><span class="step-no">1</span><div><b>Choose the Forge project</b><div class="muted">The private Sheet stays in Google until you commit a reviewed candidate.</div></div></div>
     <label>Public Forge URL<input id="origin" placeholder="https://forge.example"></label>
-    <div class="notice warn">Google runs this connector outside your computer. <b>localhost and private-network URLs cannot work here.</b> For local Forge, use its published Sheet/CSV importer; private tabs require a stable public HTTPS Forge URL.</div>
+    <div class="notice warn" id="origin-guidance">Google runs this connector outside your computer. <b>localhost and private-network URLs cannot work here.</b> For local Forge, use its published Sheet/CSV importer; private tabs require a stable public HTTPS Forge URL.</div>
     <label>Game slug<input id="game" placeholder="netrunner-sg"></label>
     <label>Cards tab<select id="cards-tab"></select></label>
     <label>Printings tab (optional)<select id="printings-tab"><option value="">Use printing columns in Cards tab</option></select></label>
@@ -97,7 +97,10 @@
     function init(s){
       state=s; el("sheet-label").textContent=`${s.spreadsheet_name} · ${s.sheet_name}`;
       const pending=s.pending_connection||{};
-      el("origin").value=s.origin||pending.origin||""; el("game").value=s.game||pending.game||"";el("handle").value=s.user_handle||"";
+      el("origin").value=s.origin||pending.origin||s.default_origin||"";el("origin").readOnly=!!s.origin_locked;
+      el("origin-guidance").className=`notice ${s.origin_locked?"good":"warn"}`;
+      el("origin-guidance").innerHTML=s.origin_locked?"✓ This beta connector is pinned to the operator-managed Forge service. The server address cannot drift between collaborators.":"Google runs this connector outside your computer. <b>localhost and private-network URLs cannot work here.</b> For local Forge, use its published Sheet/CSV importer; private tabs require a stable public HTTPS Forge URL.";
+      el("game").value=s.game||pending.game||"";el("handle").value=s.user_handle||"";
       const options=(s.tabs||[]).map(tab=>`<option value="${tab.id}">${esc(tab.name)}</option>`).join("");
       el("cards-tab").innerHTML=options;el("cards-tab").value=String(pending.cards_tab||(s.tab_mapping||{}).cards||"");
       el("printings-tab").innerHTML=`<option value="">Use printing columns in Cards tab</option>${options}`;
