@@ -22,6 +22,9 @@ Put the resulting `registry/...@sha256:...` reference in
 `FORGE_GATEWAY_IMAGE`. Put tested digest references—not floating majors—in
 `FORGEJO_IMAGE` and `POSTGRES_IMAGE`. A Forgejo major upgrade is a separate,
 backup-tested migration; it is not bundled into an application deploy.
+The current recovery profile is qualified on Forgejo 15.x and PostgreSQL 16.x;
+`FORGEJO_VERSION` and `POSTGRES_MAJOR` make that compatibility decision explicit
+and the host preflight verifies both values against the selected image metadata.
 
 ## 2. Create configuration and secrets
 

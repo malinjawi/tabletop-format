@@ -11,7 +11,8 @@
  */
 import { createHash, createHmac } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { isAbsolute, resolve, sep } from "node:path";
 import { lookup } from "node:dns/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -21,8 +22,11 @@ const args = process.argv.slice(2);
 const valueAfter = flag => { const at = args.indexOf(flag); return at >= 0 ? args[at + 1] : null; };
 const envPath = resolve(valueAfter("--env") || "deploy/.env");
 const lint = args.includes("--lint"), online = args.includes("--online"), firstBoot = args.includes("--first-boot");
+const skipImageInspect = args.includes("--test-no-image-inspect");
 const evidencePath = valueAfter("--evidence");
 if (lint && (online || evidencePath)) throw new Error("--lint cannot perform online checks or write launch evidence");
+if (skipImageInspect && !envPath.startsWith(resolve(tmpdir()) + sep))
+  throw new Error("--test-no-image-inspect is restricted to a temporary test environment");
 
 function parseEnv(path) {
   if (!existsSync(path)) throw new Error(`deployment environment not found: ${path}`);
@@ -56,7 +60,7 @@ const validOrigin = input => {
 const requiredKeys = ["FORGE_PUBLIC_ORIGIN", "FORGEJO_PUBLIC_ORIGIN", "FORGE_BIND_IP", "FORGEJO_BIND_PORT",
   "FORGE_SECRET_DIR",
   "FORGE_REGISTRATION_MODE", "FORGE_INVITE_CODE", "FORGE_OPERATOR_NAME", "FORGE_CONTACT_EMAIL", "ACME_EMAIL",
-  "FORGE_GATEWAY_IMAGE", "FORGEJO_IMAGE", "POSTGRES_IMAGE", "R2_ACCOUNT_ID", "R2_LFS_BUCKET",
+  "FORGE_GATEWAY_IMAGE", "FORGEJO_IMAGE", "FORGEJO_VERSION", "POSTGRES_IMAGE", "POSTGRES_MAJOR", "R2_ACCOUNT_ID", "R2_LFS_BUCKET",
   "FORGE_BACKUP_DESTINATION"];
 for (const name of requiredKeys) check(!!value(name), `environment ${name}`, value(name) ? "declared" : "missing");
 
@@ -80,6 +84,8 @@ if (lint) {
     "TLS expiry contact", validEmail(value("ACME_EMAIL")) ? "valid address" : "missing or invalid");
   for (const name of ["FORGE_GATEWAY_IMAGE", "FORGEJO_IMAGE", "POSTGRES_IMAGE"])
     check(/^[^\s]+@sha256:[a-f0-9]{64}$/.test(value(name)), `${name} immutable digest`, "full sha256 image reference");
+  check(/^15\./.test(value("FORGEJO_VERSION")), "qualified Forgejo major", `${value("FORGEJO_VERSION") || "missing"}; production recovery is qualified on 15.x`);
+  check(value("POSTGRES_MAJOR") === "16", "qualified PostgreSQL major", `${value("POSTGRES_MAJOR") || "missing"}; production recovery is qualified on 16.x`);
   check(/^[a-f0-9]{32}$/i.test(value("R2_ACCOUNT_ID")), "R2 account identifier", "32 hex characters");
   check(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(value("R2_LFS_BUCKET")), "R2 bucket name", value("R2_LFS_BUCKET") || "missing");
   const backup = value("FORGE_BACKUP_DESTINATION");
@@ -115,6 +121,20 @@ if (!lint) {
 const compose = spawnSync("docker", ["compose", "--env-file", envPath, "-f", resolve(ROOT, "deploy/docker-compose.prod.yml"), "config", "--quiet"],
   { cwd: ROOT, encoding: "utf8" });
 check(compose.status === 0, "Compose resolves", compose.status === 0 ? "configuration valid" : (compose.stderr || "docker compose failed").trim().split("\n").at(-1));
+if (!lint && !skipImageInspect) {
+  for (const name of ["FORGE_GATEWAY_IMAGE", "FORGEJO_IMAGE", "POSTGRES_IMAGE"]) {
+    const inspected = spawnSync("docker", ["image", "inspect", value(name)], { cwd: ROOT, encoding: "utf8" });
+    check(inspected.status === 0, `${name} available`, inspected.status === 0 ? "exact digest present on host" : "pull/build the exact digest before preflight");
+  }
+  const forgejoVersion = spawnSync("docker", ["image", "inspect", "--format", '{{index .Config.Labels "org.opencontainers.image.version"}}', value("FORGEJO_IMAGE")],
+    { cwd: ROOT, encoding: "utf8" }).stdout.trim();
+  check(forgejoVersion === value("FORGEJO_VERSION"), "Forgejo digest/version match", `${forgejoVersion || "unknown"} == declared ${value("FORGEJO_VERSION")}`);
+  const postgresEnv = spawnSync("docker", ["image", "inspect", "--format", "{{json .Config.Env}}", value("POSTGRES_IMAGE")],
+    { cwd: ROOT, encoding: "utf8" }).stdout.trim();
+  let postgresMajor = "";
+  try { postgresMajor = (JSON.parse(postgresEnv).find(item => item.startsWith("PG_MAJOR=")) || "").split("=")[1] || ""; } catch {}
+  check(postgresMajor === value("POSTGRES_MAJOR"), "PostgreSQL digest/major match", `${postgresMajor || "unknown"} == declared ${value("POSTGRES_MAJOR")}`);
+}
 const caddy = readFileSync(resolve(ROOT, "deploy/Caddyfile.example"), "utf8");
 check(caddy.includes("{$FORGE_PUBLIC_ORIGIN}") && caddy.includes("127.0.0.1:8420")
   && caddy.includes("{$FORGEJO_PUBLIC_ORIGIN}") && caddy.includes("127.0.0.1:3000"),
@@ -168,7 +188,8 @@ if (evidencePath) {
   writeFileSync(evidencePath, `${JSON.stringify({ format: "forge-production-preflight", version: 1,
     checked_at: new Date().toISOString(), commit, online, origins: {
       forge: value("FORGE_PUBLIC_ORIGIN"), forgejo: value("FORGEJO_PUBLIC_ORIGIN"), r2_bucket: value("R2_LFS_BUCKET"),
-    }, images: { gateway: value("FORGE_GATEWAY_IMAGE"), forgejo: value("FORGEJO_IMAGE"), postgres: value("POSTGRES_IMAGE") },
+    }, images: { gateway: value("FORGE_GATEWAY_IMAGE"), forgejo: value("FORGEJO_IMAGE"), forgejo_version: value("FORGEJO_VERSION"),
+      postgres: value("POSTGRES_IMAGE"), postgres_major: value("POSTGRES_MAJOR") },
     checks }, null, 2)}\n`, { mode: 0o600, flag: "wx" });
   console.log(`\nEvidence written with no secret values: ${evidencePath}`);
 }

@@ -80,5 +80,7 @@ ok(edge.includes("{$FORGE_PUBLIC_ORIGIN}") && edge.includes("127.0.0.1:8420")
 const template=readFileSync(resolve(ROOT,"deploy/.env.example"),"utf8");
 ok(/^ACME_EMAIL=.+/m.test(template) && /^FORGE_BACKUP_DESTINATION=\/.+/m.test(template),
   "deployment template requires TLS alerts and an explicit off-host backup target");
+ok(/^FORGEJO_VERSION=15\./m.test(template) && /^POSTGRES_MAJOR=16$/m.test(template),
+  "deployment template pins the majors qualified by the recovery drill");
 
 console.log(`\nPRODUCTION CONFIG GREEN — ${checks} deployability and isolation checks passed.`);

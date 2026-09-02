@@ -31,14 +31,16 @@ try {
     "ACME_EMAIL=tls@forge.test",
     `FORGE_GATEWAY_IMAGE=registry.forge.test/platform@sha256:${digest("a")}`,
     `FORGEJO_IMAGE=codeberg.org/forgejo/forgejo@sha256:${digest("b")}`,
+    "FORGEJO_VERSION=15.0.7",
     `POSTGRES_IMAGE=postgres@sha256:${digest("c")}`,
+    "POSTGRES_MAJOR=16",
     `R2_ACCOUNT_ID=${"d".repeat(32)}`,
     "R2_LFS_BUCKET=forge-pilot-lfs",
     "FORGE_BACKUP_DESTINATION=/mnt/forge-pilot-backups",
     "",
   ].join("\n"), { mode: 0o600 });
 
-  const run = () => spawnSync(process.execPath, ["deploy/preflight.mjs", "--env", envPath],
+  const run = () => spawnSync(process.execPath, ["deploy/preflight.mjs", "--env", envPath, "--test-no-image-inspect"],
     { cwd: root, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
   const passing = run();
   assert.equal(passing.status, 0, passing.stderr || passing.stdout);

@@ -16,6 +16,19 @@ for pair in "FORGEJO_TEST_IMAGE:$forgejo_image" "POSTGRES_TEST_IMAGE:$postgres_i
   fi
   docker image inspect "$value" >/dev/null
 done
+forgejo_version="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "$forgejo_image")"
+if [[ ! "$forgejo_version" =~ ^15\. ]]; then
+  printf 'Forgejo recovery is qualified on 15.x; %s reports %s\n' "$forgejo_image" "${forgejo_version:-no version label}" >&2
+  exit 2
+fi
+postgres_major="$(docker image inspect --format '{{json .Config.Env}}' "$postgres_image" | node -e '
+  let value="";process.stdin.on("data",chunk=>value+=chunk).on("end",()=>{
+    const item=(JSON.parse(value)||[]).find(entry=>entry.startsWith("PG_MAJOR="));process.stdout.write(item?item.slice(9):"");
+  });')"
+if [ "$postgres_major" != "16" ]; then
+  printf 'PostgreSQL recovery is qualified on major 16; %s reports %s\n' "$postgres_image" "${postgres_major:-unknown}" >&2
+  exit 2
+fi
 
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 prefix="forge-restore-$run_id"
