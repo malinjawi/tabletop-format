@@ -120,7 +120,7 @@ These are deployment operations, not additional product feature projects:
 - Card games first. Boards, punchouts, packaging, custom dice, and manufacturer
   fulfillment remain later component profiles.
 - One curated jam, created and moderated by Forge staff. No public jam creation.
-- Invite code registration only; no paid service and no promise of durable
+- Expiring single-use invitation registration only; no paid service and no promise of durable
   general availability.
 - No untrusted contributor CI with platform secrets. Export workers remain
   isolated from internal networks and have hard disk/time/resource budgets.

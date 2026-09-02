@@ -99,7 +99,7 @@ gateway_origin="http://127.0.0.1:$gateway_port"
 gateway_git_origin="https://git.forge.restore.test"
 postgres_password="postgres-$run_id"; forgejo_password="forgejo-$run_id"; platform_password="platform-$run_id"
 admin_user="launch-gate"; admin_password="disposable-$run_id-pass"
-journey_invite="restore-drill-$run_id-invite"
+journey_invite_alice=""; journey_invite_bob=""; journey_invite_charlie=""
 s3_access="forgeaccess$run_id"; s3_secret="forge-secret-$run_id-password"
 s3_bucket="forge-lfs-${run_id//[^a-zA-Z0-9-]/-}"
 
@@ -271,7 +271,7 @@ start_gateway(){
     --env FORGE_HUB_PATH=/app/data/hub.html \
     --env FORGE_PUBLIC_ORIGIN="$gateway_origin" --env FORGE_ALLOWED_ORIGINS="$gateway_origin" \
     --env FORGEJO_PUBLIC_ORIGIN="$gateway_git_origin" \
-    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=invite --env FORGE_INVITE_CODE="$journey_invite" \
+    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=invite --env FORGE_INVITE_MODE=database \
     --env FORGE_OPERATOR_NAME='Forge restore drill' --env FORGE_CONTACT_EMAIL=operator@forge.test \
     --env FORGE_BUILD_ID="$gateway_image" \
     "$gateway_image" /bin/sh -ec '
@@ -318,12 +318,24 @@ if [ -n "$gateway_image" ]; then
   docker volume create "$source_gateway_volume" >/dev/null
   write_gateway_secrets "$source_gateway_token"
   start_gateway "$source_gateway" "$source_gateway_volume" "$source_pg" "$source_forgejo"
+  issue_drill_invite(){
+    docker exec --env PGPASSWORD="$platform_password" "$source_gateway" \
+      node tools/pilot-invite.mjs create --label "$1" --cohort restore-drill --hours 1 \
+      | awk -F '\t' '/^inv_/{print $2}'
+  }
+  journey_invite_alice="$(issue_drill_invite Alice)"
+  journey_invite_bob="$(issue_drill_invite Bob)"
+  journey_invite_charlie="$(issue_drill_invite Charlie)"
+  [ -n "$journey_invite_alice" ] && [ -n "$journey_invite_bob" ] && [ -n "$journey_invite_charlie" ] \
+    || { printf 'could not issue single-use journey invitations\n' >&2; exit 1; }
   source_gateway_args=(FORGE_EXISTING_GATEWAY_URL="$gateway_origin")
 else
   source_gateway_args=(DB=postgres PG_URL="postgres://platform:$platform_password@127.0.0.1:$source_pg_port/platform")
 fi
 if ! env FORGE_URL="$source_origin" ADMIN_USER="$admin_user" ADMIN_PASS="$admin_password" \
-  FORGE_ALLOW_FIXTURE_DELETE=1 FORGE_JOURNEY_INVITE_CODE="$journey_invite" "${source_gateway_args[@]}" \
+  FORGE_ALLOW_FIXTURE_DELETE=1 \
+  FORGE_JOURNEY_INVITE_ALICE="$journey_invite_alice" FORGE_JOURNEY_INVITE_BOB="$journey_invite_bob" \
+  FORGE_JOURNEY_INVITE_CHARLIE="$journey_invite_charlie" "${source_gateway_args[@]}" \
   "$repo_dir/journey-forgejo.sh" > "$source_journey_log" 2>&1; then
   cat "$source_journey_log" >&2
   [ -z "$gateway_image" ] || docker logs "$source_gateway" >&2

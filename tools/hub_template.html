@@ -255,6 +255,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
     <div id="amErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:8px"></div>
     <input id="amHandle" placeholder="handle" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
     <input id="amEmail" placeholder="email" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
+    <input id="amInvite" autocomplete="one-time-code" placeholder="single-use invitation" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
     <input id="amPass" type="password" placeholder="password (8+ chars)" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="authSubmit()">Continue</button>
     <div style="font-size:13px;color:var(--mut);margin-top:12px;text-align:center">
@@ -294,6 +295,7 @@ new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(
 upgradePseudoLinks();
 /* ---- live mode + auth + stars (feature: accounts & stars end-to-end) ---- */
 let LIVE=false, ME=null, STARS={}, MYSTARS=new Set(), amMode="login", _afterAuth=null, CATALOG_LOADING=true;
+let REGISTRATION="open", PASSWORD_MIN=8;
 let EXPLORE_QUERY="", EXPLORE_TOPIC="";
 // Browser sessions are HttpOnly cookies. JavaScript never reads or persists a
 // bearer token; API/connector clients can still request and use one directly.
@@ -301,6 +303,7 @@ const authH = () => ({});
 async function refreshLive(){
   try {
     const h = await (await fetch("/healthz")).json(); LIVE = !!h.ok;
+    REGISTRATION=String(h.registration||"open"); PASSWORD_MIN=Number(h.password_min)||8;
     if(!LIVE) return;
     const catalog = await (await fetch("/api/catalog?limit=24")).json();
     const gs = catalog.items||[]; CATALOG_LOADING=false;
@@ -324,15 +327,23 @@ function authOpen(mode){ authMode(mode||"login"); document.getElementById("authM
 function authMode(m){ amMode=m;
   document.getElementById("amTitle").textContent = m==="login"?"Sign in":"Create account";
   document.getElementById("amEmail").style.display = m==="register"?"":"none";
+  document.getElementById("amInvite").style.display = m==="register"&&REGISTRATION==="invite"?"":"none";
+  document.getElementById("amPass").placeholder=`password (${PASSWORD_MIN}+ chars)`;
   document.getElementById("amSwitch").textContent = m==="login"?"Create an account instead":"I have an account";
   document.getElementById("amErr").style.display="none";
 }
 async function authSubmit(){
+  const passwordField=document.getElementById("amPass"), inviteField=document.getElementById("amInvite");
   const body={handle:document.getElementById("amHandle").value.trim(),
-              password:document.getElementById("amPass").value};
-  if(amMode==="register") body.email=document.getElementById("amEmail").value.trim();
-  const r=await fetch(`/api/auth/${amMode}`,{method:"POST",
+              password:passwordField.value};
+  if(amMode==="register"){
+    body.email=document.getElementById("amEmail").value.trim();
+    if(REGISTRATION==="invite")body.invite_code=inviteField.value.trim();
+  }
+  const request=fetch(`/api/auth/${amMode}`,{method:"POST",
     headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify(body)});
+  passwordField.value="";inviteField.value="";
+  const r=await request;
   const d=await r.json();
   if(r.ok){
     document.getElementById("authModal").style.display="none"; await refreshLive();

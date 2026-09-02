@@ -27,8 +27,9 @@ permission state, and at least one LFS-backed release all work together.
 1. Verify `SHA256SUMS`, `node deploy/s3-snapshot.mjs verify --input
    <backup>/object-store`, `unzip -t forgejo.zip`, and `pg_restore --list` for
    both database dumps before provisioning anything.
-2. Create a separate environment file with new origins, invite code, database
-   passwords, Forgejo service token, project name, ports, and `R2_LFS_BUCKET`.
+2. Create a separate environment file with new origins, the database-backed
+   invitation mode, database passwords, Forgejo service token, project name,
+   ports, and `R2_LFS_BUCKET`.
    Copy the four recovery-critical Forgejo secrets listed above into the
    drill's isolated secret directory. Create the empty bucket with credentials
    scoped only to it. Restore `object-store/` into that bucket with

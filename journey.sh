@@ -46,13 +46,25 @@ git init -qb main . && git add -A && git commit -qm "baseline"
 
 LPORT=$(( (RANDOM % 2000) + 40000 ))
 SPORT=$(( (RANDOM % 2000) + 42000 ))
+issue_journey_invite(){
+  node tools/pilot-invite.mjs create --db "$SCRATCH/platform.db" --label "$1" --cohort journey --hours 1 \
+    | awk -F '\t' '/^inv_/{print $2}'
+}
+INVITE_ALICE="$(issue_journey_invite Alice)"
+INVITE_BOB="$(issue_journey_invite Bob)"
+INVITE_CHARLIE="$(issue_journey_invite Charlie)"
+[ -n "$INVITE_ALICE" ] && [ -n "$INVITE_BOB" ] && [ -n "$INVITE_CHARLIE" ] \
+  || { echo "journey: could not issue single-use invitations" >&2; exit 1; }
 node tools/lfs-mock-server.mjs --port $LPORT --store "$SCRATCH/lfs-store" > "$SCRATCH/lfs.log" 2>&1 &
 LPID=$!
 LFS_URL="http://localhost:$LPORT" DB_PATH="$SCRATCH/platform.db" CACHE_DIR="$SCRATCH/cache" FORGE_NOW="2026-09-10T12:00:00Z" \
+  FORGE_REGISTRATION_MODE=invite FORGE_INVITE_MODE=database \
   node server.mjs --port $SPORT > "$SCRATCH/server.log" 2>&1 &
 SPID=$!
 for _ in $(seq 1 60); do curl -fsS "http://127.0.0.1:$SPORT/healthz" >/dev/null 2>&1 && break; sleep .5; done
 curl -fsS "http://127.0.0.1:$SPORT/healthz" >/dev/null
 
 FORGE_ALLOW_CACHE_LOSS_TEST=1 FORGE_TEST_CACHE_DIR="$SCRATCH/cache" \
+  FORGE_JOURNEY_INVITE_ALICE="$INVITE_ALICE" FORGE_JOURNEY_INVITE_BOB="$INVITE_BOB" \
+  FORGE_JOURNEY_INVITE_CHARLIE="$INVITE_CHARLIE" \
   node tools/journey.mjs "http://localhost:$SPORT"

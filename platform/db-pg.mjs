@@ -57,6 +57,56 @@ export const q = {
     `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, Date.now()]),
+  createPilotInvite: (db, invite) => db.query(
+    `INSERT INTO pilot_invites (id, token_hash, label, cohort_id, created_at, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [invite.id, invite.token_hash, invite.label ?? null, invite.cohort_id ?? null,
+      invite.created_at, invite.expires_at]),
+  pilotInvites: (db, now = Date.now()) => all(db,
+    `SELECT i.id, i.label, i.cohort_id, i.created_at, i.expires_at, i.revoked_at,
+            i.redeemed_at, u.handle AS redeemed_handle,
+            CASE WHEN i.redeemed_at IS NOT NULL THEN 'redeemed'
+                 WHEN i.revoked_at IS NOT NULL THEN 'revoked'
+                 WHEN i.expires_at <= $1 THEN 'expired' ELSE 'available' END AS status
+     FROM pilot_invites i LEFT JOIN users u ON u.id = i.redeemed_by
+     ORDER BY i.created_at DESC`, [now]),
+  revokePilotInvite: (db, id, now = Date.now()) => db.query(
+    `UPDATE pilot_invites SET revoked_at = $1
+     WHERE id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL`, [now, id]),
+  registerUserWithInvite: async (db, u, tokenHash, now = Date.now()) => {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const selected = await client.query(
+        `SELECT id FROM pilot_invites
+         WHERE token_hash = $1 AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > $2
+         FOR UPDATE`, [tokenHash, now]);
+      const invite = selected.rows[0];
+      if (!invite) {
+        throw Object.assign(new Error("invite is invalid or no longer available"),
+          { code: "FORGE_INVITE_INVALID" });
+      }
+      await client.query(
+        `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, now]);
+      const claimed = await client.query(
+        `UPDATE pilot_invites SET redeemed_at = $1, redeemed_by = $2
+         WHERE id = $3 AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > $4`,
+        [now, u.id, invite.id, now]);
+      if (claimed.rowCount !== 1) {
+        throw Object.assign(new Error("invite is invalid or no longer available"),
+          { code: "FORGE_INVITE_INVALID" });
+      }
+      await client.query("COMMIT");
+      return { id: invite.id };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
   userByHandle: (db, h) => one(db, "SELECT * FROM users WHERE handle = $1", [h]),
   userByEmail:  (db, e) => one(db, "SELECT * FROM users WHERE email = $1", [e]),
   userById:     (db, id) => one(db, "SELECT * FROM users WHERE id = $1", [id]),

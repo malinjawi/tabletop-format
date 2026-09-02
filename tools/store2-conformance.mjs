@@ -8,6 +8,7 @@
  *   DB=postgres PG_URL=postgres://… node tools/store2-conformance.mjs
  */
 const PG = process.env.DB === "postgres";
+import { createHash } from "node:crypto";
 const { openDb, q, newId } = PG
   ? await import("../platform/db-pg.mjs")
   : await import("../platform/db.mjs");
@@ -29,6 +30,66 @@ let duped = false;
 try { await q.createUser(db, { ...ana, id: newId("u") }); } catch { duped = true; }
 assert(duped, "duplicate handle throws (unique constraint, both engines)");
 assert((await q.userByEmail(db, ana.email)).id === ana.id, "userByEmail");
+
+// controlled-beta invitations (019) — bearer secrets stay hashed, expire,
+// revoke independently, and are consumed atomically with account creation.
+const digest = value => createHash("sha256").update(value).digest("hex");
+const inviteAt = T + 1000;
+const invite = { id: newId("inv"), token_hash: digest(`valid:${T}`), label: "Pilot Ana",
+  cohort_id: h("beta"), created_at: inviteAt, expires_at: inviteAt + 60_000 };
+await q.createPilotInvite(db, invite);
+let invitations = await q.pilotInvites(db, inviteAt);
+assert(invitations.some(row => row.id === invite.id && row.status === "available"
+  && !("token_hash" in row)), "pilot invite listing is available and never exposes its token digest");
+const invited = { id: newId("u"), handle: h("invited"), email: `${h("invited")}@x.io`, pass_hash: "invite-hash" };
+const redemption = await q.registerUserWithInvite(db, invited, invite.token_hash, inviteAt + 1);
+assert(redemption.id === invite.id && (await q.userById(db, invited.id)).handle === invited.handle,
+  "valid pilot invite atomically creates its account");
+invitations = await q.pilotInvites(db, inviteAt + 2);
+assert(invitations.find(row => row.id === invite.id)?.status === "redeemed"
+  && invitations.find(row => row.id === invite.id)?.redeemed_handle === invited.handle,
+  "redeemed invitation records the account without retaining its raw token");
+let replayed = false;
+try {
+  await q.registerUserWithInvite(db,
+    { id: newId("u"), handle: h("replay"), email: `${h("replay")}@x.io`, pass_hash: "hash" },
+    invite.token_hash, inviteAt + 3);
+} catch (error) { replayed = error?.code === "FORGE_INVITE_INVALID"; }
+assert(replayed && !(await q.userByHandle(db, h("replay"))), "an invite cannot be replayed and creates no partial account");
+const expired = { id: newId("inv"), token_hash: digest(`expired:${T}`), label: null, cohort_id: h("beta"),
+  created_at: inviteAt - 20, expires_at: inviteAt - 10 };
+await q.createPilotInvite(db, expired);
+let expiryRejected = false;
+try {
+  await q.registerUserWithInvite(db,
+    { id: newId("u"), handle: h("expired"), email: `${h("expired")}@x.io`, pass_hash: "hash" },
+    expired.token_hash, inviteAt);
+} catch (error) { expiryRejected = error?.code === "FORGE_INVITE_INVALID"; }
+assert(expiryRejected && (await q.pilotInvites(db, inviteAt)).find(row => row.id === expired.id)?.status === "expired",
+  "expired invite is rejected and reported as expired");
+const revoked = { id: newId("inv"), token_hash: digest(`revoked:${T}`), label: null, cohort_id: h("beta"),
+  created_at: inviteAt, expires_at: inviteAt + 60_000 };
+await q.createPilotInvite(db, revoked);
+await q.revokePilotInvite(db, revoked.id, inviteAt + 1);
+let revocationRejected = false;
+try {
+  await q.registerUserWithInvite(db,
+    { id: newId("u"), handle: h("revoked"), email: `${h("revoked")}@x.io`, pass_hash: "hash" },
+    revoked.token_hash, inviteAt + 2);
+} catch (error) { revocationRejected = error?.code === "FORGE_INVITE_INVALID"; }
+assert(revocationRejected && (await q.pilotInvites(db, inviteAt + 2)).find(row => row.id === revoked.id)?.status === "revoked",
+  "revoked invite is rejected and reported as revoked");
+const raced = { id: newId("inv"), token_hash: digest(`race:${T}`), label: null, cohort_id: h("beta"),
+  created_at: inviteAt, expires_at: inviteAt + 60_000 };
+await q.createPilotInvite(db, raced);
+const racers = [1, 2].map(number => ({ id: newId("u"), handle: h(`racer${number}`),
+  email: `${h(`racer${number}`)}@x.io`, pass_hash: "hash" }));
+const raceResults = await Promise.allSettled(racers.map(user =>
+  Promise.resolve().then(() => q.registerUserWithInvite(db, user, raced.token_hash, inviteAt + 3))));
+assert(raceResults.filter(result => result.status === "fulfilled").length === 1
+  && raceResults.filter(result => result.status === "rejected" && result.reason?.code === "FORGE_INVITE_INVALID").length === 1
+  && (await Promise.all(racers.map(user => q.userById(db, user.id)))).filter(Boolean).length === 1,
+  "two simultaneous redemptions produce exactly one account");
 
 // sessions
 const tok = "t".repeat(64);

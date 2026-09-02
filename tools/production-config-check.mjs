@@ -50,8 +50,9 @@ ok(env.FORGE_HTTPS==="1" && /^https:\/\//.test(env.FORGE_PUBLIC_ORIGIN||"")
   && /^https:\/\//.test(env.FORGEJO_PUBLIC_ORIGIN||"")
   && env.FORGE_ALLOWED_ORIGINS===env.FORGE_PUBLIC_ORIGIN,
   "Forge and its visible Git remote use HTTPS, with exact-origin browser writes enforced");
-ok(env.FORGE_REGISTRATION_MODE!=="open" && env.FORGE_INVITE_CODE,
-  "controlled-alpha registration is invite-only");
+ok(env.FORGE_REGISTRATION_MODE==="invite" && env.FORGE_INVITE_MODE==="database"
+  && !("FORGE_INVITE_CODE" in env),
+  "controlled-beta registration uses database-backed single-use invitations");
 ok(!("FORGE_TOKEN" in env) && !("PGPASSWORD" in env),
   "service and database credentials are not exposed in Compose environment metadata");
 ok(gateway.ports?.length===1 && gateway.ports[0].host_ip==="127.0.0.1" && gateway.ports[0].target===8420,

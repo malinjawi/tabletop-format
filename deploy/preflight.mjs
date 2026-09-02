@@ -59,7 +59,7 @@ const validOrigin = input => {
 
 const requiredKeys = ["FORGE_PUBLIC_ORIGIN", "FORGEJO_PUBLIC_ORIGIN", "FORGE_BIND_IP", "FORGEJO_BIND_PORT",
   "FORGE_SECRET_DIR",
-  "FORGE_REGISTRATION_MODE", "FORGE_INVITE_CODE", "FORGE_OPERATOR_NAME", "FORGE_CONTACT_EMAIL", "ACME_EMAIL",
+  "FORGE_REGISTRATION_MODE", "FORGE_INVITE_MODE", "FORGE_OPERATOR_NAME", "FORGE_CONTACT_EMAIL", "ACME_EMAIL",
   "FORGE_GATEWAY_IMAGE", "FORGEJO_IMAGE", "FORGEJO_VERSION", "POSTGRES_IMAGE", "POSTGRES_MAJOR", "R2_ACCOUNT_ID", "R2_LFS_BUCKET",
   "FORGE_BACKUP_DESTINATION"];
 for (const name of requiredKeys) check(!!value(name), `environment ${name}`, value(name) ? "declared" : "missing");
@@ -74,8 +74,10 @@ if (lint) {
   check(value("FORGE_PUBLIC_ORIGIN") !== value("FORGEJO_PUBLIC_ORIGIN"), "separate public origins", "Forge and Git origins differ");
   check(["127.0.0.1", "::1"].includes(value("FORGE_BIND_IP")), "loopback-only service bind", value("FORGE_BIND_IP") || "missing");
   check(value("FORGE_REGISTRATION_MODE") === "invite", "invite-only registration", value("FORGE_REGISTRATION_MODE") || "missing");
-  check(value("FORGE_INVITE_CODE").length >= 24 && !placeholder(value("FORGE_INVITE_CODE")),
-    "invite-code entropy", "at least 24 non-placeholder characters");
+  check(value("FORGE_INVITE_MODE") === "database", "single-use invitation backend",
+    value("FORGE_INVITE_MODE") || "missing");
+  check(!value("FORGE_INVITE_CODE"), "no reusable invitation secret",
+    value("FORGE_INVITE_CODE") ? "remove FORGE_INVITE_CODE" : "none declared");
   check(value("FORGE_OPERATOR_NAME").length >= 2 && !placeholder(value("FORGE_OPERATOR_NAME")),
     "accountable operator", value("FORGE_OPERATOR_NAME") ? "named" : "missing");
   check(validEmail(value("FORGE_CONTACT_EMAIL")) && !placeholder(value("FORGE_CONTACT_EMAIL")),

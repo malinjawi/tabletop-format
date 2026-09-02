@@ -13,7 +13,7 @@ import { randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
 
 export function createGateway({ name = "gateway", version = "0", allowedOrigins = [], production = false,
-  https = false, host = undefined } = {}) {
+  https = false, host = undefined, health = {} } = {}) {
   const routes = [];   // {method, pattern, parts, handler, desc}
   const middleware = [];
 
@@ -95,7 +95,7 @@ export function createGateway({ name = "gateway", version = "0", allowedOrigins 
         if (origin && !corsOrigin) return ctx.send(403, { error: "origin not allowed", request_id: requestId });
         for (const m of middleware) { await m(ctx); if (ctx.sent) return; }
         if (url.pathname === "/healthz")
-          return ctx.send(200, { ok: true, name, version, uptime_s: Math.round(process.uptime()) });
+          return ctx.send(200, { ok: true, name, version, uptime_s: Math.round(process.uptime()), ...health });
         if (url.pathname === "/api" && req.method === "GET")
           return ctx.send(200, { name, version, routes: routes.map(r => `${r.method} ${r.pattern}${r.desc ? "  — " + r.desc : ""}`) });
         const m = match(req.method, parts);

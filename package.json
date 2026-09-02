@@ -30,6 +30,8 @@
     "smoke:alpha": "node tools/alpha-readiness.mjs",
     "test:production-config": "node tools/production-config-check.mjs",
     "test:production-preflight": "node tools/test-deploy-preflight.mjs",
+    "pilot:invite": "node tools/pilot-invite.mjs",
+    "test:pilot-invite": "node tools/test-pilot-invite-registration.mjs",
     "test:source-assets": "node tools/test-source-assets.mjs",
     "package:sheets-addon": "node tools/package-sheets-addon.mjs",
     "test:sheets-package": "node tools/test-sheets-addon-package.mjs",

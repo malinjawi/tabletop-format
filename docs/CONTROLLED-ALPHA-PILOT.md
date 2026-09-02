@@ -102,9 +102,12 @@ operator cannot respond to support/moderation reports.
 3. Run `node deploy/preflight.mjs --env deploy/.env --online` and retain its
    secret-free evidence next to the restore record.
 4. Execute one internal two-person journey on the deployed build.
-5. Rotate the invite code, confirm the operator/contact policy text, and record
-   the release commit and image digests.
+5. Confirm the operator/contact policy text, record the release commit and
+   image digests, then issue one expiring single-use invitation per named pilot
+   with `node tools/pilot-invite.mjs create`. Revoke any invitation that will
+   not be delivered; never retain its raw token in the evidence sheet.
 6. Package and install one pinned Google Sheets connector, complete its live
    qualification, and record its deployment evidence without exposing the raw
    script ID.
 7. Copy the pilot evidence template outside Git and invite exactly five people.
+   Record only each invitation ID and status, never the bearer token.

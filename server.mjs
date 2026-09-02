@@ -61,11 +61,15 @@ const ALLOWED_ORIGINS = [...new Set([PUBLIC_ORIGIN,
   ...String(process.env.FORGE_ALLOWED_ORIGINS || "").split(",")].map(value => value.trim().replace(/\/$/, "")).filter(Boolean))];
 const SESSION_COOKIE = HTTPS ? "__Host-forge_session" : "forge_session";
 const REGISTRATION_MODE = process.env.FORGE_REGISTRATION_MODE || (PRODUCTION ? "closed" : "open");
+const INVITE_MODE = process.env.FORGE_INVITE_MODE || (PRODUCTION ? "database" : "shared");
 const SESSION_TTL = PRODUCTION ? 7 * 24 * 3600 * 1000 : SESSION_TTL_MS;
 const OPERATOR_NAME = process.env.FORGE_OPERATOR_NAME || "Forge local development";
 const CONTACT_EMAIL = process.env.FORGE_CONTACT_EMAIL || "support@example.invalid";
 if (PRODUCTION && !HTTPS) throw new Error("production requires an HTTPS FORGE_PUBLIC_ORIGIN (or FORGE_HTTPS=1)");
 if (PRODUCTION && REGISTRATION_MODE === "open") throw new Error("public registration cannot be open in the controlled alpha");
+if (!new Set(["database", "shared"]).has(INVITE_MODE)) throw new Error("FORGE_INVITE_MODE must be database or shared");
+if (PRODUCTION && REGISTRATION_MODE === "invite" && INVITE_MODE !== "database")
+  throw new Error("production invite registration requires single-use database invitations");
 if (PRODUCTION && (!validEmail(CONTACT_EMAIL) || CONTACT_EMAIL.endsWith(".invalid")))
   throw new Error("production requires FORGE_CONTACT_EMAIL for support, privacy, moderation, and takedown requests");
 if (PRODUCTION && (!OPERATOR_NAME || OPERATOR_NAME === "Forge local development"))
@@ -225,7 +229,8 @@ async function uiGame(slug) {
 
 /* ---------- gateway + middleware ---------- */
 const gw = createGateway({ name: "forge-platform", version: "0.3", allowedOrigins: ALLOWED_ORIGINS,
-  production: PRODUCTION, https: HTTPS, host: LISTEN_HOST });
+  production: PRODUCTION, https: HTTPS, host: LISTEN_HOST,
+  health: { registration: REGISTRATION_MODE, password_min: PRODUCTION ? 12 : 8 } });
 const hits = new Map();
 gw.use((ctx) => { if (ctx.req.method === "OPTIONS") ctx.send(204, ""); });
 gw.use((ctx) => { // rate limit
@@ -649,15 +654,32 @@ gw.route("POST", "/api/auth/register", async (ctx) => {
   let { handle, email, password, invite_code: inviteCode } = await json(ctx);
   email = String(email || "").trim().toLowerCase();
   if (REGISTRATION_MODE === "closed") return ctx.send(403, { error: "registration is invite-only during the controlled alpha" });
-  if (REGISTRATION_MODE === "invite" && (!process.env.FORGE_INVITE_CODE || inviteCode !== process.env.FORGE_INVITE_CODE))
+  if (REGISTRATION_MODE === "invite" && INVITE_MODE === "shared"
+      && (!process.env.FORGE_INVITE_CODE || inviteCode !== process.env.FORGE_INVITE_CODE))
     return ctx.send(403, { error: "a valid alpha invite code is required" });
   if (!validHandle(handle)) return ctx.send(422, { error: "handle: 2-32 chars, kebab-case" });
   if (!validEmail(email)) return ctx.send(422, { error: "invalid email" });
   const minimum = PRODUCTION ? 12 : 8;
   if ((password ?? "").length < minimum) return ctx.send(422, { error: `password: ${minimum}+ chars` });
-  if (await q.userByHandle(db, handle) || await q.userByEmail(db, email)) return ctx.send(409, { error: "handle or email already registered" });
   const id = newId("u");
-  await q.createUser(db, { id, handle, email, pass_hash: hashPassword(password) });
+  const user = { id, handle, email, pass_hash: hashPassword(password) };
+  if (REGISTRATION_MODE === "invite" && INVITE_MODE === "database") {
+    const candidate = String(inviteCode || "").trim();
+    try {
+      await q.registerUserWithInvite(db, user,
+        createHash("sha256").update(candidate).digest("hex"));
+    } catch (error) {
+      if (error?.code === "FORGE_INVITE_INVALID")
+        return ctx.send(403, { error: "invite is invalid or no longer available" });
+      if (await q.userByHandle(db, handle) || await q.userByEmail(db, email))
+        return ctx.send(409, { error: "handle or email already registered" });
+      throw error;
+    }
+  } else {
+    if (await q.userByHandle(db, handle) || await q.userByEmail(db, email))
+      return ctx.send(409, { error: "handle or email already registered" });
+    await q.createUser(db, user);
+  }
   const token = newToken();
   await q.createSession(db, tokenDigest(token), id, SESSION_TTL);
   authResponse(ctx, 201, token, { id, handle });

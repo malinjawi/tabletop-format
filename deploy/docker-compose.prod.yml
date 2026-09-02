@@ -49,7 +49,9 @@ services:
       FORGE_HTTPS: "1"
       FORGE_TRUST_PROXY: "1"
       FORGE_REGISTRATION_MODE: ${FORGE_REGISTRATION_MODE:-invite}
-      FORGE_INVITE_CODE: ${FORGE_INVITE_CODE:?set a controlled-alpha invite code}
+      # Invitations are high-entropy, single-use rows in Store 2. No reusable
+      # cohort secret is exposed in the container environment.
+      FORGE_INVITE_MODE: ${FORGE_INVITE_MODE:-database}
       FORGE_OPERATOR_NAME: ${FORGE_OPERATOR_NAME:?set the accountable service operator}
       FORGE_CONTACT_EMAIL: ${FORGE_CONTACT_EMAIL:?set support/privacy/moderation/takedown contact}
     healthcheck:

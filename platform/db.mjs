@@ -42,6 +42,49 @@ export const q = {
   createUser: (db, u) => db.prepare(
     `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`).run(u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, Date.now()),
+  createPilotInvite: (db, invite) => db.prepare(
+    `INSERT INTO pilot_invites (id, token_hash, label, cohort_id, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?)`).run(invite.id, invite.token_hash, invite.label ?? null,
+      invite.cohort_id ?? null, invite.created_at, invite.expires_at),
+  pilotInvites: (db, now = Date.now()) => db.prepare(
+    `SELECT i.id, i.label, i.cohort_id, i.created_at, i.expires_at, i.revoked_at,
+            i.redeemed_at, u.handle AS redeemed_handle,
+            CASE WHEN i.redeemed_at IS NOT NULL THEN 'redeemed'
+                 WHEN i.revoked_at IS NOT NULL THEN 'revoked'
+                 WHEN i.expires_at <= ? THEN 'expired' ELSE 'available' END AS status
+     FROM pilot_invites i LEFT JOIN users u ON u.id = i.redeemed_by
+     ORDER BY i.created_at DESC`).all(now),
+  revokePilotInvite: (db, id, now = Date.now()) => db.prepare(
+    `UPDATE pilot_invites SET revoked_at = ?
+     WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`).run(now, id),
+  registerUserWithInvite: (db, u, tokenHash, now = Date.now()) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const invite = db.prepare(
+        `SELECT id FROM pilot_invites
+         WHERE token_hash = ? AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > ?`).get(tokenHash, now);
+      if (!invite) {
+        throw Object.assign(new Error("invite is invalid or no longer available"),
+          { code: "FORGE_INVITE_INVALID" });
+      }
+      db.prepare(
+        `INSERT INTO users (id, handle, email, display_name, pass_hash, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(u.id, u.handle, u.email, u.display_name ?? u.handle, u.pass_hash, now);
+      const claimed = db.prepare(
+        `UPDATE pilot_invites SET redeemed_at = ?, redeemed_by = ?
+         WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > ?`)
+        .run(now, u.id, invite.id, now);
+      if (claimed.changes !== 1) {
+        throw Object.assign(new Error("invite is invalid or no longer available"),
+          { code: "FORGE_INVITE_INVALID" });
+      }
+      db.exec("COMMIT");
+      return { id: invite.id };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
   userByHandle: (db, h) => db.prepare("SELECT * FROM users WHERE handle = ?").get(h),
   userByEmail:  (db, e) => db.prepare("SELECT * FROM users WHERE email = ?").get(e),
   userById:     (db, id) => db.prepare("SELECT * FROM users WHERE id = ?").get(id),

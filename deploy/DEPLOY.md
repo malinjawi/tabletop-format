@@ -83,8 +83,10 @@ running major version's [Forgejo CLI documentation](https://forgejo.org/docs/lat
 
 Create `.secrets/r2-access-key` and `.secrets/r2-secret-key` from a credential
 limited to the Forge LFS bucket. Create an empty `.secrets/forge-token` for the
-first boot. Fill `.env`, including the exact HTTPS origins and a rotating alpha
-invite code. Neither `.env` nor `.secrets/` is tracked by Git.
+first boot. Fill `.env`, including the exact HTTPS origins and the
+`database` invitation backend. Forge stores only invitation-token digests in
+PostgreSQL; there is no reusable cohort code in `.env`. Neither `.env` nor
+`.secrets/` is tracked by Git.
 `FORGE_SECRET_DIR` may be an absolute path when secrets are mounted from an
 encrypted host volume; relative paths resolve from `deploy/`, exactly as Compose
 does.
@@ -109,6 +111,23 @@ demote the bootstrap account, then start the gateway:
 chmod 600 .secrets/forge-token
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+After the gateway is healthy, issue one invitation per intended participant:
+
+```sh
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-invite.mjs create --label "Amina" --cohort beta-01 --hours 168
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-invite.mjs list
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-invite.mjs revoke inv_0123456789abcdef
+```
+
+The create command prints a high-entropy bearer token exactly once. Deliver it
+only to that participant. `list` shows available, redeemed, expired, and
+revoked records without exposing either the token or its digest. Invitations
+expire after seven days by default, can be shortened with `--hours`, and can
+never be replayed.
 
 Do not put a Forgejo admin password in the gateway environment. Rotate the
 service token by updating the secret file and recreating only the gateway.

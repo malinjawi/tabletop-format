@@ -25,7 +25,7 @@ try {
     "FORGEJO_BIND_PORT=3000",
     `FORGE_SECRET_DIR=${secretDir}`,
     "FORGE_REGISTRATION_MODE=invite",
-    "FORGE_INVITE_CODE=0123456789abcdef0123456789abcdef",
+    "FORGE_INVITE_MODE=database",
     "FORGE_OPERATOR_NAME=Forge Pilot Operator",
     "FORGE_CONTACT_EMAIL=ops@forge.test",
     "ACME_EMAIL=tls@forge.test",
