@@ -6,13 +6,13 @@
 #
 # Add production-backend conformance against dedicated disposable services:
 #   FORGE_CONFORMANCE_PG_URL=postgres://... \
-#   FORGE_LIVE_URL=https://git.example.test \
-#   FORGE_LIVE_ADMIN_USER=root FORGE_LIVE_ADMIN_PASS=... \
+#   FORGEJO_TEST_IMAGE=codeberg.org/forgejo/forgejo@sha256:... \
 #   REQUIRE_PRODUCTION_BACKENDS=1 ./launch-gate.sh
 #
 # FORGE_CONFORMANCE_PG_URL must name a dedicated test database. The Store-2
-# conformance creates/migrates tables. The live Forgejo journey deletes only its
-# own alice/tidepool and bob/tidepool-bob repositories before running.
+# conformance creates/migrates tables. Alternatively, FORGE_LIVE_URL plus admin
+# credentials can target an already isolated Forgejo; that journey deletes only
+# its own alice/tidepool and bob/tidepool-bob repositories before running.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -64,8 +64,11 @@ if [ -n "${FORGE_LIVE_URL:-}" ]; then
     FORGE_ALLOW_FIXTURE_DELETE=1 \
     ./journey-forgejo.sh
   production_backends=$((production_backends + 1))
+elif [ -n "${FORGEJO_TEST_IMAGE:-}" ]; then
+  run "disposable real Forgejo journey" ./tools/disposable-forgejo-check.sh
+  production_backends=$((production_backends + 1))
 else
-  printf '\nSKIP live Forgejo conformance: set FORGE_LIVE_URL and its test-admin credentials.\n'
+  printf '\nSKIP real Forgejo conformance: set FORGE_LIVE_URL plus test-admin credentials, or FORGEJO_TEST_IMAGE to a digest-pinned image.\n'
 fi
 
 if [ "${REQUIRE_PRODUCTION_BACKENDS:-0}" = "1" ] && [ "$production_backends" -ne 2 ]; then
@@ -75,7 +78,7 @@ fi
 
 printf '\nCONTROLLED-ALPHA LAUNCH GATE GREEN'
 if [ "$production_backends" -eq 2 ]; then
-  printf ' — including PostgreSQL and live Forgejo.\n'
+  printf ' — including PostgreSQL and real Forgejo.\n'
 else
-  printf ' — including PostgreSQL; isolated live Forgejo was optional and skipped.\n'
+  printf ' — including PostgreSQL; real Forgejo was optional and skipped.\n'
 fi

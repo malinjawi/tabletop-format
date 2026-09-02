@@ -87,16 +87,27 @@ Run the single release gate against the exact release commit before deploying:
 npm ci
 FORGE_REQUIRE_CLEAN_TREE=1 \
 FORGE_CONFORMANCE_PG_URL='postgres://…/forge_conformance' \
-FORGE_LIVE_URL='http://127.0.0.1:3000' \
-FORGE_LIVE_ADMIN_USER='launch-gate' \
-FORGE_LIVE_ADMIN_PASS='…' \
+FORGEJO_TEST_IMAGE='codeberg.org/forgejo/forgejo@sha256:<tested-digest>' \
 REQUIRE_PRODUCTION_BACKENDS=1 \
 ./launch-gate.sh
 ```
 
-Use dedicated disposable backend instances. The live journey purges its exact
-fixture users and refuses to run without the guard set by `launch-gate.sh`. Do
-not point conformance at a database or Forgejo server that contains user work.
+The digest-pinned helper is the safe default: it creates a fresh Forgejo
+container and volume, runs the journey, and removes them. To test an already
+deployed isolated Forgejo instead, set `FORGE_LIVE_URL`,
+`FORGE_LIVE_ADMIN_USER`, and `FORGE_LIVE_ADMIN_PASS`; that journey purges its
+exact fixture users. Never point conformance at a database or Forgejo server
+that contains user work.
+For a repeatable local proof against the actual Forgejo image before registry
+promotion, run:
+
+```sh
+FORGEJO_TEST_IMAGE='codeberg.org/forgejo/forgejo@sha256:<tested-digest>' \
+  npm run test:forgejo:disposable
+```
+
+That helper creates and later removes only its uniquely named disposable
+container and volume. It refuses floating image tags.
 
 After deployment verify `/healthz`, a login/logout cycle, a private-project
 404 while signed out, a Sheet dry run and commit, a PR approval/merge, and one
