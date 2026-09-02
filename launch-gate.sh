@@ -9,6 +9,7 @@
 #   FORGEJO_TEST_IMAGE=codeberg.org/forgejo/forgejo@sha256:... \
 #   POSTGRES_TEST_IMAGE=postgres@sha256:... \
 #   ALPINE_TEST_IMAGE=alpine@sha256:... \
+#   FORGE_GATEWAY_TEST_IMAGE=sha256:<locally-built-image-id> \
 #   FORGE_RESTORE_DRILL=1 \
 #   REQUIRE_PRODUCTION_BACKENDS=1 ./launch-gate.sh
 #
@@ -86,9 +87,11 @@ else
 fi
 
 restore_drill=0
+gateway_image_drill=0
 if [ "${FORGE_RESTORE_DRILL:-0}" = "1" ]; then
   run "disposable synchronized backup/restore drill" ./tools/disposable-restore-drill.sh
   restore_drill=1
+  [ -z "${FORGE_GATEWAY_TEST_IMAGE:-}" ] || gateway_image_drill=1
 else
   printf '\nSKIP disaster-recovery proof: set FORGE_RESTORE_DRILL=1 plus digest-pinned Forgejo, Postgres, and Alpine images.\n'
 fi
@@ -99,6 +102,10 @@ if [ "${REQUIRE_PRODUCTION_BACKENDS:-0}" = "1" ] && [ "$production_backends" -ne
 fi
 if [ "${REQUIRE_RESTORE_DRILL:-0}" = "1" ] && [ "$restore_drill" -ne 1 ]; then
   printf '\nFAIL: release policy requires the disposable backup/restore drill.\n' >&2
+  exit 1
+fi
+if [ "${REQUIRE_GATEWAY_IMAGE_DRILL:-0}" = "1" ] && [ "$gateway_image_drill" -ne 1 ]; then
+  printf '\nFAIL: release policy requires restore verification through the exact production gateway image.\n' >&2
   exit 1
 fi
 if [ "${REQUIRE_DEPLOY_PREFLIGHT:-0}" = "1" ] && [ "$deploy_preflight" -ne 1 ]; then

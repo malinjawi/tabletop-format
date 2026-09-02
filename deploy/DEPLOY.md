@@ -30,6 +30,12 @@ and the host preflight verifies both values against the selected image metadata.
 The gateway build fails unless it receives a source revision and stores that
 commit in the standard OCI revision label. Build only from a clean commit; the
 registry digest and revision label together identify the exact shipped source.
+Before promotion, pass the built image's immutable local image ID (or registry
+digest) as `FORGE_GATEWAY_TEST_IMAGE` to the strict launch gate. The recovery
+drill rejects an image whose OCI revision is not the candidate `HEAD`, boots it
+read-only against restored Forgejo/PostgreSQL stores, and verifies that it can
+regenerate every frozen release artifact from an empty cache. Set
+`REQUIRE_GATEWAY_IMAGE_DRILL=1` to make that evidence mandatory.
 
 ## 2. Create configuration and secrets
 
@@ -92,6 +98,10 @@ docker compose -f docker-compose.prod.yml up -d
 
 Do not put a Forgejo admin password in the gateway environment. Rotate the
 service token by updating the secret file and recreating only the gateway.
+Forge uses that same token for LFS: it resolves the token owner through
+Forgejo's authenticated `/user` API, then sends the username and token with
+HTTP Basic authentication. No account password or second identity setting is
+needed.
 
 ## 4. Preflight the actual host and TLS edge
 

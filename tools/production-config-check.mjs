@@ -88,5 +88,10 @@ ok(/^ACME_EMAIL=.+/m.test(template) && /^FORGE_BACKUP_DESTINATION=\/.+/m.test(te
   "deployment template requires TLS alerts and an explicit off-host backup target");
 ok(/^FORGEJO_VERSION=15\./m.test(template) && /^POSTGRES_MAJOR=16$/m.test(template),
   "deployment template pins the majors qualified by the recovery drill");
+const restoreDrill=readFileSync(resolve(ROOT,"tools/disposable-restore-drill.sh"),"utf8");
+ok(restoreDrill.includes("FORGE_GATEWAY_TEST_IMAGE")
+  && restoreDrill.includes("org.opencontainers.image.revision")
+  && restoreDrill.includes("--read-only --tmpfs /tmp"),
+  "recovery can be verified through the exact source-matched, read-only gateway image");
 
 console.log(`\nPRODUCTION CONFIG GREEN — ${checks} deployability and isolation checks passed.`);

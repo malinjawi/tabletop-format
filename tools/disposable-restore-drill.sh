@@ -8,6 +8,7 @@ repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
 forgejo_image="${FORGEJO_TEST_IMAGE:-}"
 postgres_image="${POSTGRES_TEST_IMAGE:-}"
 utility_image="${ALPINE_TEST_IMAGE:-}"
+gateway_image="${FORGE_GATEWAY_TEST_IMAGE:-}"
 for pair in "FORGEJO_TEST_IMAGE:$forgejo_image" "POSTGRES_TEST_IMAGE:$postgres_image" "ALPINE_TEST_IMAGE:$utility_image"; do
   key="${pair%%:*}"; value="${pair#*:}"
   if [[ ! "$value" =~ @sha256:[0-9a-f]{64}$ ]]; then
@@ -16,6 +17,19 @@ for pair in "FORGEJO_TEST_IMAGE:$forgejo_image" "POSTGRES_TEST_IMAGE:$postgres_i
   fi
   docker image inspect "$value" >/dev/null
 done
+if [ -n "$gateway_image" ]; then
+  if [[ ! "$gateway_image" =~ @sha256:[0-9a-f]{64}$ && ! "$gateway_image" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    printf 'FORGE_GATEWAY_TEST_IMAGE must be a registry digest or immutable local image ID\n' >&2
+    exit 2
+  fi
+  docker image inspect "$gateway_image" >/dev/null
+  gateway_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$gateway_image")"
+  candidate_revision="$(git -C "$repo_dir" rev-parse HEAD)"
+  if [ "$gateway_revision" != "$candidate_revision" ]; then
+    printf 'gateway image revision %s does not match launch candidate %s\n' "${gateway_revision:-missing}" "$candidate_revision" >&2
+    exit 2
+  fi
+fi
 forgejo_version="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "$forgejo_image")"
 if [[ ! "$forgejo_version" =~ ^15\. ]]; then
   printf 'Forgejo recovery is qualified on 15.x; %s reports %s\n' "$forgejo_image" "${forgejo_version:-no version label}" >&2
@@ -36,17 +50,19 @@ network="$prefix-net"
 source_pg="$prefix-source-db"; source_forgejo="$prefix-source-forgejo"
 restore_pg="$prefix-restore-db"; restore_forgejo="$prefix-restore-forgejo"
 restore_helper="$prefix-restore-helper"
+gateway_container="$prefix-gateway"
 source_pg_volume="$prefix-source-pg"; source_forgejo_volume="$prefix-source-forgejo-data"
 restore_pg_volume="$prefix-restore-pg"; restore_forgejo_volume="$prefix-restore-forgejo-data"
 secret_volume="$prefix-secrets"
+gateway_volume="$prefix-gateway-data"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/forge-restore-drill.XXXXXX")"
 gateway_pid=""
 
 cleanup(){
   status=$?
   [ -n "$gateway_pid" ] && kill "$gateway_pid" >/dev/null 2>&1 || true
-  docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$restore_helper" >/dev/null 2>&1 || true
-  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$secret_volume" >/dev/null 2>&1 || true
+  docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$restore_helper" "$gateway_container" >/dev/null 2>&1 || true
+  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$secret_volume" "$gateway_volume" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   if [ "${FORGE_KEEP_RESTORE_DRILL:-0}" = "1" ]; then
     printf 'restore drill evidence retained at %s\n' "$scratch" >&2
@@ -248,22 +264,63 @@ forge_token="$(curl -fsS -u "$admin_user:$admin_password" -X POST -H 'Content-Ty
   | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).sha1||''))")"
 [ -n "$forge_token" ] || { printf 'could not mint restored Forgejo token\n' >&2; exit 1; }
 
-if find "$scratch/restored-cache" -type f -print -quit | grep -q .; then
-  printf 'restored Store 3 must begin empty\n' >&2; exit 1
+if [ -n "$gateway_image" ]; then
+  docker volume create "$gateway_volume" >/dev/null
+  docker run --rm --volume "$secret_volume:/secrets" \
+    --env FORGE_TOKEN_VALUE="$forge_token" --env PLATFORM_PASSWORD_VALUE="$platform_password" \
+    "$utility_image" sh -eu -c '
+      umask 077
+      printf "%s\n" "$FORGE_TOKEN_VALUE" > /secrets/forge-token
+      printf "%s\n" "$PLATFORM_PASSWORD_VALUE" > /secrets/platform-db-password
+      chown 1000:1000 /secrets/forge-token /secrets/platform-db-password
+      chmod 0400 /secrets/forge-token /secrets/platform-db-password
+    '
+  docker run --detach --name "$gateway_container" --network "$network" \
+    --publish "127.0.0.1:$gateway_port:8420" --read-only --tmpfs /tmp:size=536870912,mode=1777 \
+    --volume "$gateway_volume:/app/data" --volume "$secret_volume:/run/secrets:ro" \
+    --env STORE1=forgejo --env FORGE_URL="http://$restore_forgejo:3000" \
+    --env DB=postgres --env PGHOST="$restore_pg" --env PGPORT=5432 \
+    --env PGDATABASE=platform --env PGUSER=platform \
+    --env CACHE_DIR=/app/data/cache --env FARM_DIR=/app/data/forge-farm \
+    --env FORGE_HUB_PATH=/app/data/hub.html \
+    --env FORGE_PUBLIC_ORIGIN=https://forge.restore.test --env FORGE_ALLOWED_ORIGINS=https://forge.restore.test \
+    --env FORGE_HTTPS=1 --env FORGE_REGISTRATION_MODE=closed \
+    --env FORGE_OPERATOR_NAME='Forge restore drill' --env FORGE_CONTACT_EMAIL=operator@forge.test \
+    --env FORGE_BUILD_ID="$gateway_image" \
+    "$gateway_image" /bin/sh -ec '
+      export FORGE_TOKEN="$(cat /run/secrets/forge-token)"
+      export PGPASSWORD="$(cat /run/secrets/platform-db-password)"
+      exec node server.mjs --port 8420
+    ' >/dev/null
+else
+  if find "$scratch/restored-cache" -type f -print -quit | grep -q .; then
+    printf 'restored Store 3 must begin empty\n' >&2; exit 1
+  fi
+  STORE1=forgejo FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
+    FORGE_BASIC="$admin_user:$admin_password" DB=postgres \
+    PG_URL="postgres://platform:$platform_password@127.0.0.1:$restore_pg_port/platform" \
+    CACHE_DIR="$scratch/restored-cache" FARM_DIR="$scratch/restored-farm" \
+    FORGE_HUB_PATH="$scratch/restored-hub.html" FORGE_REGISTRATION_MODE=closed \
+    node "$repo_dir/server.mjs" --port "$gateway_port" > "$scratch/restored-gateway.log" 2>&1 &
+  gateway_pid=$!
 fi
-STORE1=forgejo FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
-  FORGE_BASIC="$admin_user:$admin_password" DB=postgres \
-  PG_URL="postgres://platform:$platform_password@127.0.0.1:$restore_pg_port/platform" \
-  CACHE_DIR="$scratch/restored-cache" FARM_DIR="$scratch/restored-farm" \
-  FORGE_HUB_PATH="$scratch/restored-hub.html" FORGE_REGISTRATION_MODE=closed \
-  node "$repo_dir/server.mjs" --port "$gateway_port" > "$scratch/restored-gateway.log" 2>&1 &
-gateway_pid=$!
 for _attempt in $(seq 1 120); do
   curl -fsS "$gateway_origin/healthz" >/dev/null 2>&1 && break
+  if [ -n "$gateway_image" ] && ! docker container inspect "$gateway_container" --format '{{.State.Running}}' 2>/dev/null | grep -qx true; then
+    docker logs "$gateway_container" >&2
+    exit 1
+  fi
   sleep 0.25
 done
-curl -fsS "$gateway_origin/healthz" >/dev/null || { tail -80 "$scratch/restored-gateway.log" >&2; exit 1; }
+if ! curl -fsS "$gateway_origin/healthz" >/dev/null; then
+  if [ -n "$gateway_image" ]; then docker logs "$gateway_container" >&2; else tail -80 "$scratch/restored-gateway.log" >&2; fi
+  exit 1
+fi
 FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
   node "$repo_dir/tools/restore-verify.mjs" "$gateway_origin"
 
-printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; Store 3 rebuilt exact released bytes.\n'
+if [ -n "$gateway_image" ]; then
+  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; the exact release image rebuilt Store 3 and exact released bytes.\n'
+else
+  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; Store 3 rebuilt exact released bytes.\n'
+fi
