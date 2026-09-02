@@ -142,6 +142,21 @@ failed acceptance leaves the invitation available. These receipts are included
 in the normal PostgreSQL backup and verified by the restore drill. They are
 operational evidence, not a substitute for jurisdiction-specific legal review.
 
+After registration, verify the receipt without opening PostgreSQL or printing
+the participant's email or any policy body:
+
+```sh
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs policy --handle amina --require-current
+```
+
+`verified-current` means the receipt is internally intact and matches the
+policy text rendered from this gateway's current operator/contact settings.
+Without `--require-current`, an intact older receipt is reported as
+`verified-prior`; that is useful for audit history but is not sufficient for a
+cohort that requires the current terms. A corrupt snapshot or a missing current
+receipt exits nonzero.
+
 If a participant loses access, issue a short-lived recovery token instead of
 editing the database or setting a password for them:
 

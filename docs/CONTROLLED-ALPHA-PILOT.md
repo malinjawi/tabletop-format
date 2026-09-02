@@ -108,8 +108,10 @@ operator cannot respond to support/moderation reports.
    not be delivered; never retain its raw token in the evidence sheet. Before
    beginning the product journey, confirm the participant saw the unchecked
    policy control and that their `/api/me` response contains exactly one
-   `clickwrap` receipt for the deployed `/healthz` `policy_set`; record only
-   that set identifier and acceptance time, never account credentials.
+   `clickwrap` receipt for the deployed `/healthz` `policy_set`. Then run
+   `node tools/pilot-account.mjs policy --handle … --require-current` inside
+   the gateway and require `verified-current`; record only the receipt ID, set
+   identifier, and acceptance time, never account credentials or policy text.
 6. Package and install one pinned Google Sheets connector, complete its live
    qualification, and record its deployment evidence without exposing the raw
    script ID.
