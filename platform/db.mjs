@@ -30,8 +30,15 @@ function migrate(db) {
   const dir = join(ROOT, "migrations");
   for (const f of readdirSync(dir).filter(f => f.endsWith(".sql")).sort()) {
     if (applied.has(f)) continue;
-    db.exec(readFileSync(join(dir, f), "utf8"));
-    db.prepare("INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)").run(f, Date.now());
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.exec(readFileSync(join(dir, f), "utf8"));
+      db.prepare("INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)").run(f, Date.now());
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
   }
 }
 
@@ -88,6 +95,9 @@ export const q = {
   issuePasswordReset: (db, reset, now = Date.now()) => {
     db.exec("BEGIN IMMEDIATE");
     try {
+      const active = db.prepare("SELECT id FROM users WHERE id = ? AND suspended_at IS NULL").get(reset.user_id);
+      if (!active) throw Object.assign(new Error("account is suspended or unavailable"),
+        { code: "FORGE_ACCOUNT_SUSPENDED" });
       db.prepare(
         `UPDATE password_reset_tokens SET revoked_at = ?
          WHERE user_id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`).run(now, reset.user_id);
@@ -114,8 +124,10 @@ export const q = {
     db.exec("BEGIN IMMEDIATE");
     try {
       const reset = db.prepare(
-        `SELECT id, user_id FROM password_reset_tokens
-         WHERE token_hash = ? AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > ?`).get(tokenHash, now);
+        `SELECT r.id, r.user_id FROM password_reset_tokens r
+         JOIN users u ON u.id = r.user_id
+         WHERE r.token_hash = ? AND r.revoked_at IS NULL AND r.redeemed_at IS NULL
+           AND r.expires_at > ? AND u.suspended_at IS NULL`).get(tokenHash, now);
       if (!reset) throw Object.assign(new Error("reset is invalid or no longer available"),
         { code: "FORGE_RESET_INVALID" });
       db.prepare("UPDATE users SET pass_hash = ? WHERE id = ?").run(passHash, reset.user_id);
@@ -137,12 +149,60 @@ export const q = {
   userByEmail:  (db, e) => db.prepare("SELECT * FROM users WHERE email = ?").get(e),
   userById:     (db, id) => db.prepare("SELECT * FROM users WHERE id = ?").get(id),
 
-  createSession: (db, token, userId, ttlMs) => db.prepare(
-    `INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`)
-    .run(token, userId, Date.now(), Date.now() + ttlMs),
+  accountAccessByHandle: (db, handle) => db.prepare(
+    `SELECT id, handle, created_at, suspended_at, suspension_reason,
+            CASE WHEN suspended_at IS NULL THEN 'active' ELSE 'suspended' END AS status
+     FROM users WHERE handle = ?`).get(handle),
+  accountAccessEvents: (db, userId) => db.prepare(
+    `SELECT id, action, operator_name, reason, created_at
+     FROM account_access_events WHERE user_id = ? ORDER BY created_at DESC`).all(userId),
+  setAccountSuspended: (db, change, now = Date.now()) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = change.suspended
+        ? db.prepare(
+          `UPDATE users SET suspended_at = ?, suspension_reason = ?
+           WHERE id = ? AND suspended_at IS NULL`).run(now, change.reason, change.user_id)
+        : db.prepare(
+          `UPDATE users SET suspended_at = NULL, suspension_reason = NULL
+           WHERE id = ? AND suspended_at IS NOT NULL`).run(change.user_id);
+      if (result.changes !== 1) throw Object.assign(new Error("account is already in the requested state"),
+        { code: "FORGE_ACCOUNT_STATE" });
+      if (change.suspended) {
+        db.prepare("DELETE FROM sessions WHERE user_id = ?").run(change.user_id);
+        db.prepare(
+          `UPDATE password_reset_tokens SET revoked_at = ?
+           WHERE user_id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`).run(now, change.user_id);
+      }
+      db.prepare(
+        `INSERT INTO account_access_events (id, user_id, action, operator_name, reason, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(change.id, change.user_id,
+          change.suspended ? "suspend" : "restore", change.operator_name, change.reason, now);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+
+  createSession: (db, token, userId, ttlMs) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const active = db.prepare("SELECT id FROM users WHERE id = ? AND suspended_at IS NULL").get(userId);
+      if (!active) throw Object.assign(new Error("account is suspended or unavailable"),
+        { code: "FORGE_ACCOUNT_SUSPENDED" });
+      const now = Date.now();
+      db.prepare(`INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`)
+        .run(token, userId, now, now + ttlMs);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
   sessionUser: (db, token) => db.prepare(
     `SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
-     WHERE s.token = ? AND s.expires_at > ?`).get(token, Date.now()),
+     WHERE s.token = ? AND s.expires_at > ? AND u.suspended_at IS NULL`).get(token, Date.now()),
   sessionsFor: (db, userId) => db.prepare(
     "SELECT substr(token, 1, 16) AS id, created_at, expires_at FROM sessions WHERE user_id = ? AND expires_at > ? ORDER BY created_at DESC")
     .all(userId, Date.now()),

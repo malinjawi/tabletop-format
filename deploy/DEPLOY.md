@@ -147,6 +147,27 @@ Redemption revokes every existing session; issuing another token automatically
 revokes any older outstanding token. The database and audit listing retain
 only the digest, reset ID, account, timestamps, and status.
 
+Suspend access without deleting the participant or their authored history:
+
+```sh
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs suspend --handle amina \
+    --reason "participant requested access pause"
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs status --handle amina
+docker compose -f docker-compose.prod.yml exec gateway \
+  node tools/pilot-account.mjs restore --handle amina \
+    --reason "participant confirmed return"
+```
+
+The production container supplies the declared `FORGE_OPERATOR_NAME`; direct
+development use must pass `--operator`. Suspension atomically revokes every
+session and outstanding recovery token, blocks login with the same generic
+credential error, and writes an immutable operator/reason event. Restoration
+does not invent a password or session—the participant signs in normally.
+Never put private complaint details in `--reason`; use a short operational
+description and keep sensitive case notes in the operator's protected system.
+
 Do not put a Forgejo admin password in the gateway environment. Rotate the
 service token by updating the secret file and recreating only the gateway.
 Forge uses that same token for LFS: it resolves the token owner through

@@ -146,12 +146,14 @@ try {
 
   assert.equal((await request("GET", "/api/me", { token: oldSession })).status, 401,
     "password recovery revokes the old bearer session");
-  assert.equal((await request("POST", "/api/auth/login", { body: {
+  const rejectedOldPassword = await request("POST", "/api/auth/login", { body: {
     handle: "amina", password: "correct-horse-12",
-  } })).status, 401, "old password stops working");
-  assert.equal((await request("POST", "/api/auth/login", { body: {
+  } });
+  assert.equal(rejectedOldPassword.status, 401, "old password stops working");
+  const recoveredLogin = await request("POST", "/api/auth/login", { body: {
     handle: "amina", password: "correct-horse-14",
-  } })).status, 200, "new password works");
+  } });
+  assert.equal(recoveredLogin.status, 200, "new password works");
   const resetReplay = await request("POST", "/api/auth/password-reset", { body: {
     reset_token: resetToken, password: "correct-horse-15",
   }, browserRequest: true });
@@ -160,6 +162,44 @@ try {
   assert.equal(resetList.status, 0, resetList.stderr);
   assert.match(resetList.stdout, /redeemed[\s\S]*amina/);
   assert.doesNotMatch(resetList.stdout, /fpr_|[a-f0-9]{64}/i);
+
+  const outstandingReset = runAccountCli("reset", "--handle", "amina", "--hours", "1");
+  assert.equal(outstandingReset.status, 0, outstandingReset.stderr);
+  const outstandingToken = outstandingReset.stdout.match(/(?:^|\s)(fpr_[A-Za-z0-9_-]{32})(?=\s|$)/m)?.[1];
+  assert.ok(outstandingToken);
+  const suspended = runAccountCli("suspend", "--handle", "amina", "--operator", "Forge Pilot Operator",
+    "--reason", "participant requested access pause");
+  assert.equal(suspended.status, 0, suspended.stderr);
+  assert.match(suspended.stdout, /every session and outstanding recovery token was revoked/);
+  assert.equal((await request("GET", "/api/me", { token: recoveredLogin.body.token })).status, 401,
+    "suspension immediately invalidates an existing bearer session");
+  const suspendedLogin = await request("POST", "/api/auth/login", { body: {
+    handle: "amina", password: "correct-horse-14",
+  } });
+  assert.equal(suspendedLogin.status, 401);
+  assert.equal(suspendedLogin.body.error, rejectedOldPassword.body.error,
+    "suspension does not disclose account status through login");
+  assert.equal((await request("POST", "/api/auth/password-reset", { body: {
+    reset_token: outstandingToken, password: "correct-horse-15",
+  }, browserRequest: true })).status, 403, "suspension revokes already-issued recovery");
+  const resetWhileSuspended = runAccountCli("reset", "--handle", "amina");
+  assert.equal(resetWhileSuspended.status, 2);
+  assert.match(resetWhileSuspended.stderr, /account is suspended/);
+  const suspendedStatus = runAccountCli("status", "--handle", "amina");
+  assert.equal(suspendedStatus.status, 0, suspendedStatus.stderr);
+  assert.match(suspendedStatus.stdout, /amina\tsuspended[\s\S]*Forge Pilot Operator[\s\S]*participant requested access pause/);
+  assert.doesNotMatch(suspendedStatus.stdout, /@|fpr_|[a-f0-9]{64}/i);
+
+  const restored = runAccountCli("restore", "--handle", "amina", "--operator", "Forge Pilot Operator",
+    "--reason", "participant confirmed return");
+  assert.equal(restored.status, 0, restored.stderr);
+  assert.match(restored.stdout, /no session or password was created/);
+  assert.equal((await request("POST", "/api/auth/login", { body: {
+    handle: "amina", password: "correct-horse-14",
+  } })).status, 200, "restoration re-enables login with the unchanged password");
+  const restoredStatus = runAccountCli("status", "--handle", "amina");
+  assert.match(restoredStatus.stdout, /amina\tactive[\s\S]*restore[\s\S]*suspend/);
+  assert.doesNotMatch(restoredStatus.stdout, /@|fpr_|[a-f0-9]{64}/i);
 
   const replay = await api({ handle: "replay", email: "replay@example.com",
     password: "correct-horse-13", invite_code: token });
@@ -170,7 +210,7 @@ try {
   assert.equal(listed.status, 0, listed.stderr);
   assert.match(listed.stdout, /redeemed[\s\S]*Amina designer[\s\S]*amina/);
   assert.doesNotMatch(listed.stdout, /fpi_|[a-f0-9]{64}/i);
-  console.log("PILOT ACCOUNT ACCESS GREEN — single-use admission and operator-assisted recovery work safely in the browser.");
+  console.log("PILOT ACCOUNT ACCESS GREEN — single-use admission, recovery, suspension, and restoration are auditable and safe.");
 } finally {
   if (browser) await browser.close();
   if (server && !server.killed) server.kill("SIGTERM");

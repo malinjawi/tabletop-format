@@ -111,6 +111,10 @@ export const q = {
     const client = await db.connect();
     try {
       await client.query("BEGIN");
+      const active = await client.query(
+        "SELECT id FROM users WHERE id = $1 AND suspended_at IS NULL FOR UPDATE", [reset.user_id]);
+      if (!active.rows[0]) throw Object.assign(new Error("account is suspended or unavailable"),
+        { code: "FORGE_ACCOUNT_SUSPENDED" });
       await client.query(
         `UPDATE password_reset_tokens SET revoked_at = $1
          WHERE user_id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL`, [now, reset.user_id]);
@@ -141,9 +145,11 @@ export const q = {
     try {
       await client.query("BEGIN");
       const selected = await client.query(
-        `SELECT id, user_id FROM password_reset_tokens
-         WHERE token_hash = $1 AND revoked_at IS NULL AND redeemed_at IS NULL AND expires_at > $2
-         FOR UPDATE`, [tokenHash, now]);
+        `SELECT r.id, r.user_id FROM password_reset_tokens r
+         JOIN users u ON u.id = r.user_id
+         WHERE r.token_hash = $1 AND r.revoked_at IS NULL AND r.redeemed_at IS NULL
+           AND r.expires_at > $2 AND u.suspended_at IS NULL
+         FOR UPDATE OF r, u`, [tokenHash, now]);
       const reset = selected.rows[0];
       if (!reset) throw Object.assign(new Error("reset is invalid or no longer available"),
         { code: "FORGE_RESET_INVALID" });
@@ -168,12 +174,68 @@ export const q = {
   userByEmail:  (db, e) => one(db, "SELECT * FROM users WHERE email = $1", [e]),
   userById:     (db, id) => one(db, "SELECT * FROM users WHERE id = $1", [id]),
 
-  createSession: (db, token, userId, ttlMs) => db.query(
-    `INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES ($1, $2, $3, $4)`,
-    [token, userId, Date.now(), Date.now() + ttlMs]),
+  accountAccessByHandle: (db, handle) => one(db,
+    `SELECT id, handle, created_at, suspended_at, suspension_reason,
+            CASE WHEN suspended_at IS NULL THEN 'active' ELSE 'suspended' END AS status
+     FROM users WHERE handle = $1`, [handle]),
+  accountAccessEvents: (db, userId) => all(db,
+    `SELECT id, action, operator_name, reason, created_at
+     FROM account_access_events WHERE user_id = $1 ORDER BY created_at DESC`, [userId]),
+  setAccountSuspended: async (db, change, now = Date.now()) => {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const result = change.suspended
+        ? await client.query(
+          `UPDATE users SET suspended_at = $1, suspension_reason = $2
+           WHERE id = $3 AND suspended_at IS NULL`, [now, change.reason, change.user_id])
+        : await client.query(
+          `UPDATE users SET suspended_at = NULL, suspension_reason = NULL
+           WHERE id = $1 AND suspended_at IS NOT NULL`, [change.user_id]);
+      if (result.rowCount !== 1) throw Object.assign(new Error("account is already in the requested state"),
+        { code: "FORGE_ACCOUNT_STATE" });
+      if (change.suspended) {
+        await client.query("DELETE FROM sessions WHERE user_id = $1", [change.user_id]);
+        await client.query(
+          `UPDATE password_reset_tokens SET revoked_at = $1
+           WHERE user_id = $2 AND revoked_at IS NULL AND redeemed_at IS NULL`, [now, change.user_id]);
+      }
+      await client.query(
+        `INSERT INTO account_access_events (id, user_id, action, operator_name, reason, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`, [change.id, change.user_id,
+          change.suspended ? "suspend" : "restore", change.operator_name, change.reason, now]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
+  createSession: async (db, token, userId, ttlMs) => {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const active = await client.query(
+        "SELECT id FROM users WHERE id = $1 AND suspended_at IS NULL FOR UPDATE", [userId]);
+      if (!active.rows[0]) throw Object.assign(new Error("account is suspended or unavailable"),
+        { code: "FORGE_ACCOUNT_SUSPENDED" });
+      const now = Date.now();
+      await client.query(
+        `INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES ($1, $2, $3, $4)`,
+        [token, userId, now, now + ttlMs]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
   sessionUser: (db, token) => one(db,
     `SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
-     WHERE s.token = $1 AND s.expires_at > $2`, [token, Date.now()]),
+     WHERE s.token = $1 AND s.expires_at > $2 AND u.suspended_at IS NULL`, [token, Date.now()]),
   sessionsFor: (db, userId) => all(db,
     "SELECT left(token, 16) AS id, created_at, expires_at FROM sessions WHERE user_id = $1 AND expires_at > $2 ORDER BY created_at DESC",
     [userId, Date.now()]),

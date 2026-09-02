@@ -114,3 +114,8 @@ operator cannot respond to support/moderation reports.
 8. If account recovery is needed, issue a one-hour token with
    `node tools/pilot-account.mjs reset --handle …`; record only its reset ID.
    Confirm the old sessions stopped working after redemption.
+9. If a participant must be offboarded, use
+   `node tools/pilot-account.mjs suspend --handle … --reason …`; do not delete
+   their identity or authored work. Record the access-event ID, confirm an old
+   session and login both fail, and use `restore` only after the operator has
+   documented why access may resume.

@@ -146,6 +146,69 @@ catch (error) { revokedResetRejected = error?.code === "FORGE_RESET_INVALID"; }
 assert(revokedResetRejected && (await q.passwordResets(db, resetAt + 12)).find(row => row.id === revokedReset.id)?.status === "revoked",
   "revoked recovery token is rejected");
 
+// controlled-beta access control (021) — suspension is an auditable, reversible
+// authentication decision. It preserves the user and their authored work.
+const suspensionSession = "s".repeat(64);
+await q.createSession(db, suspensionSession, ana.id, 60_000);
+const suspensionReset = { id: newId("rst"), token_hash: digest(`reset-suspended:${T}`), user_id: ana.id,
+  created_at: resetAt + 13, expires_at: resetAt + 60_000 };
+await q.issuePasswordReset(db, suspensionReset, resetAt + 13);
+const suspendEvent = newId("aae");
+await q.setAccountSuspended(db, { id: suspendEvent, user_id: ana.id, suspended: true,
+  operator_name: "Pilot Operator", reason: "participant requested access pause" }, resetAt + 14);
+const suspendedAccess = await q.accountAccessByHandle(db, ana.handle);
+assert(suspendedAccess.status === "suspended" && suspendedAccess.suspension_reason === "participant requested access pause"
+  && !("email" in suspendedAccess) && !("pass_hash" in suspendedAccess),
+  "suspension status is inspectable without exposing account credentials");
+assert(!(await q.sessionUser(db, suspensionSession))
+  && (await q.passwordResets(db, resetAt + 15)).find(row => row.id === suspensionReset.id)?.status === "revoked",
+  "suspension atomically revokes every session and outstanding recovery token");
+let suspendedSessionRejected = false, suspendedIssueRejected = false;
+try { await q.createSession(db, "x".repeat(64), ana.id, 60_000); }
+catch (error) { suspendedSessionRejected = error?.code === "FORGE_ACCOUNT_SUSPENDED"; }
+try { await q.issuePasswordReset(db, { id: newId("rst"), token_hash: digest(`reset-blocked:${T}`),
+  user_id: ana.id, created_at: resetAt + 15, expires_at: resetAt + 60_000 }, resetAt + 15); }
+catch (error) { suspendedIssueRejected = error?.code === "FORGE_ACCOUNT_SUSPENDED"; }
+assert(suspendedSessionRejected && suspendedIssueRejected,
+  "suspension prevents new sessions and new recovery tokens at the database boundary");
+let suspendedResetRejected = false;
+try { await q.resetPasswordWithToken(db, suspensionReset.token_hash, "suspended-hash", resetAt + 15); }
+catch (error) { suspendedResetRejected = error?.code === "FORGE_RESET_INVALID"; }
+assert(suspendedResetRejected && (await q.userById(db, ana.id)).pass_hash === "new-pass-hash",
+  "a suspended account cannot redeem password recovery");
+const suspendedEvents = await q.accountAccessEvents(db, ana.id);
+assert(suspendedEvents.length === 1 && suspendedEvents[0].id === suspendEvent
+  && suspendedEvents[0].action === "suspend" && suspendedEvents[0].operator_name === "Pilot Operator",
+  "suspension records an immutable operator action without deleting identity");
+let duplicateSuspensionRejected = false;
+try { await q.setAccountSuspended(db, { id: newId("aae"), user_id: ana.id, suspended: true,
+  operator_name: "Pilot Operator", reason: "duplicate" }, resetAt + 16); }
+catch (error) { duplicateSuspensionRejected = error?.code === "FORGE_ACCOUNT_STATE"; }
+assert(duplicateSuspensionRejected && (await q.accountAccessEvents(db, ana.id)).length === 1,
+  "repeating the same access state is rejected without a false audit event");
+const restoreEvent = newId("aae");
+await q.setAccountSuspended(db, { id: restoreEvent, user_id: ana.id, suspended: false,
+  operator_name: "Pilot Operator", reason: "participant confirmed return" }, resetAt + 17);
+await q.createSession(db, suspensionSession, ana.id, 60_000);
+const restoredEvents = await q.accountAccessEvents(db, ana.id);
+assert((await q.accountAccessByHandle(db, ana.handle)).status === "active"
+  && (await q.sessionUser(db, suspensionSession))?.id === ana.id
+  && restoredEvents.length === 2 && restoredEvents[0].action === "restore",
+  "restoration re-enables future authentication and preserves both audit events");
+const accessRaceToken = "q".repeat(64), raceSuspendEvent = newId("aae");
+const accessRace = await Promise.allSettled([
+  Promise.resolve().then(() => q.createSession(db, accessRaceToken, ana.id, 60_000)),
+  Promise.resolve().then(() => q.setAccountSuspended(db, { id: raceSuspendEvent, user_id: ana.id,
+    suspended: true, operator_name: "Pilot Operator", reason: "race safety proof" }, resetAt + 18)),
+]);
+assert(accessRace[1].status === "fulfilled"
+  && (accessRace[0].status === "fulfilled" || accessRace[0].reason?.code === "FORGE_ACCOUNT_SUSPENDED")
+  && (await q.accountAccessByHandle(db, ana.handle)).status === "suspended"
+  && !(await q.sessionUser(db, accessRaceToken)),
+  "a concurrent login/suspension race always ends suspended with no live session");
+await q.setAccountSuspended(db, { id: newId("aae"), user_id: ana.id, suspended: false,
+  operator_name: "Pilot Operator", reason: "finish race safety proof" }, resetAt + 19);
+
 // games index (DA-3) + ownership
 const slug = h("game");
 const projectId = newId("p");

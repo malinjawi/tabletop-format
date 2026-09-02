@@ -681,7 +681,12 @@ gw.route("POST", "/api/auth/register", async (ctx) => {
     await q.createUser(db, user);
   }
   const token = newToken();
-  await q.createSession(db, tokenDigest(token), id, SESSION_TTL);
+  try { await q.createSession(db, tokenDigest(token), id, SESSION_TTL); }
+  catch (error) {
+    if (error?.code === "FORGE_ACCOUNT_SUSPENDED")
+      return ctx.send(403, { error: "account is unavailable" });
+    throw error;
+  }
   authResponse(ctx, 201, token, { id, handle });
 }, "create account");
 gw.route("POST", "/api/auth/password-reset", async (ctx) => {
@@ -703,9 +708,14 @@ gw.route("POST", "/api/auth/password-reset", async (ctx) => {
 gw.route("POST", "/api/auth/login", async (ctx) => {
   const { handle, password } = await json(ctx), identity = String(handle || "").trim();
   const u = await q.userByHandle(db, identity) ?? await q.userByEmail(db, identity.toLowerCase());
-  if (!u || !verifyPassword(password ?? "", u.pass_hash)) return ctx.send(401, { error: "bad credentials" });
+  if (!u || u.suspended_at != null || !verifyPassword(password ?? "", u.pass_hash))
+    return ctx.send(401, { error: "bad credentials" });
   const token = newToken();
-  await q.createSession(db, tokenDigest(token), u.id, SESSION_TTL);
+  try { await q.createSession(db, tokenDigest(token), u.id, SESSION_TTL); }
+  catch (error) {
+    if (error?.code === "FORGE_ACCOUNT_SUSPENDED") return ctx.send(401, { error: "bad credentials" });
+    throw error;
+  }
   authResponse(ctx, 200, token, { id: u.id, handle: u.handle });
 }, "get session token");
 gw.route("POST", "/api/auth/logout", async (ctx) => {
