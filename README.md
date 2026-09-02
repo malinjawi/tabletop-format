@@ -61,6 +61,9 @@ exports and CLI exports use the same dependency set.
 The current invite-only alpha decision, evidence, operating limits, and
 deployment stop conditions are recorded in
 [`docs/CONTROLLED-ALPHA-LAUNCH-GATE-2026-09-01.md`](docs/CONTROLLED-ALPHA-LAUNCH-GATE-2026-09-01.md).
+The latest requirement-by-requirement beta audit and exact remaining external
+inputs are recorded in
+[`docs/CONTROLLED-BETA-READINESS-2026-09-02.md`](docs/CONTROLLED-BETA-READINESS-2026-09-02.md).
 
 ```
 ./e2e.sh                                             # 172-check functional integration gate
