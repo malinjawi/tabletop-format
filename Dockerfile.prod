@@ -13,8 +13,13 @@ RUN apt-get update \
       python3 python3-jsonschema python3-pil python3-reportlab python3-yaml \
  && rm -rf /var/lib/apt/lists/*
 
-# Keep the large OS dependency layer independent of the release revision so
-# consecutive source builds reuse it while every final image stays traceable.
+WORKDIR /app
+RUN mkdir -p /app/data && chown node:node /app/data
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+
+# Keep locked OS and npm dependency layers independent of the release revision
+# so consecutive source builds reuse them while every final image is traceable.
 ARG FORGE_SOURCE_REVISION
 RUN test -n "${FORGE_SOURCE_REVISION}" \
  || (printf 'FORGE_SOURCE_REVISION must be the clean Git commit used for this build\n' >&2; exit 1)
@@ -23,10 +28,6 @@ LABEL org.opencontainers.image.source="https://github.com/malinjawi/tabletop-for
       org.opencontainers.image.revision="${FORGE_SOURCE_REVISION}" \
       org.opencontainers.image.licenses="Apache-2.0"
 
-WORKDIR /app
-RUN mkdir -p /app/data && chown node:node /app/data
-COPY --chown=node:node package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --chown=node:node . .
 
 ENV NODE_ENV=production FORGE_LISTEN_HOST=0.0.0.0
