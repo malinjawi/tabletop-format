@@ -21,7 +21,8 @@ for pair in \
   "NODE_TEST_IMAGE:$NODE_TEST_IMAGE" \
   "FORGEJO_TEST_IMAGE:$FORGEJO_TEST_IMAGE" \
   "POSTGRES_TEST_IMAGE:$POSTGRES_TEST_IMAGE" \
-  "ALPINE_TEST_IMAGE:$ALPINE_TEST_IMAGE"; do
+  "ALPINE_TEST_IMAGE:$ALPINE_TEST_IMAGE" \
+  "S3_TEST_IMAGE:$S3_TEST_IMAGE"; do
   name="${pair%%:*}"
   value="${pair#*:}"
   if [[ ! "$value" =~ @sha256:[0-9a-f]{64}$ ]]; then

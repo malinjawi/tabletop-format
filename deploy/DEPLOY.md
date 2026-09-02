@@ -232,15 +232,21 @@ set +a
 FORGE_BACKUP_ACK_DOWNTIME=1 ./backup.sh "$FORGE_BACKUP_DESTINATION"
 ```
 
-The script stops the gateway and Forgejo, creates a Forgejo archive (including
-repositories and LFS objects), makes independent custom-format dumps of both
-PostgreSQL databases, validates all three files, records hashes and exact image
-IDs, then restarts the services even if the backup fails. Copy the completed
-directory to encrypted storage away from the host.
+The script stops the gateway and Forgejo, snapshots every object in the
+dedicated R2 LFS bucket, creates a Forgejo repository archive, makes independent
+custom-format dumps of both PostgreSQL databases, and validates every layer. It
+records object/file hashes and exact image IDs, then restarts the services even
+if backup fails. Copy the completed directory to encrypted storage away from
+the host.
 
-R2 does not provide an S3 object-versioning safety net. The Forgejo archive is
-therefore the recoverable LFS copy; bucket-scoped credentials and an R2 bucket
-lock reduce accidental deletion risk but are not a backup. Follow
+Do not treat `forgejo dump` as a backup of remote object storage. Forgejo's
+[official backup guidance](https://forgejo.org/docs/latest/admin/upgrade/#backup)
+requires a synchronized point-in-time copy of every configured storage backend,
+and its [storage reference](https://forgejo.org/docs/latest/admin/setup/storage/)
+defines LFS as a distinct S3-backed subsystem. R2 does not provide Forge with an
+automatic object-versioning safety net, so `object-store/` in this backup is the
+recoverable LFS copy; bucket-scoped credentials and an R2 bucket lock reduce
+accidental deletion risk but are not a backup. Follow
 [`RESTORE-DRILL.md`](RESTORE-DRILL.md) to restore into a separate project,
 database volumes, ports, and LFS bucket. Store-3 render/export cache and the
 generated hub are derived and deliberately excluded.

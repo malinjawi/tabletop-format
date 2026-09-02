@@ -89,9 +89,10 @@ fixture-deletion guard.
   fidelity.
 - A two-leg CI qualification gate: the complete product/protocol suite, plus a
   clean build of the source-labelled production image followed by real
-  Forgejo/PostgreSQL backup, fresh-volume restore, and exact release-byte
-  reproduction through that same image. Actions and service images are pinned
-  immutably; qualified dependency digests have one tracked source of truth.
+  Forgejo/PostgreSQL/S3 backup, fresh-service restore, and exact release-byte
+  reproduction through that same image—including LFS art restored from the
+  independent object snapshot. Actions and service images are pinned immutably;
+  qualified dependency digests have one tracked source of truth.
 
 ## Before the first outside invite
 

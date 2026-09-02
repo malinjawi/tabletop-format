@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Build real collaboration state on Forgejo + PostgreSQL, take a synchronized
-# three-store backup, and restore it into fresh disposable volumes. The restored
-# gateway starts with no render cache, proving Store 3 is genuinely derived.
+# three-store backup, and restore it into fresh disposable volumes. When an S3
+# test image is supplied, LFS lives only in S3 and that bucket is independently
+# snapshotted/restored. The restored gateway starts with no render cache,
+# proving Store 3 is genuinely derived.
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
@@ -9,6 +11,7 @@ forgejo_image="${FORGEJO_TEST_IMAGE:-}"
 postgres_image="${POSTGRES_TEST_IMAGE:-}"
 utility_image="${ALPINE_TEST_IMAGE:-}"
 gateway_image="${FORGE_GATEWAY_TEST_IMAGE:-}"
+s3_image="${S3_TEST_IMAGE:-}"
 for pair in "FORGEJO_TEST_IMAGE:$forgejo_image" "POSTGRES_TEST_IMAGE:$postgres_image" "ALPINE_TEST_IMAGE:$utility_image"; do
   key="${pair%%:*}"; value="${pair#*:}"
   if [[ ! "$value" =~ @sha256:[0-9a-f]{64}$ ]]; then
@@ -17,6 +20,13 @@ for pair in "FORGEJO_TEST_IMAGE:$forgejo_image" "POSTGRES_TEST_IMAGE:$postgres_i
   fi
   docker image inspect "$value" >/dev/null
 done
+if [ -n "$s3_image" ]; then
+  if [[ ! "$s3_image" =~ @sha256:[0-9a-f]{64}$ ]]; then
+    printf 'S3_TEST_IMAGE must be a digest-pinned image reference\n' >&2
+    exit 2
+  fi
+  docker image inspect "$s3_image" >/dev/null
+fi
 if [ -n "$gateway_image" ]; then
   if [[ ! "$gateway_image" =~ @sha256:[0-9a-f]{64}$ && ! "$gateway_image" =~ ^sha256:[0-9a-f]{64}$ ]]; then
     printf 'FORGE_GATEWAY_TEST_IMAGE must be a registry digest or immutable local image ID\n' >&2
@@ -49,11 +59,13 @@ prefix="forge-restore-$run_id"
 network="$prefix-net"
 source_pg="$prefix-source-db"; source_forgejo="$prefix-source-forgejo"
 restore_pg="$prefix-restore-db"; restore_forgejo="$prefix-restore-forgejo"
+source_s3="$prefix-source-s3"; restore_s3="$prefix-restore-s3"
 restore_helper="$prefix-restore-helper"
 source_gateway="$prefix-source-gateway"
 gateway_container="$prefix-gateway"
 source_pg_volume="$prefix-source-pg"; source_forgejo_volume="$prefix-source-forgejo-data"
 restore_pg_volume="$prefix-restore-pg"; restore_forgejo_volume="$prefix-restore-forgejo-data"
+source_s3_volume="$prefix-source-s3-data"; restore_s3_volume="$prefix-restore-s3-data"
 secret_volume="$prefix-secrets"
 source_gateway_volume="$prefix-source-gateway-data"
 gateway_volume="$prefix-gateway-data"
@@ -63,8 +75,8 @@ gateway_pid=""
 cleanup(){
   status=$?
   [ -n "$gateway_pid" ] && kill "$gateway_pid" >/dev/null 2>&1 || true
-  docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$restore_helper" "$source_gateway" "$gateway_container" >/dev/null 2>&1 || true
-  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$secret_volume" "$source_gateway_volume" "$gateway_volume" >/dev/null 2>&1 || true
+  docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$source_s3" "$restore_s3" "$restore_helper" "$source_gateway" "$gateway_container" >/dev/null 2>&1 || true
+  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$source_s3_volume" "$restore_s3_volume" "$secret_volume" "$source_gateway_volume" "$gateway_volume" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   if [ "${FORGE_KEEP_RESTORE_DRILL:-0}" = "1" ]; then
     printf 'restore drill evidence retained at %s\n' "$scratch" >&2
@@ -75,8 +87,8 @@ cleanup(){
 }
 trap cleanup EXIT INT TERM
 
-read -r source_pg_port source_forgejo_port restore_pg_port restore_forgejo_port gateway_port < <(
-  node -e 'const n=require("net"),s=Array.from({length:5},()=>n.createServer());Promise.all(s.map(x=>new Promise(r=>x.listen(0,"127.0.0.1",r)))).then(()=>{console.log(s.map(x=>x.address().port).join(" "));s.forEach(x=>x.close())})'
+read -r source_pg_port source_forgejo_port restore_pg_port restore_forgejo_port gateway_port source_s3_port restore_s3_port < <(
+  node -e 'const n=require("net"),s=Array.from({length:7},()=>n.createServer());Promise.all(s.map(x=>new Promise(r=>x.listen(0,"127.0.0.1",r)))).then(()=>{console.log(s.map(x=>x.address().port).join(" "));s.forEach(x=>x.close())})'
 )
 source_origin="http://127.0.0.1:$source_forgejo_port"
 restore_origin="http://127.0.0.1:$restore_forgejo_port"
@@ -84,6 +96,8 @@ gateway_origin="http://127.0.0.1:$gateway_port"
 postgres_password="postgres-$run_id"; forgejo_password="forgejo-$run_id"; platform_password="platform-$run_id"
 admin_user="launch-gate"; admin_password="disposable-$run_id-pass"
 journey_invite="restore-drill-$run_id-invite"
+s3_access="forgeaccess$run_id"; s3_secret="forge-secret-$run_id-password"
+s3_bucket="forge-lfs-${run_id//[^a-zA-Z0-9-]/-}"
 
 mkdir -p "$scratch/secrets" "$scratch/backup" "$scratch/staging" "$scratch/restored-cache" "$scratch/restored-farm"
 chmod 700 "$scratch/secrets"
@@ -93,11 +107,17 @@ openssl rand -base64 32 > "$scratch/secrets/forgejo-secret-key"
 openssl rand -base64 32 > "$scratch/secrets/forgejo-internal-token"
 openssl rand -base64 32 > "$scratch/secrets/forgejo-oauth2-jwt-secret"
 openssl rand -base64 32 > "$scratch/secrets/lfs-jwt-secret"
+printf '%s\n' "$s3_access" > "$scratch/secrets/s3-access-key"
+printf '%s\n' "$s3_secret" > "$scratch/secrets/s3-secret-key"
 
 docker network create "$network" >/dev/null
 for volume in "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$secret_volume"; do
   docker volume create "$volume" >/dev/null
 done
+if [ -n "$s3_image" ]; then
+  docker volume create "$source_s3_volume" >/dev/null
+  docker volume create "$restore_s3_volume" >/dev/null
+fi
 docker run --rm --volume "$secret_volume:/secrets" \
   --env FORGEJO_DB_PASSWORD="$(tr -d '\n' < "$scratch/secrets/forgejo-db-password")" \
   --env FORGEJO_SECRET_KEY="$(tr -d '\n' < "$scratch/secrets/forgejo-secret-key")" \
@@ -145,6 +165,26 @@ start_postgres(){
   docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
     -c "CREATE DATABASE platform OWNER platform" >/dev/null
 }
+wait_s3(){
+  local container="$1" origin="$2"
+  for _attempt in $(seq 1 240); do
+    curl -fsS "$origin/minio/health/ready" >/dev/null 2>&1 && return 0
+    if ! docker container inspect "$container" --format '{{.State.Running}}' 2>/dev/null | grep -qx true; then
+      docker logs "$container" >&2; return 1
+    fi
+    sleep 0.25
+  done
+  docker logs "$container" >&2
+  return 1
+}
+start_s3(){
+  local container="$1" volume="$2" port="$3"
+  docker run --detach --name "$container" --network "$network" \
+    --publish "127.0.0.1:$port:9000" \
+    --env MINIO_ROOT_USER="$s3_access" --env MINIO_ROOT_PASSWORD="$s3_secret" \
+    --volume "$volume:/data" "$s3_image" server /data --address :9000 >/dev/null
+  wait_s3 "$container" "http://127.0.0.1:$port"
+}
 wait_forgejo(){
   local container="$1" origin="$2"
   for _attempt in $(seq 1 240); do
@@ -158,7 +198,22 @@ wait_forgejo(){
   return 1
 }
 start_forgejo(){
-  local container="$1" volume="$2" database_host="$3" origin="$4" port="$5"
+  local container="$1" volume="$2" database_host="$3" origin="$4" port="$5" s3_host="${6:-}"
+  local s3_args=()
+  if [ -n "$s3_host" ]; then
+    s3_args=(
+      --env FORGEJO__lfs__STORAGE_TYPE=minio
+      --env "FORGEJO__lfs__MINIO_ENDPOINT=$s3_host:9000"
+      --env "FORGEJO__lfs__MINIO_ACCESS_KEY_ID=$s3_access"
+      --env "FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY=$s3_secret"
+      --env "FORGEJO__lfs__MINIO_BUCKET=$s3_bucket"
+      --env FORGEJO__lfs__MINIO_LOCATION=us-east-1
+      --env FORGEJO__lfs__MINIO_USE_SSL=false
+      --env FORGEJO__lfs__MINIO_BUCKET_LOOKUP=path
+      --env FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM=md5
+      --env FORGEJO__lfs__SERVE_DIRECT=false
+    )
+  fi
   docker run --detach --name "$container" --network "$network" \
     --publish "127.0.0.1:$port:3000" \
     --env USER_UID=1000 --env USER_GID=1000 \
@@ -176,6 +231,7 @@ start_forgejo(){
     --env FORGEJO__database__NAME=forgejo \
     --env FORGEJO__database__USER=forgejo \
     --env FORGEJO__database__PASSWD_URI=file:/run/forge-secrets/forgejo-db-password \
+    "${s3_args[@]}" \
     --volume "$volume:/data" --volume "$secret_volume:/run/forge-secrets:ro" \
     "$forgejo_image" >/dev/null
   wait_forgejo "$container" "$origin"
@@ -230,10 +286,17 @@ start_gateway(){
   return 1
 }
 
-printf '== Build source state on real Forgejo + PostgreSQL ==\n'
+printf '== Build source state on real Forgejo + PostgreSQL%s ==\n' "$([ -n "$s3_image" ] && printf ' + S3 LFS' || true)"
 start_postgres "$source_pg" "$source_pg_volume" "$source_pg_port"
 printf '  ✓ source PostgreSQL ready\n'
-start_forgejo "$source_forgejo" "$source_forgejo_volume" "$source_pg" "$source_origin" "$source_forgejo_port"
+if [ -n "$s3_image" ]; then
+  start_s3 "$source_s3" "$source_s3_volume" "$source_s3_port"
+  node "$repo_dir/deploy/s3-snapshot.mjs" create \
+    --endpoint "http://127.0.0.1:$source_s3_port" --bucket "$s3_bucket" --region us-east-1 \
+    --access-key-file "$scratch/secrets/s3-access-key" --secret-key-file "$scratch/secrets/s3-secret-key" >/dev/null
+  printf '  ✓ source S3 bucket ready\n'
+fi
+start_forgejo "$source_forgejo" "$source_forgejo_volume" "$source_pg" "$source_origin" "$source_forgejo_port" "$([ -n "$s3_image" ] && printf '%s' "$source_s3" || true)"
 printf '  ✓ source Forgejo ready\n'
 if ! admin_create_output="$(docker exec --user 1000 "$source_forgejo" forgejo admin user create \
   --config /data/gitea/conf/app.ini --username "$admin_user" --password "$admin_password" \
@@ -270,6 +333,14 @@ if [ -n "$gateway_image" ]; then
   docker volume rm "$source_gateway_volume" >/dev/null
 fi
 docker stop "$source_forgejo" >/dev/null
+if [ -n "$s3_image" ]; then
+  node "$repo_dir/deploy/s3-snapshot.mjs" backup \
+    --endpoint "http://127.0.0.1:$source_s3_port" --bucket "$s3_bucket" --region us-east-1 \
+    --access-key-file "$scratch/secrets/s3-access-key" --secret-key-file "$scratch/secrets/s3-secret-key" \
+    --output "$scratch/backup/object-store"
+  node -e 'const m=require(process.argv[1]);if(!m.objects.length)throw Error("S3 LFS journey created no objects")' \
+    "$scratch/backup/object-store/manifest.json"
+fi
 docker run --rm --user 1000 --network "$network" \
   --volume "$source_forgejo_volume:/data" \
   --volume "$secret_volume:/run/forge-secrets:ro" \
@@ -285,12 +356,19 @@ docker exec -i "$source_pg" pg_restore --list < "$scratch/backup/forgejo.dump" >
   printf 'created_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf 'forgejo_image=%s\n' "$forgejo_image"
   printf 'postgres_image=%s\n' "$postgres_image"
+  [ -z "$s3_image" ] || printf 's3_image=%s\n' "$s3_image"
   for secret in "$scratch"/secrets/*; do
     printf '%s_sha256=%s\n' "$(basename "$secret")" "$(shasum -a 256 "$secret" | awk '{print $1}')"
   done
 } > "$scratch/backup/manifest.txt"
-(cd "$scratch/backup" && shasum -a 256 forgejo.zip platform.dump forgejo.dump manifest.txt > SHA256SUMS)
+snapshot_manifest=()
+[ -z "$s3_image" ] || snapshot_manifest=(object-store/manifest.json)
+(cd "$scratch/backup" && shasum -a 256 forgejo.zip platform.dump forgejo.dump manifest.txt "${snapshot_manifest[@]}" > SHA256SUMS)
 (cd "$scratch/backup" && shasum -a 256 -c SHA256SUMS >/dev/null)
+if [ -n "$s3_image" ]; then
+  node "$repo_dir/deploy/s3-snapshot.mjs" verify --input "$scratch/backup/object-store"
+  docker stop "$source_s3" >/dev/null
+fi
 
 printf '\n== Restore into fresh database and repository volumes ==\n'
 start_postgres "$restore_pg" "$restore_pg_volume" "$restore_pg_port"
@@ -316,7 +394,14 @@ docker exec "$restore_helper" sh -eu -c '
     chmod 0700 /data/git/.ssh
   '
 docker rm --force "$restore_helper" >/dev/null
-start_forgejo "$restore_forgejo" "$restore_forgejo_volume" "$restore_pg" "$restore_origin" "$restore_forgejo_port"
+if [ -n "$s3_image" ]; then
+  start_s3 "$restore_s3" "$restore_s3_volume" "$restore_s3_port"
+  node "$repo_dir/deploy/s3-snapshot.mjs" restore \
+    --endpoint "http://127.0.0.1:$restore_s3_port" --bucket "$s3_bucket" --region us-east-1 \
+    --access-key-file "$scratch/secrets/s3-access-key" --secret-key-file "$scratch/secrets/s3-secret-key" \
+    --input "$scratch/backup/object-store" --create-bucket
+fi
+start_forgejo "$restore_forgejo" "$restore_forgejo_volume" "$restore_pg" "$restore_origin" "$restore_forgejo_port" "$([ -n "$s3_image" ] && printf '%s' "$restore_s3" || true)"
 if ! doctor_output="$(docker exec --user 1000 "$restore_forgejo" forgejo doctor check --all \
   --config /data/gitea/conf/app.ini --log-file /tmp/doctor.log 2>&1)"; then
   printf '%s\n' "$doctor_output" >&2
@@ -361,7 +446,7 @@ if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
 fi
 
 if [ -n "$gateway_image" ]; then
-  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; the exact release image rebuilt Store 3 and exact released bytes.\n'
+  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized repository, database%s backup restored into fresh services; the exact release image rebuilt Store 3 and exact released bytes.\n' "$([ -n "$s3_image" ] && printf ', and S3 object' || true)"
 else
   printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; Store 3 rebuilt exact released bytes.\n'
 fi

@@ -96,17 +96,23 @@ ok(restoreDrill.includes("FORGE_GATEWAY_TEST_IMAGE")
   && restoreDrill.includes("--read-only --tmpfs /tmp"),
   "recovery can be verified through the exact source-matched, read-only gateway image");
 const qualified=readFileSync(resolve(ROOT,"deploy/qualified-images.env"),"utf8");
-const qualifiedImages=[...qualified.matchAll(/^([A-Z_]+_IMAGE)=([^\n]+)$/gm)];
-ok(qualifiedImages.length===5 && qualifiedImages.every(([, , value])=>/@sha256:[a-f0-9]{64}$/.test(value)),
-  "qualified gateway dependencies are recorded as five immutable image digests");
+const qualifiedImages=[...qualified.matchAll(/^([A-Z0-9_]+_IMAGE)=([^\n]+)$/gm)];
+ok(qualifiedImages.length===6 && qualifiedImages.every(([, , value])=>/@sha256:[a-f0-9]{64}$/.test(value)),
+  "qualified gateway dependencies are recorded as six immutable image digests");
 const imageGate=readFileSync(resolve(ROOT,"tools/qualify-production-image.sh"),"utf8");
 const workflow=readFileSync(resolve(ROOT,".github/workflows/quality.yml"),"utf8");
 ok(imageGate.includes("deploy/qualified-images.env")
   && imageGate.includes("FORGE_SOURCE_REVISION")
+  && imageGate.includes("S3_TEST_IMAGE")
   && imageGate.includes("disposable-restore-drill.sh")
   && workflow.includes("./tools/qualify-production-image.sh"),
   "CI builds the source-labelled gateway and rehearses synchronized recovery through that exact image");
 ok((workflow.match(/uses: actions\/(?:checkout|setup-node|setup-python)@[a-f0-9]{40}/g)||[]).length===5,
   "CI actions are pinned to immutable commit SHAs");
+const backup=readFileSync(resolve(ROOT,"deploy/backup.sh"),"utf8");
+ok(backup.includes("s3-snapshot.mjs\" backup")
+  && backup.includes("object-store/manifest.json")
+  && restoreDrill.includes("s3-snapshot.mjs\" restore"),
+  "production and disposable recovery independently snapshot and restore the remote LFS object store");
 
 console.log(`\nPRODUCTION CONFIG GREEN — ${checks} deployability and isolation checks passed.`);
