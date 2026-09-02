@@ -35,10 +35,15 @@ fi
 
 PGPORT=$(( (RANDOM % 2000) + 55000 ))
 if command -v docker >/dev/null 2>&1; then
+  postgres_image="${POSTGRES_TEST_IMAGE:-postgres:16-alpine}"
+  if [ -n "${POSTGRES_TEST_IMAGE:-}" ] && [[ ! "$postgres_image" =~ @sha256:[0-9a-f]{64}$ ]]; then
+    echo "POSTGRES_TEST_IMAGE must be a digest-pinned image reference" >&2
+    exit 2
+  fi
   CN="store2-pg-$$"
-  echo "== leg 2: PRODUCTION driver (postgres:16-alpine on :$PGPORT) =="
+  echo "== leg 2: PRODUCTION driver ($postgres_image on :$PGPORT) =="
   if docker run -d --rm --name "$CN" -e POSTGRES_PASSWORD=confpass -e POSTGRES_DB=platform \
-      -p "$PGPORT:5432" postgres:16-alpine >/dev/null 2>&1; then
+      -p "$PGPORT:5432" "$postgres_image" >/dev/null 2>&1; then
     stable=0
     for _ in $(seq 1 120); do
       if docker exec "$CN" pg_isready -U postgres -d platform -q 2>/dev/null; then

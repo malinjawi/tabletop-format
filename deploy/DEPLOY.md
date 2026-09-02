@@ -9,6 +9,9 @@ Compose binds the gateway to loopback by default and does not expose Postgres.
 
 Resolve and record a Node base-image digest, then build from the clean release
 commit. The build context excludes games, exports, local data and secrets.
+The currently recovery-qualified multi-platform dependencies live in
+`deploy/qualified-images.env`; changing any of them is a qualification change,
+not routine deployment configuration.
 
 ```sh
 release_commit=$(git rev-parse HEAD)
@@ -18,6 +21,14 @@ docker build \
   -f Dockerfile.prod -t registry.example/forge/platform:<release> .
 docker push registry.example/forge/platform:<release>
 docker buildx imagetools inspect registry.example/forge/platform:<release>
+```
+
+The same build-and-recovery proof runs in CI for every pull request and push to
+`main`. Reproduce it locally before proposing a dependency or deployment change:
+
+```sh
+npm ci
+FORGE_REQUIRE_CLEAN_TREE=1 npm run test:production-image
 ```
 
 Put the resulting `registry/...@sha256:...` reference in

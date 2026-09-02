@@ -1,0 +1,61 @@
+name: Forge qualification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forge-qualification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  product-gate:
+    name: Product and protocol gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Use qualified Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - name: Use Python 3.11
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install locked toolchains
+        run: npm run setup:dev
+      - name: Run clean product gate
+        run: |
+          set -a
+          . deploy/qualified-images.env
+          set +a
+          unset FORGEJO_TEST_IMAGE ALPINE_TEST_IMAGE CADDY_TEST_IMAGE NODE_TEST_IMAGE
+          FORGE_REQUIRE_CLEAN_TREE=1 ./launch-gate.sh
+
+  release-image:
+    name: Exact image and recovery gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Use qualified Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - name: Install locked Node dependencies
+        run: npm ci --ignore-scripts
+      - name: Build and recover through the exact image
+        env:
+          FORGE_REQUIRE_CLEAN_TREE: "1"
+        run: ./tools/qualify-production-image.sh

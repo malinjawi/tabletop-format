@@ -87,6 +87,11 @@ fixture-deletion guard.
 - Versioned universal design/rulebook adapter contracts, with stable and
   limited capability levels shown honestly rather than implied round-trip
   fidelity.
+- A two-leg CI qualification gate: the complete product/protocol suite, plus a
+  clean build of the source-labelled production image followed by real
+  Forgejo/PostgreSQL backup, fresh-volume restore, and exact release-byte
+  reproduction through that same image. Actions and service images are pinned
+  immutably; qualified dependency digests have one tracked source of truth.
 
 ## Before the first outside invite
 

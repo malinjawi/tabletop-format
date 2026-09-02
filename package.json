@@ -35,6 +35,7 @@
     "test:pilot-report": "node tools/test-pilot-report.mjs",
     "test:forgejo:disposable": "./tools/disposable-forgejo-check.sh",
     "test:restore:disposable": "./tools/disposable-restore-drill.sh",
+    "test:production-image": "./tools/qualify-production-image.sh",
     "launch:gate": "./launch-gate.sh",
     "export:pnpink-proof": "node tools/export-pnpink.mjs examples/_fixtures/netrunner-sg tmp/pnpink-proof",
     "split:card-design": "node tools/split-layout-families.mjs",
