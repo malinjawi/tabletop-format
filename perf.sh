@@ -8,7 +8,25 @@ PASS=0; FAIL=0; FAILED=()
 say(){ printf '%s\n' "$*"; }
 ok(){ PASS=$((PASS+1)); say "  PASS  $1"; }
 bad(){ FAIL=$((FAIL+1)); FAILED+=("$1"); say "  FAIL  $1 ${2:+— $2}"; }
-tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='examples/*/exports' --exclude='beta-site' -cf - . | tar -C "$SCRATCH" -xf -
+# Copy only source inputs needed by the benchmark. Local render caches, generated
+# videos/PDFs, temporary Forgejo/Postgres data, and virtual environments can be
+# several gigabytes and would otherwise measure workstation residue rather than
+# Forge performance.
+tar -C "$REPO" \
+  --exclude='./.git' \
+  --exclude='./.venv' \
+  --exclude='./node_modules' \
+  --exclude='./tmp' \
+  --exclude='./output' \
+  --exclude='./data/cache' \
+  --exclude='./examples/*/exports' \
+  --exclude='./examples/_fixtures' \
+  --exclude='./beta-site' \
+  -cf - . | tar -C "$SCRATCH" -xf -
+# Reuse the already-verified workspace dependencies without copying them into
+# every benchmark scratch tree.
+ln -s "$REPO/node_modules" "$SCRATCH/node_modules"
+export PATH="$REPO/.venv/bin:$PATH"
 cd "$SCRATCH"
 export GIT_AUTHOR_NAME=perf GIT_COMMITTER_NAME=perf GIT_AUTHOR_EMAIL=p@x GIT_COMMITTER_EMAIL=p@x
 git init -qb main . && git add -A && git commit -qm baseline

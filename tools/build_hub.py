@@ -9,11 +9,16 @@ Generates a self-contained SPA from REAL repo data:
   before/after card art) | Releases (tags) | Banlist | Decks (live legality).
 Everything is baked at build time from git + format data. No server.
 """
-import base64, html, json, mimetypes, re, subprocess, sys, tempfile
+import base64, hashlib, html, json, mimetypes, posixpath, re, subprocess, sys, tempfile
+from urllib.parse import quote
 from pathlib import Path
 import yaml
 
+from design_engines import design_engines_metadata, load_design_engines
+
 ROOT = Path(__file__).resolve().parent.parent
+GIT_ROOT = ROOT
+LIVE_ASSETS = False
 
 FIXTURES_DIR = "_fixtures"
 
@@ -26,23 +31,71 @@ def discover_games(base=None):
     live server/hub (only the static showcase build knew about them).
     """
     base = Path(base) if base else ROOT / "examples"
-    games = set(base.glob("*/game.yaml"))
+    # A hosted top-level game is the canonical path. A same-slug fixture may
+    # still exist for regression tests, but must not create a duplicate route
+    # whose first entry wins unpredictably in the SPA's G(slug) lookup.
+    games = {p.parent.name: p.parent for p in base.glob("*/game.yaml")}
     fixtures = base / FIXTURES_DIR
     if fixtures.is_dir():
         for child in sorted(fixtures.iterdir()):
             if not child.is_dir() or child.name.startswith("."):
                 continue  # skip files (e.g. PHASE1-REPORT.md) and dotdirs
             gy = child / "game.yaml"
-            if gy.exists():
-                games.add(gy)
-    return sorted(p.parent for p in games)
+            if gy.exists() and child.name not in games:
+                games[child.name] = child
+    return sorted(games.values())
 
-def sh(args, cwd=ROOT, ok_fail=False):
-    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+def sh(args, cwd=None, ok_fail=False):
+    r = subprocess.run(args, cwd=cwd or GIT_ROOT, capture_output=True, text=True)
     if r.returncode and not ok_fail: raise RuntimeError(r.stderr)
     return r.stdout.strip() if not r.returncode else None
 
 def b64(p): return "data:image/png;base64," + base64.b64encode(Path(p).read_bytes()).decode()
+
+def data_uri(p):
+    p = Path(p)
+    mime = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+    return f"data:{mime};base64,{base64.b64encode(p.read_bytes()).decode()}"
+
+def runtime_asset(gd, path):
+    """Return one game asset as a self-contained URI or a live Store-1 URL."""
+    path, assets = Path(path).resolve(), (Path(gd) / "assets").resolve()
+    try: rel = path.relative_to(assets).as_posix()
+    except ValueError: return data_uri(path)
+    if LIVE_ASSETS:
+        stat = path.stat()
+        version = f"{stat.st_mtime_ns:x}-{stat.st_size:x}"
+        return f"/api/games/{quote(Path(gd).name, safe='')}/assets/{quote(rel, safe='/')}?v={version}"
+    return data_uri(path)
+
+def game_file(gd, rel, label):
+    """Resolve one contributor-declared path without letting it leave the game."""
+    path, base = (gd / rel).resolve(), gd.resolve()
+    try: path.relative_to(base)
+    except ValueError: raise ValueError(f"{label} escapes the game directory: {rel}")
+    if not path.is_file(): raise ValueError(f"{label} does not exist: {rel}")
+    return path
+
+def load_production(gd):
+    """Load the renderer-neutral production contract and self-contain its SVGs."""
+    path = gd / "templates" / "production.json"
+    if not path.exists(): return None
+    production = json.loads(path.read_text())
+    for template in production.get("templates") or []:
+        svg_path = game_file(gd, template.get("template", ""), "production template")
+        if svg_path.suffix.lower() != ".svg":
+            raise ValueError(f"production template must be SVG: {template.get('template')}")
+        source = svg_path.read_text()
+        for resource in template.get("resources") or []:
+            resource_path = game_file(gd, resource, "production resource")
+            reference = posixpath.relpath(resource_path.as_posix(), svg_path.parent.as_posix())
+            uri = data_uri(resource_path)
+            # SVG editors emit both href="..." and CSS url("..."). Replacing
+            # the exact declared relative reference handles both while keeping
+            # undeclared paths visible to validation instead of silently reading them.
+            source = source.replace(f'"{reference}"', f'"{uri}"').replace(f"'{reference}'", f"'{uri}'")
+        template["template_svg"] = source
+    return production
 
 # rules.md images ("BOOK ENGINE" -- tools/hub_template.html rbCompile()):
 # ![caption](path) / ![caption|left](path) resolve `path` against the
@@ -79,6 +132,57 @@ def embed_rules_assets(gd, rules_md):
         mime = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
         out[path] = f"data:{mime};base64,{base64.b64encode(resolved.read_bytes()).decode()}"
     return out
+
+def load_rulebook_publication(gd):
+    """Load one portable designed publication for the visual rules workspace."""
+    manifest_rel = Path("rules/publications/manifest.json")
+    manifest_path = gd / manifest_rel
+    if not manifest_path.exists(): return None
+    registry = json.loads(manifest_path.read_text())
+    active = next((item for item in registry.get("publications", [])
+                   if item.get("id") == registry.get("active")), None)
+    if not active: return None
+    source_rel = Path(active.get("source", ""))
+    source_path = (gd / source_rel).resolve()
+    try: source_path.relative_to(gd.resolve())
+    except ValueError: raise ValueError(f"rulebook publication source escapes game: {source_rel}")
+    if not source_path.is_file(): raise ValueError(f"rulebook publication source missing: {source_rel}")
+    publication_root = source_path.parent
+    source_files = [manifest_rel.as_posix()] + [
+        path.relative_to(gd).as_posix() for path in publication_root.rglob("*") if path.is_file()
+    ]
+    return {
+        "version": registry.get("version"), "active": registry.get("active"),
+        "manifest_path": manifest_rel.as_posix(), "source_path": source_rel.as_posix(),
+        "publication": active, "document": json.loads(source_path.read_text()),
+        "source_files": sorted(set(source_files)),
+    }
+
+def load_pnp_package(gd):
+    """Load an immutable publisher PnP package and verify its semantic baseline."""
+    manifest_path = gd / "assets" / "official-pnp" / "manifest.json"
+    if not manifest_path.exists(): return None
+    manifest = json.loads(manifest_path.read_text())
+    pdf = manifest.get("print_pdf") or {}
+    pdf_path = game_file(gd, pdf.get("path", ""), "official PnP PDF")
+    baseline_current = True
+    for rel, expected in (manifest.get("baseline_files") or {}).items():
+        source = game_file(gd, rel, "official PnP baseline file")
+        actual = hashlib.sha256(source.read_bytes()).hexdigest()
+        baseline_current = baseline_current and actual == expected
+    return {
+        "title": manifest.get("title") or "Official Print & Play",
+        "kind": manifest.get("kind"),
+        "license": manifest.get("license"),
+        "attribution": manifest.get("attribution"),
+        "source_url": manifest.get("source_url"),
+        "source_sha256": manifest.get("source_sha256"),
+        "pages": pdf.get("pages"),
+        "page_size": pdf.get("page_size"),
+        "url": runtime_asset(gd, pdf_path),
+        "baseline_current": baseline_current,
+        "production_assets": manifest.get("production_assets") or {},
+    }
 
 def load_dir(gd, d):
     p = gd / d
@@ -150,14 +254,14 @@ def md_to_html(md):
     if in_ol: out.append("</ol>")
     return "\n".join(out)
 
-def git_history(rel, limit=15):
-    log = sh(["git", "log", f"-{limit}", "--format=%H|%h|%an|%as|%s", "--", rel], ok_fail=True)
+def git_history(scope_rel, cards_rel, limit=15):
+    log = sh(["git", "log", f"-{limit}", "--format=%H|%h|%an|%as|%s", "--", scope_rel], ok_fail=True)
     if not log: return []
     entries = []
     for line in log.split("\n"):
         full, short, author, date, subject = line.split("|", 4)
-        now = cards_at(full, rel) or []
-        prev = cards_at(f"{full}^", rel) or []
+        now = cards_at(full, cards_rel) or []
+        prev = cards_at(f"{full}^", cards_rel) or []
         entries.append({"sha": short, "author": author, "date": date, "subject": subject,
                         "introduced": len(now) if not prev else 0,
                         "changes": diff_cards(prev, now) if prev else []})
@@ -167,12 +271,12 @@ def render_ref_faces(game_rel, ref, want_ids):
     """Render card faces for a git ref; return {card_id: dataURI} for first printings."""
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td) / "g"
-        subprocess.run(["cp", "-r", str(ROOT / game_rel), str(tmp)], check=True)
+        subprocess.run(["cp", "-r", str(GIT_ROOT / game_rel), str(tmp)], check=True)
         rel = f"{game_rel}/components/cards.json"
         content = sh(["git", "show", f"{ref}:{rel}"], ok_fail=True)
         if not content: return {}
         (tmp / "components/cards.json").write_text(content)
-        subprocess.run([sys.executable, str(ROOT / "tools/render_cards.py"), str(tmp), str(tmp / "f2")],
+        subprocess.run(["node", str(ROOT / "tools/render_cards.mjs"), str(tmp), str(tmp / "f2")],
                        check=True, capture_output=True)
         printings = json.loads((tmp / "components/printings.json").read_text())
         first = {}
@@ -185,45 +289,139 @@ def render_ref_faces(game_rel, ref, want_ids):
 
 def build_game(gd):
     gd = Path(gd).resolve()
-    slug = gd.name
+    slug = gd.name  # Store-1 compatibility key; public identity is namespace/repo_slug.
+    project = {}
+    project_path = gd / "forge" / "project.json"
+    if project_path.exists():
+        try: project = json.loads(project_path.read_text())
+        except Exception: project = {}
+    namespace = project.get("namespace") or "community"
+    repo_slug = project.get("slug") or slug
+    project_id = project.get("project_id") or f"legacy:{slug}"
     # games can live OUTSIDE the platform repo (forgejo-backend checkout farm,
     # scratch dirs): git-derived views degrade gracefully instead of crashing
-    try: game_rel = str(gd.relative_to(ROOT))
+    try: game_rel = str(gd.relative_to(GIT_ROOT))
     except ValueError: game_rel = None
     game = yaml.safe_load((gd / "game.yaml").read_text())
+    symbols = []
+    for symbol in game.get("symbols") or []:
+        runtime_symbol = dict(symbol)
+        asset = symbol.get("asset")
+        if asset:
+            asset_path = gd / asset
+            if asset_path.is_file(): runtime_symbol["asset_data"] = runtime_asset(gd, asset_path)
+        symbols.append(runtime_symbol)
     cards = json.loads((gd / "components/cards.json").read_text())
     printings = json.loads((gd / "components/printings.json").read_text())
+    for printing in printings:
+        art = printing.get("art")
+        if art and not re.match(r"^(?:data:|https?:|file:)", art, re.I):
+            art_path = gd / art
+            if art_path.is_file(): printing["art_data"] = runtime_asset(gd, art_path)
     # layout: OPTIONAL declarative print-true card layout (templates/layout.yaml,
     # schemas/layout.schema.json) -- read straight through to the client payload
     # as plain data; layoutCard() (tools/hub_template.html) is what interprets
     # it. Absent for most games today -- they keep rendering via cardFrame().
     layout_path = gd / "templates" / "layout.yaml"
     layout = yaml.safe_load(layout_path.read_text()) if layout_path.exists() else None
+    if layout:
+        for font in layout.get("fonts") or []:
+            local_asset = font.get("local_asset")
+            local_path = gd / local_asset if local_asset else None
+            asset = local_asset if local_path and local_path.is_file() else font.get("asset")
+            if asset and not re.match(r"^(?:data:|https?:|file:)", asset, re.I):
+                asset_path = gd / asset
+                if asset_path.is_file(): font["asset_data"] = runtime_asset(gd, asset_path)
+    def normalize_card_design_layout(value):
+        value = dict(value)
+        value["fonts"] = [dict(font) for font in value.get("fonts") or []]
+        for font in value["fonts"]:
+            local_asset = font.get("local_asset")
+            local_path = gd / local_asset if local_asset else None
+            asset = local_asset if local_path and local_path.is_file() else font.get("asset")
+            if asset and not re.match(r"^(?:data:|https?:|file:)", asset, re.I):
+                asset_path = gd / asset
+                if asset_path.is_file(): font["asset_data"] = runtime_asset(gd, asset_path)
+        return value
+    design_engines = load_design_engines(gd, normalize_card_design_layout)
+    card_design = design_engines.get("card_design") if design_engines else None
+    if not layout and card_design and card_design.get("families"):
+        layout = card_design["families"][0]["layout"]
+    source_overlay_path = gd / "templates" / "source-overlay.yaml"
+    source_overlay = yaml.safe_load(source_overlay_path.read_text()) if source_overlay_path.exists() else None
+    source_assets = {}
+    if source_overlay:
+        for region in source_overlay.get("regions") or []:
+            for asset in (region.get("patches") or {}).values():
+                if re.match(r"^(?:data:|https?:|file:)", asset, re.I): continue
+                asset_path = gd / asset
+                if asset_path.is_file() and asset not in source_assets:
+                    source_assets[asset] = runtime_asset(gd, asset_path)
+            render = region.get("render") or {}
+            for asset_key in ("font_asset", "background_asset"):
+                asset = render.get(asset_key)
+                if asset and not re.match(r"^(?:data:|https?:|file:)", asset, re.I):
+                    asset_path = gd / asset
+                    if asset_path.is_file() and asset not in source_assets:
+                        source_assets[asset] = runtime_asset(gd, asset_path)
+    production = load_production(gd)
+    pnp_package = load_pnp_package(gd)
     sets_ = load_dir(gd, "sets"); formats = load_dir(gd, "formats")
     restrictions = load_dir(gd, "restrictions"); decks = load_dir(gd, "decks")
+    setups = load_dir(gd, "setups")
     faces = gd / "exports" / "faces"
-    if not faces.is_dir():
-        subprocess.run([sys.executable, str(ROOT / "tools/render_cards.py"), str(gd)], check=True, capture_output=True)
     first = {}
     for p in printings: first.setdefault(p["card_id"], p)
     images = {}
     for c in cards:
+        # The live server renders cards from semantic data and only needs one
+        # lightweight discovery thumbnail. Exact PR comparisons are added
+        # below for their changed card ids. Static hubs keep all baked faces.
+        if LIVE_ASSETS and images: break
         pid = first.get(c["id"], {}).get("id")
         f = faces / f"{pid}.png"
         if pid and f.exists(): images[c["id"]] = b64(f)
-    # scans: real card-scan URLs (e.g. hot-linked from NetrunnerDB), first printing wins —
-    # parallel to `images` (our rendered/editable faces) so the hub can show BOTH.
+    # scans: composed source faces, local PnP crop preferred over an external URL.
+    # Parallel to `images` (our rendered/editable faces) so the hub can show BOTH.
     scans = {}
     for c in cards:
-        url = first.get(c["id"], {}).get("image")
-        if url: scans[c["id"]] = url
+        printing = first.get(c["id"], {})
+        local = printing.get("scan")
+        local_path = gd / local if local else None
+        if local_path and local_path.is_file():
+            # Keep the embedded/static payload in one place.  layoutCard() can
+            # resolve printing.scan_data through g.scans, while the headless
+            # renderer supplies printing.scan_data directly.  Duplicating the
+            # same PnP face in both objects roughly doubled large static hubs.
+            scans[c["id"]] = runtime_asset(gd, local_path)
+        elif printing.get("image"):
+            scans[c["id"]] = printing["image"]
 
     rel = f"{game_rel}/components/cards.json" if game_rel else None
-    history = git_history(rel) if rel else []
+    history = git_history(game_rel, rel) if rel else []
 
-    # rules: rendered markdown + its own git history (errata trail)
+    # Rules can use the backwards-compatible Markdown renderer or declare a
+    # native production pipeline in rules/pipeline.yaml. The browser receives
+    # only metadata and safe repository paths; actual builds stay server-side.
     rules_md = (gd / "rules" / "rules.md").read_text() if (gd / "rules" / "rules.md").exists() else ""
-    rules_log = (sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", f"{game_rel}/rules/rules.md"], ok_fail=True) or "") if game_rel else ""
+    rulebook_publication = load_rulebook_publication(gd)
+    rulebook_pipeline = None
+    pipeline_path = gd / "rules" / "pipeline.yaml"
+    if pipeline_path.exists():
+        registry = yaml.safe_load(pipeline_path.read_text()) or {}
+        active = next((p for p in registry.get("pipelines", []) if p.get("id") == registry.get("active")), None)
+        if active:
+            overlay_root = active.get("overlay_root")
+            overlay_files = []
+            if overlay_root and (gd / overlay_root).is_dir():
+                overlay_files = sorted(p.relative_to(gd).as_posix() for p in (gd / overlay_root).rglob("*") if p.is_file())
+            rulebook_pipeline = {
+                "version": registry.get("version"), "active": registry.get("active"),
+                "manifest_path": "rules/pipeline.yaml", "pipeline": active,
+                "overlay_files": overlay_files,
+                "source_lock": f"git:{(active.get('source') or {}).get('url', '')}#{(active.get('source') or {}).get('ref', '')}",
+            }
+    rules_log = (sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", f"{game_rel}/rules"], ok_fail=True) or "") if game_rel else ""
     rules_history = [dict(zip(["sha", "author", "date", "subject"], l.split("|", 3)))
                      for l in rules_log.split("\n") if l]
     tokens = []
@@ -237,6 +435,12 @@ def build_game(gd):
     design_md = ""
     dn = gd / "design" / "notes.md"
     if dn.exists(): design_md = md_to_html(dn.read_text())
+    design_brief = None
+    db = gd / "design" / "brief.json"
+    if db.exists(): design_brief = json.loads(db.read_text())
+    prototype = None
+    dp = gd / "design" / "prototype.json"
+    if dp.exists(): prototype = json.loads(dp.read_text())
     # merged credit roll (same logic as fmt credits, inline)
     people = {}
     for c in community.get("contributors") or []:
@@ -284,6 +488,14 @@ def build_game(gd):
         after = render_ref_faces(game_rel, br, changed_ids)
         prs.append({"branch": br, "author": author, "title": subject, "changes": changes,
                     "after": after})
+    # The cards grid/modal/editor already render live with layoutCard(). Do not
+    # rasterize every face merely to build the hub: `images` is only needed by
+    # static PR before/after screenshots and jam thumbnails. Existing export
+    # faces remain useful for thumbnails; a static PR renders only its touched
+    # main-branch cards through the canonical renderer.
+    if prs and game_rel:
+        current_ids = sorted({ch["card"] for pr in prs for ch in pr["changes"]})
+        images.update(render_ref_faces(game_rel, "main", current_ids))
 
     # releases (tags touching this file's history — keep simple: all tags with notes)
     releases = []
@@ -295,28 +507,38 @@ def build_game(gd):
 
     last_commit = history[0] if history else None
     return {
-        "slug": slug, "title": game.get("title", slug), "description": game.get("description", ""),
+        "slug": slug, "namespace": namespace, "repo_slug": repo_slug,
+        "project_id": project_id,
+        "slug_path": f"{quote(str(namespace), safe='')}/{quote(str(repo_slug), safe='')}",
+        "title": game.get("title", repo_slug), "description": game.get("description", ""),
         "license": game.get("license", "?"), "version": game.get("version", ""),
         "provenance": (game.get("default_provenance") or {}).get("source", "?"),
         "authors": [a.get("name") for a in (game.get("authors") or [])],
         "attribution": game.get("attribution"),
         "cards": cards, "printings": printings, "images": images, "scans": scans,
-        "layout": layout,
+        "layout": layout, "card_design": card_design,
+        "design_engines": design_engines_metadata(design_engines),
+        "source_overlay": source_overlay, "source_assets": source_assets,
+        "production": production,
+        "pnp_package": pnp_package,
         "schema": game.get("attribute_definitions") or [],
         "type_colors": game.get("type_colors") or {},
         "faction_colors": game.get("faction_colors") or {},
         "card_style": game.get("card_style"),
         "book_style": game.get("book_style"),
         "official_docs": game.get("official_docs") or [],
-        "symbols": game.get("symbols") or [],
+        "symbols": symbols,
         "sets": sets_, "formats": formats, "restrictions": restrictions,
-        "decks": deck_data, "history": history, "prs": prs, "releases": releases,
+        "decks": deck_data, "setups": setups, "history": history, "prs": prs, "releases": releases,
         "rules_html": md_to_html(rules_md), "rules_md": rules_md, "rules_assets": embed_rules_assets(gd, rules_md),
+        "rulebook_pipeline": rulebook_pipeline, "rulebook_publication": rulebook_publication,
         "rules_history": rules_history, "tokens": tokens,
         "playtests": playtests,
-        "community": community, "design_html": design_md, "credit_roll": credit_roll,
+        "community": community, "design_html": design_md, "design_brief": design_brief,
+        "prototype": prototype,
+        "credit_roll": credit_roll,
         "updated": last_commit["date"] if last_commit else "",
-        "ncards": len(cards), "nprintings": len(printings),
+        "ncards": len(cards), "nprintings": len(printings), "nsetups": len(setups),
     }
 
 def load_jams():
@@ -352,11 +574,19 @@ def build_people(games, jams):
             for p in people.values()]
 
 def main():
+    global GIT_ROOT, LIVE_ASSETS
     args = sys.argv[1:]
+    if "--repo-root" in args:
+        GIT_ROOT = Path(args[args.index("--repo-root") + 1]).resolve()
+    LIVE_ASSETS = "--live-assets" in args
+    if "--game-json" in args:
+        gd = Path(args[args.index("--game-json") + 1]).resolve()
+        print(json.dumps(build_game(gd)).replace("</", "<\\/"))
+        return
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else ROOT / "hub.html"
     base = args[args.index("--games") + 1] if "--games" in args else None
-    games = [build_game(g) for g in discover_games(base)]
     jams = load_jams()
+    games = [] if "--shell" in args else [build_game(g) for g in discover_games(base)]
     data = {"games": games, "jams": jams, "people": build_people(games, jams)}
     data_js = json.dumps(data).replace("</", "<\\/")
     tpl = (ROOT / "tools" / "hub_template.html").read_text()

@@ -92,11 +92,11 @@ const staleForge = await j(await fetch(`${base}/api/games/${g.slug}/sync/pull?so
   { method: "POST", headers: A(alice.token) }));
 ok(staleForge.s === 409 && staleForge.d.stale === "forge", "commit refuses Forge HEAD when it changed after review");
 
-const exp = await j(await fetch(`${base}/api/games/${g.slug}/export/tts`, { method: "POST", headers: A(alice.token) }));
+const exp = await j(await fetch(`${base}/api/games/${g.slug}/export/tts?wait=1`, { method: "POST", headers: A(alice.token) }));
 const tts = await (await fetch(base + exp.d.urls[0])).json();
 ok(tts.ObjectStates[0].ContainedObjects.some(o => o.Nickname === "Torch"), "THE SPINE: a card added in the SHEET appears in the TTS mod");
-ok((await fetch(`${base}/api/games/${g.slug}/export/ttc`, { method: "POST", headers: A(alice.token) })).status === 200, "the Tabletop Club pack regenerates");
-ok((await fetch(`${base}/api/games/${g.slug}/export/pnp`, { method: "POST", headers: A(alice.token) })).status === 200, "the print-and-play PDF regenerates");
+ok((await fetch(`${base}/api/games/${g.slug}/export/ttc?wait=1`, { method: "POST", headers: A(alice.token) })).status === 200, "the Tabletop Club pack regenerates");
+ok((await fetch(`${base}/api/games/${g.slug}/export/pnp?wait=1`, { method: "POST", headers: A(alice.token) })).status === 200, "the print-and-play PDF regenerates");
 
 const hist = await (await fetch(`${base}/api/games/${g.slug}/history`)).json();
 ok(hist.some(h => /Test Spark and Torch candidate/.test(h.subject) && h.author === "alice"), "the candidate is a normal, attributed commit in history");

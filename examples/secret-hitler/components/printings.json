@@ -4,83 +4,129 @@
     "card_id": "role_liberal",
     "set_id": "standard-edition",
     "collector_number": "001",
-    "quantity": 6
+    "quantity": 6,
+    "scan": "assets/official-pnp/source-faces/p_role_liberal.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 7; immutable source face." }
   },
   {
     "id": "p_role_fascist",
     "card_id": "role_fascist",
     "set_id": "standard-edition",
     "collector_number": "002",
-    "quantity": 3
+    "quantity": 3,
+    "scan": "assets/official-pnp/source-faces/p_role_fascist.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 8; immutable source face." }
   },
   {
     "id": "p_role_hitler",
     "card_id": "role_hitler",
     "set_id": "standard-edition",
     "collector_number": "003",
-    "quantity": 1
+    "quantity": 1,
+    "scan": "assets/official-pnp/source-faces/p_role_hitler.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 8; immutable source face." }
   },
   {
     "id": "p_party_liberal",
     "card_id": "party_liberal",
     "set_id": "standard-edition",
     "collector_number": "004",
-    "quantity": 6
+    "quantity": 6,
+    "scan": "assets/official-pnp/source-faces/p_party_liberal.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 0 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 8; immutable source face." }
   },
   {
     "id": "p_party_fascist",
     "card_id": "party_fascist",
     "set_id": "standard-edition",
     "collector_number": "005",
-    "quantity": 4
+    "quantity": 4,
+    "scan": "assets/official-pnp/source-faces/p_party_fascist.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 0 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 9; immutable source face." }
   },
   {
     "id": "p_policy_liberal",
     "card_id": "policy_liberal",
     "set_id": "standard-edition",
     "collector_number": "006",
-    "quantity": 6
+    "quantity": 6,
+    "scan": "assets/official-pnp/source-faces/p_policy_liberal.png",
+    "physical_size_mm": { "width": 44.45, "height": 63.5, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 4; immutable source face." }
   },
   {
     "id": "p_policy_fascist",
     "card_id": "policy_fascist",
     "set_id": "standard-edition",
     "collector_number": "007",
-    "quantity": 11
+    "quantity": 11,
+    "scan": "assets/official-pnp/source-faces/p_policy_fascist.png",
+    "physical_size_mm": { "width": 44.45, "height": 63.5, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop and lossless orientation from official PnP page 2; immutable source face." }
   },
   {
     "id": "p_ballot_ja",
     "card_id": "ballot_ja",
     "set_id": "standard-edition",
     "collector_number": "008",
-    "quantity": 10
+    "quantity": 10,
+    "scan": "assets/official-pnp/source-faces/p_ballot_ja.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 0 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 5; immutable source face." }
   },
   {
     "id": "p_ballot_nein",
     "card_id": "ballot_nein",
     "set_id": "standard-edition",
     "collector_number": "009",
-    "quantity": 10
+    "quantity": 10,
+    "scan": "assets/official-pnp/source-faces/p_ballot_nein.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 0 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 6; immutable source face." }
   },
   {
     "id": "p_placard_president",
     "card_id": "placard_president",
     "set_id": "standard-edition",
     "collector_number": "010",
-    "quantity": 1
+    "quantity": 1,
+    "scan": "assets/official-pnp/source-faces/p_placard_president.png",
+    "physical_size_mm": { "width": 173.91, "height": 52.49, "radius": 0 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact outward title panel from official foldable PnP page 3; full flat production asset is preserved under assets/official-pnp/placards/." }
   },
   {
     "id": "p_placard_chancellor",
     "card_id": "placard_chancellor",
     "set_id": "standard-edition",
     "collector_number": "011",
-    "quantity": 1
+    "quantity": 1,
+    "scan": "assets/official-pnp/source-faces/p_placard_chancellor.png",
+    "physical_size_mm": { "width": 173.91, "height": 53.34, "radius": 0 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact outward title panel from official foldable PnP page 3; full flat production asset is preserved under assets/official-pnp/placards/." }
   },
   {
-    "id": "p_placard_election_tracker",
-    "card_id": "placard_election_tracker",
+    "id": "p_pile_draw",
+    "card_id": "pile_draw",
     "set_id": "standard-edition",
     "collector_number": "012",
-    "quantity": 1
+    "quantity": 1,
+    "scan": "assets/official-pnp/source-faces/p_pile_draw.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 8; immutable source face." }
+  },
+  {
+    "id": "p_pile_discard",
+    "card_id": "pile_discard",
+    "set_id": "standard-edition",
+    "collector_number": "013",
+    "quantity": 1,
+    "scan": "assets/official-pnp/source-faces/p_pile_discard.png",
+    "physical_size_mm": { "width": 63.5, "height": 88.9, "radius": 2.5 },
+    "scan_provenance": { "source": "human", "creator": "Goat, Wolf, & Cabbage", "license": "CC-BY-NC-SA-4.0", "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf", "notes": "Exact native-pixel crop from official PnP page 8; immutable source face." }
   }
 ]

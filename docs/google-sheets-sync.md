@@ -29,11 +29,12 @@ two-way synchronization:
 This boundary is the feature. It lets a team use Sheets, a Forge editor, CSV, or
 another future adapter without weakening reviewable game history.
 
-## Verification status — 2026-08-25
+## Verification status — 2026-09-01
 
 - The real `Code.gs` connector passes the disposable-server harness, including
-  login, private-tab attachment, clean/dirty detection, visual candidate data,
-  exact-token commit, credit, session expiry, sign-out, and detach behavior.
+  login, explicit Cards + optional Printings tab mapping, unrelated-tab
+  isolation, clean/dirty detection, visual candidate data, exact-token commit,
+  credit, session expiry, server-side sign-out revocation, and detach behavior.
 - A real bound Google Apps Script project loaded the three integration files,
   produced the custom **Forge** menu, completed Google's OAuth flow in Chrome,
   and opened the candidate sidebar in a real Sheet.
@@ -41,17 +42,18 @@ another future adapter without weakening reviewable game history.
   reviewed a candidate, and created attributed Forge commit `c40b809` while
   recording the exact Sheet fingerprint and repository base SHA.
 
-The connector boundary is therefore proven end to end. Production readiness still
-requires a stable HTTPS Forge deployment and a verified Google Workspace add-on
-(private distribution is fine first); manual script copying remains only a
-proof-of-concept installer.
+The connector boundary is therefore proven end to end. A controlled alpha can use
+the bound-script installer against the production HTTPS origin. Open distribution
+still requires a packaged and verified Google Workspace add-on; manual script
+copying remains an alpha installer, not a consumer release path.
 
 Two surfaces use the same backend contract:
 
 - The Cards page accepts a published Google Sheet/HTTPS CSV URL.
 - [`integrations/google-sheets`](../integrations/google-sheets) is a bound Apps
-  Script proof of concept for private Sheets. Its sidebar marks edits as possibly
-  dirty, then always recomputes the authoritative diff from the active tab.
+  Script proof of concept for private Sheets. Its sidebar marks edits in mapped
+  tabs as possibly dirty, then always recomputes the authoritative diff from the
+  configured Cards and optional Printings tabs.
 
 ## Safety contract
 
@@ -70,7 +72,8 @@ Check returns an optimistic candidate token containing `head_sha` and
 `source_hash`. Commit re-reads both sides. If either changed after review, Forge
 returns HTTP 409 and requires another check.
 
-The check validates the complete cards + printings tree before enabling Commit
+The check reads the mapped tables as one atomic workbook snapshot and validates
+the complete cards + printings tree before enabling Commit
 and returns affected cards for visual review. A successful commit is attributed
 to the authenticated Forge user; optional collaborators are recorded explicitly
 in its message. PnP, Tabletop Club, TTS, playtests, diffs, and releases can then
@@ -90,10 +93,10 @@ newer edit reviewed or committed.
 
 ## Stable row identity
 
-Use a permanent, unique `id` column. Names can change; IDs cannot. The CSV
-importer still derives IDs from names for one-off imports, but connected Sheets
-without explicit IDs display a warning because a rename would appear as a
-deletion plus an addition.
+Use permanent, unique `id` values in Cards and Printings, plus a stable `card_id`
+in each printing. Names can change; IDs cannot. The CSV importer still derives
+IDs from names for one-off imports, but connected Sheets require explicit IDs so
+renames remain edits rather than deletion/addition pairs.
 
 Columns present in the Sheet are working-copy-managed. Forge-only card metadata and
 printing fields not represented by a Sheet column are preserved. Artwork,
@@ -112,10 +115,16 @@ DELETE /api/games/:slug/sync/sheet       detach
 The naming of these compatibility endpoints predates the working-copy model;
 their behavior is intentionally push/commit, not continuous synchronization.
 
-For a published source, the server fetches CSV. The add-on sends
-`snapshot_csv`, a stable `source_id` for the spreadsheet + active tab, and the
-preview token in JSON. Snapshots are limited to 5 MB and never stored as Google
-credentials.
+For a published source, the server fetches CSV. The add-on sends an atomic
+`snapshot` containing the mapped Cards and optional Printings tables, a stable
+`source_id` for the spreadsheet plus its tab-role mapping, and the preview token
+in JSON. Snapshots are limited to 5 MB and never store Google credentials.
+
+Every successful promotion commits `forge/imports/google-sheets.json` beside the
+game data. The receipt pins the adapter id/version, workbook and tab identities,
+source hash/revision, repository base and resulting commit, submitter, and change
+counts. That makes the external-editor boundary reproducible and reviewable even
+after the Sheet has changed again.
 
 ## Install the bound-script proof of concept
 
@@ -125,9 +134,10 @@ credentials.
 3. Reload the Sheet, then choose **Forge → Open candidate panel**.
 4. Complete Google's first-run consent in a regular browser. The manifest asks
    only for this spreadsheet, container UI, and outbound HTTPS request scopes.
-5. Enter a stable HTTPS Forge origin and game slug, then sign in with your Forge
-   account. Short-lived tunnel URLs are suitable only for disposable tests.
-6. Attach the active tab, check its draft changes, review validation/diffs, add a
+5. Enter a stable HTTPS Forge origin and game slug, choose the Cards tab and an
+   optional Printings tab, then sign in with your Forge account. Short-lived
+   tunnel URLs are suitable only for disposable tests.
+6. Attach the mapping, check its draft changes, review validation/diffs, add a
    commit message and contributors, then commit the exact candidate.
 
 The game/source identity lives in document properties shared with Sheet editors.
@@ -135,8 +145,8 @@ The password is sent directly to Forge's login endpoint and never stored; the
 resulting session token lives in Google user properties and is not shared in the
 Sheet. A valid token can be reused when connection settings change, so editors
 are not asked to resend their password unnecessarily. HTTP 401 clears the stale
-personal session and asks the editor to sign in again. **Sign out** removes only
-that editor's personal credentials. **Detach tab** removes the shared Forge
+personal session and asks the editor to sign in again. **Sign out** first revokes
+that editor's Forge session and then removes the local credential. **Detach** removes the shared Forge
 working-copy connection without deleting accepted commits or unrelated script
 properties.
 
@@ -151,8 +161,9 @@ Forge server with a small mock of the Apps Script host. The main `e2e.sh` suite
 runs it automatically and covers sign-in, private-tab attachment, password/token
 storage boundaries, password-free token reuse, clean and dirty status,
 polled live-diff hints, edit-during-check race protection, validation/preview
-data, exact candidate commit, resulting cards, attribution,
-wrong-tab rejection, expired-session cleanup, safe detach, and sign-out.
+data, exact candidate commit, resulting cards and printings, committed import
+receipt, attribution, unrelated-tab isolation, expired-session cleanup, safe
+detach, and server-side sign-out revocation.
 
 Sources are limited to 5 MB. Production sources must use HTTPS; redirect targets
 are checked as well. Loopback HTTP is accepted only when Forge itself is running

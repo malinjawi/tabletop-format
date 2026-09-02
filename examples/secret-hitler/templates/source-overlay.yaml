@@ -1,0 +1,274 @@
+schema_version: 5
+enabled: true
+private_only: false
+notice: >
+  Official grayscale print-and-play artwork, CC BY-NC-SA 4.0. Unchanged
+  components render losslessly from the immutable publisher source. Printed
+  names are editable in place; semantic notes remain versioned without being
+  fabricated on the face, while changing a component family fails closed until
+  a matching production frame is added.
+card:
+  w_mm: 63.5
+  h_mm: 88.9
+  radius_mm: 2.5
+nonvisual_card_fields:
+  - text
+  - subtypes
+  - keywords
+  - deck_limit
+frame_defining_card_fields:
+  - type
+  - attributes.faction
+  - attributes.vote
+regions:
+  # Role titles cross the character illustration, so each source card owns a
+  # deterministic inpainted background patch. The title remains live text.
+  - id: role_liberal_name
+    match: { id: role_liberal }
+    src: name
+    transform: uppercase
+    x_pct: 10
+    y_pct: 15
+    w_pct: 80
+    h_pct: 14
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 12.4
+      min_size_cqw: 6
+      line_height: 1
+      letter_spacing_cqw: 0.12
+      color: "#fafafa"
+      background_asset: assets/source-patches/secret-hitler/role-liberal-name-background.png
+      max_lines: 1
+  - id: role_fascist_name
+    match: { id: role_fascist }
+    src: name
+    transform: uppercase
+    x_pct: 10
+    y_pct: 15
+    w_pct: 80
+    h_pct: 14
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 12.4
+      min_size_cqw: 6
+      line_height: 1
+      letter_spacing_cqw: 0.12
+      color: "#fafafa"
+      background_asset: assets/source-patches/secret-hitler/role-fascist-name-background.png
+      max_lines: 1
+  - id: role_hitler_name
+    match: { id: role_hitler }
+    src: name
+    transform: uppercase
+    x_pct: 10
+    y_pct: 15
+    w_pct: 80
+    h_pct: 14
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 12.4
+      min_size_cqw: 6
+      line_height: 1
+      letter_spacing_cqw: 0.12
+      color: "#fafafa"
+      background_asset: assets/source-patches/secret-hitler/role-hitler-name-background.png
+      max_lines: 1
+
+  - id: party_name
+    match: { type: party }
+    src: name
+    transform: uppercase
+    x_pct: 17
+    y_pct: 82
+    w_pct: 66
+    h_pct: 13
+    samples:
+      Liberal: party_liberal
+      Fascist: party_fascist
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 10.8
+      min_size_cqw: 5.2
+      line_height: 1
+      color: "#a0a0a0"
+      background: "#ffffff"
+      max_lines: 1
+
+  - id: policy_name
+    match: { type: policy }
+    src: name
+    transform: uppercase
+    x_pct: 16
+    y_pct: 38
+    w_pct: 68
+    h_pct: 14
+    samples:
+      Liberal Policy: policy_liberal
+      Fascist Policy: policy_fascist
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 11.2
+      min_size_cqw: 5
+      line_height: 1
+      color: "#9e9e9e"
+      background: "#ffffff"
+      max_lines: 1
+
+  - id: ballot_ja_name
+    match: { type: ballot, attributes.vote: ja }
+    src: name
+    x_pct: 15
+    y_pct: 14
+    w_pct: 70
+    h_pct: 72
+    samples:
+      Ja!: ballot_ja
+      Nein!: ballot_nein
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      rotation_deg: 90
+      size_cqw: 20
+      min_size_cqw: 8
+      line_height: 1
+      color: "#444444"
+      background: "#ffffff"
+      max_lines: 1
+  - id: ballot_nein_name
+    match: { type: ballot, attributes.vote: nein }
+    src: name
+    x_pct: 15
+    y_pct: 14
+    w_pct: 70
+    h_pct: 72
+    samples:
+      Ja!: ballot_ja
+      Nein!: ballot_nein
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      rotation_deg: 90
+      size_cqw: 20
+      min_size_cqw: 8
+      line_height: 1
+      color: "#ffffff"
+      background: "#444444"
+      max_lines: 1
+
+  - id: pile_name
+    match: { type: pile-marker }
+    src: name
+    transform: uppercase
+    x_pct: 24
+    y_pct: 37
+    w_pct: 49
+    h_pct: 19
+    samples:
+      Draw Pile: pile_draw
+      Discard Pile: pile_discard
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 8.2
+      min_size_cqw: 4.5
+      line_height: 1.05
+      color: "#a3a3a3"
+      background: "#ffffff"
+      max_lines: 2
+
+  - id: president_name
+    match: { id: placard_president }
+    src: name
+    x_pct: 13
+    y_pct: 18
+    w_pct: 74
+    h_pct: 62
+    render:
+      type: richtext
+      font_family: Germania One
+      font_asset: assets/source-fonts/GermaniaOne-Regular.ttf
+      font_weight: 400
+      text_align: center
+      vertical_align: middle
+      size_cqw: 10.5
+      min_size_cqw: 4
+      line_height: 1
+      color: "#444444"
+      background: "#ffffff"
+      max_lines: 1
+  - id: chancellor_name
+    match: { id: placard_chancellor }
+    src: name
+    transform: uppercase
+    x_pct: 12
+    y_pct: 24
+    w_pct: 76
+    h_pct: 54
+    render:
+      type: richtext
+      font_family: Barlow Condensed
+      font_asset: assets/source-fonts/BarlowCondensed-Bold.ttf
+      font_weight: 700
+      text_align: center
+      vertical_align: middle
+      size_cqw: 9.2
+      min_size_cqw: 4
+      line_height: 1
+      letter_spacing_cqw: 0.35
+      color: "#444444"
+      text_stroke_color: "#f4f4f4"
+      text_stroke_cqw: 0.16
+      background: "#444444"
+      max_lines: 1
+baselines:
+  "role_liberal": { signature: "fnv1a:cae1eda8", printing_signature: "fnv1a:e1f10dc6", values: {"name": "Liberal"} }
+  "role_fascist": { signature: "fnv1a:cdcf8e58", printing_signature: "fnv1a:90b61f23", values: {"name": "Fascist"} }
+  "role_hitler": { signature: "fnv1a:f271724d", printing_signature: "fnv1a:cf06bda0", values: {"name": "Hitler"} }
+  "party_liberal": { signature: "fnv1a:9070d12c", printing_signature: "fnv1a:cbc8a02d", values: {"name": "Liberal"} }
+  "party_fascist": { signature: "fnv1a:fa5802e4", printing_signature: "fnv1a:56e77792", values: {"name": "Fascist"} }
+  "policy_liberal": { signature: "fnv1a:a16c80f4", printing_signature: "fnv1a:e6fac10f", values: {"name": "Liberal Policy"} }
+  "policy_fascist": { signature: "fnv1a:0cafb16c", printing_signature: "fnv1a:a8475e8c", values: {"name": "Fascist Policy"} }
+  "ballot_ja": { signature: "fnv1a:5a6d7e68", printing_signature: "fnv1a:9f8cc7b9", values: {"name": "Ja!"} }
+  "ballot_nein": { signature: "fnv1a:1b394038", printing_signature: "fnv1a:c393d99e", values: {"name": "Nein!"} }
+  "placard_president": { signature: "fnv1a:595ca081", printing_signature: "fnv1a:d96a55fc", values: {"name": "President"} }
+  "placard_chancellor": { signature: "fnv1a:bd4ab048", printing_signature: "fnv1a:ef7304ff", values: {"name": "Chancellor"} }
+  "pile_draw": { signature: "fnv1a:12bfc0a2", printing_signature: "fnv1a:82576e82", values: {"name": "Draw Pile"} }
+  "pile_discard": { signature: "fnv1a:bcec44d2", printing_signature: "fnv1a:4edc6f5d", values: {"name": "Discard Pile"} }

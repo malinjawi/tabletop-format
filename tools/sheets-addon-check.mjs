@@ -32,6 +32,8 @@ ok(sidebar.includes('id="settings-back"') && sidebar.includes("← Back to candi
 ok(sidebar.includes("getForgePulse()") && sidebar.includes("POLL_MS=2000") &&
   sidebar.includes("scheduleCandidateCheck") && sidebar.includes("diffValue(c.from)"),
   "sidebar polls the cheap edit marker and renders field-level live diffs");
+ok(sidebar.includes('id="cards-tab"') && sidebar.includes('id="printings-tab"'),
+  "connection maps Cards and optional Printings tabs explicitly");
 
 const api = async (path, options = {}) => {
   const response = await fetch(origin + path, options);
@@ -64,15 +66,28 @@ let sheetRows = [
   ["id", "name", "type", "text", "cost"],
   ["seed", "Seed", "unit", "Grow.", "1"],
 ];
-const activeSheet = {
-  getSheetId: () => sheetId,
+let printingRows = [
+  ["id", "card_id", "set_id", "collector_number", "quantity", "template_id"],
+  ["p_seed_core", "seed", "core", "001", "1", "standard_face"],
+];
+const cardsSheet = {
+  getSheetId: () => 73,
   getName: () => "Cards",
   getDataRange: () => ({ getDisplayValues: () => sheetRows.map(row => [...row]) }),
 };
+const printingsSheet = {
+  getSheetId: () => 74,
+  getName: () => "Printings",
+  getDataRange: () => ({ getDisplayValues: () => printingRows.map(row => [...row]) }),
+};
+const notesSheet = { getSheetId: () => 99, getName: () => "Notes",
+  getDataRange: () => ({ getDisplayValues: () => [["notes"], ["not game data"]] }) };
+const allSheets = [cardsSheet, printingsSheet, notesSheet];
 const spreadsheet = {
   getId: () => "spreadsheet-addon-e2e",
   getName: () => "Forge Add-on Test",
-  getActiveSheet: () => activeSheet,
+  getActiveSheet: () => allSheets.find(sheet => sheet.getSheetId() === sheetId),
+  getSheets: () => allSheets,
 };
 
 const urlFetch = (url, options = {}) => {
@@ -105,7 +120,7 @@ const context = vm.createContext({
   },
   SpreadsheetApp: {
     getActiveSpreadsheet: () => spreadsheet,
-    getActiveSheet: () => activeSheet,
+    getActiveSheet: () => spreadsheet.getActiveSheet(),
   },
   UrlFetchApp: { fetch: urlFetch },
 });
@@ -126,10 +141,20 @@ ok(reattached.result.connected && userValues.get("FORGE_ACCESS_TOKEN") === first
 const clean = context.checkForgeCandidate();
 ok(clean.result.status === "clean" && clean.result.validation.ok, "unchanged Sheet is clean and valid");
 
+const mapped = context.saveForgeSettings({ origin, game: game.slug, handle: "addon-tester", password: "",
+  cards_tab: 73, printings_tab: 74 });
+ok(mapped.result.tables.includes("cards") && mapped.result.tables.includes("printings") && mapped.result.printings === 1,
+  "the same connector attaches explicit Cards + Printings working-copy tables");
+
 sheetRows = [
   ["id", "name", "type", "text", "cost"],
   ["seed", "Seed", "unit", "Grow twice.", "1"],
   ["bloom", "Bloom", "unit", "Flower.", "2"],
+];
+printingRows = [
+  ["id", "card_id", "set_id", "collector_number", "quantity", "template_id"],
+  ["p_seed_core", "seed", "core", "001", "2", "standard_face"],
+  ["p_bloom_core", "bloom", "core", "002", "1", "standard_face"],
 ];
 context.onEdit();
 ok(docValues.has("FORGE_DIRTY_AT"), "onEdit marks the shared working copy possibly dirty");
@@ -144,22 +169,33 @@ ok(docValues.get("FORGE_DIRTY_AT") === "newer-edit-during-request",
 context.onEdit();
 const candidate = context.checkForgeCandidate();
 ok(candidate.result.status === "changes" && candidate.result.can_commit && candidate.result.counts.cards === 2 &&
-  candidate.result.candidate_cards.length === 2, "authoritative check returns two playable changes, validation, and visual-preview data");
+  candidate.result.counts.printings === 2 && candidate.result.candidate_cards.length === 2,
+  "authoritative check merges Cards + Printings changes with validation and visual-preview data");
 
 const committed = context.commitForgeCandidate({ preview: candidate.result.preview,
   commit_message: "Try the Bloom package", contributors: "sheet-coworker" });
 ok(committed.result.saved && committed.result.commit && !docValues.has("FORGE_DIRTY_AT"), "exact reviewed candidate commits and clears the dirty hint");
+ok(committed.result.adapter?.version === 2 && committed.result.import_receipt === "forge/imports/google-sheets.json",
+  "promotion identifies the versioned connector contract and committed receipt");
 const cards = await api(`/api/games/${game.slug}/cards`);
 ok(cards.length === 2 && cards.find(card => card.id === "seed")?.text === "Grow twice." && cards.some(card => card.id === "bloom"),
   "committed Forge game contains the edited and added Sheet cards");
+const printings = await api(`/api/games/${game.slug}/printings`);
+ok(printings.length === 2 && printings.find(printing => printing.id === "p_seed_core")?.quantity === 2,
+  "the exact reviewed Printings tab enters the same atomic Forge commit");
+const receipt = await api(`/api/games/${game.slug}/repository/file/forge/imports/google-sheets.json`);
+ok(receipt.format === "forge-import-receipt" && receipt.source.sha256 === committed.result.preview.source_hash &&
+  receipt.source.tables.cards && receipt.source.tables.printings,
+  "Git preserves the exact multi-table source fingerprint and mapping as an import receipt");
 const history = await api(`/api/games/${game.slug}/history`);
 ok(history.some(entry => entry.author === "addon-tester" && entry.subject === "Try the Bloom package"),
   "Forge history credits the authenticated submitter and preserves intent");
 
 sheetId = 99;
-let rejectedWrongTab = false;
-try { context.checkForgeCandidate(); } catch (error) { rejectedWrongTab = /another tab/i.test(error.message); }
-ok(rejectedWrongTab, "connector rejects a different active Sheet tab");
+const beforeUnrelated = docValues.get("FORGE_DIRTY_AT") || "";
+context.onEdit({ range: { getSheet: () => notesSheet } });
+ok((docValues.get("FORGE_DIRTY_AT") || "") === beforeUnrelated && context.checkForgeCandidate().result.status === "clean",
+  "unmapped notes/calculation tabs neither dirty nor replace the mapped game tables");
 
 sheetId = 73;
 userValues.set("FORGE_ACCESS_TOKEN", "expired-test-token");

@@ -1,0 +1,52 @@
+card:
+  w_mm: 63
+  h_mm: 87.21
+  bleed_mm: 3.175
+  radius_mm: 2.5
+  bg: palette-deep
+fonts:
+  - id: title
+    family: Forge Cinzel
+    weight: 600
+    asset: assets/source-fonts/Cinzel-Variable.ttf
+  - id: tech
+    family: Forge Gill Sans Ultra Bold
+    weight: 900
+    asset: assets/source-fonts/Orbitron-Black.ttf
+    local_asset: assets/source-fonts/GillSansUltraBold.local.ttf
+  - id: subtype
+    family: Forge Bank Gothic Light
+    weight: 300
+    asset: assets/source-fonts/Orbitron-Variable.ttf
+    local_asset: assets/source-fonts/BankGothic-Light.local.ttf
+  - id: stat
+    family: Forge Bank Gothic
+    weight: 500
+    asset: assets/source-fonts/Orbitron-Black.ttf
+    local_asset: assets/source-fonts/BankGothic-Medium.local.ttf
+  - id: label
+    family: Forge Lato
+    weight: 700
+    asset: assets/source-fonts/Lato-Bold.ttf
+  - id: body
+    family: Forge Source Serif 4
+    weight: 400
+    asset: assets/source-fonts/SourceSerif4-Variable.ttf
+  - id: flavor
+    family: Forge Source Serif 4
+    weight: 400
+    style: italic
+    asset: assets/source-fonts/SourceSerif4-Italic-Variable.ttf
+palette:
+  by: attributes.faction
+  map:
+    anarch: "#f06432"
+    criminal: "#238fc2"
+    shaper: "#65ad61"
+    haas-bioroid: "#804d7f"
+    jinteki: "#bd3b35"
+    nbn: "#d3a124"
+    weyland-consortium: "#617e67"
+    neutral-corp: "#687078"
+    neutral-runner: "#7d8389"
+  default: "#7d8389"

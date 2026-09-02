@@ -1,0 +1,32 @@
+version: 1
+kind: pnpink
+description: A deliberately isolated adapter proof. Forge commits remain canonical; CSV and .pnp files are derived on demand from the committed card data.
+upstream:
+  repository: https://github.com/xoellijo/pnpink
+  license: MIT
+  tested_tag: v0.55
+template: templates/card-design/experiments/pnpink/netrunner-proof.svg
+families:
+  - id: program
+    specimen: buzzsaw
+    bbox: bbox_program
+    fields:
+      id: program_forge_id
+      name: program_name
+      subtypes: program_subtypes
+      text: program_text
+      attributes.cost: program_cost
+      attributes.memory_cost: program_memory
+      attributes.strength: program_strength
+      attributes.faction: program_faction
+  - id: agenda
+    specimen: luminal_transubstantiation
+    bbox: bbox_agenda
+    fields:
+      id: agenda_forge_id
+      name: agenda_name
+      subtypes: agenda_subtypes
+      text: agenda_text
+      attributes.advancement_cost: agenda_advancement
+      attributes.agenda_points: agenda_points
+      attributes.faction: agenda_faction

@@ -1,0 +1,95 @@
+name: Operation template
+description: Production layout specific to operation cards. Shared frame and typography live in reusable components.
+regions:
+  - id: operation_header_shadow
+    type: rect
+    x: 13.9
+    "y": 3
+    w: 49.1
+    h: 5.65
+    fill: "#06090d"
+    clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 45%)
+    shadow: 0 .55mm .9mm rgba(0,0,0,.42)
+    show_if: type == operation
+  - id: operation_header
+    type: rect
+    x: 13.8
+    "y": 2.62
+    w: 49.2
+    h: 5.15
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.35
+    clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 45%)
+    show_if: type == operation
+  - id: operation_unique
+    type: text
+    text: ◆
+    x: 17.2
+    "y": 3.18
+    w: 2.7
+    h: 3.8
+    font: title
+    size_pt: 5.1
+    align: center
+    valign: middle
+    color: "#111820"
+    show_if: type == operation && attributes.unique
+  - id: operation_name
+    type: richtext
+    src: card.name
+    x: 18.5
+    "y": 2.98
+    w: 41.7
+    h: 4.15
+    font: title
+    size_pt: 8.8
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == operation && !attributes.unique
+  - id: operation_name_unique
+    type: richtext
+    src: card.name
+    x: 20.2
+    "y": 2.98
+    w: 40
+    h: 4.15
+    font: title
+    size_pt: 8.8
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == operation && attributes.unique
+  - id: operation_subtypes
+    type: richtext
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    x: 25
+    "y": 48.55
+    w: 26.9
+    h: 4.7
+    font: subtype
+    size_pt: 6.6
+    min_size_pt: 4.6
+    char_width_em: 0.58
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#303a43"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == operation

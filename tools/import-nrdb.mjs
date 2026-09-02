@@ -28,7 +28,13 @@ const title = tIdx > -1 ? args[tIdx + 1] : basename(srcDir);
 
 const slug = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\x20-\x7e]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 const kebab = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-const stripHtml = (s) => s.replace(/<\/?(strong|em|b|i)>/g, "").replace(/<errata>.*?<\/errata>/g, "").trim();
+const stripHtml = (s) => s
+  .replace(/<ul>\s*<li>/gi, "\n- ").replace(/<\/li>\s*<li>/gi, "\n- ").replace(/<\/li>\s*<\/ul>/gi, "")
+  .replace(/<ol>\s*<li>/gi, "\n1. ").replace(/<\/li>\s*<li>/gi, "\n1. ").replace(/<\/li>\s*<\/ol>/gi, "")
+  .replace(/<(?:strong|b)>/gi, "**").replace(/<\/(?:strong|b)>/gi, "**")
+  .replace(/<(?:em|i)>/gi, "*").replace(/<\/(?:em|i)>/gi, "*")
+  .replace(/<br\s*\/?>/gi, "\n").replace(/<\/?cite>/gi, "")
+  .replace(/<errata>.*?<\/errata>/gis, "").trim();
 
 const cycles = JSON.parse(readFileSync(join(srcDir, "cycles.json"), "utf8"));
 const packs = JSON.parse(readFileSync(join(srcDir, "packs.json"), "utf8"));

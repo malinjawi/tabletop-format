@@ -1,0 +1,22 @@
+card:
+  w_mm: 63.5
+  h_mm: 88.9
+  bleed_mm: 3
+  radius_mm: 3
+  bg: palette
+fonts:
+  - { id: heavy, family: "Arial", weight: 700 }
+  - { id: body, family: "Arial", weight: 600 }
+palette:
+  by: type
+  map: { black: "#111111", white: "#ffffff" }
+  default: "#ffffff"
+regions:
+  - { id: background, type: rect, x: 0, y: 0, w: 63.5, h: 88.9, fill: palette, radius_mm: 3 }
+  - { id: white-copy, type: richtext, src: "card.text", x: 6, y: 7, w: 51.5, h: 66, font: body, size_pt: 15, min_size_pt: 9, line_height: 1.12, color: "#111111", autoshrink: true, show_if: "type == white" }
+  - { id: black-copy, type: richtext, src: "card.text", x: 6, y: 7, w: 51.5, h: 60, font: body, size_pt: 14.5, min_size_pt: 8.5, line_height: 1.12, color: "#ffffff", autoshrink: true, show_if: "type == black" }
+  - { id: black-pick, type: text, src: "card.attributes.pick", prefix: "PICK ", x: 6, y: 69, w: 20, h: 5, font: heavy, size_pt: 7.2, color: "#ffffff", show_if: "attributes.pick" }
+  - { id: white-brand, type: text, text: "CARDS AGAINST HUMANITY", x: 6, y: 79.5, w: 51.5, h: 4, font: heavy, size_pt: 5.2, letter_spacing_em: 0.08, color: "#111111", show_if: "type == white" }
+  - { id: black-brand, type: text, text: "CARDS AGAINST HUMANITY", x: 6, y: 79.5, w: 51.5, h: 4, font: heavy, size_pt: 5.2, letter_spacing_em: 0.08, color: "#ffffff", show_if: "type == black" }
+  - { id: white-edge, type: rect, x: 0.4, y: 0.4, w: 62.7, h: 88.1, fill: none, stroke: "#d6d6d6", stroke_w_mm: 0.25, radius_mm: 2.7, show_if: "type == white" }
+  - { id: black-edge, type: rect, x: 0.4, y: 0.4, w: 62.7, h: 88.1, fill: none, stroke: "#2f2f2f", stroke_w_mm: 0.25, radius_mm: 2.7, show_if: "type == black" }

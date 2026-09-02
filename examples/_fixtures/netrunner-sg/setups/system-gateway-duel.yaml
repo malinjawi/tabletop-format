@@ -1,0 +1,212 @@
+schema_version: 1
+id: system-gateway-duel
+name: System Gateway starter duel
+description: A staged Corp-versus-Runner table built from the two Forge fixture decks.
+
+board:
+  width: 1600
+  height: 1000
+  background: "#17211f"
+
+seats:
+  - id: corp
+    name: Corp
+    color: "#b23a48"
+    position: { x: 710, y: 8 }
+  - id: runner
+    name: Runner
+    color: "#3178c6"
+    position: { x: 710, y: 948 }
+
+zones:
+  - id: corp-identity
+    name: Corp identity
+    kind: identity
+    seat_id: corp
+    position: { x: 24, y: 58 }
+    size: { width: 119, height: 176 }
+    layout: stack
+    card_face: up
+  - id: corp-hand
+    name: Corp HQ · private hand
+    kind: hand
+    seat_id: corp
+    visibility: seat
+    position: { x: 215, y: 55 }
+    size: { width: 1030, height: 180 }
+    layout: spread
+    card_face: up
+  - id: corp-draw
+    name: R&D
+    kind: draw
+    seat_id: corp
+    position: { x: 1290, y: 58 }
+    size: { width: 119, height: 176 }
+    layout: stack
+    card_face: down
+  - id: corp-discard
+    name: Archives
+    kind: discard
+    seat_id: corp
+    position: { x: 1445, y: 58 }
+    size: { width: 119, height: 176 }
+    layout: stack
+    card_face: up
+  - id: corp-score
+    name: Corp scored agendas
+    kind: score
+    seat_id: corp
+    position: { x: 24, y: 275 }
+    size: { width: 190, height: 190 }
+    layout: spread
+    card_face: up
+  - id: corp-play
+    name: Corp servers
+    kind: play
+    seat_id: corp
+    position: { x: 235, y: 270 }
+    size: { width: 1329, height: 205 }
+    layout: free
+    card_face: unchanged
+
+  - id: runner-play
+    name: Runner rig and resources
+    kind: play
+    seat_id: runner
+    position: { x: 235, y: 525 }
+    size: { width: 1329, height: 205 }
+    layout: free
+    card_face: unchanged
+  - id: runner-score
+    name: Runner stolen agendas
+    kind: score
+    seat_id: runner
+    position: { x: 24, y: 535 }
+    size: { width: 190, height: 190 }
+    layout: spread
+    card_face: up
+  - id: runner-identity
+    name: Runner identity
+    kind: identity
+    seat_id: runner
+    position: { x: 24, y: 766 }
+    size: { width: 119, height: 176 }
+    layout: stack
+    card_face: up
+  - id: runner-hand
+    name: Runner grip · private hand
+    kind: hand
+    seat_id: runner
+    visibility: seat
+    position: { x: 215, y: 765 }
+    size: { width: 1030, height: 180 }
+    layout: spread
+    card_face: up
+  - id: runner-draw
+    name: Stack
+    kind: draw
+    seat_id: runner
+    position: { x: 1290, y: 766 }
+    size: { width: 119, height: 176 }
+    layout: stack
+    card_face: down
+  - id: runner-discard
+    name: Heap
+    kind: discard
+    seat_id: runner
+    position: { x: 1445, y: 766 }
+    size: { width: 119, height: 176 }
+    layout: stack
+    card_face: up
+
+stacks:
+  - id: corp-deck
+    name: Corp deck
+    deck_id: corp-weyland-fastadvance
+    zone_id: corp-draw
+    face: down
+    shuffle: true
+  - id: runner-deck
+    name: Runner deck
+    deck_id: runner-criminal-toolbox
+    zone_id: runner-draw
+    face: down
+    shuffle: true
+
+placements:
+  - id: corp-id
+    name: Corp identity
+    deck_id: corp-weyland-fastadvance
+    card_id: weyland_consortium_built_to_last
+    zone_id: corp-identity
+    face: up
+  - id: runner-id
+    name: Runner identity
+    deck_id: runner-criminal-toolbox
+    card_id: zahya_sadeghi_versatile_smuggler
+    zone_id: runner-identity
+    face: up
+
+counters:
+  - id: corp-credits
+    name: Corp credits
+    seat_id: corp
+    initial: 5
+    minimum: 0
+    position: { x: 24, y: 236 }
+    color: "#b23a48"
+  - id: corp-clicks
+    name: Corp clicks
+    seat_id: corp
+    initial: 3
+    minimum: 0
+    position: { x: 225, y: 236 }
+    color: "#b23a48"
+  - id: corp-agenda
+    name: Corp agenda points
+    seat_id: corp
+    initial: 0
+    minimum: 0
+    position: { x: 425, y: 236 }
+    color: "#b23a48"
+  - id: bad-publicity
+    name: Bad publicity
+    seat_id: corp
+    initial: 0
+    minimum: 0
+    position: { x: 650, y: 236 }
+    color: "#b23a48"
+  - id: runner-credits
+    name: Runner credits
+    seat_id: runner
+    initial: 5
+    minimum: 0
+    position: { x: 24, y: 730 }
+    color: "#3178c6"
+  - id: runner-clicks
+    name: Runner clicks
+    seat_id: runner
+    initial: 4
+    minimum: 0
+    position: { x: 225, y: 730 }
+    color: "#3178c6"
+  - id: runner-agenda
+    name: Runner agenda points
+    seat_id: runner
+    initial: 0
+    minimum: 0
+    position: { x: 425, y: 730 }
+    color: "#3178c6"
+  - id: runner-tags
+    name: Runner tags
+    seat_id: runner
+    initial: 0
+    minimum: 0
+    position: { x: 650, y: 730 }
+    color: "#3178c6"
+
+instructions:
+  - Each player clicks their seat before using a private hand.
+  - Shuffle the two draw piles, then draw five cards into HQ and the grip.
+  - Mulligan by returning the hand to its draw pile, shuffling, and drawing five again.
+  - Counter labels are editable; click the number and type the new value.

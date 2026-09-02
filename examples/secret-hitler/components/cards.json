@@ -93,9 +93,15 @@
     "text": "Marks the current Chancellor Candidate, then the sitting Chancellor once elected. Passed by the President to their nominee each round."
   },
   {
-    "id": "placard_election_tracker",
-    "name": "Election Tracker",
-    "type": "placard",
-    "text": "Advances by one after every failed government vote and every enacted Veto. On the third advance, the top Policy is enacted automatically (\"chaos\") and the tracker resets."
+    "id": "pile_draw",
+    "name": "Draw Pile",
+    "type": "pile-marker",
+    "text": "Place the face-down Policy deck here. The President draws the top three Policies at the start of a Legislative Session."
+  },
+  {
+    "id": "pile_discard",
+    "name": "Discard Pile",
+    "type": "pile-marker",
+    "text": "Discarded Policies remain face down here. Reshuffle this pile when fewer than three Policies remain in the draw pile."
   }
 ]

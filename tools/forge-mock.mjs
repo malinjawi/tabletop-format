@@ -30,6 +30,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 
 const args = process.argv.slice(2);
 const opt = (f, d) => { const i = args.indexOf(f); return i > -1 ? args[i + 1] : d; };
@@ -40,6 +41,7 @@ mkdirSync(join(STORE, "lfs"), { recursive: true });
 
 const users = new Map();   // handle → email
 const topics = new Map();  // "owner/repo" → Set(topic)
+const tagProtections = new Map(); // "owner/repo" → [{id,name_pattern,whitelist_usernames}]
 
 const repoDir = (o, r) => join(STORE, "repos", o, r);
 const git = (dir, a, opts = {}) => execFileSync("git", ["-C", dir, ...a],
@@ -111,7 +113,7 @@ const server = createServer(async (req, res) => {
         git(dir, ["add", "-A"]);
         git(dir, ["commit", "-qm", "Initial commit"], { env: env(owner, users.get(owner)) });
       }
-      return send(res, 201, { name, owner: { login: owner } });
+      return send(res, 201, { id: `${owner}/${name}`, name, owner: { login: owner } });
     }
     if ((m = p.match(/^\/api\/v1\/repos\/([^/]+)\/([^/]+)\/topics\/([^/]+)$/)) && req.method === "PUT") {
       const k = `${m[1]}/${m[2]}`;
@@ -124,15 +126,61 @@ const server = createServer(async (req, res) => {
       const data = [];
       for (const [k, ts] of topics) if (!want || ts.has(want)) {
         const [owner, name] = k.split("/");
-        if (existsSync(repoDir(owner, name))) data.push({ name, owner: { login: owner } });
+        if (existsSync(repoDir(owner, name))) data.push({ id: k, name, owner: { login: owner } });
       }
-      return send(res, 200, { data, ok: true });
+      const limit = Math.max(1, Number(u.searchParams.get("limit") || 50));
+      const page = Math.max(1, Number(u.searchParams.get("page") || 1));
+      return send(res, 200, { data: data.slice((page - 1) * limit, page * limit), ok: true });
     }
 
     const rm = p.match(/^\/api\/v1\/repos\/([^/]+)\/([^/]+)(\/.*)?$/);
     if (rm) {
       const [, o, r] = rm; const rest = rm[3] ?? ""; const dir = repoDir(o, r);
       if (!existsSync(dir)) return send(res, 404, { message: "no repo" });
+
+      if (rest === "/tag_protections") {
+        const key = `${o}/${r}`;
+        if (req.method === "GET") return send(res, 200, tagProtections.get(key) ?? []);
+        if (req.method === "POST") {
+          const value = j(), list = tagProtections.get(key) ?? [];
+          if (list.some(rule => rule.name_pattern === value.name_pattern))
+            return send(res, 422, { message: "tag protection already exists" });
+          const rule = { id: list.length + 1, name_pattern: value.name_pattern,
+            whitelist_usernames: value.whitelist_usernames ?? [], whitelist_teams: value.whitelist_teams ?? [] };
+          list.push(rule); tagProtections.set(key, list); return send(res, 201, rule);
+        }
+      }
+      if (rest === "/tags" && req.method === "POST") {
+        const { tag_name, target = "main", message = "" } = j(), actor = req.headers.sudo;
+        const rules = tagProtections.get(`${o}/${r}`) ?? [];
+        const matching = rules.filter(rule => rule.name_pattern === "v*" && tag_name.startsWith("v"));
+        if (matching.length && !matching.some(rule => rule.whitelist_usernames.includes(actor)))
+          return send(res, 403, { message: "protected tag" });
+        try { git(dir, ["show-ref", "--verify", `refs/tags/${tag_name}`]); return send(res, 409, { message: "tag exists" }); }
+        catch {}
+        git(dir, ["tag", "-a", tag_name, target, "-m", message],
+          { env: env(actor ?? o, users.get(actor ?? o) ?? `${actor ?? o}@mock`) });
+        const id = git(dir, ["rev-parse", `refs/tags/${tag_name}`]).trim();
+        const sha = git(dir, ["rev-parse", `${tag_name}^{}`]).trim();
+        return send(res, 201, { id, name: tag_name, message, commit: { sha } });
+      }
+      if ((m = rest.match(/^\/tags\/(.+)$/)) && req.method === "GET") {
+        const tag = decodeURIComponent(m[1]);
+        try { return send(res, 200, { id: git(dir, ["rev-parse", `refs/tags/${tag}`]).trim(),
+          name: tag, message: git(dir, ["for-each-ref", "--format=%(contents)", `refs/tags/${tag}`]).trim(),
+          commit: { sha: git(dir, ["rev-parse", `${tag}^{}`]).trim() } }); }
+        catch { return send(res, 404, { message: "tag not found" }); }
+      }
+      if ((m = rest.match(/^\/git\/tags\/([0-9a-f]+)$/)) && req.method === "GET") {
+        try {
+          const raw = git(dir, ["cat-file", "-p", m[1]]), lines = raw.split("\n");
+          const object = lines.find(line => line.startsWith("object "))?.slice(7);
+          const tag = lines.find(line => line.startsWith("tag "))?.slice(4);
+          const blank = lines.indexOf("");
+          return send(res, 200, { sha: m[1], tag, object: { sha: object, type: "commit" },
+            message: lines.slice(blank + 1).join("\n") });
+        } catch { return send(res, 404, { message: "annotated tag not found" }); }
+      }
 
       /* batch commit — the spike's B/C/D semantics incl. conflict behavior */
       if (rest === "/contents" && req.method === "POST") {
@@ -188,10 +236,11 @@ const server = createServer(async (req, res) => {
       if (rest === "/branches/main")
         return send(res, 200, { name: "main", commit: { id: git(dir, ["rev-parse", "main"]).trim() } });
       if ((m = rest.match(/^\/archive\/(.+)\.tar\.gz$/))) {
-        const buf = execFileSync("bash", ["-c",
-          `git -C ${JSON.stringify(dir)} archive --prefix=${JSON.stringify(r + "/")} ${JSON.stringify(decodeURIComponent(m[1]))} | gzip`],
+        const archive = execFileSync("git", ["-C", dir,
+          "-c", "filter.lfs.process=", "-c", "filter.lfs.smudge=cat",
+          "-c", "filter.lfs.required=false", "archive", `--prefix=${r}/`, decodeURIComponent(m[1])],
           { maxBuffer: 128 * 1024 * 1024 });
-        return send(res, 200, buf, "application/gzip");
+        return send(res, 200, gzipSync(archive), "application/gzip");
       }
     }
     send(res, 404, { message: `forge-mock: no route ${req.method} ${p}` });

@@ -1,0 +1,191 @@
+version: 1
+name: Secret Hitler Forge print-and-play
+description: >
+  Platform-composed print package built from the current versioned card faces,
+  placards, and boards. The official PDF is a pinned visual reference, never the
+  file returned by Forge's PnP export.
+page:
+  width_mm: 279.4
+  height_mm: 215.9
+  background: "#ffffff"
+  color_mode: grayscale
+pages:
+  - id: cover
+    kind: cover
+    title: Secret Hitler
+    subtitle: Forge print-and-play edition
+    footer: "Generated from versioned game data and licensed production assets - CC BY-NC-SA 4.0"
+
+  - id: fascist-policies
+    kind: grid
+    x_mm: 42.2
+    y_mm: 16.3
+    columns: 3
+    rows: 4
+    order: column
+    rotate: 90
+    gap_x_mm: 1.5
+    gap_y_mm: 1.5
+    cut_label: CUT ON SOLID GREY LINES
+    items:
+      - { printing: p_policy_fascist, count: 11 }
+
+  - id: government-placards
+    kind: asset
+    assets:
+      - path: assets/official-pnp/placards/chancellor-flat.png
+        x_mm: 14.5
+        y_mm: 17.9
+        item_w_mm: 122
+        item_h_mm: 180
+        rotate: 90
+        cut: true
+      - path: assets/official-pnp/placards/president-flat.png
+        x_mm: 142.9
+        y_mm: 17.9
+        item_w_mm: 122
+        item_h_mm: 180
+        rotate: 90
+        cut: true
+
+  - id: liberal-policies-and-ballots
+    kind: layout
+    cut_label: CUT ON SOLID GREY LINES
+    groups:
+      - x_mm: 13
+        y_mm: 19
+        columns: 1
+        rows: 2
+        items:
+          - { printing: p_ballot_ja, count: 2 }
+      - x_mm: 104
+        y_mm: 44.5
+        columns: 3
+        rows: 2
+        gap_x_mm: 1.5
+        gap_y_mm: 1.5
+        items:
+          - { printing: p_policy_liberal, count: 6 }
+
+  - id: ballots-ja
+    kind: grid
+    x_mm: 12.7
+    y_mm: 19
+    columns: 4
+    rows: 2
+    cut_label: CUT ON SOLID GREY LINES
+    items:
+      - { printing: p_ballot_ja, count: 8 }
+
+  - id: ballots-nein
+    kind: grid
+    x_mm: 12.7
+    y_mm: 19
+    columns: 4
+    rows: 2
+    cut_label: CUT ON SOLID GREY LINES
+    items:
+      - { printing: p_ballot_nein, count: 8 }
+
+  - id: liberal-roles-and-ballots
+    kind: layout
+    cut_label: CUT ON SOLID GREY LINES
+    groups:
+      - x_mm: 12.7
+        y_mm: 19
+        columns: 3
+        rows: 2
+        items:
+          - { printing: p_role_liberal, count: 6 }
+      - x_mm: 203.2
+        y_mm: 19
+        columns: 1
+        rows: 2
+        items:
+          - { printing: p_ballot_nein, count: 2 }
+
+  - id: fascist-roles-and-piles
+    kind: grid
+    x_mm: 12.7
+    y_mm: 19
+    columns: 4
+    rows: 2
+    cut_label: CUT ON SOLID GREY LINES
+    items:
+      - p_party_liberal
+      - p_pile_discard
+      - p_role_hitler
+      - p_role_fascist
+      - p_party_liberal
+      - p_pile_draw
+      - p_role_fascist
+      - p_role_fascist
+
+  - id: party-memberships
+    kind: grid
+    x_mm: 12.7
+    y_mm: 19
+    columns: 4
+    rows: 2
+    cut_label: CUT ON SOLID GREY LINES
+    items:
+      - { printing: p_party_fascist, count: 2 }
+      - { printing: p_party_liberal, count: 2 }
+      - { printing: p_party_fascist, count: 2 }
+      - { printing: p_party_liberal, count: 2 }
+
+  - id: liberal-board
+    kind: asset
+    assets:
+      - path: assets/official-pnp/boards/liberal-board.png
+        split: 2
+        split_axis: x
+        columns: 2
+        x_mm: 14.7
+        y_mm: 17.9
+        item_w_mm: 125
+        item_h_mm: 180
+        rotate: 90
+        cut: true
+
+  - id: fascist-board-5-6
+    kind: asset
+    assets:
+      - path: assets/official-pnp/boards/fascist-board-5-6.png
+        split: 2
+        split_axis: x
+        columns: 2
+        x_mm: 14.7
+        y_mm: 17.9
+        item_w_mm: 125
+        item_h_mm: 180
+        rotate: 90
+        cut: true
+
+  - id: fascist-board-7-8
+    kind: asset
+    assets:
+      - path: assets/official-pnp/boards/fascist-board-7-8.png
+        split: 2
+        split_axis: x
+        columns: 2
+        x_mm: 14.7
+        y_mm: 17.9
+        item_w_mm: 125
+        item_h_mm: 180
+        rotate: 90
+        cut: true
+
+  - id: fascist-board-9-10
+    kind: asset
+    assets:
+      - path: assets/official-pnp/boards/fascist-board-9-10.png
+        split: 2
+        split_axis: x
+        columns: 2
+        x_mm: 14.7
+        y_mm: 17.9
+        item_w_mm: 125
+        item_h_mm: 180
+        rotate: 90
+        cut: true

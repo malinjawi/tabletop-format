@@ -3,9 +3,12 @@ title: First Flame Jam
 theme: fire
 tagline: Design a complete card game in 18 cards or fewer. One week. The theme is fire.
 host: Forge
-status: judging
-starts: "2026-07-01"
-ends: "2026-07-08"
+timezone: "UTC"
+starts_at: "2026-07-01T16:00:00Z"
+submissions_close_at: "2026-07-08T16:00:00Z"
+judging_ends_at: "2026-07-14T16:00:00Z"
+results_at: "2026-07-15T16:00:00Z"
+organizers: [forge]
 constraints:
   max_cards: 18
   min_cards: 6

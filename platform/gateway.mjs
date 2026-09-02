@@ -9,8 +9,11 @@
  * touching a single route handler (they only see ctx).
  */
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
+import { gzipSync } from "node:zlib";
 
-export function createGateway({ name = "gateway", version = "0" } = {}) {
+export function createGateway({ name = "gateway", version = "0", allowedOrigins = [], production = false,
+  https = false, host = undefined } = {}) {
   const routes = [];   // {method, pattern, parts, handler, desc}
   const middleware = [];
 
@@ -42,28 +45,54 @@ export function createGateway({ name = "gateway", version = "0" } = {}) {
       const t0 = Date.now();
       const url = new URL(req.url, `http://localhost:${port}`);
       const parts = url.pathname.split("/").filter(Boolean);
+      const requestId = String(req.headers["x-request-id"] || randomUUID()).slice(0, 128);
+      const origin = String(req.headers.origin || "");
+      const corsOrigin = origin && allowedOrigins.includes(origin) ? origin : "";
+      const securityHeaders = {
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+        "content-security-policy": "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:",
+        ...(https ? { "strict-transport-security": "max-age=31536000; includeSubDomains" } : {}),
+        "x-request-id": requestId,
+      };
       const ctx = {
         req, res, url, params: {},
         body: null,
         sent: false,
+        requestId,
+        corsOrigin,
+        headers: {},
+        setHeader(name, value) { ctx.headers[String(name).toLowerCase()] = value; },
         send(code, body, type = "application/json") {
           if (ctx.sent) return; ctx.sent = true;
           const data = type === "application/json" ? JSON.stringify(body, null, 2) : body;
-          res.writeHead(code, { "content-type": type,
-            "access-control-allow-origin": "*",
-            "access-control-allow-methods": "GET,PUT,POST,DELETE,OPTIONS",
-            "access-control-allow-headers": "content-type, authorization" });
-          res.end(data);
-          console.log(`${req.method} ${url.pathname} ${code} ${Date.now() - t0}ms`);
+          const raw = Buffer.from(data ?? ""), compress = raw.length >= 1024
+            && /^(text\/|application\/(json|javascript))/.test(type)
+            && /(?:^|,)\s*gzip(?:\s*;|\s*,|$)/i.test(String(req.headers["accept-encoding"] || ""));
+          const payload = compress ? gzipSync(raw, { level: 6 }) : raw;
+          res.writeHead(code, { ...securityHeaders, ...ctx.headers,
+            "content-type": type, "content-length": String(payload.length), "vary": corsOrigin ? "Accept-Encoding, Origin" : "Accept-Encoding",
+            ...(compress ? { "content-encoding": "gzip" } : {}),
+            ...(corsOrigin ? { "access-control-allow-origin": corsOrigin,
+              "access-control-allow-credentials": "true",
+              "access-control-allow-methods": "GET,PUT,POST,DELETE,OPTIONS",
+              "access-control-allow-headers": "content-type, authorization, x-forge-browser" } : {}) });
+          res.end(payload);
+          console.log(`${requestId} ${req.method} ${url.pathname} ${code} ${Date.now() - t0}ms`);
         },
         sendRaw(code, buf, headers) {
           if (ctx.sent) return; ctx.sent = true;
-          res.writeHead(code, { "access-control-allow-origin": "*", ...headers });
+          res.writeHead(code, { ...securityHeaders, ...ctx.headers,
+            ...(corsOrigin ? { "access-control-allow-origin": corsOrigin,
+              "access-control-allow-credentials": "true", "vary": "Origin" } : {}), ...headers });
           res.end(buf);
-          console.log(`${req.method} ${url.pathname} ${code} ${Date.now() - t0}ms`);
+          console.log(`${requestId} ${req.method} ${url.pathname} ${code} ${Date.now() - t0}ms`);
         },
       };
       try {
+        if (origin && !corsOrigin) return ctx.send(403, { error: "origin not allowed", request_id: requestId });
         for (const m of middleware) { await m(ctx); if (ctx.sent) return; }
         if (url.pathname === "/healthz")
           return ctx.send(200, { ok: true, name, version, uptime_s: Math.round(process.uptime()) });
@@ -75,17 +104,23 @@ export function createGateway({ name = "gateway", version = "0" } = {}) {
         await m.r.handler(ctx);
         if (!ctx.sent) ctx.send(500, { error: "handler sent nothing" });
       } catch (e) {
-        if (!ctx.sent) ctx.send(500, { error: String(e.message ?? e) });
+        const candidateStatus = Number(e?.status);
+        const status = Number.isInteger(candidateStatus) && candidateStatus >= 400 && candidateStatus <= 599
+          ? candidateStatus : 500;
+        const message = status < 500 || !production ? String(e?.message ?? e) : "internal server error";
+        if (!ctx.sent) ctx.send(status, { error: message, request_id: requestId });
         else console.error("post-send error:", e.message);
+        if (status >= 500) console.error(`${requestId} request failed:`, e?.stack || e);
       }
     });
     server.on("error", (e) => {
-      if (e.code === "EADDRINUSE" && _tries < 20) {
+      const code = /** @type {NodeJS.ErrnoException} */ (e).code;
+      if (code === "EADDRINUSE" && _tries < 20) {
         console.error(`port ${port} in use — trying ${port + 1}…`);
         setTimeout(() => listen(port + 1, cb, _tries + 1), 0);
       } else throw e;
     });
-    server.listen(port, () => { if (cb) cb(port); });
+    server.listen(port, host, () => { if (cb) cb(port); });
     return server;
   }
 
@@ -94,6 +129,8 @@ export function createGateway({ name = "gateway", version = "0" } = {}) {
 
 export const readBody = (req, maxBytes = 1024 * 1024) => new Promise((ok, no) => {
   const chunks = []; let n = 0;
-  req.on("data", c => { n += c.length; if (n > maxBytes) { no(new Error("body too large")); req.destroy(); return; } chunks.push(c); });
+  req.on("data", c => { n += c.length; if (n > maxBytes) {
+    const error = Object.assign(new Error("body too large"), { status: 413 }); no(error); req.destroy(); return;
+  } chunks.push(c); });
   req.on("end", () => ok(Buffer.concat(chunks)));
 });

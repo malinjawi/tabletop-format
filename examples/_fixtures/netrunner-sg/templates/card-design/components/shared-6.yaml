@@ -1,0 +1,35 @@
+name: Shared by Event, Hardware, Program, Resource
+description: 2 ordered regions reused by event, hardware, program, resource.
+regions:
+  - id: runner_track
+    type: pips
+    count: 5
+    glyph: ○
+    max: 5
+    direction: column
+    x: 58
+    "y": 61
+    w: 3
+    h: 16.8
+    gap_mm: 0.25
+    font: label
+    size_pt: 6.1
+    line_height: 0.78
+    color: "#68727a"
+    show_if: attributes.side == runner && attributes.influence && type != identity && type != ice
+  - id: runner_influence
+    type: pips
+    src: card.attributes.influence
+    glyph: ●
+    max: 5
+    direction: column
+    x: 58
+    "y": 61
+    w: 3
+    h: 16.8
+    gap_mm: 0.25
+    font: label
+    size_pt: 5
+    line_height: 0.95
+    color: palette
+    show_if: attributes.side == runner && attributes.influence && type != identity && type != ice

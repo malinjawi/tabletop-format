@@ -1,0 +1,18 @@
+card:
+  w_mm: 63.5
+  h_mm: 88.9
+  bleed_mm: 3
+  radius_mm: 2.5
+  bg: "#eee8da"
+
+fonts:
+  - { id: display, family: "Barlow Condensed", weight: 800 }
+  - { id: body, family: "Lora", weight: 500 }
+  - { id: label, family: "Barlow Condensed", weight: 700 }
+
+palette:
+  by: attributes.faction
+  map:
+    liberal: "#315b84"
+    fascist: "#873426"
+  default: "#8a7654"

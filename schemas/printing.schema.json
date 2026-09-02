@@ -49,6 +49,25 @@
       "format": "uri",
       "description": "External card scan URL (shown as the authentic printed card)"
     },
+    "scan": {
+      "type": "string",
+      "description": "Relative path to a local composed source-face reference. Unlike art, this is not fed into an editable layout."
+    },
+    "scan_provenance": {
+      "$ref": "provenance.schema.json",
+      "description": "Origin and usage terms for the composed source-face reference."
+    },
+    "physical_size_mm": {
+      "type": "object",
+      "description": "Per-printing trim/display geometry for mixed-format component sets. Overrides the game-wide card size for source-backed rendering.",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "radius": { "type": "number", "minimum": 0 }
+      }
+    },
     "art_url": {
       "type": "string",
       "format": "uri",

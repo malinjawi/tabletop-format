@@ -1,0 +1,49 @@
+schema_version: 1
+id: standard-table
+name: Secret Hitler standard table
+description: A staged five-seat table with the complete ten-player component supply and exact policy counts.
+
+board:
+  width: 1600
+  height: 1000
+  background: "#1d2024"
+
+seats:
+  - { id: player-1, name: Player 1, color: "#e8e3d8", position: { x: 720, y: 16 } }
+  - { id: player-2, name: Player 2, color: "#537fa8", position: { x: 1210, y: 180 } }
+  - { id: player-3, name: Player 3, color: "#a74b3b", position: { x: 1210, y: 800 } }
+  - { id: player-4, name: Player 4, color: "#d2aa4f", position: { x: 280, y: 800 } }
+  - { id: player-5, name: Player 5, color: "#6b8f71", position: { x: 280, y: 180 } }
+
+zones:
+  - { id: role-draw, name: Secret Roles, kind: draw, position: { x: 85, y: 95 }, size: { width: 125, height: 175 }, layout: stack, card_face: down }
+  - { id: party-draw, name: Party Membership, kind: draw, position: { x: 85, y: 300 }, size: { width: 125, height: 175 }, layout: stack, card_face: down }
+  - { id: ballot-supply-zone, name: Ballots, kind: supply, position: { x: 85, y: 545 }, size: { width: 125, height: 280 }, layout: spread, card_face: up }
+  - { id: policy-draw, name: Policy draw pile, kind: draw, position: { x: 360, y: 355 }, size: { width: 125, height: 175 }, layout: stack, card_face: down }
+  - { id: policy-discard, name: Policy discard, kind: discard, position: { x: 1115, y: 355 }, size: { width: 125, height: 175 }, layout: stack, card_face: down }
+  - { id: liberal-track, name: Liberal policy track, kind: score, position: { x: 535, y: 185 }, size: { width: 530, height: 180 }, color: "#315b84", layout: spread, card_face: up }
+  - { id: fascist-track, name: Fascist policy track, kind: score, position: { x: 535, y: 575 }, size: { width: 530, height: 180 }, color: "#873426", layout: spread, card_face: up }
+  - { id: government, name: Government, kind: play, position: { x: 650, y: 390 }, size: { width: 300, height: 160 }, layout: spread, card_face: up }
+  - { id: placard-supply, name: Placards, kind: supply, position: { x: 1360, y: 350 }, size: { width: 125, height: 300 }, layout: spread, card_face: up }
+  - { id: pile-marker-supply, name: Pile markers, kind: supply, position: { x: 1115, y: 545 }, size: { width: 260, height: 175 }, layout: spread, card_face: up }
+
+stacks:
+  - { id: role-stack, name: Role supply, deck_id: secret-roles, zone_id: role-draw, face: down, shuffle: true }
+  - { id: party-stack, name: Party supply, deck_id: party-membership, zone_id: party-draw, face: down, shuffle: true }
+  - { id: ballot-stack, name: Ballot supply, deck_id: ballot-supply, zone_id: ballot-supply-zone, face: up, shuffle: false }
+  - { id: policy-stack, name: Policy deck, deck_id: policy-deck, zone_id: policy-draw, face: down, shuffle: true }
+  - { id: placard-stack, name: Placards, deck_id: government-placards, zone_id: placard-supply, face: up, shuffle: false }
+  - { id: pile-marker-stack, name: Pile markers, deck_id: policy-pile-markers, zone_id: pile-marker-supply, face: up, shuffle: false }
+
+counters:
+  - { id: election-tracker, name: Failed elections, initial: 0, minimum: 0, maximum: 3, position: { x: 710, y: 790 }, color: "#d2aa4f" }
+  - { id: fascist-policies, name: Fascist Policies, initial: 0, minimum: 0, maximum: 6, position: { x: 930, y: 790 }, color: "#a74b3b" }
+  - { id: liberal-policies, name: Liberal Policies, initial: 0, minimum: 0, maximum: 5, position: { x: 490, y: 790 }, color: "#537fa8" }
+
+instructions:
+  - Add seats to match the chosen player count, up to ten.
+  - Use the role distribution in the rulebook, remove unused Role and Party Membership cards, pair each selected role with its matching party card, then shuffle the envelopes.
+  - Give every player one Ja and one Nein ballot.
+  - Shuffle all 17 Policy cards and place them face down in the policy draw zone.
+  - Choose the Fascist board for the player count; the tracks here hold enacted policies while counters record progress.
+  - Select a random first President, give them the President placard, and begin the first election.

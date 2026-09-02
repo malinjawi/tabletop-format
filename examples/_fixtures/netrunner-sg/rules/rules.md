@@ -238,7 +238,44 @@ An asset or upgrade's `trash_cost` is what the Runner pays, during access, to
 trash it. Ice has no trash cost — it is never "accessed", only passed — and
 can normally only be removed from a server by specific card effects.
 
-## 15. Glossary
+## 15. Symbol reference
+
+Forge keeps symbols as named data (`[symbol_key]`), not pasted pictures. The
+same key therefore renders consistently on cards, in rules, in diffs, and in
+exports.
+
+| Symbol | Key | Meaning |
+|--------|-----|---------|
+| [click] | `click` | One click/action |
+| [credit] | `credit` | One credit |
+| [five_credits] | `five_credits` | Five-credit marker |
+| [recurring_credit] | `recurring_credit` | Recurring credit |
+| [rez_cost] | `rez_cost` | Cost to rez a Corp card |
+| [trash] | `trash` | Trash this card/ability cost |
+| [trash_cost] | `trash_cost` | Cost paid by the Runner during access |
+| [subroutine] | `subroutine` | Ice subroutine |
+| [advancement] | `advancement` | Advancement counter or requirement |
+| [agenda] | `agenda` | Agenda point |
+| [mu] | `mu` | Memory unit |
+| [link] | `link` | Link strength |
+| [tag] | `tag` | Tag |
+| [virus_counter] | `virus_counter` | Virus counter |
+| [core_damage] | `core_damage` | Core damage |
+| [bad_publicity] | `bad_publicity` | Available bad-publicity credit |
+| [hq] | `hq` | HQ central server |
+| [rd] | `rd` | R&D central server |
+| [archives] | `archives` | Archives central server |
+| [interrupt] | `interrupt` | Interrupt/timing reminder |
+
+The blue/spent click markers, spent bad-publicity marker, reverse advancement
+marker, and blue/green generic counters are physical or diagram variants. They
+remain available to designers as `[click_blue]`, `[click_spent]`,
+`[bad_publicity_spent]`, `[advancement_reverse]`,
+`[generic_counter_blue]`, and `[generic_counter_green]`; they should not replace
+ordinary words in card rules unless the chosen production template calls for
+that exact mark.
+
+## 16. Glossary
 
 - **Rez** — pay a Corp card's cost to flip it face-up and activate it.
 - **Advance** — add an advancement counter (Corp).

@@ -1,0 +1,7 @@
+# Forge's reproducible Python production toolchain (Python 3.10+).
+# Update intentionally and run `npm run doctor` after changing these pins.
+PyYAML==6.0.3
+Pillow==12.3.0
+jsonschema==4.26.0
+reportlab==5.0.1
+pypdf==6.16.2

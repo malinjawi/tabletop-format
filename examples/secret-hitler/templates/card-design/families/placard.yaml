@@ -1,0 +1,6 @@
+regions:
+  - { id: placard-band, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 18, fill: "#8a7654", radius_mm: 1, show_if: "type == placard" }
+  - { id: placard-label, type: text, text: "GOVERNMENT", x: 8, y: 7, w: 47.5, h: 5, font: label, size_pt: 7, align: center, color: "#f5ead8", letter_spacing_em: 0.15, show_if: "type == placard" }
+  - { id: placard-title, type: text, src: "card.name", transform: uppercase, x: 6, y: 25, w: 51.5, h: 16, font: display, size_pt: 22, min_size_pt: 13, align: center, color: "#28231d", no_wrap: true, autoshrink: true, show_if: "type == placard" }
+  - { id: placard-body, type: richtext, src: "card.text", x: 9, y: 48, w: 45.5, h: 25, font: body, size_pt: 8.5, min_size_pt: 6, align: center, color: "#4a4236", autoshrink: true, show_if: "type == placard" }
+  - { id: placard-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#4a4236", letter_spacing_em: 0.13, show_if: "type == placard" }

@@ -1,0 +1,18 @@
+{
+  "format": "forge-rights",
+  "version": 1,
+  "project": {
+    "license": "CC-BY-NC-SA-4.0",
+    "owner": "Goat, Wolf, & Cabbage",
+    "trademark_notice": "Secret Hitler is credited to its creators and Goat, Wolf, & Cabbage."
+  },
+  "default": {
+    "license": "CC-BY-NC-SA-4.0",
+    "status": "licensed",
+    "copyright": ["Goat, Wolf, & Cabbage", "Mike Boxleiter", "Tommy Maranges", "Max Temkin", "Mackenzie Schubert"],
+    "redistribution": "allowed",
+    "source": "https://www.secrethitler.com/",
+    "notes": "Non-commercial ShareAlike reuse; see README.md for the official PnP provenance and attribution."
+  },
+  "files": []
+}

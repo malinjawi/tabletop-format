@@ -350,13 +350,12 @@ the Visual Editor itself has rough edges (elements subtly resize on drag, per th
 thread above); reused elements across multiple decks are "a bit annoying to manage"
 ([BGG thread 3440922](https://boardgamegeek.com/thread/3440922/nandeck-project-organization-recommendations)).
 
-> **This platform already has a one-way bridge to nanDECK** — `tools/export_nandeck.py`
-> emits a `[colname]`-bound `.txt` script + CSV from any game's `cards.json`/
-> `printings.json` (`LINK=<slug>.csv`, `TEXT=,"[name]",3,3,45,8,left`, ...), openable
-> directly in nanDECK for "professional layout, a print-ready PDF, or a direct Tabletop
-> Simulator export," per the exporter's own header comment. It does not run nanDECK or add
-> a runtime dependency. The missing half — reading a nanDECK script *back* into our
-> `layout.yaml` — is one of the more realistic import paths; see Part 6.
+> **Implemented:** `tools/export-nandeck.mjs` emits a family-aware, `[colname]`-bound
+> `.txt` + CSV set from committed cards, printings, and compiled design families. Every
+> script declares `UNIT=MM`, carries a projected and canonical merge baseline, and returns
+> through `tools/import-nandeck-layout.mjs` or the Forge Design page. Import is bounded,
+> declarative, dry-run first, field-level three-way merged, and validated before commit/PR.
+> Forge does not run nanDECK; designers open the generated source in their own installation.
 
 ### 2.2 Magic Set Editor (MSE)
 
@@ -1243,13 +1242,12 @@ schema is already JSON Schema) is all a browser editor needs; no new on-disk for
 
 Ranked by real feasibility, based on what Parts 1-4 actually found about each format:
 
-- **nanDECK script (`.txt`) — most realistic, build this first.** The directive grammar is
+- **nanDECK script (`.txt`) — implemented first.** The directive grammar is
   small, line-based, and regular (`LINK=`, `TEXT=,"[col]",x,y,w,h,align`, `IMAGE=`,
   `FONT=`) — a bounded parser, not a general-programming-language problem. This project
-  already emits this exact format one-way (`tools/export_nandeck.py`); the missing half —
-  parsing a nanDECK `.txt` + its linked CSV/XLSX back into `layout.yaml` regions — is a
-  natural, scoped extension of work already done, and directly serves designers who already
-  have a nanDECK deck (an explicitly named goal in `NORTH-STAR.md`'s adoption doctrine).
+  now emits and safely re-imports this format through a family-aware adapter. Arbitrary
+  scripts land as non-writing candidates; Forge-generated scripts carry the source metadata
+  required for a field-level three-way merge back into component/family YAML.
 - **InDesign IDML content — second most realistic, and already partly planned.** Unlike
   binary `.indd`, IDML is a documented, open, XML-based zip format. A parser scoped
   specifically to *Data-Merge-tagged* IDML documents (not arbitrary layouts) can recover:
@@ -1343,9 +1341,8 @@ talking to each other, achieves lossless template round-tripping.
 2. Ship a **small preset gallery** (6.4.7) so newcomers never need the editor at all —
    this is the cheapest way to make "zero layout work" literally true today, ahead of the
    editor.
-3. Build the **nanDECK-script import** (6.5) — smallest parser, most directly reuses
-   `tools/export_nandeck.py`'s already-solved mapping, serves an audience this project has
-   already committed to serving.
+3. **Done:** family-aware nanDECK export/import (6.5), including dry-run, conflict
+   detection, safe parser limits, browser commit/fork/PR, and explicit fidelity reports.
 4. Close the **bleed-painting gap** and correct the **default bleed value** (2mm -> 1/8"/
    ~3.2mm, per Part 4.4) before making any "print-ready" claim to a designer.
 5. Scope and build **IDML content import** for Data-Merge-tagged documents, riding on the

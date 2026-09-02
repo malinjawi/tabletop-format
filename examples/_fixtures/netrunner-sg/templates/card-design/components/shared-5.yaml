@@ -1,0 +1,45 @@
+name: Shared by Agenda, Asset, Event, Hardware, Operation, Resource, Upgrade
+description: 2 ordered regions reused by agenda, asset, event, hardware, operation, resource, upgrade.
+regions:
+  - id: standard_body
+    type: body
+    src: card.text
+    secondary_src: printing.flavor_text
+    secondary_font: flavor
+    secondary_color: "#3f474e"
+    secondary_scale: 0.86
+    x: 5.8
+    "y": 54.9
+    w: 50.8
+    h: 26.3
+    font: body
+    size_pt: 8.25
+    min_size_pt: 5.8
+    line_height: 1.12
+    secondary_line_height: 1.06
+    color: "#151b21"
+    symbols: true
+    symbol_style: plain
+    autoshrink: true
+    show_if: type != identity && type != ice && type != program && !attributes.trash_cost
+  - id: standard_body_trash
+    type: body
+    src: card.text
+    secondary_src: printing.flavor_text
+    secondary_font: flavor
+    secondary_color: "#3f474e"
+    secondary_scale: 0.86
+    x: 5.8
+    "y": 54.9
+    w: 47.1
+    h: 26.3
+    font: body
+    size_pt: 8.25
+    min_size_pt: 5.8
+    line_height: 1.12
+    secondary_line_height: 1.06
+    color: "#151b21"
+    symbols: true
+    symbol_style: plain
+    autoshrink: true
+    show_if: type != identity && type != ice && type != program && attributes.trash_cost

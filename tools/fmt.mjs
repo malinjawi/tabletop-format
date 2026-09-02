@@ -12,16 +12,18 @@
  *   fmt export tts <game-dir>                    TTS sprite sheet + save JSON
  *   fmt check-licenses <game-dir>                license/provenance publishing gate
  *
- * v0.1 note: render/export/check-licenses dispatch to the Python reference
- * implementations (python3 + Pillow + PyYAML). The canonical TS renderer
- * (headless Chromium, Block D) replaces them without changing this interface.
+ * Card faces dispatch to the canonical layoutCard() renderer in headless
+ * Chromium. Python exporters consume those PNGs for PDF/TTC/TTS packaging.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TOOLS = dirname(fileURLToPath(import.meta.url));
+const ROOT = dirname(TOOLS);
+const VENV_PYTHON = process.platform === "win32" ? join(ROOT, ".venv", "Scripts", "python.exe") : join(ROOT, ".venv", "bin", "python");
+const PYTHON = process.env.FORGE_PYTHON || (existsSync(VENV_PYTHON) ? VENV_PYTHON : "python3");
 const argv = process.argv.slice(2);
 const cmd = argv[0], sub = argv[1];
 
@@ -32,7 +34,7 @@ const PLUGINS = JSON.parse(readFileSync(join(TOOLS, "plugins.json"), "utf8"));
 const runNode = (script, args) =>
   spawnSync(process.execPath, [join(TOOLS, script), ...args], { stdio: "inherit" }).status ?? 1;
 const runPy = (script, args) =>
-  spawnSync("python3", [join(TOOLS, script), ...args], { stdio: "inherit" }).status ?? 1;
+  spawnSync(PYTHON, [join(TOOLS, script), ...args], { stdio: "inherit" }).status ?? 1;
 const runPlugin = (p, args) => (p.runner === "node" ? runNode : runPy)(p.script, args);
 const pluginList = (kind) =>
   Object.entries(PLUGINS[kind]).map(([n, p]) => `  fmt ${kind === "importers" ? "import" : "export"} ${n} ${p.usage}\n      ${p.desc}`).join("\n");
@@ -50,7 +52,7 @@ else if (cmd === "import" || cmd === "export") {
 }
 else if (cmd === "plugins") { console.log(`Importers:\n${pluginList("importers")}\n\nExporters:\n${pluginList("exporters")}\n\nAdd your own: tools/PLUGINS.md`); status = 0; }
 else if (cmd === "diff") status = runNode("diff.mjs", argv.slice(1));
-else if (cmd === "render") status = runPy("render_cards.py", argv.slice(1));
+else if (cmd === "render") status = runNode("render_cards.mjs", argv.slice(1));
 else if (cmd === "check-licenses") status = runPy("check_licenses.py", argv.slice(1));
 else if (cmd === "stats") status = runPy("stats.py", argv.slice(1));
 else if (cmd === "credits") status = runPy("credits.py", argv.slice(1));

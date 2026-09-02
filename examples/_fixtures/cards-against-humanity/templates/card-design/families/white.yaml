@@ -1,0 +1,4 @@
+regions:
+  - { id: white-copy, type: richtext, src: "card.text", x: 6, y: 7, w: 51.5, h: 66, font: body, size_pt: 15, min_size_pt: 9, line_height: 1.12, color: "#111111", autoshrink: true, show_if: "type == white" }
+  - { id: white-brand, type: text, text: "CARDS AGAINST HUMANITY", x: 6, y: 79.5, w: 51.5, h: 4, font: heavy, size_pt: 5.2, letter_spacing_em: 0.08, color: "#111111", show_if: "type == white" }
+  - { id: white-edge, type: rect, x: 0.4, y: 0.4, w: 62.7, h: 88.1, fill: none, stroke: "#d6d6d6", stroke_w_mm: 0.25, radius_mm: 2.7, show_if: "type == white" }

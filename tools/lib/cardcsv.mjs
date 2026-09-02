@@ -46,6 +46,13 @@ export function csvToCards(text) {
   if (!rows.length) return { cards: [], cardRows: [], warnings: ["the sheet is empty"], attrCols: [], headers: [],
     managedCardFields: [], managedPrintingFields: [], identitySafe: false };
   const headers = rows[0].map(h => h.trim().toLowerCase());
+  if (new Set(headers).size !== headers.length)
+    throw Object.assign(new Error("the sheet has duplicate column names"), { status: 422 });
+  const dangerous = new Set(["__proto__", "prototype", "constructor"]);
+  const invalid = headers.filter(h => h && !CORE.has(h)
+    && (!/^[a-z][a-z0-9_]{0,63}$/.test(h) || dangerous.has(h)));
+  if (invalid.length)
+    throw Object.assign(new Error(`unsupported column name '${invalid[0]}'; custom card fields use letters, numbers, and underscores`), { status: 422 });
   if (!headers.includes("name")) return { cards: [], cardRows: [], warnings: ["no 'name' column — the sheet needs at least a name column"], attrCols: [], headers,
     managedCardFields: [], managedPrintingFields: [], identitySafe: false };
   const recs = rows.slice(1).map(r => Object.fromEntries(headers.map((h, i) => [h, (r[i] ?? "").trim()])));

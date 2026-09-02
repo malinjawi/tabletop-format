@@ -1,0 +1,5 @@
+regions:
+  - { id: ballot-label, type: text, text: "BALLOT", x: 8, y: 10, w: 47.5, h: 6, font: label, size_pt: 8, align: center, color: "#4a4236", letter_spacing_em: 0.17, show_if: "type == ballot" }
+  - { id: ballot-title, type: text, src: "card.name", transform: uppercase, x: 6, y: 29, w: 51.5, h: 25, font: display, size_pt: 42, min_size_pt: 26, align: center, color: "#28231d", no_wrap: true, autoshrink: true, show_if: "type == ballot" }
+  - { id: ballot-body, type: richtext, src: "card.text", x: 10, y: 60, w: 43.5, h: 13, font: body, size_pt: 8, min_size_pt: 6, align: center, color: "#4a4236", autoshrink: true, show_if: "type == ballot" }
+  - { id: ballot-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#4a4236", letter_spacing_em: 0.13, show_if: "type == ballot" }

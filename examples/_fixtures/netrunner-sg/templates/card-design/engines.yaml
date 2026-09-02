@@ -1,0 +1,30 @@
+version: 1
+active: forge-native
+engines:
+  - id: forge-native
+    type: forge-native
+    label: Forge native
+    description: The current production renderer. Its compiled output remains the release source of truth.
+    source: templates/card-design/manifest.yaml
+    status: active
+    families:
+      - agenda
+      - asset
+      - event
+      - hardware
+      - ice
+      - corp-identity
+      - runner-identity
+      - operation
+      - program
+      - resource
+      - upgrade
+  - id: pnpink-proof
+    type: pnpink
+    label: PnPInk interoperability proof
+    description: An editable Inkscape/PnPInk round-trip experiment for two representative families. It cannot become active yet.
+    source: templates/card-design/experiments/pnpink/manifest.yaml
+    status: experimental
+    families:
+      - program
+      - agenda

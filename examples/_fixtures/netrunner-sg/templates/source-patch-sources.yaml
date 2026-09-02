@@ -1,0 +1,145 @@
+# Exact, auditable donor map for card-specific source patches.
+#
+# The public System Gateway PnP is one flattened JPEG per PDF page. It contains
+# no text or frame layers. These patches therefore copy a complete printed badge
+# from another neutral-corp agenda at integer coordinates and mask its real edge.
+# They are private proof assets and do not grant redistribution permission.
+
+schema_version: 1
+canonical_size_px: [744, 1030]
+
+patches:
+  - id: offworld_advancement_3
+    target_card: offworld_office
+    field: attributes.advancement_cost
+    value: 3
+    donor_card: superconducting_hub
+    crop_px: [635, 40, 738, 132]
+    mask: { type: difference, threshold: 28, dilation_px: 2, feather_px: 0.7 }
+    output: assets/source-patches/offworld_office/advancement_cost-3.png
+
+  - id: offworld_advancement_5
+    target_card: offworld_office
+    field: attributes.advancement_cost
+    value: 5
+    donor_card: send_a_message
+    crop_px: [635, 40, 738, 132]
+    mask: { type: difference, threshold: 28, dilation_px: 2, feather_px: 0.7 }
+    output: assets/source-patches/offworld_office/advancement_cost-5.png
+
+  - id: offworld_agenda_points_1
+    target_card: offworld_office
+    field: attributes.agenda_points
+    value: 1
+    donor_card: superconducting_hub
+    crop_px: [43, 470, 138, 552]
+    mask: { type: difference, threshold: 28, dilation_px: 2, feather_px: 0.7 }
+    output: assets/source-patches/offworld_office/agenda_points-1.png
+
+  - id: offworld_agenda_points_3
+    target_card: offworld_office
+    field: attributes.agenda_points
+    value: 3
+    donor_card: send_a_message
+    crop_px: [43, 470, 138, 552]
+    mask: { type: difference, threshold: 28, dilation_px: 2, feather_px: 0.7 }
+    output: assets/source-patches/offworld_office/agenda_points-3.png
+
+# Repeated fields use the same native-pixel method, expanded deterministically
+# by tools/build_source_patches.py. Tight crops avoid transplanting faction art;
+# the difference mask carries only the changed glyph and the pixels needed to
+# erase the target's old glyph.
+patch_sets:
+  - id: sure_cost
+    target_card: sure_gamble
+    field: attributes.cost
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": smartware_distributor, "1": overclock, "2": t400_memory_diamond, "3": verbal_plasticity, "4": carnivore, "5": sure_gamble }
+    mask: { type: difference, threshold: 24, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/sure_gamble/cost-{value}.png
+  - id: hedge_cost
+    target_card: hedge_fund
+    field: attributes.cost
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": sprint, "1": seamless_launch, "3": neurospike, "4": public_trail, "5": hedge_fund, "10": government_subsidy }
+    mask: { type: difference, threshold: 30, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/hedge_fund/cost-{value}.png
+  - id: carmen_cost
+    target_card: carmen
+    field: attributes.cost
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": smartware_distributor, "1": overclock, "2": t400_memory_diamond, "3": verbal_plasticity, "4": carnivore, "5": sure_gamble }
+    mask: { type: difference, threshold: 24, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/carmen/cost-{value}.png
+  - id: carnivore_cost
+    target_card: carnivore
+    field: attributes.cost
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": smartware_distributor, "1": overclock, "2": t400_memory_diamond, "3": verbal_plasticity, "4": carnivore, "5": sure_gamble }
+    mask: { type: difference, threshold: 24, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/carnivore/cost-{value}.png
+  - id: smartware_cost
+    target_card: smartware_distributor
+    field: attributes.cost
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": smartware_distributor, "1": overclock, "2": t400_memory_diamond, "3": verbal_plasticity, "4": carnivore, "5": sure_gamble }
+    mask: { type: difference, threshold: 24, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/smartware_distributor/cost-{value}.png
+
+  - id: spin_cost
+    target_card: spin_doctor
+    field: attributes.cost
+    crop_px: [48, 28, 110, 90]
+    donors: { "0": spin_doctor, "1": tithe, "2": nico_campaign, "3": palisade, "4": karuna, "5": ballista, "6": ansel_1_0, "7": pharos }
+    mask: { type: difference, threshold: 30, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/spin_doctor/cost-{value}.png
+  - id: anoetic_cost
+    target_card: anoetic_void
+    field: attributes.cost
+    crop_px: [48, 28, 110, 90]
+    donors: { "0": spin_doctor, "1": tithe, "2": nico_campaign, "3": palisade, "4": karuna, "5": ballista, "6": ansel_1_0, "7": pharos }
+    mask: { type: difference, threshold: 30, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/anoetic_void/cost-{value}.png
+  - id: ballista_cost
+    target_card: ballista
+    field: attributes.cost
+    crop_px: [48, 28, 110, 90]
+    donors: { "0": spin_doctor, "1": tithe, "2": nico_campaign, "3": palisade, "4": karuna, "5": ballista, "6": ansel_1_0, "7": pharos }
+    mask: { type: difference, threshold: 30, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/ballista/cost-{value}.png
+
+  - id: carmen_memory
+    target_card: carmen
+    field: attributes.memory_cost
+    crop_px: [37, 166, 70, 212]
+    donors: { "1": carmen, "2": mayfly }
+    mask: { type: difference, threshold: 24, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/carmen/memory-{value}.png
+  - id: carmen_strength
+    target_card: carmen
+    field: attributes.strength
+    crop_px: [65, 946, 137, 1020]
+    donors: { "0": echelon, "1": unity, "2": carmen, "3": buzzsaw }
+    mask: { type: difference, threshold: 36, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/carmen/strength-{value}.png
+  - id: ballista_strength
+    target_card: ballista
+    field: attributes.strength
+    crop_px: [35, 946, 113, 1022]
+    donors: { "0": whitespace, "1": ping, "2": palisade, "3": diviner, "4": ballista, "5": pharos, "6": bran_1_0 }
+    mask: { type: difference, threshold: 36, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/ballista/strength-{value}.png
+  - id: spin_trash
+    target_card: spin_doctor
+    field: attributes.trash_cost
+    crop_px: [675, 905, 735, 980]
+    donors: { "1": anoetic_void, "2": spin_doctor, "3": amaze_amusements, "4": malapert_data_vault }
+    mask: { type: difference, threshold: 32, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/spin_doctor/trash-{value}.png
+  - id: anoetic_trash
+    target_card: anoetic_void
+    field: attributes.trash_cost
+    crop_px: [675, 905, 735, 980]
+    donors: { "1": anoetic_void, "2": spin_doctor, "3": amaze_amusements, "4": malapert_data_vault }
+    mask: { type: difference, threshold: 32, dilation_px: 1, feather_px: 0.45 }
+    output_pattern: assets/source-patches/anoetic_void/trash-{value}.png

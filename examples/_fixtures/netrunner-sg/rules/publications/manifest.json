@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "active": "learn-to-play",
+  "publications": [
+    {
+      "id": "learn-to-play",
+      "label": "System Gateway Learn to Play",
+      "kind": "learn-to-play",
+      "status": "active",
+      "source": "rules/publications/learn-to-play/publication.json",
+      "editors": [
+        {
+          "id": "forge",
+          "type": "forge-layout",
+          "label": "Forge visual publication designer",
+          "source": "rules/publications/learn-to-play/publication.json",
+          "roundtrip": "native"
+        },
+        {
+          "id": "html-css",
+          "type": "html-css",
+          "label": "Portable HTML and CSS output",
+          "roundtrip": "export-only"
+        }
+      ],
+      "outputs": [
+        { "id": "print", "label": "Print-ready booklet", "format": "pdf" },
+        { "id": "web", "label": "Web publication", "format": "html" },
+        { "id": "preflight", "label": "Production preflight", "format": "json" },
+        { "id": "source", "label": "Portable source package", "format": "zip" }
+      ]
+    }
+  ]
+}

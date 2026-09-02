@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.venv/
 
 # generated exports — derived, regenerable, never versioned (design rule)
 # ** covers both examples/<slug>/exports/ and examples/_fixtures/<slug>/exports/
@@ -8,6 +9,15 @@ examples/**/exports/
 # local scratch
 *.log
 .DS_Store
-package-lock.json
-data/
+/data/
+/output/
+/tmp/
+deploy/.env
+deploy/.secrets/
 __pycache__/
+
+# local desktop production workers (Affinity, Sheets connector state, etc.)
+examples/**/.forge/
+
+# Optional licensed studio fonts: local production overrides, never redistributed.
+examples/**/assets/source-fonts/*.local.ttf

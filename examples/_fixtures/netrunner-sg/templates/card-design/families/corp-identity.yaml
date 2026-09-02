@@ -1,0 +1,212 @@
+name: Corp Identity template
+description: Production layout specific to corp identity cards. Shared frame and typography live in reusable components.
+regions:
+  - id: corp_identity_header_shadow
+    type: rect
+    x: 0
+    "y": 1.35
+    w: 52
+    h: 5.65
+    fill: "#080a0d"
+    clip_path: polygon(0 0,100% 0,92% 100%,0 100%)
+    shadow: 0 .55mm .9mm rgba(0,0,0,.52)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_header
+    type: rect
+    x: 0
+    "y": 1.05
+    w: 51.1
+    h: 5.15
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.38
+    clip_path: polygon(0 0,100% 0,92% 100%,0 100%)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_subtitle_shadow
+    type: rect
+    x: 1.55
+    "y": 6.35
+    w: 39.8
+    h: 4.15
+    fill: "#080a0d"
+    clip_path: polygon(0 0,100% 0,91% 100%,4% 100%)
+    shadow: 0 .45mm .75mm rgba(0,0,0,.48)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_subtitle_rail
+    type: rect
+    x: 1.85
+    "y": 6.15
+    w: 38.7
+    h: 3.65
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.34
+    clip_path: polygon(0 0,100% 0,91% 100%,4% 100%)
+    show_if: type == identity && attributes.side == corp
+  - id: identity_title_corp
+    type: richtext
+    src: card.name
+    transform: before-colon
+    x: 10.75
+    "y": 1.35
+    w: 35.6
+    h: 4.35
+    font: title
+    size_pt: 8.4
+    min_size_pt: 4.8
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.035
+    align: left
+    valign: middle
+    color: "#10171d"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == identity && attributes.side == corp
+  - id: identity_subtitle_corp
+    type: richtext
+    src: card.name
+    transform: after-colon
+    x: 5
+    "y": 6.28
+    w: 31.8
+    h: 3.05
+    font: title
+    size_pt: 5.35
+    min_size_pt: 3.9
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.025
+    align: left
+    valign: middle
+    color: "#202830"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == identity && attributes.side == corp
+  - id: identity_faction_glyph_corp
+    type: richtext
+    src: card.attributes.faction
+    map:
+      haas-bioroid: "[faction_hb]"
+      jinteki: "[faction_jinteki]"
+      nbn: "[faction_nbn]"
+      weyland-consortium: "[faction_weyland]"
+    x: 1.45
+    "y": 1.25
+    w: 7.8
+    h: 5.1
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    show_if: type == identity && attributes.side == corp && attributes.faction != neutral-corp
+  - id: identity_art_corp
+    type: image
+    src: printing.scan_data
+    fallback_srcs:
+      - printing.art_data
+      - printing.art_url
+      - printing.art
+    x: 0
+    "y": 9.8
+    w: 63
+    h: 47.4
+    source_crop:
+      - 0
+      - 115
+      - 744
+      - 550
+    source_size:
+      - 744
+      - 1030
+    source_crop_fit: cover
+    credit: printing.artist
+    show_if: type == identity && attributes.side == corp
+  - id: identity_art_edge_corp
+    type: rect
+    x: 0
+    "y": 9.8
+    w: 63
+    h: 47.4
+    fill: none
+    stroke: palette-dark
+    stroke_w_mm: 0.45
+    shadow: inset 0 0 2.2mm rgba(0,0,0,.45)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_stats_shadow
+    type: rect
+    x: 0
+    "y": 72.15
+    w: 8.95
+    h: 14.75
+    fill: "#07090b"
+    clip_path: polygon(0 0,87% 0,100% 9%,100% 100%,0 100%)
+    shadow: .25mm 0 .85mm rgba(0,0,0,.52)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_stats_edge
+    type: rect
+    x: 0
+    "y": 72.52
+    w: 8.55
+    h: 14.25
+    fill: palette-gradient
+    stroke: palette-light
+    stroke_w_mm: 0.28
+    clip_path: polygon(0 0,87% 0,100% 9%,100% 100%,0 100%)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_deck_face
+    type: rect
+    x: 0.65
+    "y": 73.1
+    w: 7.35
+    h: 5.65
+    fill: linear-gradient(145deg,#ffffff 0%,#e4e7e6 60%,#aab0af 100%)
+    stroke: "#20262a"
+    stroke_w_mm: 0.28
+    clip_path: polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_deck
+    type: text
+    src: card.attributes.minimum_deck_size
+    x: 0.65
+    "y": 73.22
+    w: 7.35
+    h: 5.35
+    font: stat
+    size_pt: 11.2
+    align: center
+    valign: middle
+    color: "#11171d"
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_stats_divider
+    type: rect
+    x: 0.8
+    "y": 79.05
+    w: 7.05
+    h: 0.42
+    fill: palette-light
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_influence_face
+    type: rect
+    x: 0.65
+    "y": 79.75
+    w: 7.35
+    h: 5.65
+    fill: linear-gradient(180deg,#343a3d,#080b0d)
+    stroke: "#c7ccca"
+    stroke_w_mm: 0.28
+    clip_path: polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit
+  - id: corp_identity_influence
+    type: text
+    src: card.attributes.influence_limit
+    x: 0.65
+    "y": 79.87
+    w: 7.35
+    h: 5.35
+    font: stat
+    size_pt: 11.2
+    align: center
+    valign: middle
+    color: "#ffffff"
+    text_shadow: "0 .12mm .16mm #000"
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/rulebook-pipeline.schema.json",
+  "title": "Rulebook production pipeline registry",
+  "description": "Selects a version-pinned native rulebook source and renderer. Generated PDF/HTML/JSON files are outputs, never canonical game source.",
+  "type": "object",
+  "required": ["version", "active", "pipelines"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "active": { "$ref": "#/$defs/id" },
+    "pipelines": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/pipeline" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "safePath": {
+      "type": "string",
+      "pattern": "^rules/[A-Za-z0-9_./-]+$"
+    },
+    "output": {
+      "type": "object",
+      "required": ["id", "label", "format"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string", "minLength": 1 },
+        "format": { "enum": ["pdf", "html", "json", "tex", "zip"] },
+        "annotated": { "type": "boolean" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "url", "ref", "license_status"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "git" },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "ref": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "license_status": { "enum": ["declared", "permission-required", "private"] },
+        "license": { "type": "string" }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "required": ["id", "type", "label", "status", "source", "outputs"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["nsg-rules-yaml"] },
+        "label": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "enum": ["active", "experimental", "disabled"] },
+        "source": { "$ref": "#/$defs/source" },
+        "overlay_root": { "$ref": "#/$defs/safePath" },
+        "native_inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/output" }
+        }
+      }
+    }
+  }
+}

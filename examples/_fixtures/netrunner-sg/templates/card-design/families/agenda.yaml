@@ -1,0 +1,210 @@
+name: Agenda template
+description: Production layout specific to agenda cards. Shared frame and typography live in reusable components.
+regions:
+  - id: agenda_header_shadow
+    type: rect
+    x: 0
+    "y": 2.02
+    w: 50.8
+    h: 6.15
+    fill: "#06090d"
+    clip_path: polygon(0 0,100% 0,96% 100%,0 100%)
+    shadow: 0 .55mm .95mm rgba(0,0,0,.42)
+    show_if: type == agenda
+  - id: agenda_header
+    type: rect
+    x: 0
+    "y": 1.66
+    w: 50.5
+    h: 5.7
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.35
+    clip_path: polygon(0 0,100% 0,96% 100%,0 100%)
+    show_if: type == agenda
+  - id: agenda_unique
+    type: text
+    text: ◆
+    x: 3
+    "y": 2.48
+    w: 2.8
+    h: 3.9
+    font: title
+    size_pt: 5.2
+    align: center
+    valign: middle
+    color: "#111820"
+    show_if: type == agenda && attributes.unique
+  - id: agenda_name
+    type: richtext
+    src: card.name
+    x: 2.6
+    "y": 2.25
+    w: 45.4
+    h: 4.2
+    font: title
+    size_pt: 8.7
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == agenda && !attributes.unique
+  - id: agenda_name_unique
+    type: richtext
+    src: card.name
+    x: 6.1
+    "y": 2.25
+    w: 41.9
+    h: 4.2
+    font: title
+    size_pt: 8.7
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == agenda && attributes.unique
+  - id: art_agenda
+    type: image
+    src: printing.scan_data
+    fallback_srcs:
+      - printing.art_data
+      - printing.art_url
+      - printing.art
+    x: 1.15
+    "y": 9.4
+    w: 60.7
+    h: 39.1
+    source_crop:
+      - 100
+      - 130
+      - 544
+      - 339
+    source_size:
+      - 744
+      - 1030
+    source_crop_fit: cover
+    show_if: type == agenda
+  - id: agenda_subtypes
+    type: richtext
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    x: 19.6
+    "y": 48.55
+    w: 32.3
+    h: 4.7
+    font: subtype
+    size_pt: 6.6
+    min_size_pt: 4.6
+    char_width_em: 0.58
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#303a43"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == agenda
+  - id: agenda_adv_shadow
+    type: badge
+    text: ""
+    x: 51.55
+    "y": 1.15
+    d: 11.05
+    bg: "#c4cac8"
+    color: "#151b21"
+    shadow: 0 .65mm 1.05mm rgba(0,0,0,.42)
+    show_if: type == agenda
+  - id: agenda_adv_face
+    type: badge
+    text: ""
+    x: 51.85
+    "y": 1.42
+    d: 10.55
+    bg: radial-gradient(circle at 40% 34%,#ffffff 0%,#f2f3f1 61%,#c9cecc 100%)
+    color: "#151b21"
+    show_if: type == agenda
+  - id: agenda_adv_icon
+    type: richtext
+    text: "[advancement]"
+    x: 51.85
+    "y": 1.42
+    w: 10.55
+    h: 10.55
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    opacity: 0.24
+    show_if: type == agenda
+  - id: agenda_advancement
+    type: text
+    src: card.attributes.advancement_cost
+    x: 53.08
+    "y": 3.25
+    w: 8.1
+    h: 6.9
+    font: stat
+    size_pt: 14.2
+    align: center
+    valign: middle
+    color: "#11171d"
+    text_shadow: "0 0 .28mm #ffffff,0 0 .28mm #ffffff"
+    show_if: type == agenda
+  - id: agenda_points_hex_left
+    type: rect
+    x: 0.8
+    "y": 40.05
+    w: 7.2
+    h: 6.8
+    fill: "#eef1ef"
+    stroke: "#7d8389"
+    stroke_w_mm: 0.32
+    clip_path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)
+    shadow: 0 .4mm .65mm rgba(0,0,0,.3)
+    show_if: type == agenda
+  - id: agenda_points_hex_right
+    type: rect
+    x: 7
+    "y": 40.05
+    w: 7.2
+    h: 6.8
+    fill: "#eef1ef"
+    stroke: "#7d8389"
+    stroke_w_mm: 0.32
+    clip_path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)
+    shadow: 0 .4mm .65mm rgba(0,0,0,.3)
+    show_if: type == agenda
+  - id: agenda_points_hex_top
+    type: rect
+    x: 3.9
+    "y": 36.65
+    w: 7.2
+    h: 6.8
+    fill: "#f7f8f6"
+    stroke: "#7d8389"
+    stroke_w_mm: 0.4
+    clip_path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)
+    shadow: 0 .55mm .9mm rgba(0,0,0,.4)
+    show_if: type == agenda
+  - id: agenda_points
+    type: text
+    src: card.attributes.agenda_points
+    x: 4.35
+    "y": 37.25
+    w: 6.3
+    h: 5.8
+    font: stat
+    size_pt: 12.8
+    align: center
+    valign: middle
+    color: "#11171d"
+    show_if: type == agenda

@@ -1,0 +1,400 @@
+version: 1
+name: "Netrunner: System Gateway card design system"
+description: Each card resolves to one family template plus shared components. Every source is independently reviewable in Git; releases pin the complete manifest at one commit.
+system: templates/card-design/system.yaml
+legacy_source: templates/layout.yaml
+components:
+  - id: foundation
+    label: Shared foundation
+    description: 10 ordered regions reused by every card family.
+    source: templates/card-design/components/foundation.yaml
+    applies_to: "*"
+  - id: shared-1
+    label: Shared by Hardware, Program, Resource
+    description: 1 ordered region reused by hardware, program, resource.
+    source: templates/card-design/components/shared-1.yaml
+    applies_to:
+      - hardware
+      - program
+      - resource
+  - id: shared-2
+    label: Shared by Asset, Operation, Upgrade
+    description: 1 ordered region reused by asset, operation, upgrade.
+    source: templates/card-design/components/shared-2.yaml
+    applies_to:
+      - asset
+      - operation
+      - upgrade
+  - id: shared-3
+    label: Shared by Agenda, Asset, Event, Hardware, Operation, Program, Resource, Upgrade
+    description: 12 ordered regions reused by agenda, asset, event, hardware, operation, program, resource, upgrade.
+    source: templates/card-design/components/shared-3.yaml
+    applies_to:
+      - agenda
+      - asset
+      - event
+      - hardware
+      - operation
+      - program
+      - resource
+      - upgrade
+  - id: shared-4
+    label: Shared by Event, Hardware, Operation, Program, Resource
+    description: 12 ordered regions reused by event, hardware, operation, program, resource.
+    source: templates/card-design/components/shared-4.yaml
+    applies_to:
+      - event
+      - hardware
+      - operation
+      - program
+      - resource
+  - id: shared-5
+    label: Shared by Agenda, Asset, Event, Hardware, Operation, Resource, Upgrade
+    description: 2 ordered regions reused by agenda, asset, event, hardware, operation, resource, upgrade.
+    source: templates/card-design/components/shared-5.yaml
+    applies_to:
+      - agenda
+      - asset
+      - event
+      - hardware
+      - operation
+      - resource
+      - upgrade
+  - id: shared-6
+    label: Shared by Event, Hardware, Program, Resource
+    description: 2 ordered regions reused by event, hardware, program, resource.
+    source: templates/card-design/components/shared-6.yaml
+    applies_to:
+      - event
+      - hardware
+      - program
+      - resource
+  - id: shared-7
+    label: Shared by Agenda, Asset, Operation, Upgrade
+    description: 2 ordered regions reused by agenda, asset, operation, upgrade.
+    source: templates/card-design/components/shared-7.yaml
+    applies_to:
+      - agenda
+      - asset
+      - operation
+      - upgrade
+  - id: shared-8
+    label: Shared by Corp Identity, Runner Identity
+    description: 11 ordered regions reused by corp-identity, runner-identity.
+    source: templates/card-design/components/shared-8.yaml
+    applies_to:
+      - corp-identity
+      - runner-identity
+families:
+  - id: agenda
+    label: Agenda
+    description: Production layout specific to agenda cards. Shared frame and typography live in reusable components.
+    match:
+      type: agenda
+    source: templates/card-design/families/agenda.yaml
+    specimens:
+      - luminal_transubstantiation
+      - longevity_serum
+      - orbital_superiority
+  - id: asset
+    label: Asset
+    description: Production layout specific to asset cards. Shared frame and typography live in reusable components.
+    match:
+      type: asset
+    source: templates/card-design/families/asset.yaml
+    specimens:
+      - urtica_cipher
+      - nico_campaign
+      - clearinghouse
+  - id: event
+    label: Event
+    description: Production layout specific to event cards. Shared frame and typography live in reusable components.
+    match:
+      type: event
+    source: templates/card-design/families/event.yaml
+    specimens:
+      - mutual_favor
+      - jailbreak
+      - overclock
+  - id: hardware
+    label: Hardware
+    description: Production layout specific to hardware cards. Shared frame and typography live in reusable components.
+    match:
+      type: hardware
+    source: templates/card-design/families/hardware.yaml
+    specimens:
+      - pennyshaver
+      - pantograph
+      - carnivore
+  - id: ice
+    label: Ice
+    description: Production layout specific to ice cards. Shared frame and typography live in reusable components.
+    match:
+      type: ice
+    source: templates/card-design/families/ice.yaml
+    specimens:
+      - ansel_1_0
+      - bran_1_0
+      - pharos
+  - id: corp-identity
+    label: Corp Identity
+    description: Production layout specific to corp identity cards. Shared frame and typography live in reusable components.
+    match:
+      type: identity
+      attributes.side: corp
+    source: templates/card-design/families/corp-identity.yaml
+    specimens:
+      - haas_bioroid_precision_design
+      - jinteki_restoring_humanity
+      - nbn_reality_plus
+  - id: runner-identity
+    label: Runner Identity
+    description: Production layout specific to runner identity cards. Shared frame and typography live in reusable components.
+    match:
+      type: identity
+      attributes.side: runner
+    source: templates/card-design/families/runner-identity.yaml
+    specimens:
+      - zahya_sadeghi_versatile_smuggler
+      - rene_loup_arcemont_party_animal
+      - tao_salonga_telepresence_magician
+  - id: operation
+    label: Operation
+    description: Production layout specific to operation cards. Shared frame and typography live in reusable components.
+    match:
+      type: operation
+    source: templates/card-design/families/operation.yaml
+    specimens:
+      - public_trail
+      - predictive_planogram
+      - neurospike
+  - id: program
+    label: Program
+    description: Production layout specific to program cards. Shared frame and typography live in reusable components.
+    match:
+      type: program
+    source: templates/card-design/families/program.yaml
+    specimens:
+      - tranquilizer
+      - botulus
+      - conduit
+  - id: resource
+    label: Resource
+    description: Production layout specific to resource cards. Shared frame and typography live in reusable components.
+    match:
+      type: resource
+    source: templates/card-design/families/resource.yaml
+    specimens:
+      - red_team
+      - telework_contract
+      - smartware_distributor
+  - id: upgrade
+    label: Upgrade
+    description: Production layout specific to upgrade cards. Shared frame and typography live in reusable components.
+    match:
+      type: upgrade
+    source: templates/card-design/families/upgrade.yaml
+    specimens:
+      - amaze_amusements
+      - malapert_data_vault
+      - anoetic_void
+region_order:
+  - shell
+  - shell_mesh
+  - shell_scanlines
+  - top_signal
+  - left_signal
+  - right_signal
+  - event_header_shadow
+  - event_header
+  - event_unique
+  - event_name
+  - event_name_unique
+  - resource_header_shadow
+  - resource_header
+  - resource_unique
+  - resource_name
+  - resource_name_unique
+  - program_header_shadow
+  - program_header
+  - program_unique
+  - program_name
+  - program_name_unique
+  - hardware_header_shadow
+  - hardware_header
+  - hardware_unique
+  - hardware_name
+  - hardware_name_unique
+  - operation_header_shadow
+  - operation_header
+  - operation_unique
+  - operation_name
+  - operation_name_unique
+  - asset_header_shadow
+  - asset_header
+  - asset_unique
+  - asset_name
+  - asset_name_unique
+  - upgrade_header_shadow
+  - upgrade_header
+  - upgrade_unique
+  - upgrade_name
+  - upgrade_name_unique
+  - agenda_header_shadow
+  - agenda_header
+  - agenda_unique
+  - agenda_name
+  - agenda_name_unique
+  - art_event
+  - art_runner_installed
+  - art_corp_standard
+  - art_agenda
+  - art_frame
+  - credit_dial_shadow
+  - credit_dial_rim
+  - credit_dial_face
+  - credit_dial_inner
+  - credit_dial_number
+  - credit_tick_l1
+  - credit_tick_l2
+  - credit_tick_dot_l
+  - credit_tick_dot_c
+  - credit_tick_dot_r
+  - credit_tick_r2
+  - credit_tick_r1
+  - asset_rez_cost_glyph
+  - asset_cost_shadow
+  - asset_cost_edge
+  - asset_cost_face
+  - asset_cost_number
+  - upgrade_rez_cost_glyph
+  - upgrade_cost_shadow
+  - upgrade_cost_edge
+  - upgrade_cost_face
+  - upgrade_cost_number
+  - standard_panel_shadow
+  - standard_panel
+  - standard_panel_trace
+  - standard_panel_watermark
+  - standard_type
+  - event_subtypes
+  - resource_subtypes
+  - program_subtypes
+  - hardware_subtypes
+  - operation_subtypes
+  - asset_subtypes
+  - upgrade_subtypes
+  - agenda_subtypes
+  - standard_body
+  - standard_body_trash
+  - program_body
+  - standard_faction_glyph
+  - agenda_adv_shadow
+  - agenda_adv_face
+  - agenda_adv_icon
+  - agenda_advancement
+  - agenda_points_hex_left
+  - agenda_points_hex_right
+  - agenda_points_hex_top
+  - agenda_points
+  - program_memory_shadow
+  - program_memory_edge
+  - program_memory_face
+  - program_memory_pin_1
+  - program_memory_pin_2
+  - program_memory_pin_3
+  - program_memory_pin_4
+  - program_memory
+  - standard_trash_icon
+  - standard_trash
+  - runner_track
+  - runner_influence
+  - corp_track
+  - corp_influence
+  - footer
+  - footer_signal
+  - footer_artist
+  - footer_side
+  - footer_set_icon
+  - footer_collector
+  - program_strength_shadow
+  - program_strength_face
+  - program_strength_bar_1
+  - program_strength_bar_2
+  - program_strength_bar_3
+  - program_strength
+  - identity_circuit_left
+  - identity_circuit_right
+  - identity_header_shadow
+  - identity_header
+  - corp_identity_header_shadow
+  - corp_identity_header
+  - corp_identity_subtitle_shadow
+  - corp_identity_subtitle_rail
+  - identity_title_runner
+  - identity_subtitle_runner
+  - identity_title_corp
+  - identity_subtitle_corp
+  - runner_link_ring
+  - runner_link
+  - runner_link_icon
+  - identity_faction_glyph_runner
+  - identity_faction_glyph_corp
+  - identity_art_runner
+  - identity_art_corp
+  - identity_art_edge_runner
+  - identity_art_edge_corp
+  - identity_panel_shadow
+  - identity_panel
+  - identity_watermark
+  - identity_type
+  - identity_subtypes
+  - identity_rule
+  - identity_body
+  - runner_identity_stats_shadow
+  - runner_identity_stats_edge
+  - runner_identity_deck_face
+  - runner_identity_deck
+  - runner_identity_stats_divider
+  - runner_identity_influence_face
+  - runner_identity_influence
+  - corp_identity_stats_shadow
+  - corp_identity_stats_edge
+  - corp_identity_deck_face
+  - corp_identity_deck
+  - corp_identity_stats_divider
+  - corp_identity_influence_face
+  - corp_identity_influence
+  - identity_set_icon
+  - identity_collector
+  - ice_header_shadow
+  - ice_header
+  - ice_rez_cost_glyph
+  - ice_cost_shadow
+  - ice_cost_edge
+  - ice_cost_face
+  - ice_cost_number
+  - ice_name
+  - ice_type_rail_shadow
+  - ice_type_rail
+  - ice_type
+  - ice_panel_shadow
+  - ice_panel
+  - ice_watermark
+  - ice_body
+  - ice_art
+  - ice_art_edge
+  - ice_faction_plate
+  - ice_faction_glyph
+  - ice_strength_shadow
+  - ice_strength_face
+  - ice_strength_bar_1
+  - ice_strength_bar_2
+  - ice_strength_bar_3
+  - ice_strength
+  - ice_track
+  - ice_influence
+  - ice_collector
+  - ice_set_icon
+  - ice_artist
+  - trim_edge

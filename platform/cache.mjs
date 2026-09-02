@@ -7,7 +7,7 @@
  * this is the TTS-links-never-rot property as code).
  *
  *   renders/{game}/{sha}/{printing_id}.png     card faces at an exact commit
- *   exports/{game}/{ref}/{pnp.pdf|tts.json|sheet.png|back.png}
+ *   exports/{game}/{ref}/{pnp.pdf|tts.json|table.json|table.vtt|...}
  *                                              ref = sha (GC-able) or tag (kept forever)
  *
  * Dev driver: filesystem under data/cache/ with the EXACT R2 key layout.
@@ -16,15 +16,31 @@
  * server process; the queue/worker split (DD5) is a scale move, not a
  * correctness one — generation is idempotent per key either way.
  */
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, cpSync, readdirSync,
-         statSync, utimesSync, readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+         statSync, utimesSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import { join, dirname, relative } from "node:path";
 import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+const execFileAsync = promisify(execFile);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const VENV_PYTHON = process.platform === "win32" ? join(ROOT, ".venv", "Scripts", "python.exe") : join(ROOT, ".venv", "bin", "python");
+const PYTHON = process.env.FORGE_PYTHON || (existsSync(VENV_PYTHON) ? VENV_PYTHON : "python3");
 export const CACHE_DIR = process.env.CACHE_DIR ?? join(ROOT, "data", "cache");
+export const VTT_EXPORT_VERSION = 3;
+export const vttArtifactName = (ext) => `table-v${VTT_EXPORT_VERSION}.${ext}`;
+// Artifact filenames are part of the immutable cache identity. Bump when an
+// exporter gains new required contents; never overwrite bytes at an old URL.
+export const PROJECT_EXPORT_VERSION = 5;
+export const projectArtifactName = gameSlug => `${gameSlug}-v${PROJECT_EXPORT_VERSION}.forge-project.zip`;
+export const NANDECK_EXPORT_VERSION = 1;
+export const nandeckArtifactName = gameSlug => `${gameSlug}-nandeck-v${NANDECK_EXPORT_VERSION}.zip`;
+export const EXPORTER_VERSIONS = { pnp: 2, print: 1, tts: 1, ttc: 1, vtt: VTT_EXPORT_VERSION,
+  project: PROJECT_EXPORT_VERSION, nandeck: NANDECK_EXPORT_VERSION, rulebook: 1, publication: 1 };
+export const exporterVersion = kind => EXPORTER_VERSIONS[kind] ?? 1;
 
 export const renderKey = (game, sha, printing) => `renders/${game}/${sha}/${printing}.png`;
 export const exportKey = (game, ref, file) => `exports/${game}/${ref}/${file}`;
@@ -56,38 +72,76 @@ export async function ensureRenders(gameRel, gameSlug, sha) {
   const { dir, cleanup } = await materialize(gameRel, sha);
   try {
     mkdirSync(keyDir, { recursive: true });
-    execFileSync("python3", [join(ROOT, "tools/render_cards.py"), dir, keyDir], { stdio: "pipe" });
+    execFileSync(process.execPath, [join(ROOT, "tools/render_cards.mjs"), dir, keyDir], { stdio: "pipe" });
   } finally { cleanup(); }
   return { keyDir, hit: false };
 }
 
-/** Ensure pnp/tts exports for a game at a ref (sha or tag). Idempotent per key. */
-export async function ensureExport(gameRel, gameSlug, ref, kind) {
-  const outDir = join(CACHE_DIR, "exports", gameSlug, ref);
-  const done = { pnp: join(outDir, "pnp.pdf"), tts: join(outDir, "tts.json"), ttc: join(outDir, `${gameSlug}-ttc.zip`) }[kind];
-  if (existsSync(done)) return { dir: outDir, hit: true };
-  const { dir, cleanup } = await materialize(gameRel, ref);
-  try {
-    mkdirSync(outDir, { recursive: true });
-    execFileSync("python3", [join(ROOT, "tools/render_cards.py"), dir], { stdio: "pipe" });
-    if (kind === "pnp") {
-      execFileSync("python3", [join(ROOT, "tools/export_pnp.py"), dir], { stdio: "pipe" });
-      const pdf = readdirSync(join(dir, "exports")).find(f => f.endsWith("-pnp.pdf"));
-      cpSync(join(dir, "exports", pdf), join(outDir, "pnp.pdf"));
-    } else if (kind === "ttc") {
-      execFileSync("python3", [join(ROOT, "tools/export_ttc.py"), dir], { stdio: "pipe" });
-      const z = readdirSync(join(dir, "exports/ttc")).find(f => f.endsWith("-ttc.zip"));
-      cpSync(join(dir, "exports/ttc", z), join(outDir, `${gameSlug}-ttc.zip`));
-    } else {
-      execFileSync("python3", [join(ROOT, "tools/export_tts.py"), dir], { stdio: "pipe" });
-      const tts = join(dir, "exports", "tts");
-      const save = readdirSync(tts).find(f => f.endsWith(".json"));
-      cpSync(join(tts, save), join(outDir, "tts.json"));
-      cpSync(join(tts, "sheet.png"), join(outDir, "sheet.png"));
-      cpSync(join(tts, "back.png"), join(outDir, "back.png"));
-    }
-  } finally { cleanup(); }
-  return { dir: outDir, hit: false };
+const exportInflight = new Map();
+export const EXPORT_BUDGET = {
+  wall_time_ms: Math.max(10_000, Number(process.env.EXPORT_WALL_TIME_MS) || 180_000),
+  child_timeout_ms: Math.max(5_000, Number(process.env.EXPORT_CHILD_TIMEOUT_MS) || 120_000),
+  max_files: Math.max(10, Number(process.env.EXPORT_MAX_FILES) || 2_500),
+  max_output_bytes: Math.max(1024 * 1024, Number(process.env.EXPORT_MAX_OUTPUT_BYTES) || 512 * 1024 * 1024),
+  max_log_bytes: Math.max(64 * 1024, Number(process.env.EXPORT_MAX_LOG_BYTES) || 2 * 1024 * 1024),
+};
+const doneName = (gameSlug, kind) => ({ pnp: "pnp.pdf", print: "print-ready.zip", tts: "tts.json",
+  ttc: `${gameSlug}-ttc.zip`, vtt: vttArtifactName("vtt"), project: projectArtifactName(gameSlug),
+  nandeck: nandeckArtifactName(gameSlug), rulebook: "rulebook-build.json",
+  publication: "publication-build.json" })[kind];
+const walkFiles = (root, dir = root) => readdirSync(dir).flatMap(name => {
+  const file = join(dir, name), stat = statSync(file);
+  return stat.isDirectory() ? walkFiles(root, file) : [{ file, name: relative(root, file).replaceAll("\\", "/"), stat }];
+});
+
+/** Ensure a frozen export for a game at a ref. Work runs in a credential-free
+ * child process and publishes only after its manifest and quotas verify. */
+export async function ensureExport(gameRel, gameSlug, ref, kind, { publicOrigin = null, allowNetwork = false, buildPdf = true } = {}) {
+  const outDir = join(CACHE_DIR, "exports", gameSlug, ref), done = doneName(gameSlug, kind);
+  if (!done) throw new Error(`unknown export kind '${kind}'`);
+  const marker = join(outDir, `.complete-${kind}-v${exporterVersion(kind)}.json`);
+  if (existsSync(marker) && existsSync(join(outDir, done))) return { dir: outDir, hit: true,
+    manifest: JSON.parse(readFileSync(marker, "utf8")) };
+  const key = `${gameSlug}@${ref}:${kind}:v${exporterVersion(kind)}`;
+  if (exportInflight.has(key)) return exportInflight.get(key);
+  const run = (async () => {
+    const materialized = await materialize(gameRel, ref);
+    mkdirSync(join(CACHE_DIR, "jobs"), { recursive: true });
+    const stage = mkdtempSync(join(CACHE_DIR, "jobs", `export-${kind}-`));
+    try {
+      const input = { source_dir: materialized.dir, stage_dir: stage, kind, slug: gameSlug, ref,
+        public_origin: publicOrigin || process.env.FORGE_PUBLIC_ORIGIN || "http://localhost:8420",
+        allow_network: !!allowNetwork, build_pdf: !!buildPdf, exporter_version: exporterVersion(kind),
+        names: { ttc: `${gameSlug}-ttc.zip`, project: projectArtifactName(gameSlug),
+          nandeck: nandeckArtifactName(gameSlug), vtt_json: vttArtifactName("json"), vtt_package: vttArtifactName("vtt") },
+        budget: EXPORT_BUDGET };
+      const jobFile = join(stage, ".job.json"); writeFileSync(jobFile, JSON.stringify(input));
+      const env = Object.fromEntries(["PATH", "LANG", "LC_ALL", "TMPDIR", "FORGE_PYTHON"]
+        .filter(name => process.env[name] != null).map(name => [name, process.env[name]]));
+      const { stdout } = await execFileAsync(process.execPath, [join(ROOT, "tools", "export-job-worker.mjs"), jobFile],
+        { cwd: ROOT, env, timeout: EXPORT_BUDGET.wall_time_ms, maxBuffer: EXPORT_BUDGET.max_log_bytes });
+      const manifest = JSON.parse(stdout), staged = walkFiles(stage).filter(item => !item.name.startsWith(".job"));
+      const actual = new Map(staged.map(item => [item.name, item]));
+      for (const file of manifest.files || []) {
+        const item = actual.get(file.name); if (!item) throw new Error(`worker manifest file missing: ${file.name}`);
+        const sha = createHash("sha256").update(readFileSync(item.file)).digest("hex");
+        if (sha !== file.sha256 || item.stat.size !== file.bytes) throw new Error(`worker manifest mismatch: ${file.name}`);
+      }
+      if (!actual.has(done)) throw new Error(`worker did not produce required artifact '${done}'`);
+      mkdirSync(outDir, { recursive: true });
+      for (const item of staged) {
+        const target = join(outDir, item.name); mkdirSync(dirname(target), { recursive: true });
+        rmSync(target, { recursive: item.stat.isDirectory(), force: true });
+        renameSync(item.file, target);
+      }
+      const published = { ...manifest, published_at: Date.now(), input_hash: createHash("sha256").update(`${gameSlug}\0${ref}\0${kind}\0${exporterVersion(kind)}`).digest("hex") };
+      const markerTmp = `${marker}.${randomBytes(4).toString("hex")}.tmp`;
+      writeFileSync(markerTmp, JSON.stringify(published, null, 2) + "\n"); renameSync(markerTmp, marker);
+      return { dir: outDir, hit: false, manifest: published };
+    } finally { materialized.cleanup(); rmSync(stage, { recursive: true, force: true }); }
+  })();
+  exportInflight.set(key, run);
+  try { return await run; } finally { exportInflight.delete(key); }
 }
 
 /**

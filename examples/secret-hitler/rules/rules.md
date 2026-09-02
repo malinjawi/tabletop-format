@@ -45,11 +45,15 @@ Policy for the power it grants -- that tension is the whole game.
   player, used to vote on every proposed government.
 - **President and Chancellor placards** — `type: placard`. Mark the
   current officeholders.
-- **Election Tracker** — `type: placard`. Advances on every failed vote
-  and every Veto; resets on every enacted Policy.
-- *Not modeled as cards in this port*: 10 card envelopes, a draw-pile and
-  discard-pile reference card, and three different Liberal/Fascist boards
-  (the Fascist track's layout differs by player count -- see Setup below).
+- **Draw Pile and Discard Pile cards** — `type: pile-marker`. The official
+  PnP reference cards for the two face-down Policy piles.
+- **Election Tracker marker** — modeled as the `election-tracker` setup
+  counter because the PnP supplies the track on the Liberal board, not a
+  printable card face.
+- **Four board faces** — the shared Liberal board and the 5–6, 7–8, and
+  9–10 player Fascist boards are preserved as exact versioned production
+  assets under `assets/official-pnp/boards/`.
+- *Not printed by the PnP*: 10 card envelopes; players supply these.
 
 ## Setup
 

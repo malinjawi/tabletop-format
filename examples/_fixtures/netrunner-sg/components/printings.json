@@ -6,7 +6,17 @@
     "template_id": "standard_face",
     "collector_number": "001",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30001.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30001.jpg",
+    "scan": "assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "Run wyld."
   },
   {
     "id": "p_wildcat_strike_sg",
@@ -15,7 +25,17 @@
     "template_id": "standard_face",
     "collector_number": "002",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30002.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30002.jpg",
+    "scan": "assets/source-faces/p_wildcat_strike_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_wildcat_strike_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "They can buy off union leadership, but they canʼt stop us walking out!"
   },
   {
     "id": "p_carnivore_sg",
@@ -24,7 +44,17 @@
     "template_id": "standard_face",
     "collector_number": "003",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30003.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30003.jpg",
+    "scan": "assets/source-faces/p_carnivore_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_carnivore_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Martin de Diego Sádaba",
+    "flavor_text": "“It hungers to sink teeth into problems.”\n–Loup"
   },
   {
     "id": "p_botulus_sg",
@@ -33,7 +63,17 @@
     "template_id": "standard_face",
     "collector_number": "004",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30004.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30004.jpg",
+    "scan": "assets/source-faces/p_botulus_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_botulus_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Cat Shen",
+    "flavor_text": "Was it something you ate?"
   },
   {
     "id": "p_buzzsaw_sg",
@@ -42,7 +82,17 @@
     "template_id": "standard_face",
     "collector_number": "005",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30005.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30005.jpg",
+    "scan": "assets/source-faces/p_buzzsaw_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_buzzsaw_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Cat Shen",
+    "flavor_text": "Destruction is an art."
   },
   {
     "id": "p_cleaver_sg",
@@ -51,7 +101,17 @@
     "template_id": "standard_face",
     "collector_number": "006",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30006.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30006.jpg",
+    "scan": "assets/source-faces/p_cleaver_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_cleaver_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Cat Shen",
+    "flavor_text": "Subtlety is a luxury."
   },
   {
     "id": "p_fermenter_sg",
@@ -60,7 +120,17 @@
     "template_id": "standard_face",
     "collector_number": "007",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30007.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30007.jpg",
+    "scan": "assets/source-faces/p_fermenter_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_fermenter_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Cat Shen",
+    "flavor_text": "“Thereʼs a tension to a cook. Each processing cycle sweetens the pot and raises the heat. I stir all night, but few have my appetite for danger.”\n–René “Loup” Arcemont"
   },
   {
     "id": "p_leech_sg",
@@ -69,7 +139,17 @@
     "template_id": "standard_face",
     "collector_number": "008",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30008.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30008.jpg",
+    "scan": "assets/source-faces/p_leech_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_leech_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Cat Shen",
+    "flavor_text": "The greediest bloodsucker this side of a corporate boardroom."
   },
   {
     "id": "p_cookbook_sg",
@@ -78,7 +158,17 @@
     "template_id": "standard_face",
     "collector_number": "009",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30009.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30009.jpg",
+    "scan": "assets/source-faces/p_cookbook_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_cookbook_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Cat Shen",
+    "flavor_text": "“It waits on an unlabelled memstrip far below the deepest hab. Angry, desperate souls seek it out, hungry for power to change a brutal world. Once they can stomach no more bitter revenge, they return to that nameless tunnel, the book a recipe thicker.”\n–Heinlein urban legend"
   },
   {
     "id": "p_zahya_sadeghi_versatile_smuggler_sg",
@@ -87,7 +177,17 @@
     "template_id": "standard_face",
     "collector_number": "010",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30010.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30010.jpg",
+    "scan": "assets/source-faces/p_zahya_sadeghi_versatile_smuggler_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_zahya_sadeghi_versatile_smuggler_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "I obtain your desire."
   },
   {
     "id": "p_mutual_favor_sg",
@@ -96,7 +196,17 @@
     "template_id": "standard_face",
     "collector_number": "011",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30011.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30011.jpg",
+    "scan": "assets/source-faces/p_mutual_favor_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_mutual_favor_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "The real reward is the friends you make along the way."
   },
   {
     "id": "p_tread_lightly_sg",
@@ -105,7 +215,17 @@
     "template_id": "standard_face",
     "collector_number": "012",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30012.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30012.jpg",
+    "scan": "assets/source-faces/p_tread_lightly_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_tread_lightly_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Jack Reeves",
+    "flavor_text": "“A mirrorfiber mod or high-end mantle can be helpful, but nothing beats a good dose of ‘keeping your damn head down.’”\n–“G0ph3r” OʼRyan"
   },
   {
     "id": "p_docklands_pass_sg",
@@ -114,7 +234,17 @@
     "template_id": "standard_face",
     "collector_number": "013",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30013.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30013.jpg",
+    "scan": "assets/source-faces/p_docklands_pass_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_docklands_pass_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "Zahya knows the keeper of every door between the Docklands and the Domes. More importantly, she knows their price."
   },
   {
     "id": "p_pennyshaver_sg",
@@ -123,7 +253,17 @@
     "template_id": "standard_face",
     "collector_number": "014",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30014.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30014.jpg",
+    "scan": "assets/source-faces/p_pennyshaver_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_pennyshaver_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Martin de Diego Sádaba",
+    "flavor_text": "“Braggarts chase big heists. Patience enriches skimming fractions of a credit at a time.” –Zahya"
   },
   {
     "id": "p_carmen_sg",
@@ -132,7 +272,17 @@
     "template_id": "standard_face",
     "collector_number": "015",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30015.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30015.jpg",
+    "scan": "assets/source-faces/p_carmen_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_carmen_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Jack Reeves",
+    "flavor_text": "The whole wide world your domain\nFor law your own free will."
   },
   {
     "id": "p_marjanah_sg",
@@ -141,7 +291,17 @@
     "template_id": "standard_face",
     "collector_number": "016",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30016.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30016.jpg",
+    "scan": "assets/source-faces/p_marjanah_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_marjanah_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Jack Reeves",
+    "flavor_text": "“You canʼt rule a kingdom by standing still.”\n–Zahya Sadeghi"
   },
   {
     "id": "p_tranquilizer_sg",
@@ -150,7 +310,17 @@
     "template_id": "standard_face",
     "collector_number": "017",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30017.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30017.jpg",
+    "scan": "assets/source-faces/p_tranquilizer_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_tranquilizer_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Jack Reeves",
+    "flavor_text": "Shhhh. Itʼs naptime."
   },
   {
     "id": "p_red_team_sg",
@@ -159,7 +329,17 @@
     "template_id": "standard_face",
     "collector_number": "018",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30018.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30018.jpg",
+    "scan": "assets/source-faces/p_red_team_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_red_team_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "The Domes of Heinlein are a pressure cooker of cutthroat capitalism. Prospective employers rarely have time for background checks."
   },
   {
     "id": "p_tao_salonga_telepresence_magician_sg",
@@ -168,7 +348,17 @@
     "template_id": "standard_face",
     "collector_number": "019",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30019.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30019.jpg",
+    "scan": "assets/source-faces/p_tao_salonga_telepresence_magician_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_tao_salonga_telepresence_magician_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "Sufficient skill is indistinguishable from magic."
   },
   {
     "id": "p_creative_commission_sg",
@@ -177,7 +367,17 @@
     "template_id": "standard_face",
     "collector_number": "020",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30020.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30020.jpg",
+    "scan": "assets/source-faces/p_creative_commission_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_creative_commission_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "The challenge of my art is what I live for, but Iʼm not going to say no to a patron with taste."
   },
   {
     "id": "p_vrcation_sg",
@@ -186,7 +386,17 @@
     "template_id": "standard_face",
     "collector_number": "021",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30021.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30021.jpg",
+    "scan": "assets/source-faces/p_vrcation_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_vrcation_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "“You know thereʼs no water in the Sea of Tranquility, right?”\n“That doesnʼt mean thereʼs no beach.”"
   },
   {
     "id": "p_dzmz_optimizer_sg",
@@ -195,7 +405,17 @@
     "template_id": "standard_face",
     "collector_number": "022",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30022.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30022.jpg",
+    "scan": "assets/source-faces/p_dzmz_optimizer_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_dzmz_optimizer_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "Tāo exhaled, the med-exoskeleton faithfully stabilizing him. In that absent breath, he reached through layers of waldos and optimizers and plucked the errant molecule from the chip."
   },
   {
     "id": "p_pantograph_sg",
@@ -204,7 +424,17 @@
     "template_id": "standard_face",
     "collector_number": "023",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30023.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30023.jpg",
+    "scan": "assets/source-faces/p_pantograph_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_pantograph_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Martin de Diego Sádaba",
+    "flavor_text": "“With this beautiful baby I can juggle simultaneous runs by haptic feedback alone!”\n–Tāo"
   },
   {
     "id": "p_conduit_sg",
@@ -213,7 +443,17 @@
     "template_id": "standard_face",
     "collector_number": "024",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30024.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30024.jpg",
+    "scan": "assets/source-faces/p_conduit_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_conduit_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Liiga Smilshkalne",
+    "flavor_text": "A dabbling with truth is a pernicious dream\nDrink deep, or taste not the raw datastream."
   },
   {
     "id": "p_echelon_sg",
@@ -222,7 +462,17 @@
     "template_id": "standard_face",
     "collector_number": "025",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30025.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30025.jpg",
+    "scan": "assets/source-faces/p_echelon_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_echelon_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Liiga Smilshkalne",
+    "flavor_text": "The beauty of open projects—each stands atop past success."
   },
   {
     "id": "p_unity_sg",
@@ -231,7 +481,17 @@
     "template_id": "standard_face",
     "collector_number": "026",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30026.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30026.jpg",
+    "scan": "assets/source-faces/p_unity_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_unity_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Liiga Smilshkalne",
+    "flavor_text": "The joy of handcrafted code—each fits perfectly within the whole."
   },
   {
     "id": "p_telework_contract_sg",
@@ -240,7 +500,17 @@
     "template_id": "standard_face",
     "collector_number": "027",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30027.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30027.jpg",
+    "scan": "assets/source-faces/p_telework_contract_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_telework_contract_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "“For all I know, I could spend a shift digging next to old Weyland himself.”\n–Lane"
   },
   {
     "id": "p_jailbreak_sg",
@@ -249,7 +519,17 @@
     "template_id": "standard_face",
     "collector_number": "028",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30028.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30028.jpg",
+    "scan": "assets/source-faces/p_jailbreak_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_jailbreak_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“Weʼll take the access codes from their own prisec—privilege escalation through local application of force.”\n–The Catalyst"
   },
   {
     "id": "p_overclock_sg",
@@ -258,7 +538,17 @@
     "template_id": "standard_face",
     "collector_number": "029",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30029.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30029.jpg",
+    "scan": "assets/source-faces/p_overclock_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_overclock_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Scott Uminga",
+    "flavor_text": "“After 381FS4 started acting independently, all bets were off. Rethreading its own brain chip… even probing our nodes. I had to shut it down.”\n–Linus Lovegood, NBN Novelties&Acquisitions"
   },
   {
     "id": "p_sure_gamble_sg",
@@ -267,7 +557,17 @@
     "template_id": "standard_face",
     "collector_number": "030",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30030.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30030.jpg",
+    "scan": "assets/source-faces/p_sure_gamble_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_sure_gamble_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Kira L. Nguyen",
+    "flavor_text": "Anyone can put in the hours of planning, practice, and preparation–but making it all look like luck takes style."
   },
   {
     "id": "p_t400_memory_diamond_sg",
@@ -276,7 +576,17 @@
     "template_id": "standard_face",
     "collector_number": "031",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30031.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30031.jpg",
+    "scan": "assets/source-faces/p_t400_memory_diamond_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_t400_memory_diamond_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Elizaveta Sokolova",
+    "flavor_text": "LLDS still holds the patent, but good tech attracts knockoffs."
   },
   {
     "id": "p_mayfly_sg",
@@ -285,7 +595,17 @@
     "template_id": "standard_face",
     "collector_number": "032",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30032.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30032.jpg",
+    "scan": "assets/source-faces/p_mayfly_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_mayfly_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Scott Uminga",
+    "flavor_text": "Compiling even the smallest AI takes weeks for only seconds of runtime, but that brief, shining moment allows… everything."
   },
   {
     "id": "p_smartware_distributor_sg",
@@ -294,7 +614,17 @@
     "template_id": "standard_face",
     "collector_number": "033",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30033.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30033.jpg",
+    "scan": "assets/source-faces/p_smartware_distributor_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_smartware_distributor_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "The beauty of 22nd-century tech: if it still functions after all these decades, you know the build quality is solid."
   },
   {
     "id": "p_verbal_plasticity_sg",
@@ -303,7 +633,17 @@
     "template_id": "standard_face",
     "collector_number": "034",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30034.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30034.jpg",
+    "scan": "assets/source-faces/p_verbal_plasticity_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_verbal_plasticity_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“Some kids got g-mods for beauty, sports, or staying up all night. My parents thought Broca-mods were cool. Hah. Fluent in ten languages so far, and still searching for the words to thank them.”\n–Patrick Blue, Solar Artist"
   },
   {
     "id": "p_haas_bioroid_precision_design_sg",
@@ -312,7 +652,17 @@
     "template_id": "standard_face",
     "collector_number": "035",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30035.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30035.jpg",
+    "scan": "assets/source-faces/p_haas_bioroid_precision_design_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_haas_bioroid_precision_design_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Emilio Rodríguez",
+    "flavor_text": "Not an Atom Misplaced."
   },
   {
     "id": "p_luminal_transubstantiation_sg",
@@ -321,7 +671,17 @@
     "template_id": "standard_face",
     "collector_number": "036",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30036.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30036.jpg",
+    "scan": "assets/source-faces/p_luminal_transubstantiation_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_luminal_transubstantiation_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Zoe Cohen",
+    "flavor_text": "We are the light of tomorrow."
   },
   {
     "id": "p_nico_campaign_sg",
@@ -330,7 +690,17 @@
     "template_id": "standard_face",
     "collector_number": "037",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30037.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30037.jpg",
+    "scan": "assets/source-faces/p_nico_campaign_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_nico_campaign_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“Haas thinks theyʼre making a new line of androgynous products. In truth, theyʼre making us thousands of new siblings to free.”\n–Quetzal"
   },
   {
     "id": "p_ansel_1_0_sg",
@@ -339,7 +709,17 @@
     "template_id": "standard_face",
     "collector_number": "038",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30038.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30038.jpg",
+    "scan": "assets/source-faces/p_ansel_1_0_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_ansel_1_0_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Galen Dara",
+    "flavor_text": "Designed by 2018 European Champion Patrick Gower"
   },
   {
     "id": "p_bran_1_0_sg",
@@ -348,7 +728,17 @@
     "template_id": "standard_face",
     "collector_number": "039",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30039.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30039.jpg",
+    "scan": "assets/source-faces/p_bran_1_0_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_bran_1_0_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Galen Dara",
+    "flavor_text": "A giant wakes…"
   },
   {
     "id": "p_seamless_launch_sg",
@@ -357,7 +747,17 @@
     "template_id": "standard_face",
     "collector_number": "040",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30040.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30040.jpg",
+    "scan": "assets/source-faces/p_seamless_launch_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_seamless_launch_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“The first lesson for handling bioroids is simple: they must not be allowed to feel.”\n–Do Nhi Minh"
   },
   {
     "id": "p_sprint_sg",
@@ -366,7 +766,17 @@
     "template_id": "standard_face",
     "collector_number": "041",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30041.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30041.jpg",
+    "scan": "assets/source-faces/p_sprint_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_sprint_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Galen Dara",
+    "flavor_text": "All time is crunch time."
   },
   {
     "id": "p_manegarm_skunkworks_sg",
@@ -375,7 +785,17 @@
     "template_id": "standard_face",
     "collector_number": "042",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30042.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30042.jpg",
+    "scan": "assets/source-faces/p_manegarm_skunkworks_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_manegarm_skunkworks_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“Whose memory-tape needs such stringent security?”\n–The Catalyst"
   },
   {
     "id": "p_jinteki_restoring_humanity_sg",
@@ -384,7 +804,17 @@
     "template_id": "standard_face",
     "collector_number": "043",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30043.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30043.jpg",
+    "scan": "assets/source-faces/p_jinteki_restoring_humanity_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_jinteki_restoring_humanity_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Emilio Rodríguez",
+    "flavor_text": "An End to Suffering."
   },
   {
     "id": "p_longevity_serum_sg",
@@ -393,7 +823,17 @@
     "template_id": "standard_face",
     "collector_number": "044",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30044.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30044.jpg",
+    "scan": "assets/source-faces/p_longevity_serum_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_longevity_serum_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "N. Hopkins",
+    "flavor_text": "We make you anew."
   },
   {
     "id": "p_urtica_cipher_sg",
@@ -402,7 +842,17 @@
     "template_id": "standard_face",
     "collector_number": "045",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30045.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30045.jpg",
+    "scan": "assets/source-faces/p_urtica_cipher_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_urtica_cipher_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "A novel spin-off of Chronos tech was admixing sensitive data with ethically-sourced brain images of injured staff. Few intruders can handle a thousand years of skin burns in one moment."
   },
   {
     "id": "p_diviner_sg",
@@ -411,7 +861,17 @@
     "template_id": "standard_face",
     "collector_number": "046",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30046.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30046.jpg",
+    "scan": "assets/source-faces/p_diviner_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_diviner_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "BalanceSheet",
+    "flavor_text": "It reads your future in a single biometric sweep."
   },
   {
     "id": "p_karuna_sg",
@@ -420,7 +880,17 @@
     "template_id": "standard_face",
     "collector_number": "047",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30047.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30047.jpg",
+    "scan": "assets/source-faces/p_karuna_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_karuna_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "BalanceSheet",
+    "flavor_text": "You did not escape, you were shown mercy."
   },
   {
     "id": "p_hansei_review_sg",
@@ -429,7 +899,17 @@
     "template_id": "standard_face",
     "collector_number": "048",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30048.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30048.jpg",
+    "scan": "assets/source-faces/p_hansei_review_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_hansei_review_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“Constant self-reflection is the key to excellence. We remember failed ideas, but do not carry them forward.”\n–Director Kase, unknown leadership seminar"
   },
   {
     "id": "p_neurospike_sg",
@@ -438,7 +918,17 @@
     "template_id": "standard_face",
     "collector_number": "049",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30049.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30049.jpg",
+    "scan": "assets/source-faces/p_neurospike_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_neurospike_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "BalanceSheet",
+    "flavor_text": "Macroscale developments within the Net decouple the prior informational states–surplus entropy is then gifted where it will do the most good."
   },
   {
     "id": "p_anoetic_void_sg",
@@ -447,7 +937,17 @@
     "template_id": "standard_face",
     "collector_number": "050",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30050.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30050.jpg",
+    "scan": "assets/source-faces/p_anoetic_void_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_anoetic_void_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "BalanceSheet",
+    "flavor_text": "The self-evolving Net twists into spaces unthought and unthinkable: realms of gods and other infohazards, mocking our sacrifices to petty causality.\n–Conceptual Frameworks for Applied Theology"
   },
   {
     "id": "p_nbn_reality_plus_sg",
@@ -456,7 +956,17 @@
     "template_id": "standard_face",
     "collector_number": "051",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30051.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30051.jpg",
+    "scan": "assets/source-faces/p_nbn_reality_plus_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_nbn_reality_plus_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Emilio Rodríguez",
+    "flavor_text": "Why Settle for Real?"
   },
   {
     "id": "p_tomorrows_headline_sg",
@@ -465,7 +975,17 @@
     "template_id": "standard_face",
     "collector_number": "052",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30052.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30052.jpg",
+    "scan": "assets/source-faces/p_tomorrows_headline_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_tomorrows_headline_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "NtscapeNavigator",
+    "flavor_text": "We donʼt find news. We make it."
   },
   {
     "id": "p_spin_doctor_sg",
@@ -474,7 +994,17 @@
     "template_id": "standard_face",
     "collector_number": "053",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30053.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30053.jpg",
+    "scan": "assets/source-faces/p_spin_doctor_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_spin_doctor_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“Itʼs worse than dead meat—your project is too toxic to even feed to the vultures! If you don’t want to join it in the bloody memory hole, crawl onto every business show you can and wallow in blame like a pig in muck.”"
   },
   {
     "id": "p_funhouse_sg",
@@ -483,7 +1013,17 @@
     "template_id": "standard_face",
     "collector_number": "054",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30054.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30054.jpg",
+    "scan": "assets/source-faces/p_funhouse_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_funhouse_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Bruno Balixa",
+    "flavor_text": "“I might take a break from VR after this one.”\n–SeaOfRibaldry, sensie streamer"
   },
   {
     "id": "p_ping_sg",
@@ -492,7 +1032,17 @@
     "template_id": "standard_face",
     "collector_number": "055",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30055.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30055.jpg",
+    "scan": "assets/source-faces/p_ping_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_ping_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Bruno Balixa",
+    "flavor_text": "AvID:??:73.174 time=0.632 ms\nAvID:??:73.174 time=0.201 ms\nAvID:??:73.174 time=0.000 ms ALERT"
   },
   {
     "id": "p_predictive_planogram_sg",
@@ -501,7 +1051,17 @@
     "template_id": "standard_face",
     "collector_number": "056",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30056.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30056.jpg",
+    "scan": "assets/source-faces/p_predictive_planogram_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_predictive_planogram_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Bruno Balixa",
+    "flavor_text": "For the best augmented reality shopping experience, please disable tracking protection."
   },
   {
     "id": "p_public_trail_sg",
@@ -510,7 +1070,17 @@
     "template_id": "standard_face",
     "collector_number": "057",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30057.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30057.jpg",
+    "scan": "assets/source-faces/p_public_trail_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_public_trail_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Bruno Balixa",
+    "flavor_text": "“A runner uses significant resources scrubbing their traces. Every cycle, itʼs harder to pin them down. But the game changes. In Heinlein, no one can last a day without brushing our AR-network.”\n–Cassie LaRosa, Lunar NetDefense Sysop"
   },
   {
     "id": "p_amaze_amusements_sg",
@@ -519,7 +1089,17 @@
     "template_id": "standard_face",
     "collector_number": "058",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30058.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30058.jpg",
+    "scan": "assets/source-faces/p_amaze_amusements_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_amaze_amusements_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Bruno Balixa",
+    "flavor_text": "Free commemorative souvenir!"
   },
   {
     "id": "p_weyland_consortium_built_to_last_sg",
@@ -528,7 +1108,17 @@
     "template_id": "standard_face",
     "collector_number": "059",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30059.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30059.jpg",
+    "scan": "assets/source-faces/p_weyland_consortium_built_to_last_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_weyland_consortium_built_to_last_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Emilio Rodríguez",
+    "flavor_text": "Here to Stay."
   },
   {
     "id": "p_above_the_law_sg",
@@ -537,7 +1127,17 @@
     "template_id": "standard_face",
     "collector_number": "060",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30060.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30060.jpg",
+    "scan": "assets/source-faces/p_above_the_law_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_above_the_law_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Seojun Park",
+    "flavor_text": "We are judge, jury, and executioner."
   },
   {
     "id": "p_clearinghouse_sg",
@@ -546,7 +1146,17 @@
     "template_id": "standard_face",
     "collector_number": "061",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30061.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30061.jpg",
+    "scan": "assets/source-faces/p_clearinghouse_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_clearinghouse_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“First rule of the business: make sure youʼre not ‘personally liable’ when the transaction executes.”\n–Ted J. Son, Central Counterparty Clearance"
   },
   {
     "id": "p_ballista_sg",
@@ -555,7 +1165,17 @@
     "template_id": "standard_face",
     "collector_number": "062",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30062.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30062.jpg",
+    "scan": "assets/source-faces/p_ballista_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_ballista_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Owen Sinodov",
+    "flavor_text": "“Puts a hole in your rig and your plans.”\n–René “Loup” Arcemont"
   },
   {
     "id": "p_pharos_sg",
@@ -564,7 +1184,16 @@
     "template_id": "standard_face",
     "collector_number": "063",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30063.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30063.jpg",
+    "scan": "assets/source-faces/p_pharos_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_pharos_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Owen Sinodov"
   },
   {
     "id": "p_government_subsidy_sg",
@@ -573,7 +1202,17 @@
     "template_id": "standard_face",
     "collector_number": "064",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30064.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30064.jpg",
+    "scan": "assets/source-faces/p_government_subsidy_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_government_subsidy_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "“If the government spent 1% of the funding they provide us tracking where the other 99% went, my colleagues and I would be in prison…\n…but that is a very big if.”\n–Huey DeMora, W-Con public-private facilitation seminar"
   },
   {
     "id": "p_retribution_sg",
@@ -582,7 +1221,17 @@
     "template_id": "standard_face",
     "collector_number": "065",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30065.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30065.jpg",
+    "scan": "assets/source-faces/p_retribution_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_retribution_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "Did you really think youʼd get away with it?"
   },
   {
     "id": "p_malapert_data_vault_sg",
@@ -591,7 +1240,17 @@
     "template_id": "standard_face",
     "collector_number": "066",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30066.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30066.jpg",
+    "scan": "assets/source-faces/p_malapert_data_vault_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_malapert_data_vault_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Owen Sinodov",
+    "flavor_text": "Sunlight does not touch the Crater of Eternal Darkness, a fitting abode for the Consortiumʼs malefic secrets."
   },
   {
     "id": "p_offworld_office_sg",
@@ -600,7 +1259,17 @@
     "template_id": "standard_face",
     "collector_number": "067",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30067.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30067.jpg",
+    "scan": "assets/source-faces/p_offworld_office_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_offworld_office_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "As the first lunar city, Heinlein was built on the dreams of a new frontier and boundless opportunity, but He3 mining is too lucrative for the corps to ever relinquish control."
   },
   {
     "id": "p_orbital_superiority_sg",
@@ -609,7 +1278,17 @@
     "template_id": "standard_face",
     "collector_number": "068",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30068.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30068.jpg",
+    "scan": "assets/source-faces/p_orbital_superiority_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_orbital_superiority_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Krembler",
+    "flavor_text": "Mobsters bribe police, megacorps acquire militaries."
   },
   {
     "id": "p_send_a_message_sg",
@@ -618,7 +1297,17 @@
     "template_id": "standard_face",
     "collector_number": "069",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30069.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30069.jpg",
+    "scan": "assets/source-faces/p_send_a_message_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_send_a_message_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "David Lei",
+    "flavor_text": "It might be over, but we will get them next time."
   },
   {
     "id": "p_superconducting_hub_sg",
@@ -627,7 +1316,17 @@
     "template_id": "standard_face",
     "collector_number": "070",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30070.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30070.jpg",
+    "scan": "assets/source-faces/p_superconducting_hub_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_superconducting_hub_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Scott Uminga",
+    "flavor_text": "With Earth-Luna communications, saving microseconds returns megacredits."
   },
   {
     "id": "p_regolith_mining_license_sg",
@@ -636,7 +1335,17 @@
     "template_id": "standard_face",
     "collector_number": "071",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30071.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30071.jpg",
+    "scan": "assets/source-faces/p_regolith_mining_license_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_regolith_mining_license_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "“The economy of three worlds is sustained by He3 extraction from the lunar surface. The very fulcrum of power, the key to collective survival—auctioned to the highest bidder.”\n–The Catalyst"
   },
   {
     "id": "p_palisade_sg",
@@ -645,7 +1354,17 @@
     "template_id": "standard_face",
     "collector_number": "072",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30072.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30072.jpg",
+    "scan": "assets/source-faces/p_palisade_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_palisade_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Scott Uminga",
+    "flavor_text": "Keep the neighbors honest."
   },
   {
     "id": "p_tithe_sg",
@@ -654,7 +1373,17 @@
     "template_id": "standard_face",
     "collector_number": "073",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30073.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30073.jpg",
+    "scan": "assets/source-faces/p_tithe_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_tithe_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Scott Uminga",
+    "flavor_text": "“Youʼll give till it hurts… then itʼll reach for more.”\n–Red Comyn"
   },
   {
     "id": "p_whitespace_sg",
@@ -663,7 +1392,17 @@
     "template_id": "standard_face",
     "collector_number": "074",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30074.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30074.jpg",
+    "scan": "assets/source-faces/p_whitespace_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_whitespace_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Scott Uminga",
+    "flavor_text": "[this space intentionally left blank]"
   },
   {
     "id": "p_hedge_fund_sg",
@@ -672,7 +1411,17 @@
     "template_id": "standard_face",
     "collector_number": "075",
     "quantity": 3,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30075.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30075.jpg",
+    "scan": "assets/source-faces/p_hedge_fund_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_hedge_fund_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Kira L. Nguyen",
+    "flavor_text": "A financial instrument for diverting money from those outside to those inside."
   },
   {
     "id": "p_the_catalyst_convention_breaker_sg",
@@ -681,7 +1430,17 @@
     "template_id": "standard_face",
     "collector_number": "076",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30076.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30076.jpg",
+    "scan": "assets/source-faces/p_the_catalyst_convention_breaker_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_the_catalyst_convention_breaker_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Benjamin Giletti",
+    "flavor_text": "Are you ready to start something big?"
   },
   {
     "id": "p_the_syndicate_profit_over_principle_sg",
@@ -690,6 +1449,16 @@
     "template_id": "standard_face",
     "collector_number": "077",
     "quantity": 1,
-    "image": "https://card-images.netrunnerdb.com/v2/large/30077.jpg"
+    "image": "https://card-images.netrunnerdb.com/v2/large/30077.jpg",
+    "scan": "assets/source-faces/p_the_syndicate_profit_over_principle_sg.png",
+    "scan_provenance": {
+      "source": "human",
+      "creator": "Null Signal Games",
+      "license": "Official print-and-play; private proof of concept",
+      "source_url": "https://access.nullsignal.games/Gateway/English/English/SystemGatewayEnglish-A4%20Printable%20Sheets%201x.pdf",
+      "notes": "Lossless native-pixel crop from the declared PnP PDF; see assets/source-faces/p_the_syndicate_profit_over_principle_sg.png.json for page, slot, and crop axes."
+    },
+    "artist": "Emilio Rodríguez",
+    "flavor_text": "You work for us. You just donʼt know it yet."
   }
 ]

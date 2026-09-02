@@ -1,0 +1,1953 @@
+{
+  "schema_version": 1,
+  "source_ref": "dea1633a4145435b0ca38c628dac0c88716bb6ea",
+  "source_format": "Null-Signal-Games/netrunner-cards-json pack/sg.json",
+  "cards": {
+    "rene_loup_arcemont_party_animal": {
+      "id": "rene_loup_arcemont_party_animal",
+      "name": "René \"Loup\" Arcemont: Party Animal",
+      "type": "identity",
+      "subtypes": [
+        "G-mod"
+      ],
+      "text": "The first time each turn you trash a card you are accessing, gain 1[credit] and draw 1 card.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15,
+        "base_link": 0
+      },
+      "deck_limit": 1
+    },
+    "wildcat_strike": {
+      "id": "wildcat_strike",
+      "name": "Wildcat Strike",
+      "type": "event",
+      "text": "Resolve 1 of the following of the Corp's choice:\n- Gain 6[credit].\n- Draw 4 cards.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "cost": 2,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "carnivore": {
+      "id": "carnivore",
+      "name": "Carnivore",
+      "type": "hardware",
+      "subtypes": [
+        "Console"
+      ],
+      "text": "+1[mu]\nAccess → **Trash 2 cards from your grip:** Trash the card you are accessing. Use this ability only once per turn.\nLimit 1 **console** per player.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": true,
+        "cost": 4,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "botulus": {
+      "id": "botulus",
+      "name": "Botulus",
+      "type": "program",
+      "subtypes": [
+        "Virus",
+        "Trojan"
+      ],
+      "text": "Install only on a piece of ice.\nWhen you install this program and when your turn begins, place 1 virus counter on this program.\n**Hosted virus counter:** Break 1 subroutine on host ice.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "cost": 2,
+        "memory_cost": 1,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "buzzsaw": {
+      "id": "buzzsaw",
+      "name": "Buzzsaw",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "Decoder"
+      ],
+      "text": "Interface → **1[credit]:** Break up to 2 **code gate** subroutines.\n**3[credit]:** +1 strength.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "cost": 4,
+        "strength": 3,
+        "memory_cost": 1,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "cleaver": {
+      "id": "cleaver",
+      "name": "Cleaver",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "Fracter"
+      ],
+      "text": "Interface → **1[credit]:** Break up to 2 **barrier** subroutines.\n**2[credit]:** +1 strength.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "cost": 3,
+        "strength": 3,
+        "memory_cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "fermenter": {
+      "id": "fermenter",
+      "name": "Fermenter",
+      "type": "program",
+      "subtypes": [
+        "Virus"
+      ],
+      "text": "When you install this program and when your turn begins, place 1 virus counter on this program.\n[click], [trash]**:** Gain 2[credit] for each hosted virus counter.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "cost": 1,
+        "memory_cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "leech": {
+      "id": "leech",
+      "name": "Leech",
+      "type": "program",
+      "subtypes": [
+        "Virus"
+      ],
+      "text": "Whenever you make a successful run on a central server, place 1 virus counter on this program.\n**Hosted virus counter:** The ice you are encountering gets -1 strength for the remainder of this encounter.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": false,
+        "cost": 1,
+        "memory_cost": 1,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "cookbook": {
+      "id": "cookbook",
+      "name": "Cookbook",
+      "type": "resource",
+      "subtypes": [
+        "Virtual"
+      ],
+      "text": "Whenever you install a **virus** program, you may place 1 virus counter on it.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "anarch",
+        "unique": true,
+        "cost": 1,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "zahya_sadeghi_versatile_smuggler": {
+      "id": "zahya_sadeghi_versatile_smuggler",
+      "name": "Zahya Sadeghi: Versatile Smuggler",
+      "type": "identity",
+      "subtypes": [
+        "Cyborg"
+      ],
+      "text": "Whenever a run on HQ or R&D ends, you may gain 1[credit] for each time you accessed a card during that run. Use this ability only once per turn.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15,
+        "base_link": 0
+      },
+      "deck_limit": 1
+    },
+    "mutual_favor": {
+      "id": "mutual_favor",
+      "name": "Mutual Favor",
+      "type": "event",
+      "text": "Search your stack for 1 **icebreaker** program and reveal it. *(Shuffle your stack after searching it.)* If you made a successful run this turn, you may install it. If you do not, add it to your grip.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "cost": 0,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "tread_lightly": {
+      "id": "tread_lightly",
+      "name": "Tread Lightly",
+      "type": "event",
+      "subtypes": [
+        "Run"
+      ],
+      "text": "Run any server. During that run, the rez cost of each piece of ice is increased by 3[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "cost": 1,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "docklands_pass": {
+      "id": "docklands_pass",
+      "name": "Docklands Pass",
+      "type": "hardware",
+      "text": "The first time each turn you breach HQ, access 1 additional card.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": true,
+        "cost": 2,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "pennyshaver": {
+      "id": "pennyshaver",
+      "name": "Pennyshaver",
+      "type": "hardware",
+      "subtypes": [
+        "Console"
+      ],
+      "text": "+1[mu]\nWhenever you make a successful run, place 1[credit] on this hardware.\n[click]**:** Place 1[credit] on this hardware, then take all credits from it.\nLimit 1 **console** per player.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": true,
+        "cost": 3,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "carmen": {
+      "id": "carmen",
+      "name": "Carmen",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "Killer"
+      ],
+      "text": "If you made a successful run this turn, this program costs 2[credit] less to install.\nInterface → **1[credit]:** Break 1 **sentry** subroutine.\n**2[credit]:** +3 strength.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "cost": 5,
+        "strength": 2,
+        "memory_cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "marjanah": {
+      "id": "marjanah",
+      "name": "Marjanah",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "Fracter"
+      ],
+      "text": "Interface → **2[credit]:** Break 1 **barrier** subroutine. If you made a successful run this turn, this ability costs 1[credit] less to use.\n**1[credit]:** +1 strength.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "cost": 0,
+        "strength": 1,
+        "memory_cost": 1,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "tranquilizer": {
+      "id": "tranquilizer",
+      "name": "Tranquilizer",
+      "type": "program",
+      "subtypes": [
+        "Virus",
+        "Trojan"
+      ],
+      "text": "Install only on a piece of ice.\nWhen you install this program and when your turn begins, place 1 virus counter on this program. Then, if there are 3 or more hosted virus counters, derez host ice.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "cost": 2,
+        "memory_cost": 1,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "red_team": {
+      "id": "red_team",
+      "name": "Red Team",
+      "type": "resource",
+      "subtypes": [
+        "Job"
+      ],
+      "text": "When you install this resource, load 12[credit] onto it. When it is empty, trash it.\n[click]**:** Run a central server you have not run this turn. If successful, take 3[credit] from this resource.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "criminal",
+        "unique": false,
+        "cost": 5,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "tao_salonga_telepresence_magician": {
+      "id": "tao_salonga_telepresence_magician",
+      "name": "Tāo Salonga: Telepresence Magician",
+      "type": "identity",
+      "subtypes": [
+        "Natural"
+      ],
+      "text": "Whenever an agenda is scored or stolen, you may swap 2 installed pieces of ice.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15,
+        "base_link": 0
+      },
+      "deck_limit": 1
+    },
+    "creative_commission": {
+      "id": "creative_commission",
+      "name": "Creative Commission",
+      "type": "event",
+      "text": "Gain 5[credit]. If you have any [click] remaining, lose [click].",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "vrcation": {
+      "id": "vrcation",
+      "name": "VRcation",
+      "type": "event",
+      "text": "Draw 4 cards. If you have any [click] remaining, lose [click].",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "dzmz_optimizer": {
+      "id": "dzmz_optimizer",
+      "name": "DZMZ Optimizer",
+      "type": "hardware",
+      "text": "+1[mu]\nThe first program you install each turn costs 1[credit] less to install.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 2,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "pantograph": {
+      "id": "pantograph",
+      "name": "Pantograph",
+      "type": "hardware",
+      "subtypes": [
+        "Console"
+      ],
+      "text": "+1[mu]\nWhenever an agenda is scored or stolen, gain 1[credit]. Then, you may install 1 card from your grip.\nLimit 1 **console** per player.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": true,
+        "cost": 2,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "conduit": {
+      "id": "conduit",
+      "name": "Conduit",
+      "type": "program",
+      "subtypes": [
+        "Virus"
+      ],
+      "text": "Whenever a successful run on R&D ends, you may place 1 virus counter on this program.\n[click]**:** Run R&D. If successful, access X additional cards when you breach R&D. X is equal to the number of hosted virus counters.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 4,
+        "memory_cost": 1,
+        "influence": 4
+      },
+      "deck_limit": 3
+    },
+    "echelon": {
+      "id": "echelon",
+      "name": "Echelon",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "Killer"
+      ],
+      "text": "This program gets +1 strength for each installed **icebreaker** *(including this one)*.\nInterface → **1[credit]:** Break 1 **sentry** subroutine.\n**3[credit]:** +2 strength.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 3,
+        "strength": 0,
+        "memory_cost": 1,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "unity": {
+      "id": "unity",
+      "name": "Unity",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "Decoder"
+      ],
+      "text": "Interface → **1[credit]:** Break 1 **code gate** subroutine.\n**1[credit]:** +1 strength for each installed **icebreaker** *(including this one)*.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 3,
+        "strength": 1,
+        "memory_cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "telework_contract": {
+      "id": "telework_contract",
+      "name": "Telework Contract",
+      "type": "resource",
+      "subtypes": [
+        "Job"
+      ],
+      "text": "When you install this resource, load 9[credit] onto it. When it is empty, trash it.\n[click]**:** Take 3[credit] from this resource. Use this ability only once per turn.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "shaper",
+        "unique": false,
+        "cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "jailbreak": {
+      "id": "jailbreak",
+      "name": "Jailbreak",
+      "type": "event",
+      "subtypes": [
+        "Run"
+      ],
+      "text": "Run HQ or R&D. If successful, draw 1 card and when you breach the attacked server, access 1 additional card.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "cost": 0,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "overclock": {
+      "id": "overclock",
+      "name": "Overclock",
+      "type": "event",
+      "subtypes": [
+        "Run"
+      ],
+      "text": "Place 5[credit] on this event, then run any server. You can spend hosted credits during that run.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "cost": 1,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "sure_gamble": {
+      "id": "sure_gamble",
+      "name": "Sure Gamble",
+      "type": "event",
+      "text": "Gain 9[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "cost": 5,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "t400_memory_diamond": {
+      "id": "t400_memory_diamond",
+      "name": "T400 Memory Diamond",
+      "type": "hardware",
+      "subtypes": [
+        "Chip"
+      ],
+      "text": "+1[mu]\nYou get +1 maximum hand size.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "cost": 2,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "mayfly": {
+      "id": "mayfly",
+      "name": "Mayfly",
+      "type": "program",
+      "subtypes": [
+        "Icebreaker",
+        "AI"
+      ],
+      "text": "Interface → **1[credit]:** Break 1 subroutine. When this run ends, trash this program.\n**1[credit]:** +1 strength.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "cost": 1,
+        "strength": 1,
+        "memory_cost": 2,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "smartware_distributor": {
+      "id": "smartware_distributor",
+      "name": "Smartware Distributor",
+      "type": "resource",
+      "subtypes": [
+        "Connection"
+      ],
+      "text": "[click]**:** Place 3[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "cost": 0,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "verbal_plasticity": {
+      "id": "verbal_plasticity",
+      "name": "Verbal Plasticity",
+      "type": "resource",
+      "subtypes": [
+        "Genetics"
+      ],
+      "text": "The first time each turn you take the basic action to draw 1 card, instead draw 2 cards.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": true,
+        "cost": 3,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "haas_bioroid_precision_design": {
+      "id": "haas_bioroid_precision_design",
+      "name": "Haas-Bioroid: Precision Design",
+      "type": "identity",
+      "subtypes": [
+        "Megacorp"
+      ],
+      "text": "You get +1 maximum hand size.\nWhenever you score an agenda, you may add 1 card from Archives to HQ.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15
+      },
+      "deck_limit": 1
+    },
+    "luminal_transubstantiation": {
+      "id": "luminal_transubstantiation",
+      "name": "Luminal Transubstantiation",
+      "type": "agenda",
+      "subtypes": [
+        "Research"
+      ],
+      "text": "When you score this agenda, gain [click][click][click]. You cannot score agendas for the remainder of the turn.\nLimit 1 per deck.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "advancement_cost": 3,
+        "agenda_points": 2
+      },
+      "deck_limit": 1
+    },
+    "nico_campaign": {
+      "id": "nico_campaign",
+      "name": "Nico Campaign",
+      "type": "asset",
+      "subtypes": [
+        "Advertisement"
+      ],
+      "text": "When you rez this asset, load 9[credit] onto it. When it is empty, trash it and draw 1 card.\nWhen your turn begins, take 3[credit] from this asset.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "cost": 2,
+        "trash_cost": 2,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "ansel_1_0": {
+      "id": "ansel_1_0",
+      "name": "Ansel 1.0",
+      "type": "ice",
+      "subtypes": [
+        "Sentry",
+        "Bioroid",
+        "Destroyer"
+      ],
+      "text": "**Lose [click]:** Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] Trash 1 installed Runner card.\n[subroutine] You may install 1 card from HQ or Archives.\n[subroutine] The Runner cannot steal or trash Corp cards for the remainder of this run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "cost": 6,
+        "strength": 4,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "bran_1_0": {
+      "id": "bran_1_0",
+      "name": "Brân 1.0",
+      "type": "ice",
+      "subtypes": [
+        "Barrier",
+        "Bioroid"
+      ],
+      "text": "**Lose [click]:** Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs.\n[subroutine] End the run.\n[subroutine] End the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "cost": 6,
+        "strength": 6,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "seamless_launch": {
+      "id": "seamless_launch",
+      "name": "Seamless Launch",
+      "type": "operation",
+      "text": "Place 2 advancement counters on 1 installed card that you did not install this turn.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "cost": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "sprint": {
+      "id": "sprint",
+      "name": "Sprint",
+      "type": "operation",
+      "text": "Draw 3 cards. Shuffle 2 cards from HQ into R&D.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": false,
+        "cost": 0,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "manegarm_skunkworks": {
+      "id": "manegarm_skunkworks",
+      "name": "Manegarm Skunkworks",
+      "type": "upgrade",
+      "text": "Whenever the Runner approaches this server, end the run unless they either spend [click][click] or pay 5[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "haas-bioroid",
+        "unique": true,
+        "cost": 2,
+        "trash_cost": 3,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "jinteki_restoring_humanity": {
+      "id": "jinteki_restoring_humanity",
+      "name": "Jinteki: Restoring Humanity",
+      "type": "identity",
+      "subtypes": [
+        "Megacorp"
+      ],
+      "text": "When your discard phase ends, if there is a facedown card in Archives, gain 1[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15
+      },
+      "deck_limit": 1
+    },
+    "longevity_serum": {
+      "id": "longevity_serum",
+      "name": "Longevity Serum",
+      "type": "agenda",
+      "subtypes": [
+        "Research"
+      ],
+      "text": "When you score this agenda, trash any number of cards from HQ. Shuffle up to 3 cards from Archives into R&D.\nLimit 1 per deck.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "advancement_cost": 3,
+        "agenda_points": 2
+      },
+      "deck_limit": 1
+    },
+    "urtica_cipher": {
+      "id": "urtica_cipher",
+      "name": "Urtica Cipher",
+      "type": "asset",
+      "subtypes": [
+        "Ambush"
+      ],
+      "text": "You can advance this asset.\nWhen the Runner accesses this asset while it is installed, do 2 net damage plus 1 net damage for each hosted advancement counter.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "cost": 0,
+        "trash_cost": 2,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "diviner": {
+      "id": "diviner",
+      "name": "Diviner",
+      "type": "ice",
+      "subtypes": [
+        "Code Gate",
+        "AP"
+      ],
+      "text": "[subroutine] Do 1 net damage. If you trash a card with a printed play or install cost that is an odd number, end the run. *(0 is not odd.)*",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "cost": 2,
+        "strength": 3,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "karuna": {
+      "id": "karuna",
+      "name": "Karunā",
+      "type": "ice",
+      "subtypes": [
+        "Sentry",
+        "AP"
+      ],
+      "text": "[subroutine] Do 2 net damage. The Runner may jack out.\n[subroutine] Do 2 net damage.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "cost": 4,
+        "strength": 3,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "hansei_review": {
+      "id": "hansei_review",
+      "name": "Hansei Review",
+      "type": "operation",
+      "subtypes": [
+        "Transaction"
+      ],
+      "text": "Gain 10[credit]. If there are any cards in HQ, trash 1 of them.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "cost": 5,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "neurospike": {
+      "id": "neurospike",
+      "name": "Neurospike",
+      "type": "operation",
+      "subtypes": [
+        "Gray Ops"
+      ],
+      "text": "Do X net damage, where X is equal to the sum of the printed agenda points on agendas you scored this turn.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": false,
+        "cost": 3,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "anoetic_void": {
+      "id": "anoetic_void",
+      "name": "Anoetic Void",
+      "type": "upgrade",
+      "text": "Whenever the Runner approaches this server, you may pay 2[credit] and trash 2 cards from HQ. If you do, end the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "jinteki",
+        "unique": true,
+        "cost": 0,
+        "trash_cost": 1,
+        "influence": 4
+      },
+      "deck_limit": 3
+    },
+    "nbn_reality_plus": {
+      "id": "nbn_reality_plus",
+      "name": "NBN: Reality Plus",
+      "type": "identity",
+      "subtypes": [
+        "Megacorp"
+      ],
+      "text": "The first time each turn the Runner takes a tag, gain 2[credit] or draw 2 cards.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15
+      },
+      "deck_limit": 1
+    },
+    "tomorrows_headline": {
+      "id": "tomorrows_headline",
+      "name": "Tomorrow's Headline",
+      "type": "agenda",
+      "subtypes": [
+        "Ambush"
+      ],
+      "text": "When this agenda is scored or stolen, give the Runner 1 tag.\nLimit 1 per deck.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": false,
+        "advancement_cost": 3,
+        "agenda_points": 2
+      },
+      "deck_limit": 1
+    },
+    "spin_doctor": {
+      "id": "spin_doctor",
+      "name": "Spin Doctor",
+      "type": "asset",
+      "subtypes": [
+        "Character"
+      ],
+      "text": "When you rez this asset, draw 2 cards.\n**Remove this asset from the game:** Shuffle up to 2 cards from Archives into R&D.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": true,
+        "cost": 0,
+        "trash_cost": 2,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "funhouse": {
+      "id": "funhouse",
+      "name": "Funhouse",
+      "type": "ice",
+      "subtypes": [
+        "Code Gate"
+      ],
+      "text": "When the Runner encounters this ice, end the run unless the Runner takes 1 tag.\n[subroutine] Give the Runner 1 tag unless they pay 4[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": false,
+        "cost": 5,
+        "strength": 4,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "ping": {
+      "id": "ping",
+      "name": "Ping",
+      "type": "ice",
+      "subtypes": [
+        "Barrier"
+      ],
+      "text": "When you rez this ice during a run against this server, give the Runner 1 tag.\n[subroutine] End the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": false,
+        "cost": 2,
+        "strength": 1,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "predictive_planogram": {
+      "id": "predictive_planogram",
+      "name": "Predictive Planogram",
+      "type": "operation",
+      "subtypes": [
+        "Transaction"
+      ],
+      "text": "Resolve 1 of the following. If the Runner is tagged, you may resolve both instead.\n- Gain 3[credit].\n- Draw 3 cards.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": false,
+        "cost": 0,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "public_trail": {
+      "id": "public_trail",
+      "name": "Public Trail",
+      "type": "operation",
+      "subtypes": [
+        "Gray Ops"
+      ],
+      "text": "Play only if the Runner made a successful run during their last turn.\nGive the Runner 1 tag unless they pay 8[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": false,
+        "cost": 4,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "amaze_amusements": {
+      "id": "amaze_amusements",
+      "name": "AMAZE Amusements",
+      "type": "upgrade",
+      "text": "Persistent → Whenever a run on this server ends, if the Runner stole any agendas during that run, give the Runner 2 tags. *(If the Runner trashes this card while accessing it, this ability still applies for the remainder of this run.)*",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "nbn",
+        "unique": true,
+        "cost": 1,
+        "trash_cost": 3,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "weyland_consortium_built_to_last": {
+      "id": "weyland_consortium_built_to_last",
+      "name": "Weyland Consortium: Built to Last",
+      "type": "identity",
+      "subtypes": [
+        "Megacorp"
+      ],
+      "text": "Whenever you advance a card, gain 2[credit] if it had no advancement counters.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "minimum_deck_size": 40,
+        "influence_limit": 15
+      },
+      "deck_limit": 1
+    },
+    "above_the_law": {
+      "id": "above_the_law",
+      "name": "Above the Law",
+      "type": "agenda",
+      "subtypes": [
+        "Security"
+      ],
+      "text": "When you score this agenda, you may trash 1 installed resource.\nLimit 1 per deck.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "advancement_cost": 3,
+        "agenda_points": 2
+      },
+      "deck_limit": 1
+    },
+    "clearinghouse": {
+      "id": "clearinghouse",
+      "name": "Clearinghouse",
+      "type": "asset",
+      "subtypes": [
+        "Hostile"
+      ],
+      "text": "You can advance this asset.\nWhen your turn begins, you may trash this asset to do 1 meat damage for each hosted advancement counter.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "cost": 0,
+        "trash_cost": 3,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "ballista": {
+      "id": "ballista",
+      "name": "Ballista",
+      "type": "ice",
+      "subtypes": [
+        "Sentry",
+        "Destroyer"
+      ],
+      "text": "[subroutine] Trash 1 installed program or end the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "cost": 5,
+        "strength": 4,
+        "influence": 2
+      },
+      "deck_limit": 3
+    },
+    "pharos": {
+      "id": "pharos",
+      "name": "Pharos",
+      "type": "ice",
+      "subtypes": [
+        "Barrier"
+      ],
+      "text": "You can advance this ice. It gets +5 strength while there are 3 or more hosted advancement counters.\n[subroutine] Give the Runner 1 tag.\n[subroutine] End the run.\n[subroutine] End the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "cost": 7,
+        "strength": 5,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "government_subsidy": {
+      "id": "government_subsidy",
+      "name": "Government Subsidy",
+      "type": "operation",
+      "subtypes": [
+        "Transaction"
+      ],
+      "text": "Gain 15[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "cost": 10,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "retribution": {
+      "id": "retribution",
+      "name": "Retribution",
+      "type": "operation",
+      "subtypes": [
+        "Gray Ops"
+      ],
+      "text": "Play only if the Runner is tagged.\nTrash 1 installed program or piece of hardware.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": false,
+        "cost": 1,
+        "influence": 1
+      },
+      "deck_limit": 3
+    },
+    "malapert_data_vault": {
+      "id": "malapert_data_vault",
+      "name": "Malapert Data Vault",
+      "type": "upgrade",
+      "text": "Whenever you score an agenda from this server, you may search R&D for 1 non-agenda card and reveal it. *(Shuffle R&D after searching it.)* Add that card to HQ.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "weyland-consortium",
+        "unique": true,
+        "cost": 1,
+        "trash_cost": 4,
+        "influence": 3
+      },
+      "deck_limit": 3
+    },
+    "offworld_office": {
+      "id": "offworld_office",
+      "name": "Offworld Office",
+      "type": "agenda",
+      "subtypes": [
+        "Expansion"
+      ],
+      "text": "When you score this agenda, gain 7[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "advancement_cost": 4,
+        "agenda_points": 2,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "orbital_superiority": {
+      "id": "orbital_superiority",
+      "name": "Orbital Superiority",
+      "type": "agenda",
+      "subtypes": [
+        "Security"
+      ],
+      "text": "When you score this agenda, if the Runner is tagged, do 4 meat damage; otherwise, give the Runner 1 tag.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "advancement_cost": 4,
+        "agenda_points": 2,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "send_a_message": {
+      "id": "send_a_message",
+      "name": "Send a Message",
+      "type": "agenda",
+      "subtypes": [
+        "Security"
+      ],
+      "text": "When this agenda is scored or stolen, you may rez 1 installed piece of ice, ignoring all costs.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "advancement_cost": 5,
+        "agenda_points": 3,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "superconducting_hub": {
+      "id": "superconducting_hub",
+      "name": "Superconducting Hub",
+      "type": "agenda",
+      "subtypes": [
+        "Expansion"
+      ],
+      "text": "When you score this agenda, you may draw 2 cards.\nYou get +2 maximum hand size.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "advancement_cost": 3,
+        "agenda_points": 1,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "regolith_mining_license": {
+      "id": "regolith_mining_license",
+      "name": "Regolith Mining License",
+      "type": "asset",
+      "text": "When you rez this asset, load 15[credit] onto it. When it is empty, trash it.\n[click]**:** Take 3[credit] from this asset.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "cost": 2,
+        "trash_cost": 3,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "palisade": {
+      "id": "palisade",
+      "name": "Palisade",
+      "type": "ice",
+      "subtypes": [
+        "Barrier"
+      ],
+      "text": "While this ice is protecting a remote server, it gets +2 strength.\n[subroutine] End the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "cost": 3,
+        "strength": 2,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "tithe": {
+      "id": "tithe",
+      "name": "Tithe",
+      "type": "ice",
+      "subtypes": [
+        "Sentry",
+        "AP"
+      ],
+      "text": "[subroutine] Do 1 net damage.\n[subroutine] Gain 1[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "cost": 1,
+        "strength": 1,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "whitespace": {
+      "id": "whitespace",
+      "name": "Whitespace",
+      "type": "ice",
+      "subtypes": [
+        "Code Gate"
+      ],
+      "text": "[subroutine] The Runner loses 3[credit].\n[subroutine] If the Runner has 6[credit] or less, end the run.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "cost": 2,
+        "strength": 0,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "hedge_fund": {
+      "id": "hedge_fund",
+      "name": "Hedge Fund",
+      "type": "operation",
+      "subtypes": [
+        "Transaction"
+      ],
+      "text": "Gain 9[credit].",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "cost": 5,
+        "influence": 0
+      },
+      "deck_limit": 3
+    },
+    "the_catalyst_convention_breaker": {
+      "id": "the_catalyst_convention_breaker",
+      "name": "The Catalyst: Convention Breaker",
+      "type": "identity",
+      "subtypes": [
+        "Natural"
+      ],
+      "text": "Starter game only.",
+      "keywords": [],
+      "attributes": {
+        "side": "runner",
+        "faction": "neutral-runner",
+        "unique": false,
+        "minimum_deck_size": 30,
+        "base_link": 0
+      },
+      "deck_limit": 1
+    },
+    "the_syndicate_profit_over_principle": {
+      "id": "the_syndicate_profit_over_principle",
+      "name": "The Syndicate: Profit over Principle",
+      "type": "identity",
+      "subtypes": [
+        "Megacorp"
+      ],
+      "text": "Starter game only.",
+      "keywords": [],
+      "attributes": {
+        "side": "corp",
+        "faction": "neutral-corp",
+        "unique": false,
+        "minimum_deck_size": 30
+      },
+      "deck_limit": 1
+    }
+  },
+  "printings": {
+    "p_rene_loup_arcemont_party_animal_sg": {
+      "set_id": "sg",
+      "collector_number": "001",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "Run wyld.",
+      "variant": null
+    },
+    "p_wildcat_strike_sg": {
+      "set_id": "sg",
+      "collector_number": "002",
+      "artist": "David Lei",
+      "flavor_text": "They can buy off union leadership, but they can't stop us walking out!",
+      "variant": null
+    },
+    "p_carnivore_sg": {
+      "set_id": "sg",
+      "collector_number": "003",
+      "artist": "Martin de Diego Sádaba",
+      "flavor_text": "\"It hungers to sink teeth into problems.\"\n—Loup",
+      "variant": null
+    },
+    "p_botulus_sg": {
+      "set_id": "sg",
+      "collector_number": "004",
+      "artist": "Cat Shen",
+      "flavor_text": "Was it something you ate?",
+      "variant": null
+    },
+    "p_buzzsaw_sg": {
+      "set_id": "sg",
+      "collector_number": "005",
+      "artist": "Cat Shen",
+      "flavor_text": "Destruction is an art.",
+      "variant": null
+    },
+    "p_cleaver_sg": {
+      "set_id": "sg",
+      "collector_number": "006",
+      "artist": "Cat Shen",
+      "flavor_text": "Subtlety is a luxury.",
+      "variant": null
+    },
+    "p_fermenter_sg": {
+      "set_id": "sg",
+      "collector_number": "007",
+      "artist": "Cat Shen",
+      "flavor_text": "\"There's a tension to a cook. Each processing cycle sweetens the pot and raises the heat. I stir all night, but few have my appetite for danger.\"\n—René \"Loup\" Arcemont",
+      "variant": null
+    },
+    "p_leech_sg": {
+      "set_id": "sg",
+      "collector_number": "008",
+      "artist": "Cat Shen",
+      "flavor_text": "The greediest bloodsucker this side of a corporate boardroom.",
+      "variant": null
+    },
+    "p_cookbook_sg": {
+      "set_id": "sg",
+      "collector_number": "009",
+      "artist": "Cat Shen",
+      "flavor_text": "\"It waits on an unlabelled memstrip far below the deepest hab. Angry, desperate souls seek it out, hungry for power to change a brutal world. Once they can stomach no more bitter revenge, they return to that nameless tunnel, the book a recipe thicker.\"\n—Heinlein urban legend",
+      "variant": null
+    },
+    "p_zahya_sadeghi_versatile_smuggler_sg": {
+      "set_id": "sg",
+      "collector_number": "010",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "I obtain your desire.",
+      "variant": null
+    },
+    "p_mutual_favor_sg": {
+      "set_id": "sg",
+      "collector_number": "011",
+      "artist": "David Lei",
+      "flavor_text": "The real reward is the friends you make along the way.",
+      "variant": null
+    },
+    "p_tread_lightly_sg": {
+      "set_id": "sg",
+      "collector_number": "012",
+      "artist": "Jack Reeves",
+      "flavor_text": "\"A mirrorfiber mod or high-end mantle can be helpful, but nothing beats a good dose of 'keeping your damn head down.'\"\n—\"G0ph3r\" O'Ryan",
+      "variant": null
+    },
+    "p_docklands_pass_sg": {
+      "set_id": "sg",
+      "collector_number": "013",
+      "artist": "David Lei",
+      "flavor_text": "Zahya knows the keeper of every door between the Docklands and the Domes. More importantly, she knows their price.",
+      "variant": null
+    },
+    "p_pennyshaver_sg": {
+      "set_id": "sg",
+      "collector_number": "014",
+      "artist": "Martin de Diego Sádaba",
+      "flavor_text": "\"Braggarts chase big heists. Patience enriches skimming fractions of a credit at a time.\" —Zahya",
+      "variant": null
+    },
+    "p_carmen_sg": {
+      "set_id": "sg",
+      "collector_number": "015",
+      "artist": "Jack Reeves",
+      "flavor_text": "The whole wide world your domain\nFor law your own free will.",
+      "variant": null
+    },
+    "p_marjanah_sg": {
+      "set_id": "sg",
+      "collector_number": "016",
+      "artist": "Jack Reeves",
+      "flavor_text": "\"You can't rule a kingdom by standing still.\"\n—Zahya Sadeghi",
+      "variant": null
+    },
+    "p_tranquilizer_sg": {
+      "set_id": "sg",
+      "collector_number": "017",
+      "artist": "Jack Reeves",
+      "flavor_text": "Shhhh. It's naptime.",
+      "variant": null
+    },
+    "p_red_team_sg": {
+      "set_id": "sg",
+      "collector_number": "018",
+      "artist": "David Lei",
+      "flavor_text": "The Domes of Heinlein are a pressure cooker of cutthroat capitalism. Prospective employers rarely have time for background checks.",
+      "variant": null
+    },
+    "p_tao_salonga_telepresence_magician_sg": {
+      "set_id": "sg",
+      "collector_number": "019",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "Sufficient skill is indistinguishable from magic.",
+      "variant": null
+    },
+    "p_creative_commission_sg": {
+      "set_id": "sg",
+      "collector_number": "020",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "The challenge of my art is what I live for, but I'm not going to say no to a patron with taste.",
+      "variant": null
+    },
+    "p_vrcation_sg": {
+      "set_id": "sg",
+      "collector_number": "021",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "\"You know there's no water in the Sea of Tranquility, right?\"\n\"That doesn't mean there's no beach.\"",
+      "variant": null
+    },
+    "p_dzmz_optimizer_sg": {
+      "set_id": "sg",
+      "collector_number": "022",
+      "artist": "David Lei",
+      "flavor_text": "Tāo exhaled, the med-exoskeleton faithfully stabilizing him. In that absent breath, he reached through layers of waldos and optimizers and plucked the errant molecule from the chip.",
+      "variant": null
+    },
+    "p_pantograph_sg": {
+      "set_id": "sg",
+      "collector_number": "023",
+      "artist": "Martin de Diego Sádaba",
+      "flavor_text": "\"With this beautiful baby I can juggle simultaneous runs by haptic feedback alone!\"\n—Tāo",
+      "variant": null
+    },
+    "p_conduit_sg": {
+      "set_id": "sg",
+      "collector_number": "024",
+      "artist": "Liiga Smilshkalne",
+      "flavor_text": "A dabbling with truth is a pernicious dream\nDrink deep, or taste not the raw datastream.",
+      "variant": null
+    },
+    "p_echelon_sg": {
+      "set_id": "sg",
+      "collector_number": "025",
+      "artist": "Liiga Smilshkalne",
+      "flavor_text": "The beauty of open projects—each stands atop past success.",
+      "variant": null
+    },
+    "p_unity_sg": {
+      "set_id": "sg",
+      "collector_number": "026",
+      "artist": "Liiga Smilshkalne",
+      "flavor_text": "The joy of handcrafted code—each fits perfectly within the whole.",
+      "variant": null
+    },
+    "p_telework_contract_sg": {
+      "set_id": "sg",
+      "collector_number": "027",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "\"For all I know, I could spend a shift digging next to old Weyland himself.\"\n—Lane",
+      "variant": null
+    },
+    "p_jailbreak_sg": {
+      "set_id": "sg",
+      "collector_number": "028",
+      "artist": "David Lei",
+      "flavor_text": "\"We'll take the access codes from their own prisec—privilege escalation through local application of force.\"\n—The Catalyst",
+      "variant": null
+    },
+    "p_overclock_sg": {
+      "set_id": "sg",
+      "collector_number": "029",
+      "artist": "Scott Uminga",
+      "flavor_text": "\"After 381FS4 started acting independently, all bets were off. Rethreading its own brain chip... even probing **our** nodes. I had to shut it down.\"\n—Linus Lovegood, NBN Novelties&Acquisitions",
+      "variant": null
+    },
+    "p_sure_gamble_sg": {
+      "set_id": "sg",
+      "collector_number": "030",
+      "artist": "Kira L. Nguyen",
+      "flavor_text": "Anyone can put in the hours of planning, practice, and preparation—but making it all look like luck takes **style**.",
+      "variant": null
+    },
+    "p_t400_memory_diamond_sg": {
+      "set_id": "sg",
+      "collector_number": "031",
+      "artist": "Elizaveta Sokolova",
+      "flavor_text": "LLDS still holds the patent, but good tech attracts knockoffs.",
+      "variant": null
+    },
+    "p_mayfly_sg": {
+      "set_id": "sg",
+      "collector_number": "032",
+      "artist": "Scott Uminga",
+      "flavor_text": "Compiling even the smallest AI takes weeks for only seconds of runtime, but that brief, shining moment allows... **everything**.",
+      "variant": null
+    },
+    "p_smartware_distributor_sg": {
+      "set_id": "sg",
+      "collector_number": "033",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "The beauty of 22nd-century tech: if it still functions after all these decades, you know the build quality is solid.",
+      "variant": null
+    },
+    "p_verbal_plasticity_sg": {
+      "set_id": "sg",
+      "collector_number": "034",
+      "artist": "David Lei",
+      "flavor_text": "\"Some kids got g-mods for beauty, sports, or staying up all night. My parents thought Broca-mods were cool. Hah. Fluent in ten languages so far, and still searching for the words to thank them.\"\n—Patrick Blue, Solar Artist",
+      "variant": null
+    },
+    "p_haas_bioroid_precision_design_sg": {
+      "set_id": "sg",
+      "collector_number": "035",
+      "artist": "Emilio Rodríguez",
+      "flavor_text": "Not an Atom Misplaced.",
+      "variant": null
+    },
+    "p_luminal_transubstantiation_sg": {
+      "set_id": "sg",
+      "collector_number": "036",
+      "artist": "Zoe Cohen",
+      "flavor_text": "We are the light of tomorrow.",
+      "variant": null
+    },
+    "p_nico_campaign_sg": {
+      "set_id": "sg",
+      "collector_number": "037",
+      "artist": "David Lei",
+      "flavor_text": "Haas thinks they're making a new line of androgynous products. In truth, they're making us thousands of new siblings to free.",
+      "variant": null
+    },
+    "p_ansel_1_0_sg": {
+      "set_id": "sg",
+      "collector_number": "038",
+      "artist": "Galen Dara",
+      "flavor_text": "**Designed by 2018 European Champion Patrick Gower**",
+      "variant": null
+    },
+    "p_bran_1_0_sg": {
+      "set_id": "sg",
+      "collector_number": "039",
+      "artist": "Galen Dara",
+      "flavor_text": "A giant wakes...",
+      "variant": null
+    },
+    "p_seamless_launch_sg": {
+      "set_id": "sg",
+      "collector_number": "040",
+      "artist": "David Lei",
+      "flavor_text": "The first lesson for handling bioroids is simple: they must not be allowed to feel.",
+      "variant": null
+    },
+    "p_sprint_sg": {
+      "set_id": "sg",
+      "collector_number": "041",
+      "artist": "Galen Dara",
+      "flavor_text": "All time is crunch time.",
+      "variant": null
+    },
+    "p_manegarm_skunkworks_sg": {
+      "set_id": "sg",
+      "collector_number": "042",
+      "artist": "David Lei",
+      "flavor_text": "\"Whose memory-tape needs such stringent security?\"\n—The Catalyst",
+      "variant": null
+    },
+    "p_jinteki_restoring_humanity_sg": {
+      "set_id": "sg",
+      "collector_number": "043",
+      "artist": "Emilio Rodríguez",
+      "flavor_text": "An End to Suffering.",
+      "variant": null
+    },
+    "p_longevity_serum_sg": {
+      "set_id": "sg",
+      "collector_number": "044",
+      "artist": "N. Hopkins",
+      "flavor_text": "We make you anew.",
+      "variant": null
+    },
+    "p_urtica_cipher_sg": {
+      "set_id": "sg",
+      "collector_number": "045",
+      "artist": "David Lei",
+      "flavor_text": "A novel spin-off of Chronos tech was admixing sensitive data with ethically-sourced brain images of injured staff. Few intruders can handle a thousand years of skin burns in one moment.",
+      "variant": null
+    },
+    "p_diviner_sg": {
+      "set_id": "sg",
+      "collector_number": "046",
+      "artist": "BalanceSheet",
+      "flavor_text": "It reads your future in a single biometric sweep.",
+      "variant": null
+    },
+    "p_karuna_sg": {
+      "set_id": "sg",
+      "collector_number": "047",
+      "artist": "BalanceSheet",
+      "flavor_text": "You did not escape, you were shown mercy.",
+      "variant": null
+    },
+    "p_hansei_review_sg": {
+      "set_id": "sg",
+      "collector_number": "048",
+      "artist": "David Lei",
+      "flavor_text": "\"Constant self-reflection is the key to excellence. We remember failed ideas, but do not carry them forward.\"\n—Director Kase, unknown leadership seminar",
+      "variant": null
+    },
+    "p_neurospike_sg": {
+      "set_id": "sg",
+      "collector_number": "049",
+      "artist": "BalanceSheet",
+      "flavor_text": "Macroscale developments within the Net decouple the prior informational states—surplus entropy is then gifted where it will do the most good.",
+      "variant": null
+    },
+    "p_anoetic_void_sg": {
+      "set_id": "sg",
+      "collector_number": "050",
+      "artist": "BalanceSheet",
+      "flavor_text": "The self-evolving Net twists into spaces unthought and unthinkable: realms of gods and other infohazards, mocking our sacrifices to petty causality.\n—Conceptual Frameworks for Applied Theology",
+      "variant": null
+    },
+    "p_nbn_reality_plus_sg": {
+      "set_id": "sg",
+      "collector_number": "051",
+      "artist": "Emilio Rodríguez",
+      "flavor_text": "Why Settle for Real?",
+      "variant": null
+    },
+    "p_tomorrows_headline_sg": {
+      "set_id": "sg",
+      "collector_number": "052",
+      "artist": "NtscapeNavigator",
+      "flavor_text": "We don't find news. We make it.",
+      "variant": null
+    },
+    "p_spin_doctor_sg": {
+      "set_id": "sg",
+      "collector_number": "053",
+      "artist": "David Lei",
+      "flavor_text": "\"It's worse than dead meat—your project is too toxic to even feed to the vultures! If you don't want to **join** it in the bloody memory hole, crawl onto every business show you can and wallow in blame like a pig in muck.\"",
+      "variant": null
+    },
+    "p_funhouse_sg": {
+      "set_id": "sg",
+      "collector_number": "054",
+      "artist": "Bruno Balixa",
+      "flavor_text": "\"I might take a break from VR after this one.\"\n—SeaOfRibaldry, sensie streamer",
+      "variant": null
+    },
+    "p_ping_sg": {
+      "set_id": "sg",
+      "collector_number": "055",
+      "artist": "Bruno Balixa",
+      "flavor_text": "AvID:??:73.174 time=0.632 ms\nAvID:??:73.174 time=0.201 ms\nAvID:??:73.174 time=0.000 ms **ALERT**",
+      "variant": null
+    },
+    "p_predictive_planogram_sg": {
+      "set_id": "sg",
+      "collector_number": "056",
+      "artist": "Bruno Balixa",
+      "flavor_text": "For the best augmented reality shopping experience, please disable tracking protection.",
+      "variant": null
+    },
+    "p_public_trail_sg": {
+      "set_id": "sg",
+      "collector_number": "057",
+      "artist": "Bruno Balixa",
+      "flavor_text": "\"A runner uses significant resources scrubbing their traces. Every cycle, it's harder to pin them down. But the game changes. In Heinlein, no one can last a day without brushing **our** AR-network.\"\n—Cassie LaRosa, Lunar NetDefense Sysop",
+      "variant": null
+    },
+    "p_amaze_amusements_sg": {
+      "set_id": "sg",
+      "collector_number": "058",
+      "artist": "Bruno Balixa",
+      "flavor_text": "Free commemorative souvenir!",
+      "variant": null
+    },
+    "p_weyland_consortium_built_to_last_sg": {
+      "set_id": "sg",
+      "collector_number": "059",
+      "artist": "Emilio Rodríguez",
+      "flavor_text": "Here to Stay.",
+      "variant": null
+    },
+    "p_above_the_law_sg": {
+      "set_id": "sg",
+      "collector_number": "060",
+      "artist": "Seojun Park",
+      "flavor_text": "We are judge, jury, and executioner.",
+      "variant": null
+    },
+    "p_clearinghouse_sg": {
+      "set_id": "sg",
+      "collector_number": "061",
+      "artist": "David Lei",
+      "flavor_text": "\"First rule of the business: make sure you're not 'personally liable' when the transaction executes.\"\n—Ted J. Son, Central Counterparty Clearance",
+      "variant": null
+    },
+    "p_ballista_sg": {
+      "set_id": "sg",
+      "collector_number": "062",
+      "artist": "Owen Sinodov",
+      "flavor_text": "\"Puts a hole in your rig **and** your plans.\"\n—René \"Loup\" Arcemont",
+      "variant": null
+    },
+    "p_pharos_sg": {
+      "set_id": "sg",
+      "collector_number": "063",
+      "artist": "Owen Sinodov",
+      "flavor_text": null,
+      "variant": null
+    },
+    "p_government_subsidy_sg": {
+      "set_id": "sg",
+      "collector_number": "064",
+      "artist": "David Lei",
+      "flavor_text": "\"If the government spent 1% of the funding they provide us tracking where the other 99% went, my colleagues and I would be in prison…\n…but that is a very big **if**.\"\n—Huey DeMora, W-Con public-private facilitation seminar",
+      "variant": null
+    },
+    "p_retribution_sg": {
+      "set_id": "sg",
+      "collector_number": "065",
+      "artist": "David Lei",
+      "flavor_text": "Did you really think you'd get away with it?",
+      "variant": null
+    },
+    "p_malapert_data_vault_sg": {
+      "set_id": "sg",
+      "collector_number": "066",
+      "artist": "Owen Sinodov",
+      "flavor_text": "Sunlight does not touch the Crater of Eternal Darkness, a fitting abode for the Consortium's malefic secrets.",
+      "variant": null
+    },
+    "p_offworld_office_sg": {
+      "set_id": "sg",
+      "collector_number": "067",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "As the first lunar city, Heinlein was built on the dreams of a new frontier and boundless opportunity, but He3 mining is too lucrative for the corps to ever relinquish control.",
+      "variant": null
+    },
+    "p_orbital_superiority_sg": {
+      "set_id": "sg",
+      "collector_number": "068",
+      "artist": "Krembler",
+      "flavor_text": "Mobsters bribe police, megacorps acquire militaries.",
+      "variant": null
+    },
+    "p_send_a_message_sg": {
+      "set_id": "sg",
+      "collector_number": "069",
+      "artist": "David Lei",
+      "flavor_text": "It might be over, but we **will** get them next time.",
+      "variant": null
+    },
+    "p_superconducting_hub_sg": {
+      "set_id": "sg",
+      "collector_number": "070",
+      "artist": "Scott Uminga",
+      "flavor_text": "With Earth-Luna communications, saving microseconds returns megacredits.",
+      "variant": null
+    },
+    "p_regolith_mining_license_sg": {
+      "set_id": "sg",
+      "collector_number": "071",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "\"The economy of three worlds is sustained by He3 extraction from the lunar surface. The very fulcrum of power, the key to collective survival—auctioned to the highest bidder.\"\n—The Catalyst",
+      "variant": null
+    },
+    "p_palisade_sg": {
+      "set_id": "sg",
+      "collector_number": "072",
+      "artist": "Scott Uminga",
+      "flavor_text": "Keep the neighbors honest.",
+      "variant": null
+    },
+    "p_tithe_sg": {
+      "set_id": "sg",
+      "collector_number": "073",
+      "artist": "Scott Uminga",
+      "flavor_text": "\"You'll give till it hurts... then it'll reach for more.\"\n—Red Comyn",
+      "variant": null
+    },
+    "p_whitespace_sg": {
+      "set_id": "sg",
+      "collector_number": "074",
+      "artist": "Scott Uminga",
+      "flavor_text": "[this space intentionally left blank]",
+      "variant": null
+    },
+    "p_hedge_fund_sg": {
+      "set_id": "sg",
+      "collector_number": "075",
+      "artist": "Kira L. Nguyen",
+      "flavor_text": "A financial instrument for diverting money from those outside to those inside.",
+      "variant": null
+    },
+    "p_the_catalyst_convention_breaker_sg": {
+      "set_id": "sg",
+      "collector_number": "076",
+      "artist": "Benjamin Giletti",
+      "flavor_text": "Are you ready to start something big?",
+      "variant": null
+    },
+    "p_the_syndicate_profit_over_principle_sg": {
+      "set_id": "sg",
+      "collector_number": "077",
+      "artist": "Emilio Rodríguez",
+      "flavor_text": "You work for us. You just don't know it yet.",
+      "variant": null
+    }
+  }
+}

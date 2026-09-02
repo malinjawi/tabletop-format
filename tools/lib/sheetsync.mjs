@@ -6,6 +6,7 @@
 // non-conflicting changes are merged. Conflicts are returned as data and must
 // never be committed silently.
 import { createHash } from "node:crypto";
+import { parseCSV } from "./cardcsv.mjs";
 
 const clone = (v) => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -38,7 +39,14 @@ export function sheetCardsFromBase(baseCards, parsed) {
     const prior = base.get(incoming.id);
     if (!prior) return clone(incoming);
     const card = clone(prior);
-    for (const field of parsed.managedCardFields || []) putPath(card, field, getPath(incoming, field));
+    for (const field of parsed.managedCardFields || []) {
+      let value = getPath(incoming, field);
+      // A blank list cell means an empty list, not a structurally absent field.
+      // Keeping the canonical [] form prevents semantically clean Sheet pushes
+      // from producing noisy raw-Git deletions on existing cards.
+      if ((field === "subtypes" || field === "keywords") && value === undefined) value = [];
+      putPath(card, field, value);
+    }
     card.id = incoming.id;
     return card;
   });
@@ -83,6 +91,59 @@ export function sheetPrintingsFromBase(basePrintings, remoteCards, parsed) {
     out.push(...candidates);
   });
   return out;
+}
+
+const SAFE_COLUMN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$/i;
+const DANGEROUS_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+const safeColumn = path => SAFE_COLUMN.test(path) && !path.split(".").some(part => DANGEROUS_KEYS.has(part));
+const printingValue = (raw, field, prior) => {
+  if (raw === "") return undefined;
+  if (["quantity"].includes(field)) {
+    const value = Number(raw); if (!Number.isInteger(value)) throw new Error(`${field} must be an integer`); return value;
+  }
+  if (typeof prior === "number") {
+    const value = Number(raw); if (!Number.isFinite(value)) throw new Error(`${field} must be a number`); return value;
+  }
+  if (typeof prior === "boolean") {
+    if (!/^(true|false)$/i.test(raw)) throw new Error(`${field} must be true or false`); return /^true$/i.test(raw);
+  }
+  if (typeof prior === "object" || /^[\[{]/.test(raw)) {
+    try { return JSON.parse(raw); } catch { throw new Error(`${field} must contain valid JSON`); }
+  }
+  return raw;
+};
+
+/** A dedicated Printings tab may own printing records independently of cards.
+ * Missing columns preserve Forge-only fields; missing rows intentionally remove
+ * a printing. IDs and card IDs are mandatory so art/provenance never drifts to
+ * another card because somebody renamed a display label. */
+export function sheetPrintingsFromTable(basePrintings, text) {
+  const table = parseCSV(text);
+  if (!table.length) throw Object.assign(new Error("the Printings tab is empty"), { status: 422 });
+  const headers = table[0].map(value => value.trim().toLowerCase().replace(/^printing_id$/, "id").replace(/^set$/, "set_id"));
+  if (new Set(headers).size !== headers.length) throw Object.assign(new Error("the Printings tab has duplicate columns"), { status: 422 });
+  if (!headers.includes("id") || !headers.includes("card_id"))
+    throw Object.assign(new Error("the Printings tab needs stable 'id' and 'card_id' columns"), { status: 422 });
+  const unsafe = headers.find(header => !safeColumn(header));
+  if (unsafe) throw Object.assign(new Error(`unsupported Printings column '${unsafe}'`), { status: 422 });
+  const base = new Map((basePrintings || []).map(row => [row.id, row])), out = [], seen = new Set(), warnings = [];
+  for (let index = 1; index < table.length; index++) {
+    if (!table[index].some(value => value !== "")) continue;
+    const values = Object.fromEntries(headers.map((header, column) => [header, String(table[index][column] ?? "").trim()]));
+    const id = values.id;
+    if (!id || !values.card_id) throw Object.assign(new Error(`Printings row ${index + 1} needs id and card_id`), { status: 422 });
+    if (seen.has(id)) throw Object.assign(new Error(`Printings has duplicate id '${id}'`), { status: 422 });
+    seen.add(id);
+    const prior = base.get(id), row = clone(prior || {});
+    for (const field of headers) putPath(row, field, printingValue(values[field], field, getPath(prior || {}, field)));
+    row.id = id; row.card_id = values.card_id;
+    if (!row.set_id) row.set_id = "core";
+    if (!row.collector_number) row.collector_number = String(out.length + 1).padStart(3, "0");
+    if (!row.template_id) row.template_id = "standard_face";
+    out.push(row);
+  }
+  if (!out.length) throw Object.assign(new Error("the Printings tab contains no records"), { status: 422 });
+  return { printings: out, warnings, headers, identitySafe: true };
 }
 
 const visible = (v) => v === undefined ? null : clone(v);

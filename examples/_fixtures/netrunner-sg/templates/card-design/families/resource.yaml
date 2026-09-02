@@ -1,0 +1,95 @@
+name: Resource template
+description: Production layout specific to resource cards. Shared frame and typography live in reusable components.
+regions:
+  - id: resource_header_shadow
+    type: rect
+    x: 14.8
+    "y": 2.52
+    w: 48.2
+    h: 5.25
+    fill: "#06090d"
+    clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)
+    shadow: 0 .55mm .9mm rgba(0,0,0,.42)
+    show_if: type == resource
+  - id: resource_header
+    type: rect
+    x: 14.55
+    "y": 2.16
+    w: 48.45
+    h: 4.75
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.35
+    clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)
+    show_if: type == resource
+  - id: resource_unique
+    type: text
+    text: ◆
+    x: 19.4
+    "y": 2.6
+    w: 2.6
+    h: 3.7
+    font: title
+    size_pt: 5.1
+    align: center
+    valign: middle
+    color: "#111820"
+    show_if: type == resource && attributes.unique
+  - id: resource_name
+    type: richtext
+    src: card.name
+    x: 18.2
+    "y": 2.38
+    w: 42
+    h: 3.95
+    font: title
+    size_pt: 8.7
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == resource && !attributes.unique
+  - id: resource_name_unique
+    type: richtext
+    src: card.name
+    x: 22.4
+    "y": 2.38
+    w: 37.8
+    h: 3.95
+    font: title
+    size_pt: 8.7
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == resource && attributes.unique
+  - id: resource_subtypes
+    type: richtext
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    x: 22.3
+    "y": 48.55
+    w: 29.6
+    h: 4.7
+    font: subtype
+    size_pt: 6.6
+    min_size_pt: 4.6
+    char_width_em: 0.58
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#303a43"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == resource

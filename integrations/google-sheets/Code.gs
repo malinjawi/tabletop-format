@@ -11,6 +11,7 @@ const FORGE_DOC_KEYS = {
   game: "FORGE_GAME_SLUG",
   source: "FORGE_SOURCE_ID",
   dirty: "FORGE_DIRTY_AT",
+  mapping: "FORGE_TAB_MAPPING",
 };
 const FORGE_TOKEN_KEY = "FORGE_ACCESS_TOKEN";
 const FORGE_TOKEN_ORIGIN_KEY = "FORGE_ACCESS_TOKEN_ORIGIN";
@@ -29,8 +30,10 @@ function onInstall() {
   onOpen();
 }
 
-function onEdit() {
-  markForgeDraft();
+function onEdit(event) {
+  const edited = event && event.range && event.range.getSheet ? event.range.getSheet().getSheetId() : null;
+  const mapping = forgeTabMapping_();
+  if (edited == null || edited === mapping.cards || edited === mapping.printings) markForgeDraft();
 }
 
 function markForgeDraft() {
@@ -45,12 +48,33 @@ function showForgeSidebar() {
 
 function forgeSheetIdentity_() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
-  const tab = book.getActiveSheet();
-  return `${book.getId()}:${tab.getSheetId()}`;
+  const mapping = forgeTabMapping_();
+  return `${book.getId()}:cards=${mapping.cards};printings=${mapping.printings || "-"}`;
 }
 
-function forgeCsv_() {
-  const values = SpreadsheetApp.getActiveSheet().getDataRange().getDisplayValues();
+function forgeSheets_() {
+  const book = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = book.getSheets ? book.getSheets() : [book.getActiveSheet()];
+  return sheets.map(sheet => ({ id: sheet.getSheetId(), name: sheet.getName(), sheet }));
+}
+
+function forgeTabMapping_() {
+  const doc = PropertiesService.getDocumentProperties();
+  let saved = {};
+  try { saved = JSON.parse(doc.getProperty(FORGE_DOC_KEYS.mapping) || "{}"); } catch (_) {}
+  const ids = forgeSheets_().map(entry => entry.id), active = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getSheetId();
+  return { cards: ids.indexOf(Number(saved.cards)) >= 0 ? Number(saved.cards) : active,
+    printings: ids.indexOf(Number(saved.printings)) >= 0 ? Number(saved.printings) : null };
+}
+
+function forgeSheetById_(id) {
+  const found = forgeSheets_().find(entry => entry.id === Number(id));
+  if (!found) throw new Error(`Mapped Sheet tab ${id} no longer exists. Open Connection and choose it again.`);
+  return found.sheet;
+}
+
+function forgeCsv_(sheet) {
+  const values = sheet.getDataRange().getDisplayValues();
   return values.map(row => row.map(value => {
     const text = String(value == null ? "" : value);
     return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -60,6 +84,7 @@ function forgeCsv_() {
 function forgeSettings_() {
   const doc = PropertiesService.getDocumentProperties();
   const user = PropertiesService.getUserProperties();
+  const mapping = forgeTabMapping_(), tabs = forgeSheets_().map(entry => ({ id: entry.id, name: entry.name }));
   return {
     origin: doc.getProperty(FORGE_DOC_KEYS.origin) || "",
     game: doc.getProperty(FORGE_DOC_KEYS.game) || "",
@@ -70,6 +95,8 @@ function forgeSettings_() {
     user_handle: user.getProperty(FORGE_HANDLE_KEY) || "",
     sheet_name: SpreadsheetApp.getActiveSheet().getName(),
     spreadsheet_name: SpreadsheetApp.getActiveSpreadsheet().getName(),
+    tabs,
+    tab_mapping: mapping,
   };
 }
 
@@ -105,10 +132,16 @@ function saveForgeSettings(input) {
   const game = String(input.game || "").trim();
   const handle = String(input.handle || "").trim();
   const password = String(input.password || "");
+  const tabs = forgeSheets_(), tabIds = tabs.map(tab => tab.id);
+  const cardsTab = Number(input.cards_tab || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getSheetId());
+  const printingsTab = input.printings_tab === "" || input.printings_tab == null ? null : Number(input.printings_tab);
   const secureOrigin = /^https:\/\//i.test(origin);
   const localDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
   if (!secureOrigin && !localDevOrigin) throw new Error("Forge URL must use https:// (loopback http:// is accepted only by the local test harness).");
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/i.test(game)) throw new Error("Enter the Forge game slug, such as netrunner-sg.");
+  if (tabIds.indexOf(cardsTab) < 0) throw new Error("Choose an existing Cards tab.");
+  if (printingsTab != null && tabIds.indexOf(printingsTab) < 0) throw new Error("Choose an existing Printings tab.");
+  if (printingsTab === cardsTab) throw new Error("Cards and Printings must use different tabs, or leave Printings blank.");
   const user = PropertiesService.getUserProperties();
   const tokenMatchesOrigin = user.getProperty(FORGE_TOKEN_KEY) && user.getProperty(FORGE_TOKEN_ORIGIN_KEY) === origin;
   if (password || !tokenMatchesOrigin) {
@@ -121,6 +154,7 @@ function saveForgeSettings(input) {
     });
   }
   const doc = PropertiesService.getDocumentProperties();
+  doc.setProperty(FORGE_DOC_KEYS.mapping, JSON.stringify({ cards: cardsTab, printings: printingsTab }));
   doc.setProperties({
     [FORGE_DOC_KEYS.origin]: origin,
     [FORGE_DOC_KEYS.game]: game,
@@ -136,6 +170,7 @@ function clearForgeCredentials_() {
 }
 
 function signOutForge() {
+  try { forgeRequest_("/api/auth/logout", "post", {}); } catch (_) {}
   clearForgeCredentials_();
   return forgeSettings_();
 }
@@ -144,7 +179,7 @@ function forgeLogin_(origin, handle, password) {
   const response = UrlFetchApp.fetch(`${origin}/api/auth/login`, {
     method: "post",
     contentType: "application/json",
-    payload: JSON.stringify({ handle, password }),
+    payload: JSON.stringify({ handle, password, api_token: true }),
     muteHttpExceptions: true,
   });
   const status = response.getResponseCode();
@@ -185,10 +220,18 @@ function forgeRequest_(path, method, payload) {
 }
 
 function forgeSnapshot_() {
+  const book = SpreadsheetApp.getActiveSpreadsheet(), mapping = forgeTabMapping_();
+  const cards = forgeSheetById_(mapping.cards), tables = {
+    cards: { source_id: `${book.getId()}:${mapping.cards}`, snapshot_csv: forgeCsv_(cards) },
+  };
+  if (mapping.printings) {
+    const printings = forgeSheetById_(mapping.printings);
+    tables.printings = { source_id: `${book.getId()}:${mapping.printings}`, snapshot_csv: forgeCsv_(printings) };
+  }
   return {
     source_id: forgeSheetIdentity_(),
     source_revision: PropertiesService.getDocumentProperties().getProperty(FORGE_DOC_KEYS.dirty) || new Date().toISOString(),
-    snapshot_csv: forgeCsv_(),
+    tables,
   };
 }
 

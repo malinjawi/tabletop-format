@@ -1,0 +1,98 @@
+[
+  {
+    "card_id": "rene_loup_arcemont_party_animal",
+    "card": {
+      "name": "René “Loup” Arcemont: Night Runner",
+      "text": "The first time each turn you trash a card you are accessing, gain 2[credit] and draw 1 card."
+    },
+    "printing": { "flavor_text": "Run wilder." }
+  },
+  {
+    "card_id": "offworld_office",
+    "card": {
+      "name": "Lunar Office",
+      "text": "When you score this agenda, gain 9[credit].",
+      "attributes": { "advancement_cost": 5, "agenda_points": 3 }
+    },
+    "printing": { "flavor_text": "A frontier office with an impossible view." }
+  },
+  {
+    "card_id": "spin_doctor",
+    "card": {
+      "name": "Spin Specialist",
+      "subtypes": ["Character", "Executive"],
+      "text": "When you rez this asset, draw 1 card.\nRemove this asset from the game: Shuffle up to 3 cards from Archives into R&D.",
+      "attributes": { "cost": 1, "trash_cost": 3 }
+    },
+    "printing": { "flavor_text": "Every disaster becomes tomorrow's talking point." }
+  },
+  {
+    "card_id": "anoetic_void",
+    "card": {
+      "name": "Anoetic Gate",
+      "subtypes": ["Region"],
+      "text": "Whenever the Runner approaches this server, you may pay 1[credit] and trash 2 cards from HQ. If you do, end the run.",
+      "attributes": { "cost": 2, "trash_cost": 3 }
+    },
+    "printing": { "flavor_text": "The Net folds around those who know where to press." }
+  },
+  {
+    "card_id": "hedge_fund",
+    "card": {
+      "name": "Venture Fund",
+      "subtypes": ["Transaction"],
+      "text": "Gain 8[credit].",
+      "attributes": { "cost": 4 }
+    },
+    "printing": { "flavor_text": "Capital moves fastest when nobody asks why." }
+  },
+  {
+    "card_id": "ballista",
+    "card": {
+      "name": "Ballista Prime",
+      "text": "[subroutine] Trash 1 installed program.\n[subroutine] End the run.",
+      "attributes": { "cost": 6, "strength": 5 }
+    },
+    "printing": { "flavor_text": "A sharper answer to an old question." }
+  },
+  {
+    "card_id": "carmen",
+    "card": {
+      "name": "Carmen v2",
+      "subtypes": ["Icebreaker", "Killer"],
+      "text": "If you made a successful run this turn, this program costs 1[credit] less to install.\nInterface → 1[credit]: Break 1 sentry subroutine.\n2[credit]: +2 strength.",
+      "attributes": { "cost": 4, "memory_cost": 2, "strength": 3 }
+    },
+    "printing": { "flavor_text": "The whole wide world, rewritten." }
+  },
+  {
+    "card_id": "carnivore",
+    "card": {
+      "name": "Carnivore II",
+      "subtypes": ["Console"],
+      "text": "+1[mu]\nAccess → Trash 2 cards from your grip: Trash the card you are accessing. Use this ability only once per turn.\nLimit 1 console per player.",
+      "attributes": { "cost": 5 }
+    },
+    "printing": { "flavor_text": "It learned to hunger for harder problems." }
+  },
+  {
+    "card_id": "smartware_distributor",
+    "card": {
+      "name": "Smartware Distributor+",
+      "subtypes": ["Connection"],
+      "text": "Place 4[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
+      "attributes": { "cost": 1 }
+    },
+    "printing": { "flavor_text": "Good hardware survives. Great hardware finds a buyer." }
+  },
+  {
+    "card_id": "sure_gamble",
+    "card": {
+      "name": "Sure Bet",
+      "subtypes": ["Gamble"],
+      "text": "Gain 8[credit].",
+      "attributes": { "cost": 4 }
+    },
+    "printing": { "flavor_text": "Make the odds look like luck." }
+  }
+]

@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/setup.schema.json",
+  "title": "Playable table setup",
+  "description": "A platform-neutral, versioned description of how an exact game build is staged for play. Files: setups/*.yaml.",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "board", "seats", "zones", "stacks"],
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$"
+    },
+    "position": {
+      "type": "object",
+      "required": ["x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Version of Forge's setup document shape, independent from the game's Git version."
+    },
+    "id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "board": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 800, "maximum": 4000 },
+        "height": { "type": "integer", "minimum": 600, "maximum": 4000 },
+        "background": { "type": "string", "description": "CSS color or asset reference for adapters that support it." }
+      }
+    },
+    "seats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "position"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string", "minLength": 1 },
+          "color": { "type": "string" },
+          "position": { "$ref": "#/$defs/position" },
+          "rotation": { "type": "number", "default": 0 }
+        }
+      }
+    },
+    "zones": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "position", "size"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Game-defined role such as hand, draw, discard, score, play, identity, or supply."
+          },
+          "seat_id": { "$ref": "#/$defs/id" },
+          "visibility": { "enum": ["public", "seat"], "default": "public" },
+          "position": { "$ref": "#/$defs/position" },
+          "size": { "$ref": "#/$defs/size" },
+          "rotation": { "type": "number", "default": 0 },
+          "color": { "type": "string" },
+          "layout": { "enum": ["stack", "spread", "free"], "default": "free" },
+          "card_face": { "enum": ["up", "down", "unchanged"], "default": "unchanged" }
+        }
+      }
+    },
+    "stacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "deck_id", "zone_id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string" },
+          "deck_id": { "$ref": "#/$defs/id" },
+          "zone_id": { "$ref": "#/$defs/id" },
+          "face": { "enum": ["up", "down"], "default": "down" },
+          "shuffle": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "placements": {
+      "type": "array",
+      "description": "Specific cards removed from a referenced deck and staged separately, such as identities or deterministic tutorial hands.",
+      "items": {
+        "type": "object",
+        "required": ["id", "deck_id", "card_id", "zone_id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string" },
+          "deck_id": { "$ref": "#/$defs/id" },
+          "card_id": { "$ref": "#/$defs/id" },
+          "quantity": { "type": "integer", "minimum": 1, "default": 1 },
+          "zone_id": { "$ref": "#/$defs/id" },
+          "face": { "enum": ["up", "down"], "default": "up" }
+        }
+      }
+    },
+    "counters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "initial", "position"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string", "minLength": 1 },
+          "seat_id": { "$ref": "#/$defs/id" },
+          "initial": { "type": "integer" },
+          "minimum": { "type": "integer" },
+          "maximum": { "type": "integer" },
+          "position": { "$ref": "#/$defs/position" },
+          "color": { "type": "string" }
+        }
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

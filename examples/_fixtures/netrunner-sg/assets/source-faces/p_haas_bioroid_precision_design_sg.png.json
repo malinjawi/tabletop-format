@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "forge-pnp-face-extraction",
+  "printing_id": "p_haas_bioroid_precision_design_sg",
+  "card_id": "haas_bioroid_precision_design",
+  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "pdf_page": 5,
+  "slot": {
+    "row": 2,
+    "column": 1
+  },
+  "page_size_px": [
+    2481,
+    3508
+  ],
+  "grid_axes_px": {
+    "x": [
+      124,
+      868,
+      1612,
+      2356
+    ],
+    "y": [
+      208,
+      1238,
+      2270,
+      3300
+    ]
+  },
+  "source_box_px": [
+    868,
+    2270,
+    1612,
+    3300
+  ],
+  "normalization_crop_px": [
+    0,
+    0
+  ],
+  "output_size_px": [
+    744,
+    1030
+  ],
+  "dpi": 300,
+  "encoding": "lossless-png"
+}

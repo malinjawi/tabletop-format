@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/rulebook-publication.schema.json",
+  "title": "Designed rulebook publication",
+  "description": "Portable, editor-neutral page composition for a print publication. Geometry is expressed as percentages of the trim page so the source is diffable and can be adapted by other layout engines.",
+  "type": "object",
+  "required": ["version", "id", "title", "format", "theme", "pages"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "title": { "type": "string", "minLength": 1 },
+    "subtitle": { "type": "string" },
+    "edition": { "type": "string" },
+    "language": { "type": "string", "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*$" },
+    "credits": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "format": { "$ref": "#/$defs/format" },
+    "theme": { "$ref": "#/$defs/theme" },
+    "dependencies": { "$ref": "#/$defs/dependencies" },
+    "pages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/page" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+    "percent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "safePath": { "type": "string", "pattern": "^(?:assets|rules|setups|templates)/[A-Za-z0-9_./ -]+$" },
+    "format": {
+      "type": "object",
+      "required": ["width_mm", "height_mm", "bleed_mm", "margin_mm"],
+      "additionalProperties": false,
+      "properties": {
+        "width_mm": { "type": "number", "exclusiveMinimum": 50, "maximum": 500 },
+        "height_mm": { "type": "number", "exclusiveMinimum": 50, "maximum": 500 },
+        "bleed_mm": { "type": "number", "minimum": 0, "maximum": 20 },
+        "margin_mm": { "type": "number", "minimum": 0, "maximum": 50 },
+        "binding": { "enum": ["left", "right", "none"] },
+        "facing_pages": { "type": "boolean" }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "required": ["paper", "ink", "accent", "display_font", "body_font"],
+      "additionalProperties": false,
+      "properties": {
+        "paper": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "ink": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "muted": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accent": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "corp": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "runner": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "display_font": { "type": "string", "minLength": 1 },
+        "body_font": { "type": "string", "minLength": 1 },
+        "page_number_style": { "enum": ["plain", "square", "circle", "none"] }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cards": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "setups": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "assets": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/safePath" } },
+        "fonts": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/safePath" } }
+      }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "align": { "enum": ["left", "center", "right"] },
+        "valign": { "enum": ["top", "middle", "bottom"] },
+        "color": { "type": "string" },
+        "background": { "type": "string" },
+        "border": { "type": "string" },
+        "font_size_pt": { "type": "number", "minimum": 4, "maximum": 96 },
+        "columns": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "padding_mm": { "type": "number", "minimum": 0, "maximum": 30 },
+        "radius_mm": { "type": "number", "minimum": 0, "maximum": 30 },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "uppercase": { "type": "boolean" }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "required": ["id", "kind", "x", "y", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["card", "card-back", "token", "label"] },
+        "card_id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string" },
+        "x": { "$ref": "#/$defs/percent" },
+        "y": { "$ref": "#/$defs/percent" },
+        "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "rotate": { "type": "number", "minimum": -360, "maximum": 360 },
+        "z": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "tone": { "type": "string" }
+      }
+    },
+    "arrow": {
+      "type": "object",
+      "required": ["x1", "y1", "x2", "y2"],
+      "additionalProperties": false,
+      "properties": {
+        "x1": { "$ref": "#/$defs/percent" },
+        "y1": { "$ref": "#/$defs/percent" },
+        "x2": { "$ref": "#/$defs/percent" },
+        "y2": { "$ref": "#/$defs/percent" },
+        "label": { "type": "string" },
+        "tone": { "type": "string" }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["id", "type", "x", "y", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["heading", "text", "callout", "card", "card-grid", "scene", "steps", "component-list", "rule-reference", "image", "footer"] },
+        "x": { "$ref": "#/$defs/percent" },
+        "y": { "$ref": "#/$defs/percent" },
+        "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "heading": { "type": "string" },
+        "content": { "type": "string" },
+        "caption": { "type": "string" },
+        "kicker": { "type": "string" },
+        "card_id": { "$ref": "#/$defs/id" },
+        "card_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "asset": { "$ref": "#/$defs/safePath" },
+        "items": { "type": "array", "items": { "type": "string" } },
+        "placements": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
+        "arrows": { "type": "array", "items": { "$ref": "#/$defs/arrow" } },
+        "style": { "$ref": "#/$defs/style" }
+      }
+    },
+    "background": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["paper", "dark", "corp", "runner", "split", "gradient"] },
+        "from": { "type": "string" },
+        "to": { "type": "string" }
+      }
+    },
+    "page": {
+      "type": "object",
+      "required": ["id", "name", "template", "background", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "template": { "enum": ["cover", "editorial", "diagram", "reference", "full-art"] },
+        "section": { "type": "string" },
+        "accent": { "type": "string" },
+        "background": { "$ref": "#/$defs/background" },
+        "show_page_number": { "type": "boolean" },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } }
+      }
+    }
+  }
+}

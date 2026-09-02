@@ -1,0 +1,38 @@
+version: 1
+active: nsg-comprehensive-rules
+pipelines:
+  - id: nsg-comprehensive-rules
+    type: nsg-rules-yaml
+    label: NSG Comprehensive Rules generator
+    description: Native structured YAML to official LaTeX, annotated PDF, HTML, and JSON outputs.
+    status: active
+    source:
+      kind: git
+      url: https://github.com/rubenpieters/netrunner-comprehensive-rules.git
+      ref: 552afb75323ff8f0dc2f8f4428cccc1a5c36db44
+      license_status: permission-required
+    overlay_root: rules/native/nsg
+    native_inputs:
+      - data/input/*.yaml
+      - data/changelogs/*.yaml
+      - data/images/*.svg
+      - data/templates/latex/template.tex
+      - data/templates/html/*
+      - rules_doc_generator/**/*.py
+    outputs:
+      - id: pdf
+        label: Official-style comprehensive rules PDF
+        format: pdf
+      - id: annotated-pdf
+        label: Highlighted changes PDF
+        format: pdf
+        annotated: true
+      - id: web
+        label: Linkable web rules
+        format: html
+      - id: structured
+        label: Structured rules data
+        format: json
+      - id: native-source
+        label: Native source package
+        format: zip

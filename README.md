@@ -30,22 +30,45 @@ Errata is a commit. A fork is a fan expansion with its attribution chain intact.
 
 ```
 game.yaml                  # identity, license, authors, attribute defs, symbols
+design/brief.json          # optional idea, intended experience, smallest playable slice
+design/prototype.json      # optional runnable low-fidelity test and materials list
 rules/rules.md             # rulebook as diffable prose
+rules/publications/        # designed books: pages, scenes, native sources, output recipe
 components/cards.json      # rules identities
 components/printings.json  # physical appearances
 sets/                      # released groups of printings
 formats/                   # ways to play: card pool + active restriction
 restrictions/              # dated banlists (immutable once published)
 rulings/rulings.json       # dated clarifications with sources
-templates/                 # layout templates (rendering, not interchange)
+decks/                     # versioned decklists
+setups/                    # seats, zones, stacks, placements, counters
+templates/                 # layouts + production field maps (versioned rendering)
 assets/                    # art & icons (large files via LFS)
 ```
 
 ## Tools (reference implementation, v0.1)
 
+Bootstrap the pinned local toolchain once, then verify it at any time:
+
+```sh
+npm run setup:dev   # .venv + pinned PDF/image/schema libraries + npm lockfile install
+npm run doctor      # Node, Python, Git, Chromium, and adapter readiness
 ```
-./e2e.sh                                             # 35-check integration test — ALL GREEN or it doesn't ship
+
+Forge automatically prefers `.venv/bin/python` (or `FORGE_PYTHON`) so browser
+exports and CLI exports use the same dependency set.
+
+The current invite-only alpha decision, evidence, operating limits, and
+deployment stop conditions are recorded in
+[`docs/CONTROLLED-ALPHA-LAUNCH-GATE-2026-09-01.md`](docs/CONTROLLED-ALPHA-LAUNCH-GATE-2026-09-01.md).
+
+```
+./e2e.sh                                             # 172-check functional integration gate
+./journey.sh                                         # 85-assertion two-user golden path
+./perf.sh                                            # bounded scale + concurrent-write smoke
+./launch-gate.sh                                     # all mandatory controlled-alpha gates
 ./demo.sh                                            # the whole loop, one command, narrated
+node tools/new-game.mjs my-game --title "My Game" --license proprietary --brief brief.json  # idea -> valid game dir
 node tools/import-csv.mjs cards.csv my-game --title "My Game"   # spreadsheet -> valid game dir, zero deps
 node tools/import-nrdb.mjs nrdb-data my-game --title "My Game"  # NRDB/Alsciende-family JSON -> valid game dir, zero deps
 node tools/validate.mjs examples/ember               # schema + referential integrity (needs: npm i ajv ajv-formats js-yaml)
@@ -53,8 +76,13 @@ python3 tools/validate.py examples/ember             # identical checks, Python 
 node tools/diff.mjs old-cards.json new-cards.json    # semantic card diff, zero deps
 node tools/render_cards.mjs examples/ember           # card faces @300dpi (the exact browser renderer; Chrome required)
 python3 tools/export_pnp.py examples/ember           # print-and-play PDF, 3x3 US Letter, crop marks
+python3 tools/export_pnp.py examples/_fixtures/netrunner-sg --card sure_gamble --no-back  # one-card source-backed proof
 python3 tools/export_tts.py examples/ember           # TTS sheet(s) + save JSON (auto-splits after 70 faces)
+node tools/fmt.mjs export vtt examples/my-game       # staged VirtualTabletop.io state + self-contained .vtt
+npm run vtt:up                                       # start the pinned local open-source tabletop runtime
 node tools/fmt.mjs import decklist examples/ember list.txt --name "Burn Rush" --format standard   # "3 Kindling" lines -> deck.json
+node tools/fmt.mjs export nandeck examples/_fixtures/netrunner-sg   # one MM-accurate script + CSV per card family
+node tools/fmt.mjs import nandeck-layout examples/_fixtures/netrunner-sg program.txt  # safe dry-run; add --write after review
 node tools/fmt.mjs check-deck examples/ember examples/ember/decks/burn-rush.json                  # legality: pool, size, deck limits, BANLIST
 ```
 
@@ -118,6 +146,37 @@ keep renamed cards attached to their histories. See
 installation instructions. The connector contract, real `Code.gs` harness, and
 a Google-hosted private-Sheet OAuth → attributed commit smoke test are green.
 A stable HTTPS deployment and packaged Workspace add-on remain production gates.
+
+### Production templates
+
+`templates/production.json` maps canonical card fields to named objects in a
+portable SVG once. The live editor, visual diffs, PNG/PnP exports, and optional
+native-editor adapters consume that same contract, so a field cannot be
+"editable in Affinity" but unsupported in Forge. Unmapped changes fail closed
+and name the exact missing path. See
+[`docs/production-templates.md`](docs/production-templates.md).
+
+### Designed rulebook publications
+
+`rules/publications/manifest.json` registers learn-to-play books, references,
+scenario books, and player aids as versioned production assets. The portable
+page model links cards and setup scenes rather than pasting screenshots; Forge's
+visual editor can move blocks and edit content, while Affinity Publisher,
+InDesign, Scribus, and HTML/CSS remain explicit adapter surfaces. Builds freeze
+a print PDF, web book, preflight receipt, and deterministic source package at
+the exact game commit. See
+[`docs/rulebook-publications.md`](docs/rulebook-publications.md).
+
+### Source-backed PnP faces
+
+When a community publishes composed PnP faces but not editable production files,
+`templates/source-overlay.yaml` can map semantic fields onto immutable scans.
+Verified per-card numeric patches preserve the source treatment instead of
+approximating the original typography; uninspected cards, unsupported fields,
+and unavailable values fall back visibly to the distinct community frame. The
+System Gateway private proof includes card-specific examples for cost, memory,
+strength, trash, advancement, and agenda-point fields. See
+[`docs/source-backed-pnp.md`](docs/source-backed-pnp.md).
 
 The diff tool matches cards by stable ID and reports *meaning*, not JSON noise:
 

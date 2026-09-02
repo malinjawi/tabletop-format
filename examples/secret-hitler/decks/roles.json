@@ -1,0 +1,12 @@
+{
+  "id": "secret-roles",
+  "name": "Secret Role supply",
+  "format_id": "standard",
+  "author": "Goat, Wolf, & Cabbage",
+  "cards": {
+    "role_liberal": 6,
+    "role_fascist": 3,
+    "role_hitler": 1
+  },
+  "notes": "Maximum ten-player role supply. Remove cards for the chosen player count during setup."
+}

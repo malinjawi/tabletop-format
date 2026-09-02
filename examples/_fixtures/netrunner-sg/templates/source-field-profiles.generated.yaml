@@ -1,0 +1,4921 @@
+schema_version: 1
+profiles:
+- id: zahya_sadeghi_versatile_smuggler
+  card_id: zahya_sadeghi_versatile_smuggler
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: &id001
+    - 190
+    - 30
+    - 640
+    - 88
+    style: title
+    render: &id002
+      padding_left_cqw: 1.0
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: &id003
+    - 210
+    - 90
+    - 580
+    - 127
+    style: subtitle
+    render: &id004
+      padding_left_cqw: 2.7
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id005
+    - 270
+    - 690
+    - 540
+    - 735
+    style: subtype
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/subtypes-background.png
+  - id: base_link
+    src: attributes.base_link
+    box_px: &id006
+    - 56
+    - 62
+    - 115
+    - 120
+    style: number_white
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/base_link-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: &id007
+    - 48
+    - 957
+    - 116
+    - 1005
+    style: number_white
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: &id008
+    - 635
+    - 957
+    - 704
+    - 1005
+    style: number_white
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 132
+    - 752
+    - 610
+    - 952
+    style: rules
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 132
+    - 955
+    - 610
+    - 998
+    style: flavor
+    background_asset: assets/source-patches/zahya_sadeghi_versatile_smuggler/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+- id: tao_salonga_telepresence_magician
+  card_id: tao_salonga_telepresence_magician
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: *id001
+    style: title
+    render: *id002
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: *id003
+    style: subtitle
+    render: *id004
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id005
+    style: subtype
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/subtypes-background.png
+  - id: base_link
+    src: attributes.base_link
+    box_px: *id006
+    style: number_white
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/base_link-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: *id007
+    style: number_white
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: *id008
+    style: number_white
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 132
+    - 752
+    - 610
+    - 882
+    style: rules
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 132
+    - 885
+    - 610
+    - 998
+    style: flavor
+    background_asset: assets/source-patches/tao_salonga_telepresence_magician/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+- id: the_catalyst_convention_breaker
+  card_id: the_catalyst_convention_breaker
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: *id001
+    style: title
+    render: *id002
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: *id003
+    style: subtitle
+    render: *id004
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id005
+    style: subtype
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/subtypes-background.png
+  - id: base_link
+    src: attributes.base_link
+    box_px: *id006
+    style: number_white
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/base_link-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: *id007
+    style: number_white
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: *id008
+    style: number_white
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 132
+    - 750
+    - 610
+    - 811
+    style: rules
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/rules-background.png
+    render:
+      max_lines: 3
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 132
+    - 814
+    - 610
+    - 998
+    style: flavor
+    background_asset: assets/source-patches/the_catalyst_convention_breaker/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+- id: haas_bioroid_precision_design
+  card_id: haas_bioroid_precision_design
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: &id009
+    - 120
+    - 20
+    - 620
+    - 80
+    style: title
+    render: &id010
+      padding_left_cqw: 1.5
+    background_asset: assets/source-patches/haas_bioroid_precision_design/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: &id011
+    - 50
+    - 86
+    - 540
+    - 126
+    style: subtitle
+    render: &id012
+      padding_left_cqw: 1.5
+    background_asset: assets/source-patches/haas_bioroid_precision_design/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id013
+    - 160
+    - 710
+    - 520
+    - 758
+    style: subtype
+    background_asset: assets/source-patches/haas_bioroid_precision_design/subtypes-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: &id014
+    - 49
+    - 697
+    - 117
+    - 745
+    style: number_white
+    background_asset: assets/source-patches/haas_bioroid_precision_design/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: &id015
+    - 631
+    - 697
+    - 697
+    - 745
+    style: number_white
+    background_asset: assets/source-patches/haas_bioroid_precision_design/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 35
+    - 790
+    - 610
+    - 933
+    style: rules
+    background_asset: assets/source-patches/haas_bioroid_precision_design/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 35
+    - 936
+    - 610
+    - 992
+    style: flavor
+    background_asset: assets/source-patches/haas_bioroid_precision_design/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+- id: jinteki_restoring_humanity
+  card_id: jinteki_restoring_humanity
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: *id009
+    style: title
+    render: *id010
+    background_asset: assets/source-patches/jinteki_restoring_humanity/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: *id011
+    style: subtitle
+    render: *id012
+    background_asset: assets/source-patches/jinteki_restoring_humanity/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id013
+    style: subtype
+    background_asset: assets/source-patches/jinteki_restoring_humanity/subtypes-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: *id014
+    style: number_white
+    background_asset: assets/source-patches/jinteki_restoring_humanity/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: *id015
+    style: number_white
+    background_asset: assets/source-patches/jinteki_restoring_humanity/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 35
+    - 790
+    - 610
+    - 883
+    style: rules
+    background_asset: assets/source-patches/jinteki_restoring_humanity/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 35
+    - 886
+    - 610
+    - 992
+    style: flavor
+    background_asset: assets/source-patches/jinteki_restoring_humanity/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+- id: nbn_reality_plus
+  card_id: nbn_reality_plus
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: *id009
+    style: title
+    render: *id010
+    background_asset: assets/source-patches/nbn_reality_plus/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: *id011
+    style: subtitle
+    render: *id012
+    background_asset: assets/source-patches/nbn_reality_plus/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id013
+    style: subtype
+    background_asset: assets/source-patches/nbn_reality_plus/subtypes-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: *id014
+    style: number_white
+    background_asset: assets/source-patches/nbn_reality_plus/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: *id015
+    style: number_white
+    background_asset: assets/source-patches/nbn_reality_plus/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 35
+    - 790
+    - 610
+    - 879
+    style: rules
+    background_asset: assets/source-patches/nbn_reality_plus/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 35
+    - 882
+    - 610
+    - 992
+    style: flavor
+    background_asset: assets/source-patches/nbn_reality_plus/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+- id: weyland_consortium_built_to_last
+  card_id: weyland_consortium_built_to_last
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: *id009
+    style: title
+    render: *id010
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: *id011
+    style: subtitle
+    render: *id012
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id013
+    style: subtype
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/subtypes-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: *id014
+    style: number_white
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: *id015
+    style: number_white
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 35
+    - 790
+    - 610
+    - 884
+    style: rules
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 35
+    - 887
+    - 610
+    - 992
+    style: flavor
+    background_asset: assets/source-patches/weyland_consortium_built_to_last/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+- id: the_syndicate_profit_over_principle
+  card_id: the_syndicate_profit_over_principle
+  card_type: identity
+  fields:
+  - id: title
+    src: name
+    transform: before-colon
+    box_px: *id009
+    style: title
+    render: *id010
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/title-background.png
+  - id: subtitle
+    src: name
+    transform: after-colon
+    box_px: *id011
+    style: subtitle
+    render: *id012
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/subtitle-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id013
+    style: subtype
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/subtypes-background.png
+  - id: minimum_deck_size
+    src: attributes.minimum_deck_size
+    box_px: *id014
+    style: number_white
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/minimum_deck_size-background.png
+  - id: influence_limit
+    src: attributes.influence_limit
+    box_px: *id015
+    style: number_white
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/influence_limit-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 35
+    - 790
+    - 610
+    - 841
+    style: rules
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/rules-background.png
+    render:
+      max_lines: 3
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 35
+    - 844
+    - 610
+    - 992
+    style: flavor
+    background_asset: assets/source-patches/the_syndicate_profit_over_principle/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+- id: luminal_transubstantiation
+  card_id: luminal_transubstantiation
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: &id016
+    - 18
+    - 30
+    - 590
+    - 88
+    style: title
+    render: &id017
+      padding_left_cqw: 1.5
+    background_asset: assets/source-patches/luminal_transubstantiation/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id018
+    - 208
+    - 570
+    - 520
+    - 616
+    style: subtype
+    background_asset: assets/source-patches/luminal_transubstantiation/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 815
+    style: rules
+    background_asset: assets/source-patches/luminal_transubstantiation/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 818
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/luminal_transubstantiation/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: &id019
+    - 635
+    - 40
+    - 738
+    - 132
+    patches:
+      '3': assets/source-patches/luminal_transubstantiation/advancement_cost-3.png
+      '4': assets/source-patches/luminal_transubstantiation/advancement_cost-4.png
+      '5': assets/source-patches/luminal_transubstantiation/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: &id020
+    - 43
+    - 470
+    - 138
+    - 552
+    patches:
+      '1': assets/source-patches/luminal_transubstantiation/agenda_points-1.png
+      '2': assets/source-patches/luminal_transubstantiation/agenda_points-2.png
+      '3': assets/source-patches/luminal_transubstantiation/agenda_points-3.png
+- id: longevity_serum
+  card_id: longevity_serum
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: *id016
+    style: title
+    render: *id017
+    background_asset: assets/source-patches/longevity_serum/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id018
+    style: subtype
+    background_asset: assets/source-patches/longevity_serum/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 816
+    style: rules
+    background_asset: assets/source-patches/longevity_serum/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 819
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/longevity_serum/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: *id019
+    patches:
+      '3': assets/source-patches/longevity_serum/advancement_cost-3.png
+      '4': assets/source-patches/longevity_serum/advancement_cost-4.png
+      '5': assets/source-patches/longevity_serum/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: *id020
+    patches:
+      '1': assets/source-patches/longevity_serum/agenda_points-1.png
+      '2': assets/source-patches/longevity_serum/agenda_points-2.png
+      '3': assets/source-patches/longevity_serum/agenda_points-3.png
+- id: tomorrows_headline
+  card_id: tomorrows_headline
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: *id016
+    style: title
+    render: *id017
+    background_asset: assets/source-patches/tomorrows_headline/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id018
+    style: subtype
+    background_asset: assets/source-patches/tomorrows_headline/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 774
+    style: rules
+    background_asset: assets/source-patches/tomorrows_headline/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 777
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/tomorrows_headline/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: *id019
+    patches:
+      '3': assets/source-patches/tomorrows_headline/advancement_cost-3.png
+      '4': assets/source-patches/tomorrows_headline/advancement_cost-4.png
+      '5': assets/source-patches/tomorrows_headline/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: *id020
+    patches:
+      '1': assets/source-patches/tomorrows_headline/agenda_points-1.png
+      '2': assets/source-patches/tomorrows_headline/agenda_points-2.png
+      '3': assets/source-patches/tomorrows_headline/agenda_points-3.png
+- id: above_the_law
+  card_id: above_the_law
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: *id016
+    style: title
+    render: *id017
+    background_asset: assets/source-patches/above_the_law/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id018
+    style: subtype
+    background_asset: assets/source-patches/above_the_law/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 778
+    style: rules
+    background_asset: assets/source-patches/above_the_law/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 781
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/above_the_law/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: *id019
+    patches:
+      '3': assets/source-patches/above_the_law/advancement_cost-3.png
+      '4': assets/source-patches/above_the_law/advancement_cost-4.png
+      '5': assets/source-patches/above_the_law/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: *id020
+    patches:
+      '1': assets/source-patches/above_the_law/agenda_points-1.png
+      '2': assets/source-patches/above_the_law/agenda_points-2.png
+      '3': assets/source-patches/above_the_law/agenda_points-3.png
+- id: orbital_superiority
+  card_id: orbital_superiority
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: *id016
+    style: title
+    render: *id017
+    background_asset: assets/source-patches/orbital_superiority/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id018
+    style: subtype
+    background_asset: assets/source-patches/orbital_superiority/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 766
+    style: rules
+    background_asset: assets/source-patches/orbital_superiority/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 769
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/orbital_superiority/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: *id019
+    patches:
+      '3': assets/source-patches/orbital_superiority/advancement_cost-3.png
+      '4': assets/source-patches/orbital_superiority/advancement_cost-4.png
+      '5': assets/source-patches/orbital_superiority/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: *id020
+    patches:
+      '1': assets/source-patches/orbital_superiority/agenda_points-1.png
+      '2': assets/source-patches/orbital_superiority/agenda_points-2.png
+      '3': assets/source-patches/orbital_superiority/agenda_points-3.png
+- id: send_a_message
+  card_id: send_a_message
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: *id016
+    style: title
+    render: *id017
+    background_asset: assets/source-patches/send_a_message/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id018
+    style: subtype
+    background_asset: assets/source-patches/send_a_message/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 765
+    style: rules
+    background_asset: assets/source-patches/send_a_message/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 768
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/send_a_message/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: *id019
+    patches:
+      '3': assets/source-patches/send_a_message/advancement_cost-3.png
+      '4': assets/source-patches/send_a_message/advancement_cost-4.png
+      '5': assets/source-patches/send_a_message/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: *id020
+    patches:
+      '1': assets/source-patches/send_a_message/agenda_points-1.png
+      '2': assets/source-patches/send_a_message/agenda_points-2.png
+      '3': assets/source-patches/send_a_message/agenda_points-3.png
+- id: superconducting_hub
+  card_id: superconducting_hub
+  card_type: agenda
+  fields:
+  - id: title
+    src: name
+    box_px: *id016
+    style: title
+    render: *id017
+    background_asset: assets/source-patches/superconducting_hub/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id018
+    style: subtype
+    background_asset: assets/source-patches/superconducting_hub/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 778
+    style: rules
+    background_asset: assets/source-patches/superconducting_hub/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 781
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/superconducting_hub/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: advancement_cost
+    src: attributes.advancement_cost
+    box_px: *id019
+    patches:
+      '3': assets/source-patches/superconducting_hub/advancement_cost-3.png
+      '4': assets/source-patches/superconducting_hub/advancement_cost-4.png
+      '5': assets/source-patches/superconducting_hub/advancement_cost-5.png
+  - id: agenda_points
+    src: attributes.agenda_points
+    box_px: *id020
+    patches:
+      '1': assets/source-patches/superconducting_hub/agenda_points-1.png
+      '2': assets/source-patches/superconducting_hub/agenda_points-2.png
+      '3': assets/source-patches/superconducting_hub/agenda_points-3.png
+- id: nico_campaign
+  card_id: nico_campaign
+  card_type: asset
+  fields:
+  - id: title
+    src: name
+    box_px: &id021
+    - 180
+    - 30
+    - 740
+    - 92
+    style: title
+    render: &id022
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    background_asset: assets/source-patches/nico_campaign/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id023
+    - 190
+    - 570
+    - 520
+    - 616
+    style: subtype
+    background_asset: assets/source-patches/nico_campaign/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 630
+    - 665
+    - 815
+    style: rules
+    background_asset: assets/source-patches/nico_campaign/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 818
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/nico_campaign/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: &id024
+    - 48
+    - 28
+    - 110
+    - 90
+    patches:
+      '0': assets/source-patches/nico_campaign/cost-0.png
+      '1': assets/source-patches/nico_campaign/cost-1.png
+      '2': assets/source-patches/nico_campaign/cost-2.png
+      '3': assets/source-patches/nico_campaign/cost-3.png
+      '4': assets/source-patches/nico_campaign/cost-4.png
+      '5': assets/source-patches/nico_campaign/cost-5.png
+      '6': assets/source-patches/nico_campaign/cost-6.png
+      '7': assets/source-patches/nico_campaign/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: &id025
+    - 675
+    - 905
+    - 735
+    - 980
+    patches:
+      '1': assets/source-patches/nico_campaign/trash_cost-1.png
+      '2': assets/source-patches/nico_campaign/trash_cost-2.png
+      '3': assets/source-patches/nico_campaign/trash_cost-3.png
+      '4': assets/source-patches/nico_campaign/trash_cost-4.png
+- id: urtica_cipher
+  card_id: urtica_cipher
+  card_type: asset
+  fields:
+  - id: title
+    src: name
+    box_px: *id021
+    style: title
+    render: *id022
+    background_asset: assets/source-patches/urtica_cipher/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id023
+    style: subtype
+    background_asset: assets/source-patches/urtica_cipher/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 819
+    style: rules
+    background_asset: assets/source-patches/urtica_cipher/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 822
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/urtica_cipher/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/urtica_cipher/cost-0.png
+      '1': assets/source-patches/urtica_cipher/cost-1.png
+      '2': assets/source-patches/urtica_cipher/cost-2.png
+      '3': assets/source-patches/urtica_cipher/cost-3.png
+      '4': assets/source-patches/urtica_cipher/cost-4.png
+      '5': assets/source-patches/urtica_cipher/cost-5.png
+      '6': assets/source-patches/urtica_cipher/cost-6.png
+      '7': assets/source-patches/urtica_cipher/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: *id025
+    patches:
+      '1': assets/source-patches/urtica_cipher/trash_cost-1.png
+      '2': assets/source-patches/urtica_cipher/trash_cost-2.png
+      '3': assets/source-patches/urtica_cipher/trash_cost-3.png
+      '4': assets/source-patches/urtica_cipher/trash_cost-4.png
+- id: clearinghouse
+  card_id: clearinghouse
+  card_type: asset
+  fields:
+  - id: title
+    src: name
+    box_px: *id021
+    style: title
+    render: *id022
+    background_asset: assets/source-patches/clearinghouse/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id023
+    style: subtype
+    background_asset: assets/source-patches/clearinghouse/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 815
+    style: rules
+    background_asset: assets/source-patches/clearinghouse/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 818
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/clearinghouse/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/clearinghouse/cost-0.png
+      '1': assets/source-patches/clearinghouse/cost-1.png
+      '2': assets/source-patches/clearinghouse/cost-2.png
+      '3': assets/source-patches/clearinghouse/cost-3.png
+      '4': assets/source-patches/clearinghouse/cost-4.png
+      '5': assets/source-patches/clearinghouse/cost-5.png
+      '6': assets/source-patches/clearinghouse/cost-6.png
+      '7': assets/source-patches/clearinghouse/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: *id025
+    patches:
+      '1': assets/source-patches/clearinghouse/trash_cost-1.png
+      '2': assets/source-patches/clearinghouse/trash_cost-2.png
+      '3': assets/source-patches/clearinghouse/trash_cost-3.png
+      '4': assets/source-patches/clearinghouse/trash_cost-4.png
+- id: regolith_mining_license
+  card_id: regolith_mining_license
+  card_type: asset
+  fields:
+  - id: title
+    src: name
+    box_px: *id021
+    style: title
+    render: *id022
+    background_asset: assets/source-patches/regolith_mining_license/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id023
+    style: subtype
+    background_asset: assets/source-patches/regolith_mining_license/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 630
+    - 665
+    - 778
+    style: rules
+    background_asset: assets/source-patches/regolith_mining_license/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 781
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/regolith_mining_license/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/regolith_mining_license/cost-0.png
+      '1': assets/source-patches/regolith_mining_license/cost-1.png
+      '2': assets/source-patches/regolith_mining_license/cost-2.png
+      '3': assets/source-patches/regolith_mining_license/cost-3.png
+      '4': assets/source-patches/regolith_mining_license/cost-4.png
+      '5': assets/source-patches/regolith_mining_license/cost-5.png
+      '6': assets/source-patches/regolith_mining_license/cost-6.png
+      '7': assets/source-patches/regolith_mining_license/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: *id025
+    patches:
+      '1': assets/source-patches/regolith_mining_license/trash_cost-1.png
+      '2': assets/source-patches/regolith_mining_license/trash_cost-2.png
+      '3': assets/source-patches/regolith_mining_license/trash_cost-3.png
+      '4': assets/source-patches/regolith_mining_license/trash_cost-4.png
+- id: manegarm_skunkworks
+  card_id: manegarm_skunkworks
+  card_type: upgrade
+  fields:
+  - id: title
+    src: name
+    box_px: &id026
+    - 180
+    - 30
+    - 740
+    - 94
+    style: title
+    render: &id027
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    prefix: '◆ '
+    background_asset: assets/source-patches/manegarm_skunkworks/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id028
+    - 220
+    - 570
+    - 530
+    - 616
+    style: subtype
+    background_asset: assets/source-patches/manegarm_skunkworks/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 766
+    style: rules
+    background_asset: assets/source-patches/manegarm_skunkworks/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 769
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/manegarm_skunkworks/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/manegarm_skunkworks/cost-0.png
+      '1': assets/source-patches/manegarm_skunkworks/cost-1.png
+      '2': assets/source-patches/manegarm_skunkworks/cost-2.png
+      '3': assets/source-patches/manegarm_skunkworks/cost-3.png
+      '4': assets/source-patches/manegarm_skunkworks/cost-4.png
+      '5': assets/source-patches/manegarm_skunkworks/cost-5.png
+      '6': assets/source-patches/manegarm_skunkworks/cost-6.png
+      '7': assets/source-patches/manegarm_skunkworks/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: *id025
+    patches:
+      '1': assets/source-patches/manegarm_skunkworks/trash_cost-1.png
+      '2': assets/source-patches/manegarm_skunkworks/trash_cost-2.png
+      '3': assets/source-patches/manegarm_skunkworks/trash_cost-3.png
+      '4': assets/source-patches/manegarm_skunkworks/trash_cost-4.png
+- id: amaze_amusements
+  card_id: amaze_amusements
+  card_type: upgrade
+  fields:
+  - id: title
+    src: name
+    box_px: *id026
+    style: title
+    render: *id027
+    prefix: '◆ '
+    background_asset: assets/source-patches/amaze_amusements/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id028
+    style: subtype
+    background_asset: assets/source-patches/amaze_amusements/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 879
+    style: rules
+    background_asset: assets/source-patches/amaze_amusements/rules-background.png
+    render:
+      max_lines: 8
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 882
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/amaze_amusements/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/amaze_amusements/cost-0.png
+      '1': assets/source-patches/amaze_amusements/cost-1.png
+      '2': assets/source-patches/amaze_amusements/cost-2.png
+      '3': assets/source-patches/amaze_amusements/cost-3.png
+      '4': assets/source-patches/amaze_amusements/cost-4.png
+      '5': assets/source-patches/amaze_amusements/cost-5.png
+      '6': assets/source-patches/amaze_amusements/cost-6.png
+      '7': assets/source-patches/amaze_amusements/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: *id025
+    patches:
+      '1': assets/source-patches/amaze_amusements/trash_cost-1.png
+      '2': assets/source-patches/amaze_amusements/trash_cost-2.png
+      '3': assets/source-patches/amaze_amusements/trash_cost-3.png
+      '4': assets/source-patches/amaze_amusements/trash_cost-4.png
+- id: malapert_data_vault
+  card_id: malapert_data_vault
+  card_type: upgrade
+  fields:
+  - id: title
+    src: name
+    box_px: *id026
+    style: title
+    render: *id027
+    prefix: '◆ '
+    background_asset: assets/source-patches/malapert_data_vault/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id028
+    style: subtype
+    background_asset: assets/source-patches/malapert_data_vault/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 840
+    style: rules
+    background_asset: assets/source-patches/malapert_data_vault/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 843
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/malapert_data_vault/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/malapert_data_vault/cost-0.png
+      '1': assets/source-patches/malapert_data_vault/cost-1.png
+      '2': assets/source-patches/malapert_data_vault/cost-2.png
+      '3': assets/source-patches/malapert_data_vault/cost-3.png
+      '4': assets/source-patches/malapert_data_vault/cost-4.png
+      '5': assets/source-patches/malapert_data_vault/cost-5.png
+      '6': assets/source-patches/malapert_data_vault/cost-6.png
+      '7': assets/source-patches/malapert_data_vault/cost-7.png
+  - id: trash_cost
+    src: attributes.trash_cost
+    box_px: *id025
+    patches:
+      '1': assets/source-patches/malapert_data_vault/trash_cost-1.png
+      '2': assets/source-patches/malapert_data_vault/trash_cost-2.png
+      '3': assets/source-patches/malapert_data_vault/trash_cost-3.png
+      '4': assets/source-patches/malapert_data_vault/trash_cost-4.png
+- id: seamless_launch
+  card_id: seamless_launch
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: &id029
+    - 165
+    - 30
+    - 740
+    - 94
+    style: title
+    render: &id030
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    background_asset: assets/source-patches/seamless_launch/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id031
+    - 250
+    - 570
+    - 540
+    - 616
+    style: subtype
+    background_asset: assets/source-patches/seamless_launch/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 628
+    - 665
+    - 724
+    style: rules
+    background_asset: assets/source-patches/seamless_launch/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 727
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/seamless_launch/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: &id032
+    - 69
+    - 68
+    - 133
+    - 138
+    patches:
+      '0': assets/source-patches/seamless_launch/cost-0.png
+      '1': assets/source-patches/seamless_launch/cost-1.png
+      '3': assets/source-patches/seamless_launch/cost-3.png
+      '4': assets/source-patches/seamless_launch/cost-4.png
+      '5': assets/source-patches/seamless_launch/cost-5.png
+      '10': assets/source-patches/seamless_launch/cost-10.png
+- id: sprint
+  card_id: sprint
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/sprint/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/sprint/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 628
+    - 665
+    - 728
+    style: rules
+    background_asset: assets/source-patches/sprint/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 731
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/sprint/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/sprint/cost-0.png
+      '1': assets/source-patches/sprint/cost-1.png
+      '3': assets/source-patches/sprint/cost-3.png
+      '4': assets/source-patches/sprint/cost-4.png
+      '5': assets/source-patches/sprint/cost-5.png
+      '10': assets/source-patches/sprint/cost-10.png
+- id: hansei_review
+  card_id: hansei_review
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/hansei_review/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/hansei_review/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 627
+    - 665
+    - 728
+    style: rules
+    background_asset: assets/source-patches/hansei_review/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 731
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/hansei_review/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/hansei_review/cost-0.png
+      '1': assets/source-patches/hansei_review/cost-1.png
+      '3': assets/source-patches/hansei_review/cost-3.png
+      '4': assets/source-patches/hansei_review/cost-4.png
+      '5': assets/source-patches/hansei_review/cost-5.png
+      '10': assets/source-patches/hansei_review/cost-10.png
+- id: neurospike
+  card_id: neurospike
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/neurospike/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/neurospike/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 766
+    style: rules
+    background_asset: assets/source-patches/neurospike/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 769
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/neurospike/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/neurospike/cost-0.png
+      '1': assets/source-patches/neurospike/cost-1.png
+      '3': assets/source-patches/neurospike/cost-3.png
+      '4': assets/source-patches/neurospike/cost-4.png
+      '5': assets/source-patches/neurospike/cost-5.png
+      '10': assets/source-patches/neurospike/cost-10.png
+- id: predictive_planogram
+  card_id: predictive_planogram
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/predictive_planogram/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/predictive_planogram/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 820
+    style: rules
+    background_asset: assets/source-patches/predictive_planogram/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 823
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/predictive_planogram/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/predictive_planogram/cost-0.png
+      '1': assets/source-patches/predictive_planogram/cost-1.png
+      '3': assets/source-patches/predictive_planogram/cost-3.png
+      '4': assets/source-patches/predictive_planogram/cost-4.png
+      '5': assets/source-patches/predictive_planogram/cost-5.png
+      '10': assets/source-patches/predictive_planogram/cost-10.png
+- id: public_trail
+  card_id: public_trail
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/public_trail/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/public_trail/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 628
+    - 665
+    - 778
+    style: rules
+    background_asset: assets/source-patches/public_trail/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 781
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/public_trail/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/public_trail/cost-0.png
+      '1': assets/source-patches/public_trail/cost-1.png
+      '3': assets/source-patches/public_trail/cost-3.png
+      '4': assets/source-patches/public_trail/cost-4.png
+      '5': assets/source-patches/public_trail/cost-5.png
+      '10': assets/source-patches/public_trail/cost-10.png
+- id: government_subsidy
+  card_id: government_subsidy
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/government_subsidy/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/government_subsidy/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 628
+    - 665
+    - 686
+    style: rules
+    background_asset: assets/source-patches/government_subsidy/rules-background.png
+    render:
+      max_lines: 3
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 689
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/government_subsidy/flavor-background.png
+    render:
+      max_lines: 9
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/government_subsidy/cost-0.png
+      '1': assets/source-patches/government_subsidy/cost-1.png
+      '3': assets/source-patches/government_subsidy/cost-3.png
+      '4': assets/source-patches/government_subsidy/cost-4.png
+      '5': assets/source-patches/government_subsidy/cost-5.png
+      '10': assets/source-patches/government_subsidy/cost-10.png
+- id: retribution
+  card_id: retribution
+  card_type: operation
+  fields:
+  - id: title
+    src: name
+    box_px: *id029
+    style: title
+    render: *id030
+    background_asset: assets/source-patches/retribution/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id031
+    style: subtype
+    background_asset: assets/source-patches/retribution/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 86
+    - 632
+    - 665
+    - 774
+    style: rules
+    background_asset: assets/source-patches/retribution/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 86
+    - 777
+    - 665
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/retribution/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id032
+    patches:
+      '0': assets/source-patches/retribution/cost-0.png
+      '1': assets/source-patches/retribution/cost-1.png
+      '3': assets/source-patches/retribution/cost-3.png
+      '4': assets/source-patches/retribution/cost-4.png
+      '5': assets/source-patches/retribution/cost-5.png
+      '10': assets/source-patches/retribution/cost-10.png
+- id: ansel_1_0
+  card_id: ansel_1_0
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: &id033
+    - 110
+    - 18
+    - 740
+    - 94
+    style: title
+    render: &id034
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    background_asset: assets/source-patches/ansel_1_0/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: &id035
+    - 25
+    - 145
+    - 98
+    - 535
+    style: subtype
+    render: &id036
+      rotation_deg: -90
+      padding_left_cqw: 0.5
+      padding_right_cqw: 0.5
+    background_asset: assets/source-patches/ansel_1_0/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 123
+    - 665
+    - 465
+    style: rules
+    background_asset: assets/source-patches/ansel_1_0/rules-background.png
+    render:
+      max_lines: 10
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 468
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/ansel_1_0/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/ansel_1_0/cost-0.png
+      '1': assets/source-patches/ansel_1_0/cost-1.png
+      '2': assets/source-patches/ansel_1_0/cost-2.png
+      '3': assets/source-patches/ansel_1_0/cost-3.png
+      '4': assets/source-patches/ansel_1_0/cost-4.png
+      '5': assets/source-patches/ansel_1_0/cost-5.png
+      '6': assets/source-patches/ansel_1_0/cost-6.png
+      '7': assets/source-patches/ansel_1_0/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: &id037
+    - 35
+    - 946
+    - 113
+    - 1022
+    patches:
+      '0': assets/source-patches/ansel_1_0/strength-0.png
+      '1': assets/source-patches/ansel_1_0/strength-1.png
+      '2': assets/source-patches/ansel_1_0/strength-2.png
+      '3': assets/source-patches/ansel_1_0/strength-3.png
+      '4': assets/source-patches/ansel_1_0/strength-4.png
+      '5': assets/source-patches/ansel_1_0/strength-5.png
+      '6': assets/source-patches/ansel_1_0/strength-6.png
+- id: bran_1_0
+  card_id: bran_1_0
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/bran_1_0/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/bran_1_0/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 123
+    - 665
+    - 444
+    style: rules
+    background_asset: assets/source-patches/bran_1_0/rules-background.png
+    render:
+      max_lines: 10
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 447
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/bran_1_0/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/bran_1_0/cost-0.png
+      '1': assets/source-patches/bran_1_0/cost-1.png
+      '2': assets/source-patches/bran_1_0/cost-2.png
+      '3': assets/source-patches/bran_1_0/cost-3.png
+      '4': assets/source-patches/bran_1_0/cost-4.png
+      '5': assets/source-patches/bran_1_0/cost-5.png
+      '6': assets/source-patches/bran_1_0/cost-6.png
+      '7': assets/source-patches/bran_1_0/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/bran_1_0/strength-0.png
+      '1': assets/source-patches/bran_1_0/strength-1.png
+      '2': assets/source-patches/bran_1_0/strength-2.png
+      '3': assets/source-patches/bran_1_0/strength-3.png
+      '4': assets/source-patches/bran_1_0/strength-4.png
+      '5': assets/source-patches/bran_1_0/strength-5.png
+      '6': assets/source-patches/bran_1_0/strength-6.png
+- id: diviner
+  card_id: diviner
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/diviner/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/diviner/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 117
+    - 665
+    - 294
+    style: rules
+    background_asset: assets/source-patches/diviner/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 297
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/diviner/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/diviner/cost-0.png
+      '1': assets/source-patches/diviner/cost-1.png
+      '2': assets/source-patches/diviner/cost-2.png
+      '3': assets/source-patches/diviner/cost-3.png
+      '4': assets/source-patches/diviner/cost-4.png
+      '5': assets/source-patches/diviner/cost-5.png
+      '6': assets/source-patches/diviner/cost-6.png
+      '7': assets/source-patches/diviner/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/diviner/strength-0.png
+      '1': assets/source-patches/diviner/strength-1.png
+      '2': assets/source-patches/diviner/strength-2.png
+      '3': assets/source-patches/diviner/strength-3.png
+      '4': assets/source-patches/diviner/strength-4.png
+      '5': assets/source-patches/diviner/strength-5.png
+      '6': assets/source-patches/diviner/strength-6.png
+- id: karuna
+  card_id: karuna
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/karuna/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/karuna/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 121
+    - 665
+    - 269
+    style: rules
+    background_asset: assets/source-patches/karuna/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 272
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/karuna/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/karuna/cost-0.png
+      '1': assets/source-patches/karuna/cost-1.png
+      '2': assets/source-patches/karuna/cost-2.png
+      '3': assets/source-patches/karuna/cost-3.png
+      '4': assets/source-patches/karuna/cost-4.png
+      '5': assets/source-patches/karuna/cost-5.png
+      '6': assets/source-patches/karuna/cost-6.png
+      '7': assets/source-patches/karuna/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/karuna/strength-0.png
+      '1': assets/source-patches/karuna/strength-1.png
+      '2': assets/source-patches/karuna/strength-2.png
+      '3': assets/source-patches/karuna/strength-3.png
+      '4': assets/source-patches/karuna/strength-4.png
+      '5': assets/source-patches/karuna/strength-5.png
+      '6': assets/source-patches/karuna/strength-6.png
+- id: funhouse
+  card_id: funhouse
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/funhouse/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/funhouse/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 124
+    - 665
+    - 344
+    style: rules
+    background_asset: assets/source-patches/funhouse/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 347
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/funhouse/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/funhouse/cost-0.png
+      '1': assets/source-patches/funhouse/cost-1.png
+      '2': assets/source-patches/funhouse/cost-2.png
+      '3': assets/source-patches/funhouse/cost-3.png
+      '4': assets/source-patches/funhouse/cost-4.png
+      '5': assets/source-patches/funhouse/cost-5.png
+      '6': assets/source-patches/funhouse/cost-6.png
+      '7': assets/source-patches/funhouse/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/funhouse/strength-0.png
+      '1': assets/source-patches/funhouse/strength-1.png
+      '2': assets/source-patches/funhouse/strength-2.png
+      '3': assets/source-patches/funhouse/strength-3.png
+      '4': assets/source-patches/funhouse/strength-4.png
+      '5': assets/source-patches/funhouse/strength-5.png
+      '6': assets/source-patches/funhouse/strength-6.png
+- id: ping
+  card_id: ping
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/ping/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/ping/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 123
+    - 665
+    - 308
+    style: rules
+    background_asset: assets/source-patches/ping/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 311
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/ping/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/ping/cost-0.png
+      '1': assets/source-patches/ping/cost-1.png
+      '2': assets/source-patches/ping/cost-2.png
+      '3': assets/source-patches/ping/cost-3.png
+      '4': assets/source-patches/ping/cost-4.png
+      '5': assets/source-patches/ping/cost-5.png
+      '6': assets/source-patches/ping/cost-6.png
+      '7': assets/source-patches/ping/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/ping/strength-0.png
+      '1': assets/source-patches/ping/strength-1.png
+      '2': assets/source-patches/ping/strength-2.png
+      '3': assets/source-patches/ping/strength-3.png
+      '4': assets/source-patches/ping/strength-4.png
+      '5': assets/source-patches/ping/strength-5.png
+      '6': assets/source-patches/ping/strength-6.png
+- id: pharos
+  card_id: pharos
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/pharos/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/pharos/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 124
+    - 665
+    - 389
+    style: rules
+    background_asset: assets/source-patches/pharos/rules-background.png
+    render:
+      max_lines: 8
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 405
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/pharos/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/pharos/cost-0.png
+      '1': assets/source-patches/pharos/cost-1.png
+      '2': assets/source-patches/pharos/cost-2.png
+      '3': assets/source-patches/pharos/cost-3.png
+      '4': assets/source-patches/pharos/cost-4.png
+      '5': assets/source-patches/pharos/cost-5.png
+      '6': assets/source-patches/pharos/cost-6.png
+      '7': assets/source-patches/pharos/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/pharos/strength-0.png
+      '1': assets/source-patches/pharos/strength-1.png
+      '2': assets/source-patches/pharos/strength-2.png
+      '3': assets/source-patches/pharos/strength-3.png
+      '4': assets/source-patches/pharos/strength-4.png
+      '5': assets/source-patches/pharos/strength-5.png
+      '6': assets/source-patches/pharos/strength-6.png
+- id: palisade
+  card_id: palisade
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/palisade/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/palisade/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 119
+    - 665
+    - 269
+    style: rules
+    background_asset: assets/source-patches/palisade/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 272
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/palisade/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/palisade/cost-0.png
+      '1': assets/source-patches/palisade/cost-1.png
+      '2': assets/source-patches/palisade/cost-2.png
+      '3': assets/source-patches/palisade/cost-3.png
+      '4': assets/source-patches/palisade/cost-4.png
+      '5': assets/source-patches/palisade/cost-5.png
+      '6': assets/source-patches/palisade/cost-6.png
+      '7': assets/source-patches/palisade/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/palisade/strength-0.png
+      '1': assets/source-patches/palisade/strength-1.png
+      '2': assets/source-patches/palisade/strength-2.png
+      '3': assets/source-patches/palisade/strength-3.png
+      '4': assets/source-patches/palisade/strength-4.png
+      '5': assets/source-patches/palisade/strength-5.png
+      '6': assets/source-patches/palisade/strength-6.png
+- id: tithe
+  card_id: tithe
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/tithe/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/tithe/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 117
+    - 665
+    - 231
+    style: rules
+    background_asset: assets/source-patches/tithe/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 234
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/tithe/flavor-background.png
+    render:
+      max_lines: 9
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/tithe/cost-0.png
+      '1': assets/source-patches/tithe/cost-1.png
+      '2': assets/source-patches/tithe/cost-2.png
+      '3': assets/source-patches/tithe/cost-3.png
+      '4': assets/source-patches/tithe/cost-4.png
+      '5': assets/source-patches/tithe/cost-5.png
+      '6': assets/source-patches/tithe/cost-6.png
+      '7': assets/source-patches/tithe/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/tithe/strength-0.png
+      '1': assets/source-patches/tithe/strength-1.png
+      '2': assets/source-patches/tithe/strength-2.png
+      '3': assets/source-patches/tithe/strength-3.png
+      '4': assets/source-patches/tithe/strength-4.png
+      '5': assets/source-patches/tithe/strength-5.png
+      '6': assets/source-patches/tithe/strength-6.png
+- id: whitespace
+  card_id: whitespace
+  card_type: ice
+  fields:
+  - id: title
+    src: name
+    box_px: *id033
+    style: title
+    render: *id034
+    background_asset: assets/source-patches/whitespace/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' - '
+    prefix: 'ICE: '
+    box_px: *id035
+    style: subtype
+    render: *id036
+    background_asset: assets/source-patches/whitespace/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 128
+    - 119
+    - 665
+    - 241
+    style: rules
+    background_asset: assets/source-patches/whitespace/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 128
+    - 244
+    - 665
+    - 515
+    style: flavor
+    background_asset: assets/source-patches/whitespace/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id024
+    patches:
+      '0': assets/source-patches/whitespace/cost-0.png
+      '1': assets/source-patches/whitespace/cost-1.png
+      '2': assets/source-patches/whitespace/cost-2.png
+      '3': assets/source-patches/whitespace/cost-3.png
+      '4': assets/source-patches/whitespace/cost-4.png
+      '5': assets/source-patches/whitespace/cost-5.png
+      '6': assets/source-patches/whitespace/cost-6.png
+      '7': assets/source-patches/whitespace/cost-7.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id037
+    patches:
+      '0': assets/source-patches/whitespace/strength-0.png
+      '1': assets/source-patches/whitespace/strength-1.png
+      '2': assets/source-patches/whitespace/strength-2.png
+      '3': assets/source-patches/whitespace/strength-3.png
+      '4': assets/source-patches/whitespace/strength-4.png
+      '5': assets/source-patches/whitespace/strength-5.png
+      '6': assets/source-patches/whitespace/strength-6.png
+- id: botulus
+  card_id: botulus
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: &id038
+    - 180
+    - 30
+    - 740
+    - 94
+    style: title
+    render: &id039
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    background_asset: assets/source-patches/botulus/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id040
+    - 210
+    - 570
+    - 550
+    - 620
+    style: subtype
+    background_asset: assets/source-patches/botulus/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 649
+    - 675
+    - 908
+    style: rules
+    background_asset: assets/source-patches/botulus/rules-background.png
+    render:
+      max_lines: 8
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 911
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/botulus/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: &id041
+    - 69
+    - 68
+    - 133
+    - 138
+    patches:
+      '0': assets/source-patches/botulus/cost-0.png
+      '1': assets/source-patches/botulus/cost-1.png
+      '2': assets/source-patches/botulus/cost-2.png
+      '3': assets/source-patches/botulus/cost-3.png
+      '4': assets/source-patches/botulus/cost-4.png
+      '5': assets/source-patches/botulus/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: &id042
+    - 37
+    - 166
+    - 70
+    - 212
+    patches:
+      '1': assets/source-patches/botulus/memory_cost-1.png
+      '2': assets/source-patches/botulus/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: &id043
+    - 65
+    - 946
+    - 137
+    - 1020
+    patches:
+      '0': assets/source-patches/botulus/strength-0.png
+      '1': assets/source-patches/botulus/strength-1.png
+      '2': assets/source-patches/botulus/strength-2.png
+      '3': assets/source-patches/botulus/strength-3.png
+- id: buzzsaw
+  card_id: buzzsaw
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/buzzsaw/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/buzzsaw/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 645
+    - 675
+    - 797
+    style: rules
+    background_asset: assets/source-patches/buzzsaw/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 800
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/buzzsaw/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/buzzsaw/cost-0.png
+      '1': assets/source-patches/buzzsaw/cost-1.png
+      '2': assets/source-patches/buzzsaw/cost-2.png
+      '3': assets/source-patches/buzzsaw/cost-3.png
+      '4': assets/source-patches/buzzsaw/cost-4.png
+      '5': assets/source-patches/buzzsaw/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/buzzsaw/memory_cost-1.png
+      '2': assets/source-patches/buzzsaw/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/buzzsaw/strength-0.png
+      '1': assets/source-patches/buzzsaw/strength-1.png
+      '2': assets/source-patches/buzzsaw/strength-2.png
+      '3': assets/source-patches/buzzsaw/strength-3.png
+- id: cleaver
+  card_id: cleaver
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/cleaver/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/cleaver/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 645
+    - 675
+    - 795
+    style: rules
+    background_asset: assets/source-patches/cleaver/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 798
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/cleaver/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/cleaver/cost-0.png
+      '1': assets/source-patches/cleaver/cost-1.png
+      '2': assets/source-patches/cleaver/cost-2.png
+      '3': assets/source-patches/cleaver/cost-3.png
+      '4': assets/source-patches/cleaver/cost-4.png
+      '5': assets/source-patches/cleaver/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/cleaver/memory_cost-1.png
+      '2': assets/source-patches/cleaver/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/cleaver/strength-0.png
+      '1': assets/source-patches/cleaver/strength-1.png
+      '2': assets/source-patches/cleaver/strength-2.png
+      '3': assets/source-patches/cleaver/strength-3.png
+- id: fermenter
+  card_id: fermenter
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/fermenter/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/fermenter/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 649
+    - 675
+    - 831
+    style: rules
+    background_asset: assets/source-patches/fermenter/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 834
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/fermenter/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/fermenter/cost-0.png
+      '1': assets/source-patches/fermenter/cost-1.png
+      '2': assets/source-patches/fermenter/cost-2.png
+      '3': assets/source-patches/fermenter/cost-3.png
+      '4': assets/source-patches/fermenter/cost-4.png
+      '5': assets/source-patches/fermenter/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/fermenter/memory_cost-1.png
+      '2': assets/source-patches/fermenter/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/fermenter/strength-0.png
+      '1': assets/source-patches/fermenter/strength-1.png
+      '2': assets/source-patches/fermenter/strength-2.png
+      '3': assets/source-patches/fermenter/strength-3.png
+- id: leech
+  card_id: leech
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/leech/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/leech/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 649
+    - 675
+    - 887
+    style: rules
+    background_asset: assets/source-patches/leech/rules-background.png
+    render:
+      max_lines: 8
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 890
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/leech/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/leech/cost-0.png
+      '1': assets/source-patches/leech/cost-1.png
+      '2': assets/source-patches/leech/cost-2.png
+      '3': assets/source-patches/leech/cost-3.png
+      '4': assets/source-patches/leech/cost-4.png
+      '5': assets/source-patches/leech/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/leech/memory_cost-1.png
+      '2': assets/source-patches/leech/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/leech/strength-0.png
+      '1': assets/source-patches/leech/strength-1.png
+      '2': assets/source-patches/leech/strength-2.png
+      '3': assets/source-patches/leech/strength-3.png
+- id: marjanah
+  card_id: marjanah
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/marjanah/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/marjanah/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 645
+    - 675
+    - 833
+    style: rules
+    background_asset: assets/source-patches/marjanah/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 836
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/marjanah/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/marjanah/cost-0.png
+      '1': assets/source-patches/marjanah/cost-1.png
+      '2': assets/source-patches/marjanah/cost-2.png
+      '3': assets/source-patches/marjanah/cost-3.png
+      '4': assets/source-patches/marjanah/cost-4.png
+      '5': assets/source-patches/marjanah/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/marjanah/memory_cost-1.png
+      '2': assets/source-patches/marjanah/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/marjanah/strength-0.png
+      '1': assets/source-patches/marjanah/strength-1.png
+      '2': assets/source-patches/marjanah/strength-2.png
+      '3': assets/source-patches/marjanah/strength-3.png
+- id: tranquilizer
+  card_id: tranquilizer
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/tranquilizer/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/tranquilizer/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 645
+    - 675
+    - 908
+    style: rules
+    background_asset: assets/source-patches/tranquilizer/rules-background.png
+    render:
+      max_lines: 8
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 911
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/tranquilizer/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/tranquilizer/cost-0.png
+      '1': assets/source-patches/tranquilizer/cost-1.png
+      '2': assets/source-patches/tranquilizer/cost-2.png
+      '3': assets/source-patches/tranquilizer/cost-3.png
+      '4': assets/source-patches/tranquilizer/cost-4.png
+      '5': assets/source-patches/tranquilizer/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/tranquilizer/memory_cost-1.png
+      '2': assets/source-patches/tranquilizer/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/tranquilizer/strength-0.png
+      '1': assets/source-patches/tranquilizer/strength-1.png
+      '2': assets/source-patches/tranquilizer/strength-2.png
+      '3': assets/source-patches/tranquilizer/strength-3.png
+- id: conduit
+  card_id: conduit
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/conduit/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/conduit/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 649
+    - 675
+    - 870
+    style: rules
+    background_asset: assets/source-patches/conduit/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 873
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/conduit/flavor-background.png
+    render:
+      max_lines: 4
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/conduit/cost-0.png
+      '1': assets/source-patches/conduit/cost-1.png
+      '2': assets/source-patches/conduit/cost-2.png
+      '3': assets/source-patches/conduit/cost-3.png
+      '4': assets/source-patches/conduit/cost-4.png
+      '5': assets/source-patches/conduit/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/conduit/memory_cost-1.png
+      '2': assets/source-patches/conduit/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/conduit/strength-0.png
+      '1': assets/source-patches/conduit/strength-1.png
+      '2': assets/source-patches/conduit/strength-2.png
+      '3': assets/source-patches/conduit/strength-3.png
+- id: echelon
+  card_id: echelon
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/echelon/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/echelon/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 649
+    - 675
+    - 845
+    style: rules
+    background_asset: assets/source-patches/echelon/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 848
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/echelon/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/echelon/cost-0.png
+      '1': assets/source-patches/echelon/cost-1.png
+      '2': assets/source-patches/echelon/cost-2.png
+      '3': assets/source-patches/echelon/cost-3.png
+      '4': assets/source-patches/echelon/cost-4.png
+      '5': assets/source-patches/echelon/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/echelon/memory_cost-1.png
+      '2': assets/source-patches/echelon/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/echelon/strength-0.png
+      '1': assets/source-patches/echelon/strength-1.png
+      '2': assets/source-patches/echelon/strength-2.png
+      '3': assets/source-patches/echelon/strength-3.png
+- id: unity
+  card_id: unity
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/unity/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/unity/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 645
+    - 675
+    - 795
+    style: rules
+    background_asset: assets/source-patches/unity/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 798
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/unity/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/unity/cost-0.png
+      '1': assets/source-patches/unity/cost-1.png
+      '2': assets/source-patches/unity/cost-2.png
+      '3': assets/source-patches/unity/cost-3.png
+      '4': assets/source-patches/unity/cost-4.png
+      '5': assets/source-patches/unity/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/unity/memory_cost-1.png
+      '2': assets/source-patches/unity/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/unity/strength-0.png
+      '1': assets/source-patches/unity/strength-1.png
+      '2': assets/source-patches/unity/strength-2.png
+      '3': assets/source-patches/unity/strength-3.png
+- id: mayfly
+  card_id: mayfly
+  card_type: program
+  fields:
+  - id: title
+    src: name
+    box_px: *id038
+    style: title
+    render: *id039
+    background_asset: assets/source-patches/mayfly/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id040
+    style: subtype
+    background_asset: assets/source-patches/mayfly/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 645
+    - 675
+    - 791
+    style: rules
+    background_asset: assets/source-patches/mayfly/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 794
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/mayfly/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/mayfly/cost-0.png
+      '1': assets/source-patches/mayfly/cost-1.png
+      '2': assets/source-patches/mayfly/cost-2.png
+      '3': assets/source-patches/mayfly/cost-3.png
+      '4': assets/source-patches/mayfly/cost-4.png
+      '5': assets/source-patches/mayfly/cost-5.png
+  - id: memory_cost
+    src: attributes.memory_cost
+    box_px: *id042
+    patches:
+      '1': assets/source-patches/mayfly/memory_cost-1.png
+      '2': assets/source-patches/mayfly/memory_cost-2.png
+  - id: strength
+    src: attributes.strength
+    box_px: *id043
+    patches:
+      '0': assets/source-patches/mayfly/strength-0.png
+      '1': assets/source-patches/mayfly/strength-1.png
+      '2': assets/source-patches/mayfly/strength-2.png
+      '3': assets/source-patches/mayfly/strength-3.png
+- id: docklands_pass
+  card_id: docklands_pass
+  card_type: hardware
+  fields:
+  - id: title
+    src: name
+    box_px: &id044
+    - 180
+    - 30
+    - 740
+    - 94
+    style: title
+    render: &id045
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    prefix: '◆ '
+    background_asset: assets/source-patches/docklands_pass/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id046
+    - 225
+    - 570
+    - 540
+    - 620
+    style: subtype
+    background_asset: assets/source-patches/docklands_pass/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 636
+    - 680
+    - 732
+    style: rules
+    background_asset: assets/source-patches/docklands_pass/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 735
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/docklands_pass/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/docklands_pass/cost-0.png
+      '1': assets/source-patches/docklands_pass/cost-1.png
+      '2': assets/source-patches/docklands_pass/cost-2.png
+      '3': assets/source-patches/docklands_pass/cost-3.png
+      '4': assets/source-patches/docklands_pass/cost-4.png
+      '5': assets/source-patches/docklands_pass/cost-5.png
+- id: pennyshaver
+  card_id: pennyshaver
+  card_type: hardware
+  fields:
+  - id: title
+    src: name
+    box_px: *id044
+    style: title
+    render: *id045
+    prefix: '◆ '
+    background_asset: assets/source-patches/pennyshaver/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id046
+    style: subtype
+    background_asset: assets/source-patches/pennyshaver/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 684
+    - 680
+    - 898
+    style: rules
+    background_asset: assets/source-patches/pennyshaver/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 901
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/pennyshaver/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/pennyshaver/cost-0.png
+      '1': assets/source-patches/pennyshaver/cost-1.png
+      '2': assets/source-patches/pennyshaver/cost-2.png
+      '3': assets/source-patches/pennyshaver/cost-3.png
+      '4': assets/source-patches/pennyshaver/cost-4.png
+      '5': assets/source-patches/pennyshaver/cost-5.png
+- id: dzmz_optimizer
+  card_id: dzmz_optimizer
+  card_type: hardware
+  fields:
+  - id: title
+    src: name
+    box_px: *id044
+    style: title
+    render: *id045
+    background_asset: assets/source-patches/dzmz_optimizer/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id046
+    style: subtype
+    background_asset: assets/source-patches/dzmz_optimizer/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 686
+    - 680
+    - 782
+    style: rules
+    background_asset: assets/source-patches/dzmz_optimizer/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 785
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/dzmz_optimizer/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/dzmz_optimizer/cost-0.png
+      '1': assets/source-patches/dzmz_optimizer/cost-1.png
+      '2': assets/source-patches/dzmz_optimizer/cost-2.png
+      '3': assets/source-patches/dzmz_optimizer/cost-3.png
+      '4': assets/source-patches/dzmz_optimizer/cost-4.png
+      '5': assets/source-patches/dzmz_optimizer/cost-5.png
+- id: pantograph
+  card_id: pantograph
+  card_type: hardware
+  fields:
+  - id: title
+    src: name
+    box_px: *id044
+    style: title
+    render: *id045
+    prefix: '◆ '
+    background_asset: assets/source-patches/pantograph/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id046
+    style: subtype
+    background_asset: assets/source-patches/pantograph/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 686
+    - 680
+    - 821
+    style: rules
+    background_asset: assets/source-patches/pantograph/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 824
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/pantograph/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/pantograph/cost-0.png
+      '1': assets/source-patches/pantograph/cost-1.png
+      '2': assets/source-patches/pantograph/cost-2.png
+      '3': assets/source-patches/pantograph/cost-3.png
+      '4': assets/source-patches/pantograph/cost-4.png
+      '5': assets/source-patches/pantograph/cost-5.png
+- id: t400_memory_diamond
+  card_id: t400_memory_diamond
+  card_type: hardware
+  fields:
+  - id: title
+    src: name
+    box_px: *id044
+    style: title
+    render: *id045
+    background_asset: assets/source-patches/t400_memory_diamond/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id046
+    style: subtype
+    background_asset: assets/source-patches/t400_memory_diamond/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 690
+    - 680
+    - 744
+    style: rules
+    background_asset: assets/source-patches/t400_memory_diamond/rules-background.png
+    render:
+      max_lines: 3
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 747
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/t400_memory_diamond/flavor-background.png
+    render:
+      max_lines: 7
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/t400_memory_diamond/cost-0.png
+      '1': assets/source-patches/t400_memory_diamond/cost-1.png
+      '2': assets/source-patches/t400_memory_diamond/cost-2.png
+      '3': assets/source-patches/t400_memory_diamond/cost-3.png
+      '4': assets/source-patches/t400_memory_diamond/cost-4.png
+      '5': assets/source-patches/t400_memory_diamond/cost-5.png
+- id: cookbook
+  card_id: cookbook
+  card_type: resource
+  fields:
+  - id: title
+    src: name
+    box_px: &id047
+    - 180
+    - 24
+    - 740
+    - 92
+    style: title
+    render: &id048
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    prefix: '◆ '
+    background_asset: assets/source-patches/cookbook/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id049
+    - 215
+    - 570
+    - 540
+    - 620
+    style: subtype
+    background_asset: assets/source-patches/cookbook/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 636
+    - 680
+    - 728
+    style: rules
+    background_asset: assets/source-patches/cookbook/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 731
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/cookbook/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/cookbook/cost-0.png
+      '1': assets/source-patches/cookbook/cost-1.png
+      '2': assets/source-patches/cookbook/cost-2.png
+      '3': assets/source-patches/cookbook/cost-3.png
+      '4': assets/source-patches/cookbook/cost-4.png
+      '5': assets/source-patches/cookbook/cost-5.png
+- id: red_team
+  card_id: red_team
+  card_type: resource
+  fields:
+  - id: title
+    src: name
+    box_px: *id047
+    style: title
+    render: *id048
+    background_asset: assets/source-patches/red_team/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id049
+    style: subtype
+    background_asset: assets/source-patches/red_team/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 635
+    - 680
+    - 857
+    style: rules
+    background_asset: assets/source-patches/red_team/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 860
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/red_team/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/red_team/cost-0.png
+      '1': assets/source-patches/red_team/cost-1.png
+      '2': assets/source-patches/red_team/cost-2.png
+      '3': assets/source-patches/red_team/cost-3.png
+      '4': assets/source-patches/red_team/cost-4.png
+      '5': assets/source-patches/red_team/cost-5.png
+- id: telework_contract
+  card_id: telework_contract
+  card_type: resource
+  fields:
+  - id: title
+    src: name
+    box_px: *id047
+    style: title
+    render: *id048
+    background_asset: assets/source-patches/telework_contract/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id049
+    style: subtype
+    background_asset: assets/source-patches/telework_contract/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 635
+    - 680
+    - 810
+    style: rules
+    background_asset: assets/source-patches/telework_contract/rules-background.png
+    render:
+      max_lines: 6
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 813
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/telework_contract/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/telework_contract/cost-0.png
+      '1': assets/source-patches/telework_contract/cost-1.png
+      '2': assets/source-patches/telework_contract/cost-2.png
+      '3': assets/source-patches/telework_contract/cost-3.png
+      '4': assets/source-patches/telework_contract/cost-4.png
+      '5': assets/source-patches/telework_contract/cost-5.png
+- id: verbal_plasticity
+  card_id: verbal_plasticity
+  card_type: resource
+  fields:
+  - id: title
+    src: name
+    box_px: *id047
+    style: title
+    render: *id048
+    prefix: '◆ '
+    background_asset: assets/source-patches/verbal_plasticity/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id049
+    style: subtype
+    background_asset: assets/source-patches/verbal_plasticity/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 636
+    - 680
+    - 728
+    style: rules
+    background_asset: assets/source-patches/verbal_plasticity/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 731
+    - 680
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/verbal_plasticity/flavor-background.png
+    render:
+      max_lines: 8
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/verbal_plasticity/cost-0.png
+      '1': assets/source-patches/verbal_plasticity/cost-1.png
+      '2': assets/source-patches/verbal_plasticity/cost-2.png
+      '3': assets/source-patches/verbal_plasticity/cost-3.png
+      '4': assets/source-patches/verbal_plasticity/cost-4.png
+      '5': assets/source-patches/verbal_plasticity/cost-5.png
+- id: wildcat_strike
+  card_id: wildcat_strike
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: &id050
+    - 165
+    - 24
+    - 740
+    - 94
+    style: title
+    render: &id051
+      padding_left_cqw: 7.4
+      padding_right_cqw: 1.0
+    background_asset: assets/source-patches/wildcat_strike/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: &id052
+    - 160
+    - 625
+    - 500
+    - 672
+    style: subtype
+    background_asset: assets/source-patches/wildcat_strike/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 694
+    - 675
+    - 840
+    style: rules
+    background_asset: assets/source-patches/wildcat_strike/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 843
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/wildcat_strike/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/wildcat_strike/cost-0.png
+      '1': assets/source-patches/wildcat_strike/cost-1.png
+      '2': assets/source-patches/wildcat_strike/cost-2.png
+      '3': assets/source-patches/wildcat_strike/cost-3.png
+      '4': assets/source-patches/wildcat_strike/cost-4.png
+      '5': assets/source-patches/wildcat_strike/cost-5.png
+- id: mutual_favor
+  card_id: mutual_favor
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: *id050
+    style: title
+    render: *id051
+    background_asset: assets/source-patches/mutual_favor/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id052
+    style: subtype
+    background_asset: assets/source-patches/mutual_favor/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 680
+    - 675
+    - 903
+    style: rules
+    background_asset: assets/source-patches/mutual_favor/rules-background.png
+    render:
+      max_lines: 7
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 906
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/mutual_favor/flavor-background.png
+    render:
+      max_lines: 3
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/mutual_favor/cost-0.png
+      '1': assets/source-patches/mutual_favor/cost-1.png
+      '2': assets/source-patches/mutual_favor/cost-2.png
+      '3': assets/source-patches/mutual_favor/cost-3.png
+      '4': assets/source-patches/mutual_favor/cost-4.png
+      '5': assets/source-patches/mutual_favor/cost-5.png
+- id: tread_lightly
+  card_id: tread_lightly
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: *id050
+    style: title
+    render: *id051
+    background_asset: assets/source-patches/tread_lightly/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id052
+    style: subtype
+    background_asset: assets/source-patches/tread_lightly/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 694
+    - 675
+    - 790
+    style: rules
+    background_asset: assets/source-patches/tread_lightly/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 793
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/tread_lightly/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/tread_lightly/cost-0.png
+      '1': assets/source-patches/tread_lightly/cost-1.png
+      '2': assets/source-patches/tread_lightly/cost-2.png
+      '3': assets/source-patches/tread_lightly/cost-3.png
+      '4': assets/source-patches/tread_lightly/cost-4.png
+      '5': assets/source-patches/tread_lightly/cost-5.png
+- id: creative_commission
+  card_id: creative_commission
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: *id050
+    style: title
+    render: *id051
+    background_asset: assets/source-patches/creative_commission/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id052
+    style: subtype
+    background_asset: assets/source-patches/creative_commission/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 690
+    - 675
+    - 785
+    style: rules
+    background_asset: assets/source-patches/creative_commission/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 788
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/creative_commission/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/creative_commission/cost-0.png
+      '1': assets/source-patches/creative_commission/cost-1.png
+      '2': assets/source-patches/creative_commission/cost-2.png
+      '3': assets/source-patches/creative_commission/cost-3.png
+      '4': assets/source-patches/creative_commission/cost-4.png
+      '5': assets/source-patches/creative_commission/cost-5.png
+- id: vrcation
+  card_id: vrcation
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: *id050
+    style: title
+    render: *id051
+    background_asset: assets/source-patches/vrcation/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id052
+    style: subtype
+    background_asset: assets/source-patches/vrcation/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 690
+    - 675
+    - 790
+    style: rules
+    background_asset: assets/source-patches/vrcation/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 793
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/vrcation/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/vrcation/cost-0.png
+      '1': assets/source-patches/vrcation/cost-1.png
+      '2': assets/source-patches/vrcation/cost-2.png
+      '3': assets/source-patches/vrcation/cost-3.png
+      '4': assets/source-patches/vrcation/cost-4.png
+      '5': assets/source-patches/vrcation/cost-5.png
+- id: jailbreak
+  card_id: jailbreak
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: *id050
+    style: title
+    render: *id051
+    background_asset: assets/source-patches/jailbreak/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id052
+    style: subtype
+    background_asset: assets/source-patches/jailbreak/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 694
+    - 675
+    - 827
+    style: rules
+    background_asset: assets/source-patches/jailbreak/rules-background.png
+    render:
+      max_lines: 5
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 830
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/jailbreak/flavor-background.png
+    render:
+      max_lines: 5
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/jailbreak/cost-0.png
+      '1': assets/source-patches/jailbreak/cost-1.png
+      '2': assets/source-patches/jailbreak/cost-2.png
+      '3': assets/source-patches/jailbreak/cost-3.png
+      '4': assets/source-patches/jailbreak/cost-4.png
+      '5': assets/source-patches/jailbreak/cost-5.png
+- id: overclock
+  card_id: overclock
+  card_type: event
+  fields:
+  - id: title
+    src: name
+    box_px: *id050
+    style: title
+    render: *id051
+    background_asset: assets/source-patches/overclock/title-background.png
+  - id: subtypes
+    src: subtypes
+    transform: join
+    separator: ' · '
+    box_px: *id052
+    style: subtype
+    background_asset: assets/source-patches/overclock/subtypes-background.png
+  - id: rules
+    src: text
+    box_px:
+    - 65
+    - 694
+    - 675
+    - 790
+    style: rules
+    background_asset: assets/source-patches/overclock/rules-background.png
+    render:
+      max_lines: 4
+  - id: flavor
+    src: flavor_text
+    box_px:
+    - 65
+    - 793
+    - 675
+    - 975
+    style: flavor
+    background_asset: assets/source-patches/overclock/flavor-background.png
+    render:
+      max_lines: 6
+    source: printing
+  - id: cost
+    src: attributes.cost
+    box_px: *id041
+    patches:
+      '0': assets/source-patches/overclock/cost-0.png
+      '1': assets/source-patches/overclock/cost-1.png
+      '2': assets/source-patches/overclock/cost-2.png
+      '3': assets/source-patches/overclock/cost-3.png
+      '4': assets/source-patches/overclock/cost-4.png
+      '5': assets/source-patches/overclock/cost-5.png
+- id: wildcat_strike_influence_runner
+  card_id: wildcat_strike
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: &id053
+    - 690
+    - 756
+    - 719
+    - 922
+    patches:
+      '0': assets/source-patches/wildcat_strike/influence_runner-0.png
+      '1': assets/source-patches/wildcat_strike/influence_runner-1.png
+      '2': assets/source-patches/wildcat_strike/influence_runner-2.png
+      '3': assets/source-patches/wildcat_strike/influence_runner-3.png
+      '4': assets/source-patches/wildcat_strike/influence_runner-4.png
+      '5': assets/source-patches/wildcat_strike/influence_runner-5.png
+- id: carnivore_influence_runner
+  card_id: carnivore
+  card_type: hardware
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/carnivore/influence_runner-0.png
+      '1': assets/source-patches/carnivore/influence_runner-1.png
+      '2': assets/source-patches/carnivore/influence_runner-2.png
+      '3': assets/source-patches/carnivore/influence_runner-3.png
+      '4': assets/source-patches/carnivore/influence_runner-4.png
+      '5': assets/source-patches/carnivore/influence_runner-5.png
+- id: botulus_influence_runner
+  card_id: botulus
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/botulus/influence_runner-0.png
+      '1': assets/source-patches/botulus/influence_runner-1.png
+      '2': assets/source-patches/botulus/influence_runner-2.png
+      '3': assets/source-patches/botulus/influence_runner-3.png
+      '4': assets/source-patches/botulus/influence_runner-4.png
+      '5': assets/source-patches/botulus/influence_runner-5.png
+- id: buzzsaw_influence_runner
+  card_id: buzzsaw
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/buzzsaw/influence_runner-0.png
+      '1': assets/source-patches/buzzsaw/influence_runner-1.png
+      '2': assets/source-patches/buzzsaw/influence_runner-2.png
+      '3': assets/source-patches/buzzsaw/influence_runner-3.png
+      '4': assets/source-patches/buzzsaw/influence_runner-4.png
+      '5': assets/source-patches/buzzsaw/influence_runner-5.png
+- id: cleaver_influence_runner
+  card_id: cleaver
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/cleaver/influence_runner-0.png
+      '1': assets/source-patches/cleaver/influence_runner-1.png
+      '2': assets/source-patches/cleaver/influence_runner-2.png
+      '3': assets/source-patches/cleaver/influence_runner-3.png
+      '4': assets/source-patches/cleaver/influence_runner-4.png
+      '5': assets/source-patches/cleaver/influence_runner-5.png
+- id: fermenter_influence_runner
+  card_id: fermenter
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/fermenter/influence_runner-0.png
+      '1': assets/source-patches/fermenter/influence_runner-1.png
+      '2': assets/source-patches/fermenter/influence_runner-2.png
+      '3': assets/source-patches/fermenter/influence_runner-3.png
+      '4': assets/source-patches/fermenter/influence_runner-4.png
+      '5': assets/source-patches/fermenter/influence_runner-5.png
+- id: leech_influence_runner
+  card_id: leech
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/leech/influence_runner-0.png
+      '1': assets/source-patches/leech/influence_runner-1.png
+      '2': assets/source-patches/leech/influence_runner-2.png
+      '3': assets/source-patches/leech/influence_runner-3.png
+      '4': assets/source-patches/leech/influence_runner-4.png
+      '5': assets/source-patches/leech/influence_runner-5.png
+- id: cookbook_influence_runner
+  card_id: cookbook
+  card_type: resource
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/cookbook/influence_runner-0.png
+      '1': assets/source-patches/cookbook/influence_runner-1.png
+      '2': assets/source-patches/cookbook/influence_runner-2.png
+      '3': assets/source-patches/cookbook/influence_runner-3.png
+      '4': assets/source-patches/cookbook/influence_runner-4.png
+      '5': assets/source-patches/cookbook/influence_runner-5.png
+- id: mutual_favor_influence_runner
+  card_id: mutual_favor
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/mutual_favor/influence_runner-0.png
+      '1': assets/source-patches/mutual_favor/influence_runner-1.png
+      '2': assets/source-patches/mutual_favor/influence_runner-2.png
+      '3': assets/source-patches/mutual_favor/influence_runner-3.png
+      '4': assets/source-patches/mutual_favor/influence_runner-4.png
+      '5': assets/source-patches/mutual_favor/influence_runner-5.png
+- id: tread_lightly_influence_runner
+  card_id: tread_lightly
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/tread_lightly/influence_runner-0.png
+      '1': assets/source-patches/tread_lightly/influence_runner-1.png
+      '2': assets/source-patches/tread_lightly/influence_runner-2.png
+      '3': assets/source-patches/tread_lightly/influence_runner-3.png
+      '4': assets/source-patches/tread_lightly/influence_runner-4.png
+      '5': assets/source-patches/tread_lightly/influence_runner-5.png
+- id: docklands_pass_influence_runner
+  card_id: docklands_pass
+  card_type: hardware
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/docklands_pass/influence_runner-0.png
+      '1': assets/source-patches/docklands_pass/influence_runner-1.png
+      '2': assets/source-patches/docklands_pass/influence_runner-2.png
+      '3': assets/source-patches/docklands_pass/influence_runner-3.png
+      '4': assets/source-patches/docklands_pass/influence_runner-4.png
+      '5': assets/source-patches/docklands_pass/influence_runner-5.png
+- id: pennyshaver_influence_runner
+  card_id: pennyshaver
+  card_type: hardware
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/pennyshaver/influence_runner-0.png
+      '1': assets/source-patches/pennyshaver/influence_runner-1.png
+      '2': assets/source-patches/pennyshaver/influence_runner-2.png
+      '3': assets/source-patches/pennyshaver/influence_runner-3.png
+      '4': assets/source-patches/pennyshaver/influence_runner-4.png
+      '5': assets/source-patches/pennyshaver/influence_runner-5.png
+- id: carmen_influence_runner
+  card_id: carmen
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/carmen/influence_runner-0.png
+      '1': assets/source-patches/carmen/influence_runner-1.png
+      '2': assets/source-patches/carmen/influence_runner-2.png
+      '3': assets/source-patches/carmen/influence_runner-3.png
+      '4': assets/source-patches/carmen/influence_runner-4.png
+      '5': assets/source-patches/carmen/influence_runner-5.png
+- id: marjanah_influence_runner
+  card_id: marjanah
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/marjanah/influence_runner-0.png
+      '1': assets/source-patches/marjanah/influence_runner-1.png
+      '2': assets/source-patches/marjanah/influence_runner-2.png
+      '3': assets/source-patches/marjanah/influence_runner-3.png
+      '4': assets/source-patches/marjanah/influence_runner-4.png
+      '5': assets/source-patches/marjanah/influence_runner-5.png
+- id: tranquilizer_influence_runner
+  card_id: tranquilizer
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/tranquilizer/influence_runner-0.png
+      '1': assets/source-patches/tranquilizer/influence_runner-1.png
+      '2': assets/source-patches/tranquilizer/influence_runner-2.png
+      '3': assets/source-patches/tranquilizer/influence_runner-3.png
+      '4': assets/source-patches/tranquilizer/influence_runner-4.png
+      '5': assets/source-patches/tranquilizer/influence_runner-5.png
+- id: red_team_influence_runner
+  card_id: red_team
+  card_type: resource
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/red_team/influence_runner-0.png
+      '1': assets/source-patches/red_team/influence_runner-1.png
+      '2': assets/source-patches/red_team/influence_runner-2.png
+      '3': assets/source-patches/red_team/influence_runner-3.png
+      '4': assets/source-patches/red_team/influence_runner-4.png
+      '5': assets/source-patches/red_team/influence_runner-5.png
+- id: creative_commission_influence_runner
+  card_id: creative_commission
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/creative_commission/influence_runner-0.png
+      '1': assets/source-patches/creative_commission/influence_runner-1.png
+      '2': assets/source-patches/creative_commission/influence_runner-2.png
+      '3': assets/source-patches/creative_commission/influence_runner-3.png
+      '4': assets/source-patches/creative_commission/influence_runner-4.png
+      '5': assets/source-patches/creative_commission/influence_runner-5.png
+- id: vrcation_influence_runner
+  card_id: vrcation
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/vrcation/influence_runner-0.png
+      '1': assets/source-patches/vrcation/influence_runner-1.png
+      '2': assets/source-patches/vrcation/influence_runner-2.png
+      '3': assets/source-patches/vrcation/influence_runner-3.png
+      '4': assets/source-patches/vrcation/influence_runner-4.png
+      '5': assets/source-patches/vrcation/influence_runner-5.png
+- id: dzmz_optimizer_influence_runner
+  card_id: dzmz_optimizer
+  card_type: hardware
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/dzmz_optimizer/influence_runner-0.png
+      '1': assets/source-patches/dzmz_optimizer/influence_runner-1.png
+      '2': assets/source-patches/dzmz_optimizer/influence_runner-2.png
+      '3': assets/source-patches/dzmz_optimizer/influence_runner-3.png
+      '4': assets/source-patches/dzmz_optimizer/influence_runner-4.png
+      '5': assets/source-patches/dzmz_optimizer/influence_runner-5.png
+- id: pantograph_influence_runner
+  card_id: pantograph
+  card_type: hardware
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/pantograph/influence_runner-0.png
+      '1': assets/source-patches/pantograph/influence_runner-1.png
+      '2': assets/source-patches/pantograph/influence_runner-2.png
+      '3': assets/source-patches/pantograph/influence_runner-3.png
+      '4': assets/source-patches/pantograph/influence_runner-4.png
+      '5': assets/source-patches/pantograph/influence_runner-5.png
+- id: conduit_influence_runner
+  card_id: conduit
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/conduit/influence_runner-0.png
+      '1': assets/source-patches/conduit/influence_runner-1.png
+      '2': assets/source-patches/conduit/influence_runner-2.png
+      '3': assets/source-patches/conduit/influence_runner-3.png
+      '4': assets/source-patches/conduit/influence_runner-4.png
+      '5': assets/source-patches/conduit/influence_runner-5.png
+- id: echelon_influence_runner
+  card_id: echelon
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/echelon/influence_runner-0.png
+      '1': assets/source-patches/echelon/influence_runner-1.png
+      '2': assets/source-patches/echelon/influence_runner-2.png
+      '3': assets/source-patches/echelon/influence_runner-3.png
+      '4': assets/source-patches/echelon/influence_runner-4.png
+      '5': assets/source-patches/echelon/influence_runner-5.png
+- id: unity_influence_runner
+  card_id: unity
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/unity/influence_runner-0.png
+      '1': assets/source-patches/unity/influence_runner-1.png
+      '2': assets/source-patches/unity/influence_runner-2.png
+      '3': assets/source-patches/unity/influence_runner-3.png
+      '4': assets/source-patches/unity/influence_runner-4.png
+      '5': assets/source-patches/unity/influence_runner-5.png
+- id: telework_contract_influence_runner
+  card_id: telework_contract
+  card_type: resource
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/telework_contract/influence_runner-0.png
+      '1': assets/source-patches/telework_contract/influence_runner-1.png
+      '2': assets/source-patches/telework_contract/influence_runner-2.png
+      '3': assets/source-patches/telework_contract/influence_runner-3.png
+      '4': assets/source-patches/telework_contract/influence_runner-4.png
+      '5': assets/source-patches/telework_contract/influence_runner-5.png
+- id: jailbreak_influence_runner
+  card_id: jailbreak
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/jailbreak/influence_runner-0.png
+      '1': assets/source-patches/jailbreak/influence_runner-1.png
+      '2': assets/source-patches/jailbreak/influence_runner-2.png
+      '3': assets/source-patches/jailbreak/influence_runner-3.png
+      '4': assets/source-patches/jailbreak/influence_runner-4.png
+      '5': assets/source-patches/jailbreak/influence_runner-5.png
+- id: overclock_influence_runner
+  card_id: overclock
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/overclock/influence_runner-0.png
+      '1': assets/source-patches/overclock/influence_runner-1.png
+      '2': assets/source-patches/overclock/influence_runner-2.png
+      '3': assets/source-patches/overclock/influence_runner-3.png
+      '4': assets/source-patches/overclock/influence_runner-4.png
+      '5': assets/source-patches/overclock/influence_runner-5.png
+- id: sure_gamble_influence_runner
+  card_id: sure_gamble
+  card_type: event
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/sure_gamble/influence_runner-0.png
+      '1': assets/source-patches/sure_gamble/influence_runner-1.png
+      '2': assets/source-patches/sure_gamble/influence_runner-2.png
+      '3': assets/source-patches/sure_gamble/influence_runner-3.png
+      '4': assets/source-patches/sure_gamble/influence_runner-4.png
+      '5': assets/source-patches/sure_gamble/influence_runner-5.png
+- id: t400_memory_diamond_influence_runner
+  card_id: t400_memory_diamond
+  card_type: hardware
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/t400_memory_diamond/influence_runner-0.png
+      '1': assets/source-patches/t400_memory_diamond/influence_runner-1.png
+      '2': assets/source-patches/t400_memory_diamond/influence_runner-2.png
+      '3': assets/source-patches/t400_memory_diamond/influence_runner-3.png
+      '4': assets/source-patches/t400_memory_diamond/influence_runner-4.png
+      '5': assets/source-patches/t400_memory_diamond/influence_runner-5.png
+- id: mayfly_influence_runner
+  card_id: mayfly
+  card_type: program
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/mayfly/influence_runner-0.png
+      '1': assets/source-patches/mayfly/influence_runner-1.png
+      '2': assets/source-patches/mayfly/influence_runner-2.png
+      '3': assets/source-patches/mayfly/influence_runner-3.png
+      '4': assets/source-patches/mayfly/influence_runner-4.png
+      '5': assets/source-patches/mayfly/influence_runner-5.png
+- id: smartware_distributor_influence_runner
+  card_id: smartware_distributor
+  card_type: resource
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/smartware_distributor/influence_runner-0.png
+      '1': assets/source-patches/smartware_distributor/influence_runner-1.png
+      '2': assets/source-patches/smartware_distributor/influence_runner-2.png
+      '3': assets/source-patches/smartware_distributor/influence_runner-3.png
+      '4': assets/source-patches/smartware_distributor/influence_runner-4.png
+      '5': assets/source-patches/smartware_distributor/influence_runner-5.png
+- id: verbal_plasticity_influence_runner
+  card_id: verbal_plasticity
+  card_type: resource
+  fields:
+  - id: influence_runner
+    src: attributes.influence
+    box_px: *id053
+    patches:
+      '0': assets/source-patches/verbal_plasticity/influence_runner-0.png
+      '1': assets/source-patches/verbal_plasticity/influence_runner-1.png
+      '2': assets/source-patches/verbal_plasticity/influence_runner-2.png
+      '3': assets/source-patches/verbal_plasticity/influence_runner-3.png
+      '4': assets/source-patches/verbal_plasticity/influence_runner-4.png
+      '5': assets/source-patches/verbal_plasticity/influence_runner-5.png
+- id: nico_campaign_influence_corp
+  card_id: nico_campaign
+  card_type: asset
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: &id054
+    - 34
+    - 804
+    - 63
+    - 971
+    patches:
+      '0': assets/source-patches/nico_campaign/influence_corp-0.png
+      '1': assets/source-patches/nico_campaign/influence_corp-1.png
+      '2': assets/source-patches/nico_campaign/influence_corp-2.png
+      '3': assets/source-patches/nico_campaign/influence_corp-3.png
+      '4': assets/source-patches/nico_campaign/influence_corp-4.png
+      '5': assets/source-patches/nico_campaign/influence_corp-5.png
+- id: ansel_1_0_influence_corp
+  card_id: ansel_1_0
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/ansel_1_0/influence_corp-0.png
+      '1': assets/source-patches/ansel_1_0/influence_corp-1.png
+      '2': assets/source-patches/ansel_1_0/influence_corp-2.png
+      '3': assets/source-patches/ansel_1_0/influence_corp-3.png
+      '4': assets/source-patches/ansel_1_0/influence_corp-4.png
+      '5': assets/source-patches/ansel_1_0/influence_corp-5.png
+- id: bran_1_0_influence_corp
+  card_id: bran_1_0
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/bran_1_0/influence_corp-0.png
+      '1': assets/source-patches/bran_1_0/influence_corp-1.png
+      '2': assets/source-patches/bran_1_0/influence_corp-2.png
+      '3': assets/source-patches/bran_1_0/influence_corp-3.png
+      '4': assets/source-patches/bran_1_0/influence_corp-4.png
+      '5': assets/source-patches/bran_1_0/influence_corp-5.png
+- id: seamless_launch_influence_corp
+  card_id: seamless_launch
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/seamless_launch/influence_corp-0.png
+      '1': assets/source-patches/seamless_launch/influence_corp-1.png
+      '2': assets/source-patches/seamless_launch/influence_corp-2.png
+      '3': assets/source-patches/seamless_launch/influence_corp-3.png
+      '4': assets/source-patches/seamless_launch/influence_corp-4.png
+      '5': assets/source-patches/seamless_launch/influence_corp-5.png
+- id: sprint_influence_corp
+  card_id: sprint
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/sprint/influence_corp-0.png
+      '1': assets/source-patches/sprint/influence_corp-1.png
+      '2': assets/source-patches/sprint/influence_corp-2.png
+      '3': assets/source-patches/sprint/influence_corp-3.png
+      '4': assets/source-patches/sprint/influence_corp-4.png
+      '5': assets/source-patches/sprint/influence_corp-5.png
+- id: manegarm_skunkworks_influence_corp
+  card_id: manegarm_skunkworks
+  card_type: upgrade
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/manegarm_skunkworks/influence_corp-0.png
+      '1': assets/source-patches/manegarm_skunkworks/influence_corp-1.png
+      '2': assets/source-patches/manegarm_skunkworks/influence_corp-2.png
+      '3': assets/source-patches/manegarm_skunkworks/influence_corp-3.png
+      '4': assets/source-patches/manegarm_skunkworks/influence_corp-4.png
+      '5': assets/source-patches/manegarm_skunkworks/influence_corp-5.png
+- id: urtica_cipher_influence_corp
+  card_id: urtica_cipher
+  card_type: asset
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/urtica_cipher/influence_corp-0.png
+      '1': assets/source-patches/urtica_cipher/influence_corp-1.png
+      '2': assets/source-patches/urtica_cipher/influence_corp-2.png
+      '3': assets/source-patches/urtica_cipher/influence_corp-3.png
+      '4': assets/source-patches/urtica_cipher/influence_corp-4.png
+      '5': assets/source-patches/urtica_cipher/influence_corp-5.png
+- id: diviner_influence_corp
+  card_id: diviner
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/diviner/influence_corp-0.png
+      '1': assets/source-patches/diviner/influence_corp-1.png
+      '2': assets/source-patches/diviner/influence_corp-2.png
+      '3': assets/source-patches/diviner/influence_corp-3.png
+      '4': assets/source-patches/diviner/influence_corp-4.png
+      '5': assets/source-patches/diviner/influence_corp-5.png
+- id: karuna_influence_corp
+  card_id: karuna
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/karuna/influence_corp-0.png
+      '1': assets/source-patches/karuna/influence_corp-1.png
+      '2': assets/source-patches/karuna/influence_corp-2.png
+      '3': assets/source-patches/karuna/influence_corp-3.png
+      '4': assets/source-patches/karuna/influence_corp-4.png
+      '5': assets/source-patches/karuna/influence_corp-5.png
+- id: hansei_review_influence_corp
+  card_id: hansei_review
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/hansei_review/influence_corp-0.png
+      '1': assets/source-patches/hansei_review/influence_corp-1.png
+      '2': assets/source-patches/hansei_review/influence_corp-2.png
+      '3': assets/source-patches/hansei_review/influence_corp-3.png
+      '4': assets/source-patches/hansei_review/influence_corp-4.png
+      '5': assets/source-patches/hansei_review/influence_corp-5.png
+- id: neurospike_influence_corp
+  card_id: neurospike
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/neurospike/influence_corp-0.png
+      '1': assets/source-patches/neurospike/influence_corp-1.png
+      '2': assets/source-patches/neurospike/influence_corp-2.png
+      '3': assets/source-patches/neurospike/influence_corp-3.png
+      '4': assets/source-patches/neurospike/influence_corp-4.png
+      '5': assets/source-patches/neurospike/influence_corp-5.png
+- id: anoetic_void_influence_corp
+  card_id: anoetic_void
+  card_type: upgrade
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/anoetic_void/influence_corp-0.png
+      '1': assets/source-patches/anoetic_void/influence_corp-1.png
+      '2': assets/source-patches/anoetic_void/influence_corp-2.png
+      '3': assets/source-patches/anoetic_void/influence_corp-3.png
+      '4': assets/source-patches/anoetic_void/influence_corp-4.png
+      '5': assets/source-patches/anoetic_void/influence_corp-5.png
+- id: spin_doctor_influence_corp
+  card_id: spin_doctor
+  card_type: asset
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/spin_doctor/influence_corp-0.png
+      '1': assets/source-patches/spin_doctor/influence_corp-1.png
+      '2': assets/source-patches/spin_doctor/influence_corp-2.png
+      '3': assets/source-patches/spin_doctor/influence_corp-3.png
+      '4': assets/source-patches/spin_doctor/influence_corp-4.png
+      '5': assets/source-patches/spin_doctor/influence_corp-5.png
+- id: funhouse_influence_corp
+  card_id: funhouse
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/funhouse/influence_corp-0.png
+      '1': assets/source-patches/funhouse/influence_corp-1.png
+      '2': assets/source-patches/funhouse/influence_corp-2.png
+      '3': assets/source-patches/funhouse/influence_corp-3.png
+      '4': assets/source-patches/funhouse/influence_corp-4.png
+      '5': assets/source-patches/funhouse/influence_corp-5.png
+- id: ping_influence_corp
+  card_id: ping
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/ping/influence_corp-0.png
+      '1': assets/source-patches/ping/influence_corp-1.png
+      '2': assets/source-patches/ping/influence_corp-2.png
+      '3': assets/source-patches/ping/influence_corp-3.png
+      '4': assets/source-patches/ping/influence_corp-4.png
+      '5': assets/source-patches/ping/influence_corp-5.png
+- id: predictive_planogram_influence_corp
+  card_id: predictive_planogram
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/predictive_planogram/influence_corp-0.png
+      '1': assets/source-patches/predictive_planogram/influence_corp-1.png
+      '2': assets/source-patches/predictive_planogram/influence_corp-2.png
+      '3': assets/source-patches/predictive_planogram/influence_corp-3.png
+      '4': assets/source-patches/predictive_planogram/influence_corp-4.png
+      '5': assets/source-patches/predictive_planogram/influence_corp-5.png
+- id: public_trail_influence_corp
+  card_id: public_trail
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/public_trail/influence_corp-0.png
+      '1': assets/source-patches/public_trail/influence_corp-1.png
+      '2': assets/source-patches/public_trail/influence_corp-2.png
+      '3': assets/source-patches/public_trail/influence_corp-3.png
+      '4': assets/source-patches/public_trail/influence_corp-4.png
+      '5': assets/source-patches/public_trail/influence_corp-5.png
+- id: amaze_amusements_influence_corp
+  card_id: amaze_amusements
+  card_type: upgrade
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/amaze_amusements/influence_corp-0.png
+      '1': assets/source-patches/amaze_amusements/influence_corp-1.png
+      '2': assets/source-patches/amaze_amusements/influence_corp-2.png
+      '3': assets/source-patches/amaze_amusements/influence_corp-3.png
+      '4': assets/source-patches/amaze_amusements/influence_corp-4.png
+      '5': assets/source-patches/amaze_amusements/influence_corp-5.png
+- id: clearinghouse_influence_corp
+  card_id: clearinghouse
+  card_type: asset
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/clearinghouse/influence_corp-0.png
+      '1': assets/source-patches/clearinghouse/influence_corp-1.png
+      '2': assets/source-patches/clearinghouse/influence_corp-2.png
+      '3': assets/source-patches/clearinghouse/influence_corp-3.png
+      '4': assets/source-patches/clearinghouse/influence_corp-4.png
+      '5': assets/source-patches/clearinghouse/influence_corp-5.png
+- id: ballista_influence_corp
+  card_id: ballista
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/ballista/influence_corp-0.png
+      '1': assets/source-patches/ballista/influence_corp-1.png
+      '2': assets/source-patches/ballista/influence_corp-2.png
+      '3': assets/source-patches/ballista/influence_corp-3.png
+      '4': assets/source-patches/ballista/influence_corp-4.png
+      '5': assets/source-patches/ballista/influence_corp-5.png
+- id: pharos_influence_corp
+  card_id: pharos
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/pharos/influence_corp-0.png
+      '1': assets/source-patches/pharos/influence_corp-1.png
+      '2': assets/source-patches/pharos/influence_corp-2.png
+      '3': assets/source-patches/pharos/influence_corp-3.png
+      '4': assets/source-patches/pharos/influence_corp-4.png
+      '5': assets/source-patches/pharos/influence_corp-5.png
+- id: government_subsidy_influence_corp
+  card_id: government_subsidy
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/government_subsidy/influence_corp-0.png
+      '1': assets/source-patches/government_subsidy/influence_corp-1.png
+      '2': assets/source-patches/government_subsidy/influence_corp-2.png
+      '3': assets/source-patches/government_subsidy/influence_corp-3.png
+      '4': assets/source-patches/government_subsidy/influence_corp-4.png
+      '5': assets/source-patches/government_subsidy/influence_corp-5.png
+- id: retribution_influence_corp
+  card_id: retribution
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/retribution/influence_corp-0.png
+      '1': assets/source-patches/retribution/influence_corp-1.png
+      '2': assets/source-patches/retribution/influence_corp-2.png
+      '3': assets/source-patches/retribution/influence_corp-3.png
+      '4': assets/source-patches/retribution/influence_corp-4.png
+      '5': assets/source-patches/retribution/influence_corp-5.png
+- id: malapert_data_vault_influence_corp
+  card_id: malapert_data_vault
+  card_type: upgrade
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/malapert_data_vault/influence_corp-0.png
+      '1': assets/source-patches/malapert_data_vault/influence_corp-1.png
+      '2': assets/source-patches/malapert_data_vault/influence_corp-2.png
+      '3': assets/source-patches/malapert_data_vault/influence_corp-3.png
+      '4': assets/source-patches/malapert_data_vault/influence_corp-4.png
+      '5': assets/source-patches/malapert_data_vault/influence_corp-5.png
+- id: offworld_office_influence_corp
+  card_id: offworld_office
+  card_type: agenda
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/offworld_office/influence_corp-0.png
+      '1': assets/source-patches/offworld_office/influence_corp-1.png
+      '2': assets/source-patches/offworld_office/influence_corp-2.png
+      '3': assets/source-patches/offworld_office/influence_corp-3.png
+      '4': assets/source-patches/offworld_office/influence_corp-4.png
+      '5': assets/source-patches/offworld_office/influence_corp-5.png
+- id: orbital_superiority_influence_corp
+  card_id: orbital_superiority
+  card_type: agenda
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/orbital_superiority/influence_corp-0.png
+      '1': assets/source-patches/orbital_superiority/influence_corp-1.png
+      '2': assets/source-patches/orbital_superiority/influence_corp-2.png
+      '3': assets/source-patches/orbital_superiority/influence_corp-3.png
+      '4': assets/source-patches/orbital_superiority/influence_corp-4.png
+      '5': assets/source-patches/orbital_superiority/influence_corp-5.png
+- id: send_a_message_influence_corp
+  card_id: send_a_message
+  card_type: agenda
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/send_a_message/influence_corp-0.png
+      '1': assets/source-patches/send_a_message/influence_corp-1.png
+      '2': assets/source-patches/send_a_message/influence_corp-2.png
+      '3': assets/source-patches/send_a_message/influence_corp-3.png
+      '4': assets/source-patches/send_a_message/influence_corp-4.png
+      '5': assets/source-patches/send_a_message/influence_corp-5.png
+- id: superconducting_hub_influence_corp
+  card_id: superconducting_hub
+  card_type: agenda
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/superconducting_hub/influence_corp-0.png
+      '1': assets/source-patches/superconducting_hub/influence_corp-1.png
+      '2': assets/source-patches/superconducting_hub/influence_corp-2.png
+      '3': assets/source-patches/superconducting_hub/influence_corp-3.png
+      '4': assets/source-patches/superconducting_hub/influence_corp-4.png
+      '5': assets/source-patches/superconducting_hub/influence_corp-5.png
+- id: regolith_mining_license_influence_corp
+  card_id: regolith_mining_license
+  card_type: asset
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/regolith_mining_license/influence_corp-0.png
+      '1': assets/source-patches/regolith_mining_license/influence_corp-1.png
+      '2': assets/source-patches/regolith_mining_license/influence_corp-2.png
+      '3': assets/source-patches/regolith_mining_license/influence_corp-3.png
+      '4': assets/source-patches/regolith_mining_license/influence_corp-4.png
+      '5': assets/source-patches/regolith_mining_license/influence_corp-5.png
+- id: palisade_influence_corp
+  card_id: palisade
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/palisade/influence_corp-0.png
+      '1': assets/source-patches/palisade/influence_corp-1.png
+      '2': assets/source-patches/palisade/influence_corp-2.png
+      '3': assets/source-patches/palisade/influence_corp-3.png
+      '4': assets/source-patches/palisade/influence_corp-4.png
+      '5': assets/source-patches/palisade/influence_corp-5.png
+- id: tithe_influence_corp
+  card_id: tithe
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/tithe/influence_corp-0.png
+      '1': assets/source-patches/tithe/influence_corp-1.png
+      '2': assets/source-patches/tithe/influence_corp-2.png
+      '3': assets/source-patches/tithe/influence_corp-3.png
+      '4': assets/source-patches/tithe/influence_corp-4.png
+      '5': assets/source-patches/tithe/influence_corp-5.png
+- id: whitespace_influence_corp
+  card_id: whitespace
+  card_type: ice
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/whitespace/influence_corp-0.png
+      '1': assets/source-patches/whitespace/influence_corp-1.png
+      '2': assets/source-patches/whitespace/influence_corp-2.png
+      '3': assets/source-patches/whitespace/influence_corp-3.png
+      '4': assets/source-patches/whitespace/influence_corp-4.png
+      '5': assets/source-patches/whitespace/influence_corp-5.png
+- id: hedge_fund_influence_corp
+  card_id: hedge_fund
+  card_type: operation
+  fields:
+  - id: influence_corp
+    src: attributes.influence
+    box_px: *id054
+    patches:
+      '0': assets/source-patches/hedge_fund/influence_corp-0.png
+      '1': assets/source-patches/hedge_fund/influence_corp-1.png
+      '2': assets/source-patches/hedge_fund/influence_corp-2.png
+      '3': assets/source-patches/hedge_fund/influence_corp-3.png
+      '4': assets/source-patches/hedge_fund/influence_corp-4.png
+      '5': assets/source-patches/hedge_fund/influence_corp-5.png

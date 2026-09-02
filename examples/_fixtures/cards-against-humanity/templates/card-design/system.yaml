@@ -1,0 +1,17 @@
+card:
+  w_mm: 63.5
+  h_mm: 88.9
+  bleed_mm: 3
+  radius_mm: 3
+  bg: palette
+
+fonts:
+  - { id: heavy, family: "Arial", weight: 700 }
+  - { id: body, family: "Arial", weight: 600 }
+
+palette:
+  by: type
+  map:
+    black: "#111111"
+    white: "#ffffff"
+  default: "#ffffff"

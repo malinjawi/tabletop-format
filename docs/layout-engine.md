@@ -14,11 +14,12 @@ they're baked pixels.
 per-game file that positions every visual element of a physical card in
 real millimeters. One renderer, `layoutCard(g, c, printing, opts)` in
 `tools/hub_template.html`, turns `{card data, printing, layout spec}` into
-the actual card — and it's the *only* card renderer in the hub: the cards
-grid, the card modal, the live card editor preview (re-rendered on every
-keystroke), the PR visual diff, and the true-physical-size print sheet all
-call it. Edit a card's name/cost/text in the editor and the same function
-that draws the grid tile redraws the print-ready card, live.
+the actual card. It is the only face renderer in the hub: the cards grid,
+card modal, live editor preview, PR visual diff, and physical-size print
+sheet all call it. `tools/render_cards.mjs` extracts that exact source into
+headless Chrome and captures the 300dpi faces consumed by PnP, Tabletop Club,
+TTS, releases, and the immutable render cache. Edit a card once and every
+surface regenerates from the same markup and layout rules.
 
 A game with no `templates/layout.yaml` is unaffected: `layoutCard()`
 detects there's no spec and falls straight through to the original
@@ -94,9 +95,10 @@ printing, and game:
 | type | what it draws | key fields |
 |---|---|---|
 | `text` | one line/short field | `src`/`text`, `font`, `size_pt`, `align`, `valign`, `color`, `bg`, `uppercase` |
-| `richtext` | multi-line body text | adds `symbols` ([key] -> glyph chips, same convention as `cardFrame()`), `autoshrink`, `min_size_pt` |
-| `image` | printing/card artwork | `src`, `fit` (`cover`/`contain`), `credit` (artist caption, also shown on the placeholder) |
+| `richtext` | multi-line body text or a licensed/vector symbol | adds `symbols` ([key] -> versioned glyph assets), `icon_only`, `autoshrink`, `min_size_pt`, `no_wrap`, `char_width_em`; every region can also use `opacity` and a CSS `filter` |
+| `image` | printing/card artwork | `src`, `fit` (`cover`/`contain`), `source_crop`, `source_size`, `source_crop_fit`, `credit` (artist caption, also shown on the placeholder) |
 | `badge` | circular/square numeric chip | `d` (diameter) instead of `w`/`h`, `shape` |
+| `pips` | repeated glyphs (for influence, loyalty, etc.) | `src`, `glyph`, `max`, plus the shared text styling fields |
 | `row` | evenly-spaced inline cells | `of: [{key, label, ...}]`, each cell independently `show_if`-able |
 | `rect` | undecorated frame/bar/divider | `fill`, `stroke`, `stroke_w_mm`, `radius_mm` — no data, pure decoration |
 | `background` | full-bleed (or partial) decorative texture — a reusable frame/border image, not credited artwork | same fields as `image` (`src`, `fit`) minus the artist-credit chrome; meant to be the FIRST region so everything else paints on top |
@@ -109,6 +111,28 @@ this to only draw its subtypes line when a card actually has subtypes
 for "Abduction" which has `[]`), and to guard its loyalty badge with
 `show_if: "attributes.loyalty"` the same way a split attack/defense stat
 row would guard on `attributes.attack` in a game that has one.
+
+Any region may also provide `map`, an object that converts the resolved
+value into a display label or asset URL before rendering. This keeps source
+data stable while a layout supplies presentation-specific names.
+
+For source-backed artwork, `source_crop: [x, y, width, height]` and
+`source_size: [width, height]` select a rectangle from a complete source
+face. Crops retain the historical stretch-to-fill behavior unless
+`source_crop_fit: cover` is set. `cover` trims the selected rectangle around
+its center to the target region's aspect ratio before scaling, preserving
+the artwork's proportions.
+
+Symbols declared in `game.yaml` may provide both a fallback `glyph` and an
+`asset` path. Rich-text `[symbol]` tokens use the SVG/image asset when one is
+available and keep the glyph fallback for portable data-only games.
+Set `icon_only: true` on a rich-text region containing one `[symbol]` token to
+center and scale the original asset inside its physical box. This lets a game
+version its faction, set, currency, point, and stat language without baking
+those marks into a flattened card frame.
+`opacity`, `filter`, and `blend_mode` apply to the whole region, including its
+symbol image, so the same versioned asset can be a quiet watermark, an inverted
+footer mark, or a multiply-blended print emblem without modifying the SVG.
 
 ## Color: literal or data-driven
 
@@ -158,6 +182,21 @@ needing to.
    into `g.layout` if the file exists; nothing else to wire).
 5. Try `🖨 Print` on the game's Cards tab — that's the same spec at true
    physical size, cut lines included.
+6. Rasterize the exact same renderer with `node tools/render_cards.mjs
+   examples/<game>`. Set `FMT_RENDER_STRICT=1` to fail if any text-bearing
+   region clips; this is the release check for dense or unusually long cards.
+
+## Raster exports and requirements
+
+The canonical rasterizer needs Node dependencies (`npm install`) and a local
+Chrome/Chromium executable. Set `FMT_CHROME_BIN` if it is not installed in a
+standard location. `tools/render_cards.py` remains as a compatibility wrapper
+for older scripts; it dispatches to the Node renderer and does not contain a
+second drawing implementation. Exporters always regenerate faces before
+packaging, so stale PNGs cannot silently disagree with the browser preview.
+
+Card faces are unified. The generic back is still generated by the rasterizer
+itself because `layout.yaml` does not yet have a declarative back-side spec.
 
 ## Importing an official template (case study: Arcmage)
 

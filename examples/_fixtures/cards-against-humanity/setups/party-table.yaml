@@ -1,0 +1,39 @@
+schema_version: 1
+id: party-table
+name: Cards Against Humanity party table
+description: A ready-to-play four-seat table using the exact black and white card pools in this version.
+
+board:
+  width: 1400
+  height: 900
+  background: "#1d2423"
+
+seats:
+  - { id: card-czar, name: Card Czar, color: "#f5f5f5", position: { x: 620, y: 18 } }
+  - { id: player-1, name: Player 1, color: "#dc6b55", position: { x: 170, y: 830 } }
+  - { id: player-2, name: Player 2, color: "#e3b341", position: { x: 620, y: 830 } }
+  - { id: player-3, name: Player 3, color: "#5ca8a0", position: { x: 1070, y: 830 } }
+
+zones:
+  - { id: black-draw, name: Black prompts, kind: draw, position: { x: 80, y: 90 }, size: { width: 130, height: 185 }, layout: stack, card_face: down }
+  - { id: prompt, name: Current prompt, kind: play, position: { x: 330, y: 90 }, size: { width: 210, height: 260 }, layout: free, card_face: up }
+  - { id: black-discard, name: Used prompts, kind: discard, position: { x: 1180, y: 90 }, size: { width: 130, height: 185 }, layout: stack, card_face: up }
+  - { id: white-draw, name: White answers, kind: draw, position: { x: 80, y: 610 }, size: { width: 130, height: 185 }, layout: stack, card_face: down }
+  - { id: submissions, name: Anonymous submissions, kind: play, position: { x: 300, y: 390 }, size: { width: 800, height: 300 }, layout: spread, card_face: up }
+  - { id: white-discard, name: Used answers, kind: discard, position: { x: 1180, y: 610 }, size: { width: 130, height: 185 }, layout: stack, card_face: up }
+  - { id: score, name: Awesome Points, kind: score, position: { x: 590, y: 90 }, size: { width: 500, height: 180 }, layout: spread, card_face: up }
+
+stacks:
+  - { id: black-prompt-deck, name: Black prompt deck, deck_id: black-cards, zone_id: black-draw, face: down, shuffle: true }
+  - { id: white-answer-deck, name: White answer deck, deck_id: white-cards, zone_id: white-draw, face: down, shuffle: true }
+
+counters:
+  - { id: round, name: Round, initial: 1, minimum: 1, position: { x: 1130, y: 330 }, color: "#f5f5f5" }
+  - { id: target-score, name: Points to win, initial: 7, minimum: 1, position: { x: 1130, y: 385 }, color: "#f5f5f5" }
+
+instructions:
+  - Add more seats when more than four people are playing.
+  - Shuffle both decks. Each non-Czar player draws ten White Cards into a private hand.
+  - Reveal one Black Card in the prompt zone. Each non-Czar submits the number of White Cards shown by PICK.
+  - Shuffle the submissions before the Czar reads them. The chosen player keeps the Black Card as one Awesome Point.
+  - Pass the Card Czar role clockwise, refill hands to ten, and begin the next round.

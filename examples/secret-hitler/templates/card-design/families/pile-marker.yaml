@@ -1,0 +1,6 @@
+regions:
+  - { id: pile-band, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 82.5, fill: "#a7a7a7", radius_mm: 1, show_if: "type == pile-marker" }
+  - { id: pile-label, type: text, text: "POLICY DECK", x: 8, y: 9, w: 47.5, h: 5, font: label, size_pt: 7, align: center, color: "#ffffff", letter_spacing_em: 0.15, show_if: "type == pile-marker" }
+  - { id: pile-title, type: text, src: "card.name", transform: uppercase, x: 7, y: 27, w: 49.5, h: 18, font: display, size_pt: 26, min_size_pt: 16, align: center, color: "#ffffff", no_wrap: true, autoshrink: true, show_if: "type == pile-marker" }
+  - { id: pile-body, type: richtext, src: "card.text", x: 10, y: 52, w: 43.5, h: 18, font: body, size_pt: 8, min_size_pt: 5.5, align: center, color: "#222222", autoshrink: true, show_if: "type == pile-marker" }
+  - { id: pile-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#444444", letter_spacing_em: 0.13, show_if: "type == pile-marker" }

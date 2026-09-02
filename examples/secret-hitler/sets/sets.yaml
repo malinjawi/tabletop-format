@@ -1,20 +1,12 @@
 - id: standard-edition
   name: Standard Edition
   position: 1
-  size: 12
+  size: 13
   description: >
-    12 distinct printings (60 total physical pieces once each printing's
-    quantity is counted) making up the full component set from the
-    official Standard Edition box / free print-and-play, at its printed
-    10-player maximum: 10 Secret Role cards (6 Liberal, 3 Fascist, 1
-    Hitler), 10 Party Membership cards (6 Liberal, 4 Fascist -- Hitler
-    uses a Fascist card), 17 Policy tiles (6 Liberal, 11 Fascist), 20
-    Ballot cards (10 Ja!, 10 Nein!), and 3 placards (President,
-    Chancellor, Election Tracker). See rules.md for exactly how many of
-    the role/party/ballot cards are actually dealt at 5-10 players -- the
-    box ships one fixed maximum set and every player count uses a subset
-    of it, the same way this set is modeled here. Not modeled as separate
-    cards: the 10 card envelopes, the draw-pile and discard-pile reference
-    cards, and the 3 Liberal/Fascist boards (the physical game contains
-    different Fascist-track boards for 5-6 / 7-8 / 9-10 players; see
-    rules.md for what each track does).
+    13 distinct printable identities (61 printed pieces once quantities are
+    counted) from the official free PnP: 10 Secret Roles, 10 Party Membership
+    cards, 17 Policy tiles, 20 Ballots, two foldable government placards, and
+    the Draw/Discard Pile cards. The Election Tracker is a setup counter on
+    the Liberal board, not a fabricated card. The four exact board faces and
+    two complete flat placards are versioned in assets/official-pnp/; the
+    publisher's 13-page PDF remains the authoritative mixed-size print export.

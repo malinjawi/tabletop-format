@@ -1,0 +1,10 @@
+{
+  "id": "policy-pile-markers",
+  "name": "Policy pile markers",
+  "format_id": "standard",
+  "author": "Goat, Wolf, & Cabbage",
+  "cards": {
+    "pile_draw": 1,
+    "pile_discard": 1
+  }
+}

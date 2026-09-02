@@ -13,6 +13,12 @@
       "usage": "<nrdb-dir> <out-dir> [--title T]",
       "desc": "NRDB/Alsciende-family JSON (Netrunner, Arkham, Marvel...)"
     },
+    "pnp-faces": {
+      "runner": "python",
+      "script": "import_pnp_pdf.py",
+      "usage": "<pnp.pdf> <game-dir> [--first-page N] [--source-url U]",
+      "desc": "3x3 PnP PDF -> local source-face references mapped by collector number"
+    },
     "decklist": {
       "runner": "node",
       "script": "import-decklist.mjs",
@@ -30,6 +36,18 @@
       "script": "import-playtest.mjs",
       "usage": "<game-dir> <session.json> [--ref SHA] [--date D]",
       "desc": "Ingest a play-session's results (loose JSON) -> schema-valid playtests/*.json, pinned to the tested version"
+    },
+    "project": {
+      "runner": "node",
+      "script": "import-forge-project.mjs",
+      "usage": "<game-dir> <project-dir-or-zip> [--write] [--allow-delete]",
+      "desc": "Forge design project -> three-way card/printing/template merge (dry-run unless --write)"
+    },
+    "nandeck-layout": {
+      "runner": "node",
+      "script": "import-nandeck-layout.mjs",
+      "usage": "<game-dir> <script.txt> [--write] [--report FILE]",
+      "desc": "nanDECK layout -> field-level three-way merge into versioned Forge family/component YAML"
     }
   },
   "exporters": {
@@ -38,6 +56,12 @@
       "script": "export_pnp.py",
       "usage": "<game-dir> [--dpi N]",
       "desc": "Print-and-play PDF (300dpi default, crop marks)"
+    },
+    "print": {
+      "runner": "python",
+      "script": "export_print_ready.py",
+      "usage": "<game-dir> [--output-dir DIR] [--ref REF]",
+      "desc": "Print-ready package (A4 + Letter duplex PDFs, 3.175mm bleed PNGs, press PDF)"
     },
     "tts": {
       "runner": "python",
@@ -51,11 +75,23 @@
       "usage": "<game-dir>",
       "desc": "Tabletop Club asset pack (open-source 3D playspace; carries provenance)"
     },
-    "nandeck": {
+    "vtt": {
       "runner": "python",
-      "script": "export_nandeck.py",
-      "usage": "<game-dir>",
-      "desc": "nanDECK project (script + CSV) for pro card layout - open in nanDECK; bridge only, nothing runs server-side"
+      "script": "export_vtt.py",
+      "usage": "<game-dir> [--setup ID] [--face-base-url U] [--ref REF]",
+      "desc": "VirtualTabletop.io staged table (.vtt package + state JSON) from a versioned setup"
+    },
+    "project": {
+      "runner": "node",
+      "script": "export-forge-project.mjs",
+      "usage": "<game-dir> [out-dir] [--with-art]",
+      "desc": "Portable design project: editable CSV + canonical JSON + templates/assets + merge baseline"
+    },
+    "nandeck": {
+      "runner": "node",
+      "script": "export-nandeck.mjs",
+      "usage": "<game-dir> [--output-dir DIR]",
+      "desc": "Family-aware nanDECK project (MM scripts + CSV + explicit fidelity report)"
     },
     "htmlcards": {
       "runner": "python",

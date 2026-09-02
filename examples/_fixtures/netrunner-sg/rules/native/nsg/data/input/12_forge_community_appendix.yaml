@@ -1,0 +1,12 @@
+chapter: chpt_forge_community_edition
+text: Forge Community Edition
+sections:
+  - section: sec_forge_provenance
+    text: Version and Provenance
+    rules:
+      - rule: rule_forge_exact_version
+        text: This community appendix is maintained as native NSG rules YAML. Its source lock, local changes, templates, and generated publications are attached to the exact Forge commit that produced them.
+      - rule: rule_forge_review_boundary
+        text: A proposed rules change is not part of this edition until its semantic rule diff and rendered publication diff have been reviewed and merged.
+      - rule: rule_forge_release_outputs
+        text: A released edition freezes the comprehensive PDF, highlighted-changes PDF, linkable web rules, structured rules data, and the native source package together.

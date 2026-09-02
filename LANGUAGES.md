@@ -7,7 +7,7 @@ coding begins. Honest revision of the original "TypeScript everywhere" lock.*
 | Language | Where | Lines-ish | Why it's there |
 |---|---|---|---|
 | **JavaScript** (Node ≥20 ESM, zero deps) | gateway, server, all platform/* stores, importers, semantic diff, git porcelain, LFS client, fmt CLI, editor/hub browser JS | ~3,500 | The platform. Zero-dep by necessity (sandbox) which became a virtue: instant boot, no supply chain |
-| **Python 3** (stdlib + Pillow/PyYAML/jsonschema) | reference renderer, PnP/TTS exporters, validator twin, stats, credits, deck/jam/license checkers, site/editor/hub builders | ~2,500 | Born of sandbox constraints (no npm → no ajv/puppeteer), **kept on merit** — see policy §2 |
+| **Python 3** (stdlib + Pillow/PyYAML/jsonschema/ReportLab) | reference renderer, print/PnP/TTS exporters, validator twin, stats, credits, deck/jam/license checkers, site/editor/hub builders | ~2,500 | Born of sandbox constraints (no npm → no ajv/puppeteer), **kept on merit** — see policy §2 |
 | **SQL** (SQLite/Postgres-compatible subset) | migrations/ | small | Store 2 canonical schema |
 | **Bash** | e2e.sh, perf.sh, demo.sh, fork-demo.sh, build_beta.sh | ~700 | Test harnesses & assembly |
 | **JSON Schema / YAML / Markdown** | the format itself | — | Deliberately language-NEUTRAL — that's the moat |

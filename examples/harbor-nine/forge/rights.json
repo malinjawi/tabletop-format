@@ -1,0 +1,12 @@
+{
+  "format": "forge-rights",
+  "version": 1,
+  "project": { "license": "CC-BY-4.0", "owner": "The Format Project", "trademark_notice": null },
+  "default": { "license": "CC-BY-4.0", "status": "original", "copyright": ["The Format Project"], "redistribution": "allowed" },
+  "files": [
+    {
+      "paths": [".gitattributes", "CODEOWNERS", "forge/project.json", "forge/collaboration.json", "forge/imports/**", "forge/jams/**"],
+      "license": "CC0-1.0", "status": "generated", "copyright": ["Forge metadata for The Format Project"], "redistribution": "allowed"
+    }
+  ]
+}

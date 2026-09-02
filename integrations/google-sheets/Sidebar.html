@@ -8,7 +8,7 @@
     h1{font-size:18px;margin:0}.sub{color:#66707b;margin:3px 0 14px}
     .box{background:white;border:1px solid #d8dee4;border-radius:10px;padding:12px;margin:10px 0}
     label{display:block;color:#57606a;font-size:11px;margin-top:8px}
-    input,textarea{box-sizing:border-box;width:100%;border:1px solid #c6ccd2;border-radius:6px;padding:8px;margin-top:3px;font:inherit}
+    input,textarea,select{box-sizing:border-box;width:100%;border:1px solid #c6ccd2;border-radius:6px;padding:8px;margin-top:3px;font:inherit;background:#fff}
     textarea{resize:vertical}.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
     button{border:1px solid #b8c0c8;background:#fff;border-radius:6px;padding:7px 10px;font-weight:600;cursor:pointer}
     button.primary{color:#fff;background:#1f6f43;border-color:#1f6f43}button:disabled{opacity:.5;cursor:default}
@@ -39,6 +39,9 @@
     </div>
     <label>Forge URL<input id="origin" placeholder="https://forge.example"></label>
     <label>Game slug<input id="game" placeholder="netrunner-sg"></label>
+    <label>Cards tab<select id="cards-tab"></select></label>
+    <label>Printings tab (optional)<select id="printings-tab"><option value="">Use printing columns in Cards tab</option></select></label>
+    <div class="muted">Map stable <b>id</b> rows. A separate Printings tab also needs <b>card_id</b>. Other tabs remain normal Sheet notes and calculations.</div>
     <label>Forge handle or email<input id="handle" autocomplete="username" placeholder="Your Forge account"></label>
     <label>Forge password<input id="password" type="password" autocomplete="current-password" placeholder="Used once to sign in; never stored"></label>
     <div class="row">
@@ -73,6 +76,10 @@
     function init(s){
       state=s; el("sheet-label").textContent=`${s.spreadsheet_name} · ${s.sheet_name}`;
       el("origin").value=s.origin||""; el("game").value=s.game||"";el("handle").value=s.user_handle||"";
+      const options=(s.tabs||[]).map(tab=>`<option value="${tab.id}">${esc(tab.name)}</option>`).join("");
+      el("cards-tab").innerHTML=options;el("cards-tab").value=String((s.tab_mapping||{}).cards||"");
+      el("printings-tab").innerHTML=`<option value="">Use printing columns in Cards tab</option>${options}`;
+      el("printings-tab").value=String((s.tab_mapping||{}).printings||"");
       const ready=!!(s.origin&&s.game&&s.has_token);
       el("settings").classList.toggle("hidden",ready); el("candidate").classList.toggle("hidden",!ready);
       el("settings-back").classList.toggle("hidden",!ready);
@@ -137,7 +144,8 @@
     function saveSettings(){
       busy(true);el("error").textContent="";
       google.script.run.withSuccessHandler(x=>{busy(false);el("password").value="";init(x.state);}).withFailureHandler(fail)
-        .saveForgeSettings({origin:el("origin").value,game:el("game").value,handle:el("handle").value,password:el("password").value});
+        .saveForgeSettings({origin:el("origin").value,game:el("game").value,cards_tab:el("cards-tab").value,
+          printings_tab:el("printings-tab").value,handle:el("handle").value,password:el("password").value});
     }
     function signOut(){
       busy(true);el("error").textContent="";

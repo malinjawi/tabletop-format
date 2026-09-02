@@ -1,0 +1,2 @@
+regions:
+  - { id: background, type: rect, x: 0, y: 0, w: 63.5, h: 88.9, fill: palette, radius_mm: 3 }

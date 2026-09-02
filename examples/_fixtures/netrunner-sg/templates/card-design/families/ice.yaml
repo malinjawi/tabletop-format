@@ -1,0 +1,381 @@
+name: Ice template
+description: Production layout specific to ice cards. Shared frame and typography live in reusable components.
+regions:
+  - id: ice_header_shadow
+    type: rect
+    x: 7.2
+    "y": 2
+    w: 55.8
+    h: 8.4
+    fill: "#06090d"
+    clip_path: polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)
+    shadow: 0 .7mm 1.2mm rgba(0,0,0,.5)
+    show_if: type == ice
+  - id: ice_header
+    type: rect
+    x: 6.2
+    "y": 1.35
+    w: 56.8
+    h: 8.4
+    fill: linear-gradient(180deg,#ffffff,#e8ece9)
+    stroke: palette-dark
+    stroke_w_mm: 0.45
+    clip_path: polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)
+    show_if: type == ice
+  - id: ice_rez_cost_glyph
+    type: richtext
+    text: "[rez_cost]"
+    x: 1.55
+    "y": 0.58
+    w: 10.6
+    h: 10.6
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: drop-shadow(0 .4mm .5mm rgba(0,0,0,.55))
+    show_if: type == ice && attributes.cost
+  - id: ice_cost_shadow
+    type: badge
+    text: ""
+    x: 3.05
+    "y": 2.12
+    d: 7.55
+    bg: "#050709"
+    color: "#ffffff"
+    shadow: 0 .55mm .9mm rgba(0,0,0,.58)
+    show_if: type == ice
+  - id: ice_cost_edge
+    type: badge
+    text: ""
+    x: 3.28
+    "y": 2.35
+    d: 7.08
+    bg: palette-dark
+    color: "#ffffff"
+    show_if: type == ice
+  - id: ice_cost_face
+    type: badge
+    text: ""
+    x: 3.58
+    "y": 2.65
+    d: 6.48
+    bg: radial-gradient(circle at 50% 42%,#2d3336 0%,#111518 56%,#050709 100%)
+    color: "#ffffff"
+    show_if: type == ice
+  - id: ice_cost_number
+    type: text
+    src: card.attributes.cost
+    x: 3.58
+    "y": 2.72
+    w: 6.48
+    h: 6.34
+    font: stat
+    size_pt: 11.6
+    align: center
+    valign: middle
+    color: "#ffffff"
+    text_shadow: "0 .15mm .18mm #000,0 0 .3mm #000"
+    show_if: type == ice
+  - id: ice_name
+    type: richtext
+    src: card.name
+    x: 14.2
+    "y": 2.1
+    w: 43.6
+    h: 5.6
+    font: title
+    size_pt: 9.7
+    min_size_pt: 5.6
+    char_width_em: 0.62
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#10171d"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == ice
+  - id: ice_type_rail_shadow
+    type: rect
+    x: 1
+    "y": 10.8
+    w: 6
+    h: 35
+    fill: "#05080b"
+    radius_mm: 0.7
+    show_if: type == ice
+  - id: ice_type_rail
+    type: rect
+    x: 1.45
+    "y": 10.4
+    w: 5.5
+    h: 34.8
+    fill: linear-gradient(180deg,#f8faf7,#e4e9e5)
+    stroke: palette-dark
+    stroke_w_mm: 0.42
+    radius_mm: 0.65
+    show_if: type == ice
+  - id: ice_type
+    type: text
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    prefix: "ICE · "
+    x: 2
+    "y": 11.4
+    w: 4.4
+    h: 32.8
+    font: subtype
+    size_pt: 5.1
+    align: center
+    valign: middle
+    color: "#151c22"
+    writing_mode: vertical
+    show_if: type == ice
+  - id: ice_panel_shadow
+    type: rect
+    x: 7.5
+    "y": 10.8
+    w: 53.4
+    h: 34.8
+    fill: "#05080b"
+    radius_mm: 0.8
+    show_if: type == ice
+  - id: ice_panel
+    type: rect
+    x: 7.9
+    "y": 10.4
+    w: 52.8
+    h: 34.8
+    fill: linear-gradient(145deg,#f8faf7,#e6ede7)
+    stroke: palette-dark
+    stroke_w_mm: 0.5
+    radius_mm: 0.75
+    show_if: type == ice
+  - id: ice_watermark
+    type: richtext
+    src: card.attributes.faction
+    map:
+      haas-bioroid: "[faction_hb]"
+      jinteki: "[faction_jinteki]"
+      nbn: "[faction_nbn]"
+      weyland-consortium: "[faction_weyland]"
+    x: 42
+    "y": 26
+    w: 12.5
+    h: 12.5
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    opacity: 0.065
+    filter: grayscale(1) contrast(1.5)
+    show_if: type == ice && attributes.faction != neutral-corp
+  - id: ice_body
+    type: body
+    src: card.text
+    secondary_src: printing.flavor_text
+    secondary_font: flavor
+    secondary_color: "#414950"
+    secondary_scale: 0.84
+    x: 9.8
+    "y": 12
+    w: 48.6
+    h: 31.6
+    font: body
+    size_pt: 8.2
+    min_size_pt: 5.8
+    line_height: 1.14
+    secondary_line_height: 1.06
+    color: "#151b21"
+    symbols: true
+    symbol_style: plain
+    autoshrink: true
+    show_if: type == ice
+  - id: ice_art
+    type: image
+    src: printing.scan_data
+    fallback_srcs:
+      - printing.art_data
+      - printing.art_url
+      - printing.art
+    x: 7.9
+    "y": 46.2
+    w: 52.8
+    h: 40.3
+    source_crop:
+      - 70
+      - 550
+      - 600
+      - 450
+    source_size:
+      - 744
+      - 1030
+    source_crop_fit: cover
+    show_if: type == ice
+  - id: ice_art_edge
+    type: rect
+    x: 7.9
+    "y": 46.2
+    w: 52.8
+    h: 40.3
+    fill: none
+    stroke: palette-light
+    stroke_w_mm: 0.58
+    shadow: inset 0 0 2mm rgba(0,0,0,.45)
+    show_if: type == ice
+  - id: ice_faction_plate
+    type: rect
+    x: 52.3
+    "y": 41
+    w: 9.7
+    h: 9
+    fill: palette-light
+    stroke: palette-dark
+    stroke_w_mm: 0.34
+    clip_path: polygon(16% 0,84% 0,100% 22%,100% 78%,84% 100%,16% 100%,0 78%,0 22%)
+    show_if: type == ice && attributes.faction != neutral-corp
+  - id: ice_faction_glyph
+    type: richtext
+    src: card.attributes.faction
+    map:
+      haas-bioroid: "[faction_hb]"
+      jinteki: "[faction_jinteki]"
+      nbn: "[faction_nbn]"
+      weyland-consortium: "[faction_weyland]"
+    x: 52.9
+    "y": 41.45
+    w: 8.5
+    h: 8.1
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    show_if: type == ice && attributes.faction != neutral-corp
+  - id: ice_strength_shadow
+    type: badge
+    text: ""
+    x: -1.05
+    "y": 75.85
+    d: 14.75
+    bg: "#101315"
+    color: "#11171d"
+    shadow: 0 .6mm 1.1mm rgba(0,0,0,.55)
+    show_if: type == ice && attributes.strength
+  - id: ice_strength_face
+    type: badge
+    text: ""
+    x: -0.75
+    "y": 76.12
+    d: 14.2
+    bg: radial-gradient(circle at 58% 38%,#ffffff 0%,#eef0ef 64%,#aeb4b2 100%)
+    color: "#11171d"
+    show_if: type == ice && attributes.strength
+  - id: ice_strength_bar_1
+    type: rect
+    x: 0
+    "y": 80.28
+    w: 3.2
+    h: 0.54
+    fill: "#8e9493"
+    show_if: type == ice && attributes.strength
+  - id: ice_strength_bar_2
+    type: rect
+    x: 0
+    "y": 82.22
+    w: 4.4
+    h: 0.54
+    fill: "#8e9493"
+    show_if: type == ice && attributes.strength
+  - id: ice_strength_bar_3
+    type: rect
+    x: 0
+    "y": 84.16
+    w: 10.2
+    h: 0.54
+    fill: "#8e9493"
+    show_if: type == ice && attributes.strength
+  - id: ice_strength
+    type: text
+    src: card.attributes.strength
+    x: 3
+    "y": 77.45
+    w: 7.6
+    h: 6.5
+    font: stat
+    size_pt: 14.4
+    align: center
+    valign: middle
+    color: "#11171d"
+    show_if: type == ice && attributes.strength
+  - id: ice_track
+    type: pips
+    count: 5
+    glyph: ○
+    max: 5
+    direction: column
+    x: 59.05
+    "y": 64
+    w: 3
+    h: 16
+    gap_mm: 0.2
+    font: label
+    size_pt: 5.7
+    line_height: 0.78
+    color: "#aeb7b4"
+    show_if: type == ice && attributes.influence
+  - id: ice_influence
+    type: pips
+    src: card.attributes.influence
+    glyph: ●
+    max: 5
+    direction: column
+    x: 59.05
+    "y": 64
+    w: 3
+    h: 16
+    gap_mm: 0.2
+    font: label
+    size_pt: 4.8
+    line_height: 0.95
+    color: palette-light
+    show_if: type == ice && attributes.influence
+  - id: ice_collector
+    type: text
+    src: printing.collector_number
+    x: 60
+    "y": 10.7
+    w: 2
+    h: 4.1
+    font: label
+    size_pt: 3.8
+    align: center
+    valign: middle
+    color: "#ffffff"
+    writing_mode: vertical
+    show_if: type == ice
+  - id: ice_set_icon
+    type: richtext
+    text: "[set_system_gateway]"
+    x: 59.42
+    "y": 14.7
+    w: 3.15
+    h: 3.15
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: invert(1)
+    opacity: 0.92
+    show_if: type == ice
+  - id: ice_artist
+    type: text
+    src: printing.artist
+    prefix: "ILLUS. "
+    x: 60.15
+    "y": 18.4
+    w: 1.8
+    h: 24
+    font: label
+    size_pt: 2.8
+    align: center
+    valign: middle
+    color: "#edf1ef"
+    writing_mode: vertical
+    show_if: type == ice

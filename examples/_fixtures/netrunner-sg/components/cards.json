@@ -41,7 +41,7 @@
     "subtypes": [
       "Console"
     ],
-    "text": "+1[mu]\nAccess, once per turn → Trash 2 cards from your grip: Trash the card you are accessing.\nLimit 1 console per player.",
+    "text": "+1[mu]\nAccess, once per turn → **Trash 2 cards from your grip:** Trash the card you are accessing.\nLimit 1 **console** per player.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -60,7 +60,7 @@
       "Virus",
       "Trojan"
     ],
-    "text": "Install only on a piece of ice. (If the host ice is uninstalled, this program is trashed.)\nWhen you install this program and when your turn begins, place 1 virus counter on this program.\nHosted virus counter: Break 1 subroutine on host ice.",
+    "text": "Install only on a piece of ice. *(If the host ice is uninstalled, this program is trashed.)*\nWhen you install this program and when your turn begins, place 1 virus counter on this program.\n**Hosted virus counter:** Break 1 subroutine on host ice.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -80,7 +80,7 @@
       "Icebreaker",
       "Decoder"
     ],
-    "text": "Interface → 1[credit]: Break up to 2 code gate subroutines.\n3[credit]: +1 strength.",
+    "text": "Interface → **1[credit]:** Break up to 2 **code gate** subroutines.\n**3[credit]:** +1 strength.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -101,7 +101,7 @@
       "Icebreaker",
       "Fracter"
     ],
-    "text": "Interface → 1[credit]: Break up to 2 barrier subroutines.\n2[credit]: +1 strength.",
+    "text": "Interface → **1[credit]:** Break up to 2 **barrier** subroutines.\n**2[credit]:** +1 strength.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -121,7 +121,7 @@
     "subtypes": [
       "Virus"
     ],
-    "text": "When you install this program and when your turn begins, place 1 virus counter on this program.\n[click], [trash]: Gain 2[credit] for each hosted virus counter.",
+    "text": "When you install this program and when your turn begins, place 1 virus counter on this program.\n[click], [trash]**:** Gain 2[credit] for each hosted virus counter.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -140,7 +140,7 @@
     "subtypes": [
       "Virus"
     ],
-    "text": "Whenever you make a successful run on a central server, place 1 virus counter on this program.\nHosted virus counter: The ice you are encountering gets -1 strength for the remainder of this encounter.",
+    "text": "Whenever you make a successful run on a central server, place 1 virus counter on this program.\n**Hosted virus counter:** The ice you are encountering gets -1 strength for the remainder of this encounter.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -159,7 +159,7 @@
     "subtypes": [
       "Virtual"
     ],
-    "text": "Whenever you install a virus program, you may place 1 virus counter on it.",
+    "text": "Whenever you install a **virus** program, you may place 1 virus counter on it.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -194,7 +194,7 @@
     "name": "Mutual Favor",
     "type": "event",
     "subtypes": [],
-    "text": "Search your stack for 1 icebreaker and reveal it. (Shuffle your stack after searching it.) If you made a successful run this turn, you may install that program. If you do not, add it to your grip.",
+    "text": "Search your stack for 1 **icebreaker** and reveal it. *(Shuffle your stack after searching it.)* If you made a successful run this turn, you may install that program. If you do not, add it to your grip.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -246,7 +246,7 @@
     "subtypes": [
       "Console"
     ],
-    "text": "+1[mu]\nWhenever you make a successful run, place 1[credit] on this hardware.\n[click]: Place 1[credit] on this hardware, then take all credits from it.\nLimit 1 console per player.",
+    "text": "+1[mu]\nWhenever you make a successful run, place 1[credit] on this hardware.\n[click]**:** Place 1[credit] on this hardware, then take all credits from it.\nLimit 1 **console** per player.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -265,7 +265,7 @@
       "Icebreaker",
       "Killer"
     ],
-    "text": "If you made a successful run this turn, this program costs 2[credit] less to install.\nInterface → 1[credit]: Break 1 sentry subroutine.\n2[credit]: +3 strength.",
+    "text": "If you made a successful run this turn, this program costs 2[credit] less to install.\nInterface → **1[credit]:** Break 1 **sentry** subroutine.\n**2[credit]:** +3 strength.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -286,7 +286,7 @@
       "Icebreaker",
       "Fracter"
     ],
-    "text": "Interface → 2[credit]: Break 1 barrier subroutine. If you made a successful run this turn, this ability costs 1[credit] less to use.\n1[credit]: +1 strength.",
+    "text": "Interface → **2[credit]:** Break 1 **barrier** subroutine. If you made a successful run this turn, this ability costs 1[credit] less to use.\n**1[credit]:** +1 strength.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -307,7 +307,7 @@
       "Virus",
       "Trojan"
     ],
-    "text": "Install only on a piece of ice. (If the host ice is uninstalled, this program is trashed.)\nWhen you install this program and when your turn begins, place 1 virus counter on this program. Then, if there are 3 or more hosted virus counters, derez host ice.",
+    "text": "Install only on a piece of ice. *(If the host ice is uninstalled, this program is trashed.)*\nWhen you install this program and when your turn begins, place 1 virus counter on this program. Then, if there are 3 or more hosted virus counters, derez host ice.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -326,7 +326,7 @@
     "subtypes": [
       "Job"
     ],
-    "text": "When you install this resource, load 12[credit] onto it. When it is empty, trash it.\n[click]: Run a central server you have not run this turn. If successful, take 3[credit] from this resource.",
+    "text": "When you install this resource, load 12[credit] onto it. When it is empty, trash it.\n[click]**:** Run a central server you have not run this turn. If successful, take 3[credit] from this resource.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -411,7 +411,7 @@
     "subtypes": [
       "Console"
     ],
-    "text": "+1[mu]\nWhenever an agenda is scored or stolen, gain 1[credit]. Then, you may install 1 card from your grip.\nLimit 1 console per player.",
+    "text": "+1[mu]\nWhenever an agenda is scored or stolen, gain 1[credit]. Then, you may install 1 card from your grip.\nLimit 1 **console** per player.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -429,7 +429,7 @@
     "subtypes": [
       "Virus"
     ],
-    "text": "Whenever a successful run on R&D ends, you may place 1 virus counter on this program.\n[click]: Run R&D. If successful, access X additional cards when you breach R&D. X is equal to the number of hosted virus counters.",
+    "text": "Whenever a successful run on R&D ends, you may place 1 virus counter on this program.\n[click]**:** Run R&D. If successful, access X additional cards when you breach R&D. X is equal to the number of hosted virus counters.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -449,7 +449,7 @@
       "Icebreaker",
       "Killer"
     ],
-    "text": "This program gets +1 strength for each installed icebreaker (including this one).\nInterface → 1[credit]: Break 1 sentry subroutine.\n3[credit]: +2 strength.",
+    "text": "This program gets +1 strength for each installed **icebreaker** *(including this one)*.\nInterface → **1[credit]:** Break 1 **sentry** subroutine.\n**3[credit]:** +2 strength.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -470,7 +470,7 @@
       "Icebreaker",
       "Decoder"
     ],
-    "text": "Interface → 1[credit]: Break 1 code gate subroutine.\n1[credit]: +X strength. X is equal to the number of installed icebreakers (including this one).",
+    "text": "Interface → **1[credit]:** Break 1 **code gate** subroutine.\n**1[credit]:** +X strength. X is equal to the number of installed **icebreakers** *(including this one)*.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -490,7 +490,7 @@
     "subtypes": [
       "Job"
     ],
-    "text": "When you install this resource, load 9[credit] onto it. When it is empty, trash it.\nOnce per turn → [click]: Take 3[credit] from this resource.",
+    "text": "When you install this resource, load 9[credit] onto it. When it is empty, trash it.\nOnce per turn → [click]**:** Take 3[credit] from this resource.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -579,7 +579,7 @@
       "Icebreaker",
       "AI"
     ],
-    "text": "Interface → 1[credit]: Break 1 subroutine. When this run ends, trash this program.\n1[credit]: +1 strength.",
+    "text": "Interface → **1[credit]:** Break 1 subroutine. When this run ends, trash this program.\n**1[credit]:** +1 strength.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -599,7 +599,7 @@
     "subtypes": [
       "Connection"
     ],
-    "text": "[click]: Place 3[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
+    "text": "[click]**:** Place 3[credit] on this resource.\nWhen your turn begins, take 1[credit] from this resource.",
     "keywords": [],
     "attributes": {
       "side": "runner",
@@ -692,7 +692,7 @@
       "Bioroid",
       "Destroyer"
     ],
-    "text": "Lose [click]: Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] Trash 1 installed Runner card.\n[subroutine] You may install 1 card from HQ or Archives.\n[subroutine] The Runner cannot steal or trash Corp cards for the remainder of this run.",
+    "text": "**Lose [click]:** Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] Trash 1 installed Runner card.\n[subroutine] You may install 1 card from HQ or Archives.\n[subroutine] The Runner cannot steal or trash Corp cards for the remainder of this run.",
     "keywords": [],
     "attributes": {
       "side": "corp",
@@ -712,7 +712,7 @@
       "Barrier",
       "Bioroid"
     ],
-    "text": "Lose [click]: Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs.\n[subroutine] End the run.\n[subroutine] End the run.",
+    "text": "**Lose [click]:** Break 1 subroutine on this ice. Only the Runner can use this ability.\n[subroutine] You may install 1 piece of ice from HQ or Archives directly inward from this ice, ignoring all costs.\n[subroutine] End the run.\n[subroutine] End the run.",
     "keywords": [],
     "attributes": {
       "side": "corp",
@@ -836,7 +836,7 @@
       "Code Gate",
       "AP"
     ],
-    "text": "[subroutine] Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. (0 is not odd.)",
+    "text": "[subroutine] Do 1 net damage. If you trash a card this way with a printed play or install cost that is an odd number, end the run. *(0 is not odd.)*",
     "keywords": [],
     "attributes": {
       "side": "corp",
@@ -964,7 +964,7 @@
     "subtypes": [
       "Character"
     ],
-    "text": "When you rez this asset, draw 2 cards.\nRemove this asset from the game: Shuffle up to 2 cards from Archives into R&D.",
+    "text": "When you rez this asset, draw 2 cards.\n**Remove this asset from the game:** Shuffle up to 2 cards from Archives into R&D.",
     "keywords": [],
     "attributes": {
       "side": "corp",
@@ -1055,7 +1055,7 @@
     "name": "AMAZE Amusements",
     "type": "upgrade",
     "subtypes": [],
-    "text": "Persistent → Whenever a run on this server ends, if the Runner stole any agendas during that run, give the Runner 2 tags. (If the Runner trashes this card while accessing it, this ability still applies for the remainder of this run.)",
+    "text": "Persistent → Whenever a run on this server ends, if the Runner stole any agendas during that run, give the Runner 2 tags. *(If the Runner trashes this card while accessing it, this ability still applies for the remainder of this run.)*",
     "keywords": [],
     "attributes": {
       "side": "corp",
@@ -1202,7 +1202,7 @@
     "name": "Malapert Data Vault",
     "type": "upgrade",
     "subtypes": [],
-    "text": "Whenever you score an agenda from the root of this server, you may search R&D for 1 non-agenda card and reveal it. (Shuffle R&D after searching it.) Add that card to HQ.",
+    "text": "Whenever you score an agenda from the root of this server, you may search R&D for 1 non-agenda card and reveal it. *(Shuffle R&D after searching it.)* Add that card to HQ.",
     "keywords": [],
     "attributes": {
       "side": "corp",
@@ -1295,7 +1295,7 @@
     "name": "Regolith Mining License",
     "type": "asset",
     "subtypes": [],
-    "text": "When you rez this asset, load 15[credit] onto it. When it is empty, trash it.\n[click]: Take 3[credit] from this asset.",
+    "text": "When you rez this asset, load 15[credit] onto it. When it is empty, trash it.\n[click]**:** Take 3[credit] from this asset.",
     "keywords": [],
     "attributes": {
       "side": "corp",

@@ -1,0 +1,10 @@
+{
+  "id": "government-placards",
+  "name": "Government placards",
+  "format_id": "standard",
+  "author": "Goat, Wolf, & Cabbage",
+  "cards": {
+    "placard_president": 1,
+    "placard_chancellor": 1
+  }
+}

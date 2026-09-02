@@ -1,0 +1,116 @@
+name: Event template
+description: Production layout specific to event cards. Shared frame and typography live in reusable components.
+regions:
+  - id: event_header_shadow
+    type: rect
+    x: 0
+    "y": 1.72
+    w: 61.7
+    h: 7.15
+    fill: "#06090d"
+    radius_mm: 2.3
+    shadow: 0 .7mm 1.25mm rgba(0,0,0,.42)
+    show_if: type == event
+  - id: event_header
+    type: rect
+    x: 0
+    "y": 1.22
+    w: 61.1
+    h: 6.55
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.35
+    radius_mm: 2.1
+    show_if: type == event
+  - id: event_unique
+    type: text
+    text: ◆
+    x: 19.2
+    "y": 2.35
+    w: 2.8
+    h: 3.9
+    font: title
+    size_pt: 5.2
+    align: center
+    valign: middle
+    color: "#111820"
+    show_if: type == event && attributes.unique
+  - id: event_name
+    type: richtext
+    src: card.name
+    x: 17.5
+    "y": 2
+    w: 40.8
+    h: 4.9
+    font: title
+    size_pt: 8.9
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == event && !attributes.unique
+  - id: event_name_unique
+    type: richtext
+    src: card.name
+    x: 22.3
+    "y": 2
+    w: 36
+    h: 4.9
+    font: title
+    size_pt: 8.9
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == event && attributes.unique
+  - id: art_event
+    type: image
+    src: printing.scan_data
+    fallback_srcs:
+      - printing.art_data
+      - printing.art_url
+      - printing.art
+    x: 1.15
+    "y": 9.4
+    w: 60.7
+    h: 39.1
+    source_crop:
+      - 50
+      - 145
+      - 644
+      - 401
+    source_size:
+      - 744
+      - 1030
+    source_crop_fit: cover
+    show_if: type == event
+  - id: event_subtypes
+    type: richtext
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    x: 17.9
+    "y": 48.55
+    w: 34
+    h: 4.7
+    font: subtype
+    size_pt: 6.6
+    min_size_pt: 4.6
+    char_width_em: 0.58
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#303a43"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == event

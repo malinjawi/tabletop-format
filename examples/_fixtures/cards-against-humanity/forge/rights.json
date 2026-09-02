@@ -1,0 +1,18 @@
+{
+  "format": "forge-rights",
+  "version": 1,
+  "project": {
+    "license": "CC-BY-NC-SA-2.0",
+    "owner": "Cards Against Humanity LLC",
+    "trademark_notice": "Cards Against Humanity is credited to Cards Against Humanity LLC."
+  },
+  "default": {
+    "license": "CC-BY-NC-SA-2.0",
+    "status": "licensed",
+    "copyright": ["Cards Against Humanity LLC"],
+    "redistribution": "allowed",
+    "source": "https://www.cardsagainsthumanity.com/",
+    "notes": "Non-commercial ShareAlike reuse; see README.md for scope and provenance."
+  },
+  "files": []
+}

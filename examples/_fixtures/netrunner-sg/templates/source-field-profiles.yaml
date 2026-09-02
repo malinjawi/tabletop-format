@@ -1,0 +1,250 @@
+# Declarative field geometry for the private System Gateway stress test.
+#
+# This file is game-owned data. tools/compile_source_profiles.py is generic:
+# another game supplies its own inspected card IDs, boxes, and style tokens.
+
+schema_version: 1
+canonical_size_px: [744, 1030]
+
+styles:
+  title:
+    type: richtext
+    font_family: Forge Cinzel
+    font_asset: assets/source-fonts/Cinzel-Variable.ttf
+    font_weight: 700
+    size_cqw: 4.3
+    min_size_cqw: 2.6
+    line_height: 1.0
+    color: "#080808"
+    padding_top_cqw: 0.25
+    padding_left_cqw: 0.45
+    padding_right_cqw: 0.3
+    symbols: false
+    autoshrink: true
+    max_lines: 1
+  subtitle:
+    type: richtext
+    font_family: Forge Cinzel
+    font_asset: assets/source-fonts/Cinzel-Variable.ttf
+    font_weight: 700
+    size_cqw: 2.8
+    min_size_cqw: 2.0
+    line_height: 1.0
+    color: "#101010"
+    padding_left_cqw: 0.4
+    symbols: false
+    autoshrink: true
+    max_lines: 1
+  subtype:
+    type: richtext
+    font_family: Forge Lato
+    font_asset: assets/source-fonts/Lato-Regular.ttf
+    font_weight: 400
+    size_cqw: 3.35
+    min_size_cqw: 2.25
+    line_height: 1.0
+    color: "#111111"
+    padding_top_cqw: 0.35
+    padding_left_cqw: 0.25
+    symbols: false
+    autoshrink: true
+    max_lines: 1
+  rules:
+    type: richtext
+    font_family: Forge Noto Serif
+    font_asset: assets/source-fonts/NotoSerif-Variable.ttf
+    font_weight: 400
+    size_cqw: 3.55
+    min_size_cqw: 2.35
+    line_height: 1.18
+    color: "#111111"
+    padding_top_cqw: 0.4
+    padding_right_cqw: 0.5
+    padding_bottom_cqw: 0.25
+    padding_left_cqw: 0.5
+    symbols: true
+    autoshrink: true
+    max_lines: 6
+  flavor:
+    type: richtext
+    font_family: Forge Noto Serif
+    font_asset: assets/source-fonts/NotoSerif-Variable.ttf
+    font_weight: 400
+    font_style: italic
+    size_cqw: 3.05
+    min_size_cqw: 2.15
+    line_height: 1.2
+    color: "#333333"
+    padding_top_cqw: 0.25
+    padding_right_cqw: 0.45
+    padding_bottom_cqw: 0.2
+    padding_left_cqw: 0.45
+    symbols: true
+    autoshrink: true
+    max_lines: 6
+  number_white:
+    type: richtext
+    font_family: Forge Orbitron
+    font_asset: assets/source-fonts/Orbitron-Variable.ttf
+    font_weight: 900
+    size_cqw: 6.1
+    min_size_cqw: 3.4
+    line_height: 1.0
+    color: "#ffffff"
+    text_align: center
+    vertical_align: middle
+    symbols: false
+    autoshrink: true
+    max_lines: 1
+  number_dark:
+    type: richtext
+    font_family: Forge Orbitron
+    font_asset: assets/source-fonts/Orbitron-Variable.ttf
+    font_weight: 900
+    size_cqw: 5.7
+    min_size_cqw: 3.5
+    line_height: 1.0
+    color: "#333333"
+    text_align: center
+    vertical_align: middle
+    symbols: false
+    autoshrink: true
+    max_lines: 1
+
+profiles:
+  - id: identity_runner
+    card_id: rene_loup_arcemont_party_animal
+    card_type: identity
+    fields:
+      - id: title
+        src: name
+        transform: before-colon
+        box_px: [190, 35, 610, 84]
+        style: title
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/title-background.png
+      - id: subtitle
+        src: name
+        transform: after-colon
+        box_px: [225, 92, 410, 125]
+        style: subtitle
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/subtitle-background.png
+      - id: subtypes
+        src: subtypes
+        transform: join
+        separator: " · "
+        box_px: [270, 690, 430, 735]
+        style: subtype
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/subtype-background.png
+      - id: base_link
+        src: attributes.base_link
+        box_px: [56, 62, 115, 120]
+        style: number_white
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/base-link-background.png
+      - id: minimum_deck_size
+        src: attributes.minimum_deck_size
+        box_px: [48, 957, 116, 1005]
+        style: number_white
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/minimum-deck-size-background.png
+      - id: influence_limit
+        src: attributes.influence_limit
+        box_px: [635, 957, 704, 1005]
+        style: number_white
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/influence-limit-background.png
+      - id: rules
+        src: text
+        box_px: [132, 750, 680, 872]
+        style: rules
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/rules-background.png
+        render: { max_lines: 4 }
+      - id: flavor
+        source: printing
+        src: flavor_text
+        box_px: [132, 885, 390, 925]
+        style: flavor
+        background_asset: assets/source-patches/rene_loup_arcemont_party_animal/flavor-background.png
+        render: { max_lines: 1 }
+
+  - id: asset
+    card_id: spin_doctor
+    card_type: asset
+    fields:
+      - { id: title, src: name, box_px: [255, 35, 620, 86], style: title, background_asset: assets/source-patches/spin_doctor/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [190, 570, 410, 616], style: subtype, background_asset: assets/source-patches/spin_doctor/subtypes-background.png }
+      - { id: rules, src: text, box_px: [86, 630, 665, 765], style: rules, background_asset: assets/source-patches/spin_doctor/rules-background.png, render: { max_lines: 4 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [86, 775, 665, 950], style: flavor, background_asset: assets/source-patches/spin_doctor/flavor-background.png, render: { max_lines: 5 } }
+      - { id: cost, src: attributes.cost, box_px: [48, 28, 110, 90], patches: { "0": assets/source-patches/spin_doctor/cost-0.png, "1": assets/source-patches/spin_doctor/cost-1.png, "2": assets/source-patches/spin_doctor/cost-2.png, "3": assets/source-patches/spin_doctor/cost-3.png, "4": assets/source-patches/spin_doctor/cost-4.png, "5": assets/source-patches/spin_doctor/cost-5.png, "6": assets/source-patches/spin_doctor/cost-6.png, "7": assets/source-patches/spin_doctor/cost-7.png } }
+
+  - id: upgrade
+    card_id: anoetic_void
+    card_type: upgrade
+    fields:
+      - { id: title, src: name, box_px: [245, 36, 630, 92], style: title, background_asset: assets/source-patches/anoetic_void/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [220, 570, 500, 616], style: subtype, background_asset: assets/source-patches/anoetic_void/subtypes-background.png }
+      - { id: rules, src: text, box_px: [86, 630, 660, 755], style: rules, background_asset: assets/source-patches/anoetic_void/rules-background.png, render: { max_lines: 4 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [86, 765, 660, 960], style: flavor, background_asset: assets/source-patches/anoetic_void/flavor-background.png, render: { max_lines: 6 } }
+      - { id: cost, src: attributes.cost, box_px: [48, 28, 110, 90], patches: { "0": assets/source-patches/anoetic_void/cost-0.png, "1": assets/source-patches/anoetic_void/cost-1.png, "2": assets/source-patches/anoetic_void/cost-2.png, "3": assets/source-patches/anoetic_void/cost-3.png, "4": assets/source-patches/anoetic_void/cost-4.png, "5": assets/source-patches/anoetic_void/cost-5.png, "6": assets/source-patches/anoetic_void/cost-6.png, "7": assets/source-patches/anoetic_void/cost-7.png } }
+      - { id: trash_cost, src: attributes.trash_cost, box_px: [675, 905, 735, 980], patches: { "1": assets/source-patches/anoetic_void/trash-1.png, "2": assets/source-patches/anoetic_void/trash-2.png, "3": assets/source-patches/anoetic_void/trash-3.png, "4": assets/source-patches/anoetic_void/trash-4.png } }
+
+  - id: operation
+    card_id: hedge_fund
+    card_type: operation
+    fields:
+      - { id: title, src: name, box_px: [210, 35, 620, 88], style: title, background_asset: assets/source-patches/hedge_fund/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [250, 570, 500, 615], style: subtype, background_asset: assets/source-patches/hedge_fund/subtypes-background.png }
+      - { id: rules, src: text, box_px: [86, 625, 650, 685], style: rules, background_asset: assets/source-patches/hedge_fund/rules-background.png, render: { max_lines: 2 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [86, 690, 650, 775], style: flavor, background_asset: assets/source-patches/hedge_fund/flavor-background.png, render: { max_lines: 3 } }
+      - { id: cost, src: attributes.cost, box_px: [69, 68, 133, 138], patches: { "0": assets/source-patches/hedge_fund/cost-0.png, "1": assets/source-patches/hedge_fund/cost-1.png, "3": assets/source-patches/hedge_fund/cost-3.png, "4": assets/source-patches/hedge_fund/cost-4.png, "5": assets/source-patches/hedge_fund/cost-5.png, "10": assets/source-patches/hedge_fund/cost-10.png } }
+
+  - id: ice
+    card_id: ballista
+    card_type: ice
+    fields:
+      - { id: title, src: name, box_px: [155, 24, 610, 82], style: title, background_asset: assets/source-patches/ballista/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " - ", prefix: "ICE: ", box_px: [25, 145, 98, 535], style: subtype, background_asset: assets/source-patches/ballista/subtypes-background.png, render: { rotation_deg: -90, padding_left_cqw: 0.5, padding_right_cqw: 0.5 } }
+      - { id: rules, src: text, box_px: [128, 112, 665, 205], style: rules, background_asset: assets/source-patches/ballista/rules-background.png, render: { max_lines: 3 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [128, 215, 665, 300], style: flavor, background_asset: assets/source-patches/ballista/flavor-background.png, render: { max_lines: 3 } }
+
+  - id: program
+    card_id: carmen
+    card_type: program
+    fields:
+      - { id: title, src: name, box_px: [205, 35, 610, 92], style: title, background_asset: assets/source-patches/carmen/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [215, 570, 535, 620], style: subtype, background_asset: assets/source-patches/carmen/subtypes-background.png }
+      - { id: rules, src: text, box_px: [65, 640, 655, 820], style: rules, background_asset: assets/source-patches/carmen/rules-background.png, render: { max_lines: 6 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [65, 830, 625, 925], style: flavor, background_asset: assets/source-patches/carmen/flavor-background.png, render: { max_lines: 3 } }
+      - { id: cost, src: attributes.cost, box_px: [69, 68, 133, 138], patches: { "0": assets/source-patches/carmen/cost-0.png, "1": assets/source-patches/carmen/cost-1.png, "2": assets/source-patches/carmen/cost-2.png, "3": assets/source-patches/carmen/cost-3.png, "4": assets/source-patches/carmen/cost-4.png, "5": assets/source-patches/carmen/cost-5.png } }
+
+  - id: hardware
+    card_id: carnivore
+    card_type: hardware
+    fields:
+      - { id: title, src: name, box_px: [255, 38, 630, 92], style: title, background_asset: assets/source-patches/carnivore/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [235, 570, 500, 620], style: subtype, background_asset: assets/source-patches/carnivore/subtypes-background.png }
+      - { id: rules, src: text, box_px: [65, 635, 655, 860], style: rules, background_asset: assets/source-patches/carnivore/rules-background.png, render: { max_lines: 7 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [65, 870, 685, 950], style: flavor, background_asset: assets/source-patches/carnivore/flavor-background.png, render: { max_lines: 2 } }
+      - { id: cost, src: attributes.cost, box_px: [69, 68, 133, 138], patches: { "0": assets/source-patches/carnivore/cost-0.png, "1": assets/source-patches/carnivore/cost-1.png, "2": assets/source-patches/carnivore/cost-2.png, "3": assets/source-patches/carnivore/cost-3.png, "4": assets/source-patches/carnivore/cost-4.png, "5": assets/source-patches/carnivore/cost-5.png } }
+
+  - id: resource
+    card_id: smartware_distributor
+    card_type: resource
+    fields:
+      - { id: title, src: name, box_px: [235, 25, 690, 80], style: title, background_asset: assets/source-patches/smartware_distributor/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [220, 570, 510, 620], style: subtype, background_asset: assets/source-patches/smartware_distributor/subtypes-background.png }
+      - { id: rules, src: text, box_px: [65, 635, 650, 780], style: rules, background_asset: assets/source-patches/smartware_distributor/rules-background.png, render: { max_lines: 5 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [65, 785, 680, 865], style: flavor, background_asset: assets/source-patches/smartware_distributor/flavor-background.png, render: { max_lines: 2 } }
+      - { id: cost, src: attributes.cost, box_px: [69, 68, 133, 138], patches: { "0": assets/source-patches/smartware_distributor/cost-0.png, "1": assets/source-patches/smartware_distributor/cost-1.png, "2": assets/source-patches/smartware_distributor/cost-2.png, "3": assets/source-patches/smartware_distributor/cost-3.png, "4": assets/source-patches/smartware_distributor/cost-4.png, "5": assets/source-patches/smartware_distributor/cost-5.png } }
+
+  - id: event
+    card_id: sure_gamble
+    card_type: event
+    fields:
+      - { id: title, src: name, box_px: [200, 28, 610, 88], style: title, background_asset: assets/source-patches/sure_gamble/title-background.png }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [160, 625, 430, 670], style: subtype, background_asset: assets/source-patches/sure_gamble/subtypes-background.png }
+      - { id: rules, src: text, box_px: [65, 680, 630, 745], style: rules, background_asset: assets/source-patches/sure_gamble/rules-background.png, render: { max_lines: 2 } }
+      - { id: flavor, source: printing, src: flavor_text, box_px: [65, 755, 640, 855], style: flavor, background_asset: assets/source-patches/sure_gamble/flavor-background.png, render: { max_lines: 3 } }
+
+  - id: agenda
+    card_id: offworld_office
+    card_type: agenda
+    fields:
+      - { id: flavor, source: printing, src: flavor_text, box_px: [86, 687, 660, 835], style: flavor, background_asset: assets/source-patches/offworld_office/flavor-background.png, render: { max_lines: 4 } }

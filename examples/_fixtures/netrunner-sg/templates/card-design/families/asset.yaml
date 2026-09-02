@@ -1,0 +1,149 @@
+name: Asset template
+description: Production layout specific to asset cards. Shared frame and typography live in reusable components.
+regions:
+  - id: asset_header_shadow
+    type: rect
+    x: 14.8
+    "y": 2.84
+    w: 48.2
+    h: 5.15
+    fill: "#06090d"
+    clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)
+    shadow: 0 .55mm .9mm rgba(0,0,0,.42)
+    show_if: type == asset
+  - id: asset_header
+    type: rect
+    x: 14.7
+    "y": 2.48
+    w: 48.3
+    h: 4.65
+    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    stroke: palette-dark
+    stroke_w_mm: 0.35
+    clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)
+    show_if: type == asset
+  - id: asset_unique
+    type: text
+    text: ◆
+    x: 19.5
+    "y": 2.88
+    w: 2.7
+    h: 3.8
+    font: title
+    size_pt: 5.1
+    align: center
+    valign: middle
+    color: "#111820"
+    show_if: type == asset && attributes.unique
+  - id: asset_name
+    type: richtext
+    src: card.name
+    x: 18.3
+    "y": 2.68
+    w: 42
+    h: 4
+    font: title
+    size_pt: 8.8
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == asset && !attributes.unique
+  - id: asset_name_unique
+    type: richtext
+    src: card.name
+    x: 22.4
+    "y": 2.68
+    w: 37.9
+    h: 4
+    font: title
+    size_pt: 8.8
+    min_size_pt: 4.4
+    char_width_em: 0.6
+    line_height: 1
+    letter_spacing_em: -0.045
+    align: left
+    valign: middle
+    color: "#111820"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == asset && attributes.unique
+  - id: asset_rez_cost_glyph
+    type: richtext
+    text: "[rez_cost]"
+    x: 1.55
+    "y": 0.82
+    w: 10.3
+    h: 10.3
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: drop-shadow(0 .35mm .45mm rgba(0,0,0,.5))
+    show_if: type == asset && attributes.cost
+  - id: asset_cost_shadow
+    type: badge
+    text: ""
+    x: 3.25
+    "y": 2.52
+    d: 7.05
+    bg: "#07090b"
+    color: "#ffffff"
+    shadow: 0 .48mm .78mm rgba(0,0,0,.58)
+    show_if: type == asset && attributes.cost
+  - id: asset_cost_edge
+    type: badge
+    text: ""
+    x: 3.48
+    "y": 2.75
+    d: 6.59
+    bg: palette-dark
+    color: "#ffffff"
+    show_if: type == asset && attributes.cost
+  - id: asset_cost_face
+    type: badge
+    text: ""
+    x: 3.77
+    "y": 3.04
+    d: 6.01
+    bg: radial-gradient(circle at 50% 42%,#2b3134,#090b0d 72%)
+    color: "#ffffff"
+    show_if: type == asset && attributes.cost
+  - id: asset_cost_number
+    type: text
+    src: card.attributes.cost
+    x: 3.77
+    "y": 3.07
+    w: 6.01
+    h: 5.95
+    font: stat
+    size_pt: 11.4
+    align: center
+    valign: middle
+    color: "#ffffff"
+    text_shadow: "0 .14mm .16mm #000,0 0 .28mm #000"
+    show_if: type == asset && attributes.cost
+  - id: asset_subtypes
+    type: richtext
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    x: 17
+    "y": 48.55
+    w: 34.9
+    h: 4.7
+    font: subtype
+    size_pt: 6.6
+    min_size_pt: 4.6
+    char_width_em: 0.58
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#303a43"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == asset

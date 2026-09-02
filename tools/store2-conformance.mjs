@@ -40,11 +40,15 @@ assert(!(await q.sessionUser(db, dead)), "expired session resolves to nothing");
 
 // games index (DA-3) + ownership
 const slug = h("game");
-await q.upsertGame(db, { slug, title: "Game", license: "CC-BY-4.0", card_count: 6 });
-await q.upsertGame(db, { slug, title: "Game v2", license: "CC-BY-4.0", card_count: 7 });
+const projectId = newId("p");
+const project = { slug, project_id: projectId, namespace: ana.handle, repo_slug: slug };
+await q.upsertGame(db, { ...project, title: "Game", license: "CC-BY-4.0", card_count: 6 });
+await q.upsertGame(db, { ...project, title: "Game v2", license: "CC-BY-4.0", card_count: 7 });
 await q.setForkMeta(db, slug, null, ana.id);
 let g = (await q.listGames(db)).find(x => x.slug === slug);
 assert(g.title === "Game v2" && g.card_count === 7, "upsert takes the update path");
+assert(g.project_id === projectId && g.namespace === ana.handle && g.repo_slug === slug,
+  "upsert preserves immutable project identity and owner/slug namespace");
 assert(g.owner_handle === ana.handle, "listGames joins owner_handle");
 assert(typeof g.stars === "number" && g.stars === 0, "stars is a NUMBER zero (pg ::int cast)", typeof g.stars);
 assert((await q.gamesOwnedBy(db, ana.id)).includes(slug), "gamesOwnedBy");
@@ -60,7 +64,8 @@ assert(await q.starCount(db, slug) === 0, "unstar → 0");
 
 // fork lineage
 const fork = h("game-fork");
-await q.upsertGame(db, { slug: fork, title: "Fork", license: null, card_count: 7 });
+await q.upsertGame(db, { slug: fork, project_id: newId("p"), namespace: ana.handle,
+  repo_slug: fork, title: "Fork", license: null, card_count: 7 });
 await q.setForkMeta(db, fork, slug, ana.id);
 g = (await q.listGames(db)).find(x => x.slug === fork);
 assert(g.forked_from === slug, "fork lineage recorded");

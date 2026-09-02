@@ -26,11 +26,13 @@
  *   materialize(slug, ref)        → { dir, cleanup }     // exact tree at ref (Store 3 feed)
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync,
          mkdirSync, mkdtempSync, rmSync, cpSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, isAbsolute, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { uploadAsset, downloadAsset } from "../tools/lib/lfs.mjs";
+import { PROJECT_META, parseProjectMeta } from "./project-ref.mjs";
 
 /** @param {{root: string, gamesDir: string, lfsUrl?: string|null}} cfg */
 export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
@@ -55,8 +57,37 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
     if (hasGameYaml(fixture)) return fixture;
     return top;
   };
-  const rel = (slug) => abs(slug).replace(root + "/", "");
-  const okSlug = (s) => /^[a-z0-9][a-z0-9-]*$/.test(s);
+  const rel = (slug) => relative(root, abs(slug)).replaceAll("\\", "/");
+  const okSlug = (s) => /^[a-z0-9][a-z0-9-]*(?:~[a-z0-9][a-z0-9-]*)?$/.test(s);
+  const treeMtime = (dir) => {
+    let newest = 0;
+    for (const name of readdirSync(dir)) {
+      if (name.startsWith(".") || name === "exports") continue;
+      const path = join(dir, name), stat = statSync(path);
+      newest = Math.max(newest, stat.mtimeMs, stat.isDirectory() ? treeMtime(path) : 0);
+    }
+    return newest;
+  };
+  const isPointer = (content) => Buffer.from(content).slice(0, 60).toString().startsWith("version https://git-lfs");
+  const localLfsObject = (pointer) => {
+    const oid = String(pointer).match(/^oid sha256:([0-9a-f]{64})$/mi)?.[1];
+    if (!oid) throw new Error("invalid Git LFS pointer");
+    const gitPath = git(["rev-parse", "--git-path", `lfs/objects/${oid.slice(0, 2)}/${oid.slice(2, 4)}/${oid}`]);
+    const objectPath = isAbsolute(gitPath) ? gitPath : join(root, gitPath);
+    if (!existsSync(objectPath)) throw new Error(`Git LFS object ${oid} is unavailable locally`);
+    const bytes = readFileSync(objectPath);
+    if (createHash("sha256").update(bytes).digest("hex") !== oid)
+      throw new Error(`Git LFS object ${oid} failed its SHA-256 check`);
+    return bytes;
+  };
+  const cacheLocalLfsObject = (oid, bytes) => {
+    if (createHash("sha256").update(bytes).digest("hex") !== oid)
+      throw new Error(`refusing to cache Git LFS object ${oid}: SHA-256 mismatch`);
+    const gitPath = git(["rev-parse", "--git-path", `lfs/objects/${oid.slice(0, 2)}/${oid.slice(2, 4)}/${oid}`]);
+    const objectPath = isAbsolute(gitPath) ? gitPath : join(root, gitPath);
+    mkdirSync(dirname(objectPath), { recursive: true });
+    if (!existsSync(objectPath)) writeFileSync(objectPath, bytes);
+  };
 
   const store = {
     kind: "local",
@@ -67,20 +98,17 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       const nested = existsSync(fixturesDir)
         ? readdirSync(fixturesDir).filter(d => hasGameYaml(join(fixturesDir, d)))
         : [];
-      return [...top, ...nested]; // slugs = basename either way
+      return [...top, ...nested.filter(slug => !top.includes(slug))]; // top-level hosted game wins
     },
     has(slug) { return okSlug(slug) && store.list().includes(slug); },
     dir(slug) { return store.has(slug) ? abs(slug) : null; },
     treeRoot() { return gamesDir; },
 
     version(slug) {
-      return String(Math.max(...["game.yaml", "components/cards.json"].map(f => {
-        const p = join(abs(slug), f); return existsSync(p) ? statSync(p).mtimeMs : 0; })));
+      return String(treeMtime(abs(slug)));
     },
     catalogVersion() {
-      return String(Math.max(0, ...store.list().flatMap(s =>
-        ["game.yaml", "components/cards.json", "community.yaml"].map(f => {
-          const p = join(abs(s), f); return existsSync(p) ? statSync(p).mtimeMs : 0; }))));
+      return String(Math.max(0, ...store.list().map(s => treeMtime(abs(s)))));
     },
 
     readFile(slug, relPath) {
@@ -89,21 +117,52 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
     },
     readMeta(slug) {
       const gy = store.readFile(slug, "game.yaml")?.toString() ?? "";
+      const project = parseProjectMeta(store.readFile(slug, PROJECT_META), slug);
       let cardCount = null;
       try { cardCount = JSON.parse(store.readFile(slug, "components/cards.json").toString()).length; } catch {}
       return { title: (gy.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? slug,
                license: (gy.match(/^license:\s*(\S+)/m) ?? [])[1] ?? null,
-               cardCount };
+               cardCount, projectId: project.project_id, namespace: project.namespace,
+               repoSlug: project.slug, repoId: null };
+    },
+
+    projectKey(namespace, repoSlug) {
+      for (const key of store.list()) {
+        const project = parseProjectMeta(store.readFile(key, PROJECT_META), key);
+        if (project.namespace === namespace && project.slug === repoSlug) return key;
+      }
+      return null;
     },
 
     /** files: [{path, content:Buffer|string}] — one atomic commit, authored as the user. */
-    writeFiles(slug, files, message, author) {
+    async writeFiles(slug, files, message, author) {
       for (const f of files) {
         const dest = join(abs(slug), f.path);
+        if (f.content === null) { rmSync(dest, { force: true }); continue; }
+        let content = f.content;
+        if (lfsUrl && f.path.startsWith("assets/") && !isPointer(content)) {
+          const bytes = Buffer.from(content);
+          const up = await uploadAsset(lfsUrl, f.path, bytes);
+          cacheLocalLfsObject(up.oid, bytes);
+          content = up.pointer;
+        }
         mkdirSync(dirname(dest), { recursive: true });
-        writeFileSync(dest, f.content);
+        writeFileSync(dest, content);
       }
-      git(["add", "--", ...files.map(f => join(abs(slug), f.path))]);
+      const add = ["add", "-A", "--", ...files.map(f => join(abs(slug), f.path))];
+      // Portable mode must stay portable even when the developer has Git LFS
+      // installed globally and this repository's .gitattributes names assets.
+      // Otherwise `git add` silently creates an unresolvable pointer while no
+      // LFS endpoint exists. Explicit LFS mode already uploads and stages the
+      // verified pointer, so only the no-service path bypasses clean filters.
+      git(lfsUrl ? add : ["-c", "filter.lfs.process=", "-c", "filter.lfs.clean=cat",
+        "-c", "filter.lfs.smudge=cat", "-c", "filter.lfs.required=false", ...add]);
+      try {
+        git(["diff", "--cached", "--quiet", "--", ...files.map(f => join(abs(slug), f.path))], QUIET);
+        return { sha: git(["rev-parse", "--short", "HEAD"]), unchanged: true };
+      } catch (error) {
+        if (error.status !== 1) throw error;
+      }
       git(["commit", "-m", message, "--author", author]);
       return { sha: git(["rev-parse", "--short", "HEAD"]) };
     },
@@ -119,13 +178,22 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
     /** Copy-fork an exact source ref with a game.yaml transform (id rewrite +
      *  SPEC §9 attribution). Resolving HEAD before this call makes the fork
      *  immune to a source commit landing between the user's click and copy. */
-    fork(src, dest, transformYaml, message, author, ref = "HEAD") {
-      const { dir, cleanup } = store.materialize(src, ref);
+    async fork(src, dest, transformYaml, message, author, ref = "HEAD", identity = null, repositoryFiles = []) {
+      const { dir, cleanup } = await store.materialize(src, ref);
       try {
         cpSync(dir, abs(dest), { recursive: true,
           filter: (p) => !p.includes("/exports") && !p.split("/").pop().startsWith(".") });
         const yaml = readFileSync(join(abs(dest), "game.yaml"), "utf8");
         writeFileSync(join(abs(dest), "game.yaml"), transformYaml(yaml));
+        if (identity) {
+          mkdirSync(dirname(join(abs(dest), PROJECT_META)), { recursive: true });
+          writeFileSync(join(abs(dest), PROJECT_META), identity);
+        }
+        for (const file of repositoryFiles) {
+          const target = join(abs(dest), file.path);
+          mkdirSync(dirname(target), { recursive: true });
+          writeFileSync(target, file.content);
+        }
         git(["add", "--", abs(dest)]);
         git(["commit", "-m", message, "--author", author]);
         return { sha: git(["rev-parse", "--short", "HEAD"]) };
@@ -153,14 +221,37 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
         || git(["rev-parse", "--short", "HEAD"]);
     },
 
+    createReleaseTag(slug, tag, target, message, author) {
+      if (!/^v[0-9][0-9A-Za-z._-]{0,31}$/.test(tag)) throw new Error("release tags must start with v and a number");
+      const ref = `refs/tags/forge/${slug}/${tag}`;
+      try { git(["show-ref", "--verify", "--quiet", ref], QUIET); throw new Error(`release tag '${tag}' already exists`); }
+      catch (error) { if (/already exists/.test(error.message)) throw error; }
+      const fullTarget = git(["rev-parse", target]);
+      const parsed = String(author ?? "Forge <releases@forge.invalid>").match(/^(.*?)\s*<(.+)>$/);
+      const name = parsed?.[1] || "Forge", email = parsed?.[2] || "releases@forge.invalid";
+      git(["tag", "-a", `forge/${slug}/${tag}`, fullTarget, "-m", message],
+        { env: { ...process.env, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email } });
+      return { tag, target: git(["rev-parse", `${ref}^{}`]), tagObject: git(["rev-parse", ref]),
+        annotated: git(["cat-file", "-t", ref]) === "tag", protected: true };
+    },
+
+    releaseTagInfo(slug, tag) {
+      const ref = `refs/tags/forge/${slug}/${tag}`;
+      try { return { tag, target: git(["rev-parse", `${ref}^{}`]), tagObject: git(["rev-parse", ref]),
+        annotated: git(["cat-file", "-t", ref]) === "tag", protected: true,
+        message: git(["for-each-ref", "--format=%(contents)", ref]) }; }
+      catch { return null; }
+    },
+
     /** SPEC §7 write path: LFS batch upload + pointer committed (or portable inline). */
-    async putAsset(slug, relPath, buf, author) {
+    async putAsset(slug, relPath, buf, author, extraFiles = []) {
       let mode = "portable", oid = null, content = buf;
       if (lfsUrl) {
         const up = await uploadAsset(lfsUrl, relPath, buf);
+        cacheLocalLfsObject(up.oid, buf);
         content = up.pointer; mode = "lfs"; oid = up.oid;
       }
-      const { sha } = store.writeFiles(slug, [{ path: relPath, content }],
+      const { sha } = await store.writeFiles(slug, [{ path: relPath, content }, ...extraFiles],
         `assets: add ${relPath}${mode === "lfs" ? " (LFS)" : ""}`, author);
       return { mode, oid, sha };
     },
@@ -169,18 +260,28 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       let buf = store.readFile(slug, relPath);
       if (!buf) return null;
       if (buf.slice(0, 60).toString().startsWith("version https://git-lfs")) {
-        if (!lfsUrl) throw new Error("pointer file but no LFS endpoint configured");
-        buf = await downloadAsset(lfsUrl, buf.toString());
+        buf = lfsUrl ? await downloadAsset(lfsUrl, buf.toString()) : localLfsObject(buf);
       }
       return buf;
     },
 
-    materialize(slug, ref) {
+    async materialize(slug, ref, { resolveLfs = true } = {}) {
       const tmp = mkdtempSync(join(tmpdir(), "at-sha-"));
       execFileSync("bash", ["-c",
-        `git archive ${ref === "HEAD" ? "HEAD" : ref} -- ${JSON.stringify(rel(slug))} | tar -x -C ${JSON.stringify(tmp)}`],
-        { cwd: root });
-      return { dir: join(tmp, rel(slug)), cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
+        `set -o pipefail; git archive ${ref === "HEAD" ? "HEAD" : ref} -- ${JSON.stringify(rel(slug))} | tar -x -C ${JSON.stringify(tmp)}`],
+        { cwd: root, env: { ...process.env, GIT_LFS_SKIP_SMUDGE: "1" } });
+      const dir = join(tmp, rel(slug));
+      if (resolveLfs && existsSync(join(dir, "assets"))) {
+        const walk = d => readdirSync(d).flatMap(name => {
+          const path = join(d, name); return statSync(path).isDirectory() ? walk(path) : [path];
+        });
+        for (const path of walk(join(dir, "assets"))) {
+          const bytes = readFileSync(path);
+          if (isPointer(bytes)) writeFileSync(path,
+            lfsUrl ? await downloadAsset(lfsUrl, bytes.toString()) : localLfsObject(bytes));
+        }
+      }
+      return { dir, cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
     },
   };
   return store;

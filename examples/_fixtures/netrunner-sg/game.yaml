@@ -1,10 +1,11 @@
 format_version: "0.1.0"
 id: netrunner-sg
 title: "Netrunner: System Gateway"
-# license: this fixture reproduces card names/text/costs fetched from NetrunnerDB
-# (community-maintained, CC-BY-NC data covering Fantasy Flight Games' / Null Signal
-# Games' Android: Netrunner and its "System Gateway" (2021) product line). "Proprietary"
-# below is a placeholder - the underlying IP is NOT owned by this repo or its authors.
+# license: this fixture reproduces card names/text/costs fetched from NetrunnerDB.
+# The card-data repository does not provide a general open-content license for that
+# material. "Proprietary" below is a conservative placeholder - the underlying IP is
+# NOT owned by this repo or its authors. The separately attributed NSG symbol assets
+# are CC BY-ND 4.0; that license does not extend to the card data, frames, art, or backs.
 # This fixture exists ONLY as an internal test fixture for the tabletop-format platform
 # and MUST NOT be hosted, published, or distributed as if it were an original game.
 # See README.md in this directory for the full provenance statement.
@@ -42,11 +43,13 @@ attribute_definitions:
   - key: side
     name: Side
     type: string
+    choices: [corp, runner]
     required: true
     description: Which side of the asymmetric matchup this card belongs to ("corp" or "runner").
   - key: faction
     name: Faction
     type: string
+    choices: [anarch, criminal, shaper, haas-bioroid, jinteki, nbn, weyland-consortium, neutral-corp, neutral-runner]
     required: true
     description: Card's faction (e.g. anarch, criminal, shaper, haas-bioroid, jinteki, nbn, weyland-consortium, or a neutral-* faction).
   - key: influence
@@ -98,24 +101,151 @@ symbols:
   - key: click
     name: Click
     glyph: "▸"
+    asset: "assets/nsg-symbols/NSG_CLICK.svg"
   - key: credit
     name: Credit
     glyph: "¢"
+    asset: "assets/nsg-symbols/NSG_CREDIT.svg"
   - key: subroutine
     name: Subroutine
     glyph: "⇒"
+    asset: "assets/nsg-symbols/NSG_SUBROUTINE.svg"
   - key: recurring_credit
     name: Recurring credit
     glyph: "↺"
+    asset: "assets/nsg-symbols/NSG_RECURRING_CREDIT.svg"
   - key: mu
     name: Memory unit
     glyph: "◇"
+    asset: "assets/nsg-symbols/NSG_Mu.svg"
   - key: trash
     name: Trash
     glyph: "🗑"
+    asset: "assets/nsg-symbols/NSG_TRASH_ABILITY.svg"
   - key: link
     name: Link
     glyph: "🔗"
+    asset: "assets/nsg-symbols/NSG_LINK.svg"
+  - key: agenda
+    name: Agenda point
+    glyph: "★"
+    asset: "assets/nsg-symbols/NSG_AGENDA.svg"
+  - key: trash_cost
+    name: Trash cost
+    glyph: "⌫"
+    asset: "assets/nsg-symbols/NSG_TRASH_COST_bw.svg"
+  - key: rez_cost
+    name: Rez cost
+    glyph: "◉"
+    asset: "assets/nsg-symbols/NSG_REZ_COST.svg"
+  - key: advancement
+    name: Advancement
+    glyph: "▲"
+    asset: "assets/nsg-symbols/NSG_ADVANCEMENT_COUNTER.svg"
+  - key: advancement_reverse
+    name: Advancement (reverse)
+    glyph: "△"
+    asset: "assets/nsg-symbols/NSG_ADVANCEMENT_COUNTER_REVERSE.svg"
+  - key: five_credits
+    name: Five credits
+    glyph: "5¢"
+    asset: "assets/nsg-symbols/NSG_5_CREDITS.svg"
+  - key: click_blue
+    name: Available click
+    glyph: "▸"
+    asset: "assets/nsg-symbols/NSG_CLICK_BLUE.svg"
+  - key: click_spent
+    name: Spent click
+    glyph: "▹"
+    asset: "assets/nsg-symbols/NSG_CLICK_SPENT.svg"
+  - key: bad_publicity
+    name: Bad publicity
+    glyph: "BP"
+    asset: "assets/nsg-symbols/NSG_BAD_PUBLICITY.svg"
+  - key: bad_publicity_spent
+    name: Spent bad publicity
+    glyph: "BP"
+    asset: "assets/nsg-symbols/NSG_BAD_PUBLICITY_SPENT.svg"
+  - key: core_damage
+    name: Core damage
+    glyph: "✚"
+    asset: "assets/nsg-symbols/NSG_CORE_DAMAGE.svg"
+  - key: tag
+    name: Tag
+    glyph: "T"
+    asset: "assets/nsg-symbols/NSG_TAG.svg"
+  - key: virus_counter
+    name: Virus counter
+    glyph: "V"
+    asset: "assets/nsg-symbols/NSG_VIRUS_COUNTER.svg"
+  - key: generic_counter_blue
+    name: Generic counter (blue)
+    glyph: "●"
+    asset: "assets/nsg-symbols/NSG_GENERIC_COUNTER_BLUE.svg"
+  - key: generic_counter_green
+    name: Generic counter (green)
+    glyph: "●"
+    asset: "assets/nsg-symbols/NSG_GENERIC_COUNTER_GREEN.svg"
+  - key: hq
+    name: HQ
+    glyph: "HQ"
+    asset: "assets/nsg-symbols/NSG_HQ.svg"
+  - key: rd
+    name: R&D
+    glyph: "R&D"
+    asset: "assets/nsg-symbols/NSG_RD.svg"
+  - key: archives
+    name: Archives
+    glyph: "AR"
+    asset: "assets/nsg-symbols/NSG_ARCHIVES.svg"
+  - key: interrupt
+    name: Interrupt
+    glyph: "!"
+    asset: "assets/nsg-symbols/NSG_INTERRUPT.svg"
+  - key: faction_anarch
+    name: Anarch faction
+    glyph: "A"
+    asset: "assets/nsg-symbols/NSG_ANARCH.svg"
+  - key: faction_criminal
+    name: Criminal faction
+    glyph: "C"
+    asset: "assets/nsg-symbols/NSG_CRIMINAL.svg"
+  - key: faction_shaper
+    name: Shaper faction
+    glyph: "S"
+    asset: "assets/nsg-symbols/NSG_SHAPER.svg"
+  - key: faction_hb
+    name: Haas-Bioroid faction
+    glyph: "HB"
+    asset: "assets/nsg-symbols/NSG_HB.svg"
+  - key: faction_jinteki
+    name: Jinteki faction
+    glyph: "J"
+    asset: "assets/nsg-symbols/NSG_JINTEKI.svg"
+  - key: faction_nbn
+    name: NBN faction
+    glyph: "NBN"
+    asset: "assets/nsg-symbols/NSG_NBN.svg"
+  - key: faction_weyland
+    name: Weyland Consortium faction
+    glyph: "W"
+    asset: "assets/nsg-symbols/NSG_WEYLAND.svg"
+  - key: faction_adam
+    name: Adam faction
+    glyph: "AD"
+    asset: "assets/nsg-symbols/NSG_ADAM.svg"
+  - key: faction_apex
+    name: Apex faction
+    glyph: "AP"
+    asset: "assets/nsg-symbols/NSG_APEX.svg"
+  - key: faction_sunny
+    name: Sunny Lebeau faction
+    glyph: "SL"
+    asset: "assets/nsg-symbols/NSG_SUNNY.svg"
+  - key: set_system_gateway
+    name: System Gateway set
+    glyph: "SG"
+    asset: "assets/nsg-symbols/NSG_SYSTEM_GATEWAY_SET.svg"
 type_colors:
   identity:  { fg: "#1a1a1a", bg: "#d9d9d9" }
   agenda:    { fg: "#8a6d00", bg: "#fbf0c4" }

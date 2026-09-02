@@ -1,0 +1,205 @@
+# System Gateway frame families used to expand card-specific source overlays.
+# Geometry is expressed in native pixels on the 744x1030 lossless face.
+
+schema_version: 1
+canonical_size_px: [744, 1030]
+
+externally_profiled_cards:
+  - rene_loup_arcemont_party_animal
+  - offworld_office
+  - spin_doctor
+  - anoetic_void
+  - hedge_fund
+  - ballista
+  - carmen
+  - carnivore
+  - smartware_distributor
+  - sure_gamble
+
+donor_sets:
+  runner_cost:
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": smartware_distributor, "1": overclock, "2": t400_memory_diamond, "3": verbal_plasticity, "4": carnivore, "5": sure_gamble }
+    mask: { type: difference, box_px: [82, 76, 126, 132], threshold: 24, dilation_px: 1, feather_px: 0.45 }
+  corp_installed_cost:
+    crop_px: [48, 28, 110, 90]
+    donors: { "0": spin_doctor, "1": tithe, "2": nico_campaign, "3": palisade, "4": karuna, "5": ballista, "6": ansel_1_0, "7": pharos }
+    mask: { type: difference, box_px: [58, 36, 105, 88], threshold: 30, dilation_px: 1, feather_px: 0.45 }
+  operation_cost:
+    crop_px: [69, 68, 133, 138]
+    donors: { "0": sprint, "1": seamless_launch, "3": neurospike, "4": public_trail, "5": hedge_fund, "10": government_subsidy }
+    mask: { type: difference, box_px: [82, 76, 126, 132], threshold: 30, dilation_px: 1, feather_px: 0.45 }
+  program_memory:
+    crop_px: [37, 166, 70, 212]
+    donors: { "1": carmen, "2": mayfly }
+    mask: { type: difference, box_px: [43, 172, 69, 211], threshold: 24, dilation_px: 1, feather_px: 0.45 }
+  program_strength:
+    crop_px: [65, 946, 137, 1020]
+    donors: { "0": echelon, "1": unity, "2": carmen, "3": buzzsaw }
+    mask: { type: difference, box_px: [80, 960, 132, 1019], threshold: 36, dilation_px: 1, feather_px: 0.45 }
+  ice_strength:
+    crop_px: [35, 946, 113, 1022]
+    donors: { "0": whitespace, "1": ping, "2": palisade, "3": diviner, "4": ballista, "5": pharos, "6": bran_1_0 }
+    mask: { type: difference, box_px: [42, 958, 102, 1021], threshold: 36, dilation_px: 1, feather_px: 0.45 }
+  trash_cost:
+    crop_px: [675, 905, 735, 980]
+    donors: { "1": anoetic_void, "2": spin_doctor, "3": amaze_amusements, "4": malapert_data_vault }
+    mask: { type: difference, box_px: [685, 918, 728, 974], threshold: 32, dilation_px: 1, feather_px: 0.45 }
+  advancement:
+    crop_px: [635, 40, 738, 132]
+    donors: { "3": superconducting_hub, "4": offworld_office, "5": send_a_message }
+    mask: { type: difference, box_px: [655, 52, 722, 120], threshold: 28, dilation_px: 2, feather_px: 0.7 }
+  agenda_points:
+    crop_px: [43, 470, 138, 552]
+    donors: { "1": superconducting_hub, "2": offworld_office, "3": send_a_message }
+    mask: { type: difference, box_px: [55, 480, 122, 545], threshold: 28, dilation_px: 2, feather_px: 0.7 }
+
+# The official frame prints influence as a five-socket vertical track.  The
+# renderer remains game-agnostic: these coordinates and verified donor faces
+# belong to the System Gateway production profile, not to Forge itself.
+pip_tracks:
+  influence_runner:
+    match: { attributes.side: runner }
+    field: attributes.influence
+    crop_px: [690, 756, 719, 922]
+    centers_px: [[704, 770], [704, 804], [704, 839], [704, 873], [704, 908]]
+    values: [0, 1, 2, 3, 4, 5]
+    empty_donor: jailbreak
+    filled_donor: conduit
+    filled_donor_value: 4
+    radius_px: 14
+    threshold: 10
+    dilate_px: 1
+    feather_px: 0.45
+  influence_corp:
+    match: { attributes.side: corp }
+    field: attributes.influence
+    crop_px: [34, 804, 63, 971]
+    centers_px: [[48, 818], [48, 853], [48, 887], [48, 922], [48, 957]]
+    values: [0, 1, 2, 3, 4, 5]
+    empty_donor: hedge_fund
+    filled_donor: anoetic_void
+    filled_donor_value: 4
+    radius_px: 14
+    threshold: 10
+    dilate_px: 1
+    feather_px: 0.45
+
+families:
+  - id: runner_identity
+    match: { type: identity, attributes.side: runner }
+    skip_cards: [rene_loup_arcemont_party_animal]
+    fields:
+      - { id: title, src: name, transform: before-colon, box_px: [190, 30, 640, 88], style: title, render: { padding_left_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [300, 610] } }
+      - { id: subtitle, src: name, transform: after-colon, box_px: [210, 90, 580, 127], style: subtitle, render: { padding_left_cqw: 2.7 }, background: { method: row_profile_light, sample_x_px: [300, 560] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [270, 690, 540, 735], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+      - { id: base_link, src: attributes.base_link, box_px: [56, 62, 115, 120], style: number_white, background: { method: inpaint_light, threshold: 110, dilate_px: 2, radius_px: 4 } }
+      - { id: minimum_deck_size, src: attributes.minimum_deck_size, box_px: [48, 957, 116, 1005], style: number_white, background: { method: inpaint_light, threshold: 175, dilate_px: 1, radius_px: 3 } }
+      - { id: influence_limit, src: attributes.influence_limit, box_px: [635, 957, 704, 1005], style: number_white, background: { method: inpaint_light, threshold: 175, dilate_px: 1, radius_px: 3 } }
+    body: { box_px: [132, 750, 610, 998], wrap_chars: 33, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 105 } }
+
+  - id: corp_identity
+    match: { type: identity, attributes.side: corp }
+    fields:
+      - { id: title, src: name, transform: before-colon, box_px: [120, 20, 620, 80], style: title, render: { padding_left_cqw: 1.5 }, background: { method: row_profile_light, sample_x_px: [260, 600] } }
+      - { id: subtitle, src: name, transform: after-colon, box_px: [50, 86, 540, 126], style: subtitle, render: { padding_left_cqw: 1.5 }, background: { method: row_profile_light, sample_x_px: [220, 520] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [160, 710, 520, 758], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+      - { id: minimum_deck_size, src: attributes.minimum_deck_size, box_px: [49, 697, 117, 745], style: number_white, background: { method: inpaint_light, threshold: 175, dilate_px: 1, radius_px: 3 } }
+      - { id: influence_limit, src: attributes.influence_limit, box_px: [631, 697, 697, 745], style: number_white, background: { method: inpaint_light, threshold: 175, dilate_px: 1, radius_px: 3 } }
+    body: { box_px: [35, 790, 610, 992], wrap_chars: 39, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 105 } }
+
+  - id: agenda
+    match: { type: agenda }
+    skip_cards: [offworld_office]
+    fields:
+      - { id: title, src: name, box_px: [18, 30, 590, 88], style: title, render: { padding_left_cqw: 1.5 }, background: { method: row_profile_light, sample_x_px: [260, 580] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [208, 570, 520, 616], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [86, 630, 665, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: advancement_cost, src: attributes.advancement_cost, donor_set: advancement }
+      - { id: agenda_points, src: attributes.agenda_points, donor_set: agenda_points }
+
+  - id: asset
+    match: { type: asset }
+    skip_cards: [spin_doctor]
+    fields:
+      - { id: title, src: name, box_px: [180, 30, 740, 92], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [190, 570, 520, 616], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [86, 630, 665, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: corp_installed_cost }
+      - { id: trash_cost, src: attributes.trash_cost, donor_set: trash_cost }
+
+  - id: upgrade
+    match: { type: upgrade }
+    skip_cards: [anoetic_void]
+    fields:
+      - { id: title, src: name, box_px: [180, 30, 740, 94], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [220, 570, 530, 616], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [86, 630, 665, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: corp_installed_cost }
+      - { id: trash_cost, src: attributes.trash_cost, donor_set: trash_cost }
+
+  - id: operation
+    match: { type: operation }
+    skip_cards: [hedge_fund]
+    fields:
+      - { id: title, src: name, box_px: [165, 30, 740, 94], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [250, 570, 540, 616], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [86, 625, 665, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: operation_cost }
+
+  - id: ice
+    match: { type: ice }
+    skip_cards: [ballista]
+    fields:
+      - { id: title, src: name, box_px: [110, 18, 740, 94], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " - ", prefix: "ICE: ", box_px: [25, 145, 98, 535], style: subtype, render: { rotation_deg: -90, padding_left_cqw: 0.5, padding_right_cqw: 0.5 }, background: { method: column_profile_light, sample_y_px: [150, 525] } }
+    body: { box_px: [128, 112, 665, 515], wrap_chars: 37, line_height_px: 40, gap_px: 16, min_rules_height_px: 45, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 105 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: corp_installed_cost }
+      - { id: strength, src: attributes.strength, donor_set: ice_strength }
+
+  - id: program
+    match: { type: program }
+    skip_cards: [carmen]
+    fields:
+      - { id: title, src: name, box_px: [180, 30, 740, 94], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [210, 570, 550, 620], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [65, 635, 675, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: runner_cost }
+      - { id: memory_cost, src: attributes.memory_cost, donor_set: program_memory }
+      - { id: strength, src: attributes.strength, donor_set: program_strength }
+
+  - id: hardware
+    match: { type: hardware }
+    skip_cards: [carnivore]
+    fields:
+      - { id: title, src: name, box_px: [180, 30, 740, 94], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [225, 570, 540, 620], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [65, 635, 680, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: runner_cost }
+
+  - id: resource
+    match: { type: resource }
+    skip_cards: [smartware_distributor]
+    fields:
+      - { id: title, src: name, box_px: [180, 24, 740, 92], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [215, 570, 540, 620], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [65, 635, 680, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: runner_cost }
+
+  - id: event
+    match: { type: event }
+    skip_cards: [sure_gamble]
+    fields:
+      - { id: title, src: name, box_px: [165, 24, 740, 94], style: title, render: { padding_left_cqw: 7.4, padding_right_cqw: 1.0 }, background: { method: row_profile_light, sample_x_px: [260, 710] } }
+      - { id: subtypes, src: subtypes, transform: join, separator: " · ", box_px: [160, 625, 500, 672], style: subtype, background: { method: inpaint_dark, threshold: 110 } }
+    body: { box_px: [65, 680, 675, 975], wrap_chars: 42, line_height_px: 38, gap_px: 16, min_rules_height_px: 42, rules_style: rules, flavor_style: flavor, background: { method: inpaint_dark, threshold: 110 } }
+    numeric_fields:
+      - { id: cost, src: attributes.cost, donor_set: runner_cost }

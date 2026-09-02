@@ -1,0 +1,24 @@
+{
+  "id": "black-cards",
+  "name": "Black prompt cards",
+  "format_id": "standard",
+  "author": "Cards Against Humanity LLC",
+  "cards": {
+    "black_01": 1,
+    "black_02": 1,
+    "black_03": 1,
+    "black_04": 1,
+    "black_05": 1,
+    "black_06": 1,
+    "black_07": 1,
+    "black_08": 1,
+    "black_09": 1,
+    "black_10": 1,
+    "black_11": 1,
+    "black_12": 1,
+    "black_13": 1,
+    "black_14": 1,
+    "black_15": 1
+  },
+  "notes": "Versioned prompt-card supply for the Forge party-table setup."
+}

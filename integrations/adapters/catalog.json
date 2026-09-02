@@ -1,0 +1,86 @@
+[
+  {
+    "id": "csv-cards", "name": "CSV card snapshot", "version": 2, "stage": "snapshot-import", "status": "stable",
+    "capabilities": ["inspect", "import", "export"], "components": ["cards", "printings"], "tested_upstream": "RFC 4180-compatible CSV",
+    "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["One-file imports model one primary printing per card; use a Forge project or Sheets Printings tab for multiple printings."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 5000000, "timeout_ms": 15000 }, "provenance": "receipt", "entrypoint": "POST /api/games"
+  },
+  {
+    "id": "google-sheets-working-copy", "name": "Google Sheets working copy", "version": 2, "stage": "working-copy", "status": "beta",
+    "capabilities": ["inspect", "import"], "components": ["cards", "printings"], "tested_upstream": "Google Apps Script V8 / current spreadsheet scope",
+    "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["One-way promotion; Forge never writes back to Sheets.", "Draft comments and cell history remain in Google."] },
+    "credentials": { "required": true, "kind": "revocable Forge session", "storage": "user-private" }, "network": ["configured Forge HTTPS origin"],
+    "limits": { "max_bytes": 5000000, "timeout_ms": 15000 }, "provenance": "receipt", "entrypoint": "integrations/google-sheets"
+  },
+  {
+    "id": "forge-design-project", "name": "Forge design project ZIP", "version": 1, "stage": "source-adapter", "status": "stable",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "printings", "templates", "rules", "referenced-assets"], "tested_upstream": "forge-design-project v1",
+    "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["Only manifest-declared safe project paths round-trip.", "Deletion requires explicit confirmation."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/design/import"
+  },
+  {
+    "id": "nandeck-family", "name": "nanDECK family source", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "printings", "card-layout-families"], "tested_upstream": "nanDECK 1.27.x family scripts",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Unsupported script commands are reported and preserved outside the canonical layout subset.", "Secondary flowing text remains Forge-only."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 2097152, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/design/import/nandeck"
+  },
+  {
+    "id": "affinity-bridge", "name": "Affinity production bridge", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "export"], "components": ["card-layout-families", "fonts", "graphics"], "tested_upstream": "Affinity Publisher/Designer template bindings",
+    "deterministic": false, "fidelity": { "level": "declared-subset", "limitations": ["Native Affinity files remain versioned source assets; Forge does not claim lossless .afpub parsing.", "A local desktop worker performs native rendering."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "GET /api/games/:slug/affinity"
+  },
+  {
+    "id": "pnpink", "name": "PnPInk bridge", "version": 1, "stage": "source-adapter", "status": "experimental",
+    "capabilities": ["inspect", "export"], "components": ["cards", "card-layout-families"], "tested_upstream": null,
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Format and tested upstream version are not yet pinned; do not use as the only production source."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "tools/export-pnpink.mjs"
+  },
+  {
+    "id": "pnp-pdf", "name": "Print-and-play PDF", "version": 2, "stage": "artifact-export", "status": "stable",
+    "capabilities": ["export"], "components": ["cards", "backs"], "tested_upstream": "PDF 1.4+ viewers/printers",
+    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["PDF is an output; edit canonical data and templates instead."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "embedded", "entrypoint": "POST /api/games/:slug/export/pnp"
+  },
+  {
+    "id": "print-package", "name": "Print production package", "version": 2, "stage": "artifact-export", "status": "beta",
+    "capabilities": ["export"], "components": ["cards", "backs", "print-manifest"], "tested_upstream": "home A4/Letter and generic press RGB profiles",
+    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Manufacturer-specific color/stock/dieline profiles are not yet modeled."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/print"
+  },
+  {
+    "id": "tabletop-simulator", "name": "Tabletop Simulator save", "version": 2, "stage": "artifact-export", "status": "stable",
+    "capabilities": ["import", "export"], "components": ["cards", "backs", "deck-save"], "tested_upstream": "Tabletop Simulator CustomDeck JSON",
+    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Private-project hosted textures require an authenticated Forge session; publish a release before sharing a mod."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": ["immutable Forge artifact URLs for shared saves"],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "embedded", "entrypoint": "POST /api/games/:slug/export/tts"
+  },
+  {
+    "id": "tabletop-club", "name": "Tabletop Club package", "version": 1, "stage": "artifact-export", "status": "stable",
+    "capabilities": ["export"], "components": ["cards", "backs", "package"], "tested_upstream": "Tabletop Club asset package",
+    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Package contains objects/assets; setup completeness depends on the game setup manifest."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "embedded", "entrypoint": "POST /api/games/:slug/export/ttc"
+  },
+  {
+    "id": "virtualtabletop", "name": "VirtualTabletop.io package", "version": 1, "stage": "artifact-export", "status": "beta",
+    "capabilities": ["export"], "components": ["cards", "setup", "table-state"], "tested_upstream": "VirtualTabletop.io bundle format",
+    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Remote staging is disabled unless explicitly allowed; the package bundles faces."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/vtt"
+  },
+  {
+    "id": "rulebook-publication", "name": "Rulebook publication", "version": 1, "stage": "artifact-export", "status": "beta",
+    "capabilities": ["inspect", "export"], "components": ["rules", "illustrations", "examples", "print-layout"], "tested_upstream": "Forge rulebook publication v1",
+    "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["External network assets are off by default and must be rights-declared before release."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/publication"
+  }
+]

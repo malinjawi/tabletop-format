@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "kind": "forge-official-pnp-package",
+  "title": "Secret Hitler — official Print & Play",
+  "source_url": "https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf",
+  "source_sha256": "b835c7b1365f19448649db99a78b043f30f12a1805b62bf3a4e883562edd6829",
+  "license": "CC-BY-NC-SA-4.0",
+  "attribution": "Secret Hitler by Mike Boxleiter, Tommy Maranges, Max Temkin, and Mackenzie Schubert; published by Goat, Wolf, & Cabbage.",
+  "print_pdf": {
+    "path": "assets/official-pnp/Secret_Hitler_Print_and_Play.pdf",
+    "sha256": "b835c7b1365f19448649db99a78b043f30f12a1805b62bf3a4e883562edd6829",
+    "pages": 13,
+    "page_size": "US Letter landscape",
+    "dpi": 300
+  },
+  "baseline_files": {
+    "components/cards.json": "dbce21e62377d1c859ad1f051f2eb0f9397ccd275f221d5050f6aa28be0bb674",
+    "components/printings.json": "6692570feb573ed9faf69b3c0fea3c102509ef67106eae0529c389a27736f563"
+  },
+  "geometry": {
+    "standard_card_px": [
+      750,
+      1050
+    ],
+    "policy_tile_px": [
+      525,
+      750
+    ],
+    "source_page_px": [
+      3300,
+      2550
+    ],
+    "notes": "No resampling is used for gallery faces; the official PDF remains the print truth."
+  },
+  "source_faces": {
+    "p_ballot_ja": {
+      "path": "assets/official-pnp/source-faces/p_ballot_ja.png",
+      "pdf_page": 5,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "12ba75c2545b67ddc15f7aba23bc599665be7a2ba8ec8c83f11d4ae21238a9ab"
+    },
+    "p_ballot_nein": {
+      "path": "assets/official-pnp/source-faces/p_ballot_nein.png",
+      "pdf_page": 6,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "bbdacc5dce7c06ff7f6391ca35ffd1abfdd384559f6c3e4dcfb79d934c474171"
+    },
+    "p_role_liberal": {
+      "path": "assets/official-pnp/source-faces/p_role_liberal.png",
+      "pdf_page": 7,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "de4493addc553ce8f9081177a3229ea2d7076e83b631759774621cdff357162d"
+    },
+    "p_party_liberal": {
+      "path": "assets/official-pnp/source-faces/p_party_liberal.png",
+      "pdf_page": 8,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "1c2c0b6c9993a6301f2cfde5c6e7b91bd27fdf9974699cbf2ba9323a38658d78"
+    },
+    "p_pile_discard": {
+      "path": "assets/official-pnp/source-faces/p_pile_discard.png",
+      "pdf_page": 8,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "ac064febce312ca2f5755fe9e9a4c8cb1a35ae97761f744980b363e5fc1928c6"
+    },
+    "p_role_hitler": {
+      "path": "assets/official-pnp/source-faces/p_role_hitler.png",
+      "pdf_page": 8,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "bf6e81c7012b101a8bab59ad3a5d90fd1b217c339ef17c370e3a8012841a4d2a"
+    },
+    "p_role_fascist": {
+      "path": "assets/official-pnp/source-faces/p_role_fascist.png",
+      "pdf_page": 8,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "96c69ee4e05430d7870db5d5da198b82a2947a86e259de75f354f2b7fc3100dc"
+    },
+    "p_pile_draw": {
+      "path": "assets/official-pnp/source-faces/p_pile_draw.png",
+      "pdf_page": 8,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "950fbda68477026ca6bf512f2c0c27580367ab9ff212e55a3d3a133ae1744027"
+    },
+    "p_party_fascist": {
+      "path": "assets/official-pnp/source-faces/p_party_fascist.png",
+      "pdf_page": 9,
+      "pixels": [
+        750,
+        1050
+      ],
+      "sha256": "27cfab6b25338cfbd4c75d174b63269af91cdc4fd6e4aee6c8d1acc3162cf3eb"
+    },
+    "p_policy_liberal": {
+      "path": "assets/official-pnp/source-faces/p_policy_liberal.png",
+      "pdf_page": 4,
+      "pixels": [
+        525,
+        750
+      ],
+      "sha256": "db34ef43c48f503c62f936b06e14b4ae404713f5fdfa2f02d0df9f9339b0538e"
+    },
+    "p_policy_fascist": {
+      "path": "assets/official-pnp/source-faces/p_policy_fascist.png",
+      "pdf_page": 2,
+      "pixels": [
+        525,
+        750
+      ],
+      "sha256": "9637d14a1be066c80c97331fba10bb260bc3201872d86147bc5b720957a2297a"
+    },
+    "p_placard_chancellor": {
+      "path": "assets/official-pnp/source-faces/p_placard_chancellor.png",
+      "pdf_page": 3,
+      "pixels": [
+        2054,
+        630
+      ],
+      "sha256": "719d201c486733a2a95ef49509a9c4499f3eb725de8a2dc1925176d67934ac98"
+    },
+    "p_placard_president": {
+      "path": "assets/official-pnp/source-faces/p_placard_president.png",
+      "pdf_page": 3,
+      "pixels": [
+        2054,
+        620
+      ],
+      "sha256": "a6c6787acc2715e829c74c5f8db55e2191a0b102126eb76a46014a9b53293235"
+    }
+  },
+  "production_assets": {
+    "placards": [
+      "assets/official-pnp/placards/chancellor-flat.png",
+      "assets/official-pnp/placards/president-flat.png"
+    ],
+    "boards": [
+      {
+        "path": "assets/official-pnp/boards/liberal-board.png",
+        "pdf_page": 10,
+        "pixels": [
+          4240,
+          1508
+        ],
+        "sha256": "30119252b9ee9930dea48b7a4c84fbb2620fa56f7792ec21dc4147ee2b0f55a0"
+      },
+      {
+        "path": "assets/official-pnp/boards/fascist-board-5-6.png",
+        "pdf_page": 11,
+        "pixels": [
+          4240,
+          1508
+        ],
+        "sha256": "c5a092ccdaa81b0ff73d4e06596c5afc697c33bf120389961bf8ddd17a0a28c4"
+      },
+      {
+        "path": "assets/official-pnp/boards/fascist-board-7-8.png",
+        "pdf_page": 12,
+        "pixels": [
+          4240,
+          1508
+        ],
+        "sha256": "77cc2f83e7f59aba4da0538175df24f1647fb2a4052735a78ddb68850ace55ac"
+      },
+      {
+        "path": "assets/official-pnp/boards/fascist-board-9-10.png",
+        "pdf_page": 13,
+        "pixels": [
+          4240,
+          1508
+        ],
+        "sha256": "59c2f1485762a1f5ed379e0472e9236dc06f13f28ad149cf832679256f999bec"
+      }
+    ]
+  }
+}

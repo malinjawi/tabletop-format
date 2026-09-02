@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * import-csv.mjs — designer spreadsheet → format (v0.1). ZERO dependencies.
- * Usage: node tools/import-csv.mjs <cards.csv> <output-dir> [--title "Game Title"]
+ * Usage: node tools/import-csv.mjs <cards.csv> <output-dir> [--title "Game Title"] [--license SPDX]
  *
  * Column conventions (case-insensitive):
  *   Core: id, name, type, subtypes, keywords (';'-separated), text,
@@ -18,6 +18,8 @@ const csvPath = args[0], outDir = args[1];
 if (!outDir) { console.error("Usage: node tools/import-csv.mjs <cards.csv> <output-dir> [--title T]"); process.exit(2); }
 const tIdx = args.indexOf("--title");
 const title = tIdx > -1 ? args[tIdx + 1] : basename(outDir);
+const lIdx = args.indexOf("--license");
+const license = lIdx > -1 ? args[lIdx + 1] : "CC-BY-4.0";
 
 // --- tiny CSV parser (quotes, embedded commas/newlines) ---
 function parseCSV(text) {
@@ -97,7 +99,7 @@ const gameYaml = [
   `id: ${kebab(title)}`,
   `title: ${JSON.stringify(title)}`,
   `version: "0.1.0"`,
-  `license: CC-BY-4.0  # <-- imported default; CHOOSE your license deliberately`,
+  `license: ${JSON.stringify(license)}`,
   `default_provenance:`,
   `  source: human`,
   ...(attrCols.length ? [`attribute_definitions:`] : []),

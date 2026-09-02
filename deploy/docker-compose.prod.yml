@@ -1,83 +1,141 @@
-# docker-compose.prod.yml — the whole platform, production-shaped.
-#   cp ../.env.example .env   (fill it in)   →   docker compose up -d
-#
-# Every non-obvious line here was LEARNED, not guessed — from the Phase-1
-# spike against real Forgejo and the production journeys:
-#   · LFS_START_SERVER + JWT secret: without them /info/lfs 404s (spike C2)
-#   · webhook ALLOWED_HOST_LIST: Forgejo's SSRF guard silently refuses
-#     private-address hooks — allowlist the gateway BY NAME, not * (spike F1)
-#   · LFS on R2: md5 checksum + SERVE_DIRECT off first (gitea #32407)
-#   · platform DB is Postgres via db-pg.mjs; BIGINT epoch-ms columns
+# Controlled-alpha production profile. Every image reference is supplied by
+# digest in .env; credentials are mounted from deploy/.secrets, never written
+# into this file or exposed to the gateway container as Forgejo admin basics.
 
 services:
   gateway:
-    image: node:22-alpine
-    container_name: platform-gateway
+    image: ${FORGE_GATEWAY_IMAGE:?set a digest-pinned FORGE_GATEWAY_IMAGE}
     restart: unless-stopped
-    working_dir: /app
-    command: sh -c "apk add --no-cache git python3 py3-pillow py3-yaml py3-jsonschema tar gzip bash >/dev/null && npm i pg --no-save --silent && node server.mjs --port 8420"
+    user: "1000:1000"
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        export FORGE_TOKEN="$$(cat /run/secrets/forge_token)"
+        export PGPASSWORD="$$(cat /run/secrets/platform_db_password)"
+        exec node server.mjs --port 8420
     ports:
-      - "8420:8420"          # put a CDN/reverse proxy (TLS) in front; cache /cache/* forever
+      - "${FORGE_BIND_IP:-127.0.0.1}:8420:8420"
+    tmpfs:
+      - /tmp:size=536870912,mode=1777
     volumes:
-      - ../:/app:ro          # the platform code (read-only; state lives in the stores)
       - gateway-data:/app/data
+    secrets:
+      - forge_token
+      - platform_db_password
     environment:
-      - STORE1=forgejo
-      - FORGE_URL=http://forgejo:3000
-      - FORGE_TOKEN=${FORGE_TOKEN}          # mint once: DEPLOY.md step 3
-      - FORGE_BASIC=${FORGE_ADMIN_USER}:${FORGE_ADMIN_PASS}
-      - DB=postgres
-      - PG_URL=postgres://platform:${PLATFORM_DB_PASS}@db:5432/platform
-      - CACHE_DIR=/app/data/cache           # Store 3 keys; same layout as the R2 bucket
-      - FARM_DIR=/app/data/forge-farm
-    depends_on: [forgejo, db]
+      STORE1: forgejo
+      FORGE_URL: http://forgejo:3000
+      DB: postgres
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: platform
+      PGUSER: platform
+      CACHE_DIR: /app/data/cache
+      FARM_DIR: /app/data/forge-farm
+      FORGE_PUBLIC_ORIGIN: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
+      FORGE_ALLOWED_ORIGINS: ${FORGE_PUBLIC_ORIGIN:?set the public HTTPS Forge URL}
+      FORGE_HTTPS: "1"
+      FORGE_TRUST_PROXY: "1"
+      FORGE_REGISTRATION_MODE: ${FORGE_REGISTRATION_MODE:-invite}
+      FORGE_INVITE_CODE: ${FORGE_INVITE_CODE:?set a controlled-alpha invite code}
+      FORGE_OPERATOR_NAME: ${FORGE_OPERATOR_NAME:?set the accountable service operator}
+      FORGE_CONTACT_EMAIL: ${FORGE_CONTACT_EMAIL:?set support/privacy/moderation/takedown contact}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8420/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      forgejo: { condition: service_healthy }
+      db: { condition: service_healthy }
+    networks: [edge, backend]
+    pids_limit: 256
+    mem_limit: 2g
 
   forgejo:
-    image: codeberg.org/forgejo/forgejo:11
-    container_name: platform-forgejo
+    image: ${FORGEJO_IMAGE:?set a tested digest-pinned FORGEJO_IMAGE}
     restart: unless-stopped
+    init: true
+    security_opt: [no-new-privileges:true]
     volumes:
       - forgejo-data:/data
+    secrets:
+      - forge_db_password
+      - lfs_jwt_secret
+      - r2_access_key
+      - r2_secret_key
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
-      - FORGEJO__security__INSTALL_LOCK=true
-      - FORGEJO__server__ROOT_URL=${FORGE_PUBLIC_URL:-http://localhost:3000/}
-      - FORGEJO__service__DISABLE_REGISTRATION=true   # the platform provisions users
-      - FORGEJO__database__DB_TYPE=postgres
-      - FORGEJO__database__HOST=db:5432
-      - FORGEJO__database__NAME=forgejo
-      - FORGEJO__database__USER=forgejo
-      - FORGEJO__database__PASSWD=${FORGE_DB_PASS}
-      # --- LFS server (spike C2: absent = /info/lfs 404) ---
-      - FORGEJO__server__LFS_START_SERVER=true
-      - FORGEJO__server__LFS_JWT_SECRET=${LFS_JWT_SECRET}
-      # --- LFS blobs on R2 (decision D5; quirks are load-bearing) ---
-      - FORGEJO__lfs__STORAGE_TYPE=minio
-      - FORGEJO__lfs__MINIO_ENDPOINT=${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
-      - FORGEJO__lfs__MINIO_ACCESS_KEY_ID=${R2_ACCESS_KEY}
-      - FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY=${R2_SECRET_KEY}
-      - FORGEJO__lfs__MINIO_BUCKET=${R2_LFS_BUCKET:-forge-lfs}
-      - FORGEJO__lfs__MINIO_USE_SSL=true
-      - FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM=md5
-      - FORGEJO__lfs__SERVE_DIRECT=false
-      # --- SSRF guard: allow exactly our gateway, nothing else (spike F1) ---
-      - FORGEJO__webhook__ALLOWED_HOST_LIST=gateway
-    depends_on: [db]
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__server__ROOT_URL: ${FORGEJO_PUBLIC_ORIGIN:?set the public HTTPS Forgejo URL}/
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__database__DB_TYPE: postgres
+      FORGEJO__database__HOST: db:5432
+      FORGEJO__database__NAME: forgejo
+      FORGEJO__database__USER: forgejo
+      FORGEJO__database__PASSWD__FILE: /run/secrets/forge_db_password
+      FORGEJO__server__LFS_START_SERVER: "true"
+      FORGEJO__server__LFS_JWT_SECRET__FILE: /run/secrets/lfs_jwt_secret
+      FORGEJO__lfs__STORAGE_TYPE: minio
+      FORGEJO__lfs__MINIO_ENDPOINT: ${R2_ACCOUNT_ID:?set the R2 account id}.r2.cloudflarestorage.com
+      FORGEJO__lfs__MINIO_ACCESS_KEY_ID__FILE: /run/secrets/r2_access_key
+      FORGEJO__lfs__MINIO_SECRET_ACCESS_KEY__FILE: /run/secrets/r2_secret_key
+      FORGEJO__lfs__MINIO_BUCKET: ${R2_LFS_BUCKET:-forge-lfs}
+      FORGEJO__lfs__MINIO_USE_SSL: "true"
+      FORGEJO__lfs__MINIO_CHECKSUM_ALGORITHM: md5
+      FORGEJO__lfs__SERVE_DIRECT: "false"
+      FORGEJO__webhook__ALLOWED_HOST_LIST: gateway
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:3000/api/healthz]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [edge, backend]
 
   db:
-    image: postgres:16-alpine
-    container_name: platform-db
+    image: ${POSTGRES_IMAGE:?set a digest-pinned POSTGRES_IMAGE}
     restart: unless-stopped
+    shm_size: 256mb
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d:ro   # creates forgejo + platform DBs
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - pg_super_password
+      - forge_db_password
+      - platform_db_password
     environment:
-      - POSTGRES_PASSWORD=${PG_SUPER_PASS}
-      - FORGE_DB_PASS=${FORGE_DB_PASS}
-      - PLATFORM_DB_PASS=${PLATFORM_DB_PASS}
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_super_password
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d postgres]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+secrets:
+  forge_token: { file: ./.secrets/forge-token }
+  pg_super_password: { file: ./.secrets/pg-super-password }
+  forge_db_password: { file: ./.secrets/forge-db-password }
+  platform_db_password: { file: ./.secrets/platform-db-password }
+  lfs_jwt_secret: { file: ./.secrets/lfs-jwt-secret }
+  r2_access_key: { file: ./.secrets/r2-access-key }
+  r2_secret_key: { file: ./.secrets/r2-secret-key }
+
+networks:
+  edge: {}
+  backend: { internal: true }
 
 volumes:
-  gateway-data:
-  forgejo-data:
-  pg-data:
+  gateway-data: {}
+  forgejo-data: {}
+  pg-data: {}

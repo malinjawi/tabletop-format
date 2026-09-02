@@ -1,0 +1,14 @@
+# VirtualTabletop.io is a separate GPLv3 runtime. Forge only talks to its HTTP
+# state API and does not copy or link VTT code into the Apache-2.0 application.
+services:
+  virtualtabletop:
+    image: arnoldsmith86/virtualtabletop@sha256:06e7110e96519914525d978992cd69a89e2c484b543d2899612851b32934fb1a
+    platform: linux/amd64
+    ports:
+      - "8272:8272"
+    volumes:
+      - forge-vtt-save:/app/save
+    restart: unless-stopped
+
+volumes:
+  forge-vtt-save:

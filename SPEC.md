@@ -36,6 +36,8 @@ components/cards.json        REQUIRED  card rules-identities [card]
 components/printings.json    REQUIRED  physical appearances [printing]
 components/tokens.json       optional  non-card components [token]
 rules/rules.md               RECOMMENDED  rulebook, markdown only
+design/brief.json            optional  versioned design intent + smallest playable slice
+design/prototype.json        optional  runnable low-fidelity test plan [prototype]
 design/notes.md              optional  designer diary
 sets/*.yaml                  RECOMMENDED  sets/packs [set] (file may hold a list)
 formats/*.yaml               optional  play formats [format]
@@ -44,14 +46,19 @@ restrictions/*.yaml          optional  dated banlists [restriction] — IMMUTABL
                                        new file; never edit history)
 rulings/rulings.json         optional  dated clarifications [ruling]
 decks/*.json                 optional  decks [deck]
+setups/*.yaml                optional  playable table staging [setup] — seats, zones,
+                                       deck stacks, starting placements, counters
 playtests/*.json             optional  session logs [playtest] (version_ref → sha/tag)
 community.yaml               optional  governance/contributors/roadmap [community]
 CHANGELOG.md · CREDITS.md    optional  committed conveniences (regenerable by fmt)
 assets/**                    optional  SOURCE art only — LFS-tracked (§6)
-templates/*.json             optional  layout templates
+templates/layout.yaml        optional  declarative Forge layout
+templates/production.json    optional  shared SVG/native-editor field-binding contract
+templates/source-overlay.yaml optional immutable-face patch map for narrow PnP proofs
+templates/affinity/*.json    optional  native-editor transport adapter (may reference production.json)
 translations/<locale>/**     RESERVED  (v0.2 target; NRDB sidecar pattern)
 boards/*.json                RESERVED  (v0.2+: grids/zones/slots/tracks — FUTURE-GENRES.md)
-scenarios/*.yaml             RESERVED  (v0.2+: setups as data — placements/options)
+scenarios/*.yaml             RESERVED  (v0.2+: authored missions/objectives/options)
 tables/*.json                RESERVED  (v0.3: CRTs/reference charts — no open standard exists; ours would be first)
 exports/                     FORBIDDEN in git — derived output, gitignored
 ```
@@ -65,7 +72,8 @@ anything the ecosystem depends on must enter this spec first.
 symbols+glyphs, type_colors, default_provenance, attribution) · `card` (two-tier
 rules identity) · `printing` (appearance; per-asset provenance) · `token` · `set` ·
 `format` (card_pool + active_restriction_id) · `restriction` (dated, immutable) ·
-`ruling` · `deck` · `playtest` (version_ref pins feedback to a sha) · `community` ·
+`ruling` · `deck` · `design-brief` (intent + MVP) · `prototype` (materials + runnable first test) · `setup` (platform-neutral playable staging) · `playtest`
+(version_ref pins feedback to a sha) · `community` ·
 `jam` (jams live in the PLATFORM repo's `jams/`, not in game repos).
 
 ## 5. Identity & referential rules (LOCKED)

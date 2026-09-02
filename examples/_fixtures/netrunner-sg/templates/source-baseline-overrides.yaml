@@ -1,0 +1,7 @@
+# Corrections where the historical data file omitted text visibly printed on
+# the flattened 2023 PnP face.
+cards:
+  the_catalyst_convention_breaker:
+    text: Starter game only.
+  the_syndicate_profit_over_principle:
+    text: Starter game only.

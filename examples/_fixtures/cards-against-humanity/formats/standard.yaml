@@ -1,0 +1,7 @@
+id: standard
+name: Forge Base Set
+description: The licensed 55-card demonstration pool shipped by this Forge project.
+card_pool:
+  - base
+deck_rules:
+  min_size: 1

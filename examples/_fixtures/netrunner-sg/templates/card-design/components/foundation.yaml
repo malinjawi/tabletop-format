@@ -1,0 +1,110 @@
+name: Shared foundation
+description: 10 ordered regions reused by every card family.
+regions:
+  - id: shell
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 87.21
+    fill: palette-gradient
+    radius_mm: 2.5
+  - id: shell_mesh
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 87.21
+    fill: repeating-linear-gradient(60deg,transparent 0 4.4mm,rgba(255,255,255,.13) 4.45mm 4.7mm)
+    opacity: 0.32
+    radius_mm: 2.5
+  - id: shell_scanlines
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 87.21
+    fill: repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 .12mm,transparent .12mm .7mm)
+    opacity: 0.28
+    radius_mm: 2.5
+  - id: top_signal
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 1.65
+    fill: palette
+  - id: left_signal
+    type: rect
+    x: 0
+    "y": 0
+    w: 1.2
+    h: 87.21
+    fill: palette-light
+    opacity: 0.82
+  - id: right_signal
+    type: rect
+    x: 62.05
+    "y": 0
+    w: 0.95
+    h: 87.21
+    fill: palette
+    opacity: 0.7
+  - id: standard_panel_watermark
+    type: richtext
+    src: card.attributes.faction
+    map:
+      anarch: "[faction_anarch]"
+      criminal: "[faction_criminal]"
+      shaper: "[faction_shaper]"
+      haas-bioroid: "[faction_hb]"
+      jinteki: "[faction_jinteki]"
+      nbn: "[faction_nbn]"
+      weyland-consortium: "[faction_weyland]"
+    x: 39
+    "y": 62
+    w: 14
+    h: 14
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    opacity: 0.065
+    filter: grayscale(1) contrast(1.5)
+    show_if: >-
+      attributes.faction == anarch || attributes.faction == criminal || attributes.faction == shaper || attributes.faction == haas-bioroid || attributes.faction == jinteki || attributes.faction == nbn || attributes.faction ==
+      weyland-consortium
+  - id: standard_trash_icon
+    type: richtext
+    text: "[trash_cost]"
+    x: 53.5
+    "y": 66
+    w: 8
+    h: 8
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: "drop-shadow(0 0 .45mm #f7f8f6) drop-shadow(0 0 .45mm #f7f8f6)"
+    show_if: attributes.trash_cost
+  - id: standard_trash
+    type: text
+    src: card.attributes.trash_cost
+    x: 55.05
+    "y": 68.35
+    w: 4.9
+    h: 4.4
+    font: stat
+    size_pt: 9.8
+    align: center
+    valign: middle
+    color: "#11171d"
+    show_if: attributes.trash_cost
+  - id: trim_edge
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 87.21
+    fill: none
+    stroke: "#05080b"
+    stroke_w_mm: 0.36
+    radius_mm: 2.5

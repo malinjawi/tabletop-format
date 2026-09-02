@@ -1,0 +1,51 @@
+card:
+  w_mm: 63.5
+  h_mm: 88.9
+  bleed_mm: 3
+  radius_mm: 2.5
+  bg: "#eee8da"
+
+fonts:
+  - { id: display, family: "Barlow Condensed", weight: 800 }
+  - { id: body, family: "Lora", weight: 500 }
+  - { id: label, family: "Barlow Condensed", weight: 700 }
+
+palette:
+  by: attributes.faction
+  map:
+    liberal: "#315b84"
+    fascist: "#873426"
+  default: "#8a7654"
+regions:
+  - { id: paper, type: rect, x: 0, y: 0, w: 63.5, h: 88.9, fill: "#eee8da", radius_mm: 2.5 }
+  - { id: inner-rule, type: rect, x: 2.2, y: 2.2, w: 59.1, h: 84.5, fill: none, stroke: "#4a4236", stroke_w_mm: 0.35, radius_mm: 1.2 }
+  - { id: role-panel, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 82.5, fill: palette, radius_mm: 1, show_if: "type == role" }
+  - { id: role-label, type: text, text: "SECRET ROLE", x: 7, y: 8, w: 49.5, h: 6, font: label, size_pt: 8, align: center, color: "#f5ead8", letter_spacing_em: 0.15, show_if: "type == role" }
+  - { id: role-title, type: text, src: "card.name", transform: uppercase, x: 6, y: 20, w: 51.5, h: 14, font: display, size_pt: 25, min_size_pt: 15, align: center, color: "#ffffff", no_wrap: true, autoshrink: true, show_if: "type == role" }
+  - { id: role-body, type: richtext, src: "card.text", x: 8, y: 42, w: 47.5, h: 30, font: body, size_pt: 9, min_size_pt: 6, align: center, line_height: 1.2, color: "#fffaf0", autoshrink: true, show_if: "type == role" }
+  - { id: role-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#f5ead8", letter_spacing_em: 0.13, show_if: "type == role" }
+  - { id: party-band, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 24, fill: palette, radius_mm: 1, show_if: "type == party" }
+  - { id: party-label, type: text, text: "PARTY MEMBERSHIP", x: 7, y: 7, w: 49.5, h: 5, font: label, size_pt: 7, align: center, color: "#f5ead8", letter_spacing_em: 0.12, show_if: "type == party" }
+  - { id: party-title, type: text, src: "card.name", transform: uppercase, x: 6, y: 14, w: 51.5, h: 10, font: display, size_pt: 22, align: center, color: "#ffffff", show_if: "type == party" }
+  - { id: party-body, type: richtext, src: "card.text", x: 8, y: 36, w: 47.5, h: 34, font: body, size_pt: 9, min_size_pt: 6, align: center, line_height: 1.22, color: "#28231d", autoshrink: true, show_if: "type == party" }
+  - { id: party-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#4a4236", letter_spacing_em: 0.13, show_if: "type == party" }
+  - { id: policy-field, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 82.5, fill: palette-soft, radius_mm: 1, show_if: "type == policy" }
+  - { id: policy-rule, type: rect, x: 8, y: 9, w: 47.5, h: 66, fill: none, stroke: palette, stroke_w_mm: 1, radius_mm: 2, show_if: "type == policy" }
+  - { id: policy-label, type: text, text: "ENACTED POLICY", x: 8, y: 14, w: 47.5, h: 6, font: label, size_pt: 8, align: center, color: palette-deep, letter_spacing_em: 0.14, show_if: "type == policy" }
+  - { id: policy-title, type: text, src: "card.name", transform: uppercase, x: 7, y: 29, w: 49.5, h: 16, font: display, size_pt: 21, min_size_pt: 14, align: center, color: palette-deep, no_wrap: true, autoshrink: true, show_if: "type == policy" }
+  - { id: policy-body, type: richtext, src: "card.text", x: 10, y: 50, w: 43.5, h: 20, font: body, size_pt: 8, min_size_pt: 5.5, align: center, color: "#28231d", autoshrink: true, show_if: "type == policy" }
+  - { id: policy-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: palette-deep, letter_spacing_em: 0.13, show_if: "type == policy" }
+  - { id: ballot-label, type: text, text: "BALLOT", x: 8, y: 10, w: 47.5, h: 6, font: label, size_pt: 8, align: center, color: "#4a4236", letter_spacing_em: 0.17, show_if: "type == ballot" }
+  - { id: ballot-title, type: text, src: "card.name", transform: uppercase, x: 6, y: 29, w: 51.5, h: 25, font: display, size_pt: 42, min_size_pt: 26, align: center, color: "#28231d", no_wrap: true, autoshrink: true, show_if: "type == ballot" }
+  - { id: ballot-body, type: richtext, src: "card.text", x: 10, y: 60, w: 43.5, h: 13, font: body, size_pt: 8, min_size_pt: 6, align: center, color: "#4a4236", autoshrink: true, show_if: "type == ballot" }
+  - { id: ballot-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#4a4236", letter_spacing_em: 0.13, show_if: "type == ballot" }
+  - { id: placard-band, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 18, fill: "#8a7654", radius_mm: 1, show_if: "type == placard" }
+  - { id: placard-label, type: text, text: "GOVERNMENT", x: 8, y: 7, w: 47.5, h: 5, font: label, size_pt: 7, align: center, color: "#f5ead8", letter_spacing_em: 0.15, show_if: "type == placard" }
+  - { id: placard-title, type: text, src: "card.name", transform: uppercase, x: 6, y: 25, w: 51.5, h: 16, font: display, size_pt: 22, min_size_pt: 13, align: center, color: "#28231d", no_wrap: true, autoshrink: true, show_if: "type == placard" }
+  - { id: placard-body, type: richtext, src: "card.text", x: 9, y: 48, w: 45.5, h: 25, font: body, size_pt: 8.5, min_size_pt: 6, align: center, color: "#4a4236", autoshrink: true, show_if: "type == placard" }
+  - { id: placard-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#4a4236", letter_spacing_em: 0.13, show_if: "type == placard" }
+  - { id: pile-band, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 82.5, fill: "#a7a7a7", radius_mm: 1, show_if: "type == pile-marker" }
+  - { id: pile-label, type: text, text: "POLICY DECK", x: 8, y: 9, w: 47.5, h: 5, font: label, size_pt: 7, align: center, color: "#ffffff", letter_spacing_em: 0.15, show_if: "type == pile-marker" }
+  - { id: pile-title, type: text, src: "card.name", transform: uppercase, x: 7, y: 27, w: 49.5, h: 18, font: display, size_pt: 26, min_size_pt: 16, align: center, color: "#ffffff", no_wrap: true, autoshrink: true, show_if: "type == pile-marker" }
+  - { id: pile-body, type: richtext, src: "card.text", x: 10, y: 52, w: 43.5, h: 18, font: body, size_pt: 8, min_size_pt: 5.5, align: center, color: "#222222", autoshrink: true, show_if: "type == pile-marker" }
+  - { id: pile-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: "#444444", letter_spacing_em: 0.13, show_if: "type == pile-marker" }

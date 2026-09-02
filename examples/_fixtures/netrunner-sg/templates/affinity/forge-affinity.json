@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "kind": "forge-affinity-binding",
+  "layout_source": "working-tree",
+  "game": "netrunner-sg",
+  "card_id": "offworld_office",
+  "printing_id": "p_offworld_office_sg",
+  "bridge_dir": "~/Desktop/Forge Affinity/netrunner-sg",
+  "production": "templates/production.json",
+  "production_template": "offworld_office",
+  "native_document": "offworld-office.af",
+  "preflight": {
+    "check_document_bounds": true,
+    "tolerance": 0.5
+  }
+}

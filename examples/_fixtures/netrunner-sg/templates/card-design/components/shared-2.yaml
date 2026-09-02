@@ -1,0 +1,24 @@
+name: Shared by Asset, Operation, Upgrade
+description: 1 ordered region reused by asset, operation, upgrade.
+regions:
+  - id: art_corp_standard
+    type: image
+    src: printing.scan_data
+    fallback_srcs:
+      - printing.art_data
+      - printing.art_url
+      - printing.art
+    x: 1.15
+    "y": 9.4
+    w: 60.7
+    h: 39.1
+    source_crop:
+      - 50
+      - 145
+      - 644
+      - 401
+    source_size:
+      - 744
+      - 1030
+    source_crop_fit: cover
+    show_if: type == asset || type == operation || type == upgrade

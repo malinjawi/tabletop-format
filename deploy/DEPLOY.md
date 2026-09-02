@@ -1,70 +1,126 @@
-# DEPLOY — the platform, production-shaped
+# Controlled-alpha deployment
 
-One VM with Docker is enough to start. Every step below exists because a test
-proved it matters (spike A–G, journey-forgejo, store2-pg-test) — nothing here
-is speculative.
+Forge launches behind HTTPS as three digest-pinned services: the immutable
+gateway image, Forgejo (repository truth), and Postgres (identity/conversation
+state). R2 holds LFS objects. The host proxy is the only public ingress;
+Compose binds the gateway to loopback by default and does not expose Postgres.
 
-## 0. What runs where
+## 1. Build and promote the gateway
 
-| Piece | Container | State | Loss tolerance |
-|---|---|---|---|
-| Gateway (server.mjs) | `gateway` | none (Store-3 cache only) | disposable — cache regenerates (DA-5) |
-| Forgejo (Store 1) | `forgejo` | repos + LFS metadata | **the product** — back it up (step 6) |
-| LFS blobs | Cloudflare R2 | game assets | R2 durability + versioning |
-| Postgres (Store 2 ×2) | `db` | forge DB + platform DB | platform DB is a rebuildable index for games (DA-3/DA-9); users/stars/claims need backup |
+Resolve and record a Node base-image digest, then build from the clean release
+commit. The build context excludes games, exports, local data and secrets.
 
-## 1. Boot
+```sh
+docker build \
+  --build-arg NODE_IMAGE='node:22-bookworm-slim@sha256:<verified-digest>' \
+  -f Dockerfile.prod -t registry.example/forge/platform:<release> .
+docker push registry.example/forge/platform:<release>
+docker buildx imagetools inspect registry.example/forge/platform:<release>
+```
 
-    cd deploy
-    cp .env.example .env        # fill in — generator one-liner is in the file
-    docker compose -f docker-compose.prod.yml up -d
+Put the resulting `registry/...@sha256:...` reference in
+`FORGE_GATEWAY_IMAGE`. Put tested digest references—not floating majors—in
+`FORGEJO_IMAGE` and `POSTGRES_IMAGE`. A Forgejo major upgrade is a separate,
+backup-tested migration; it is not bundled into an application deploy.
 
-Create the R2 bucket (`forge-lfs`) in Cloudflare first. For a dry run without
-R2, switch the forgejo `lfs` block to `FORGEJO__lfs__STORAGE_TYPE=local` (the
-spike default) — the platform code is identical either way.
+## 2. Create configuration and secrets
 
-## 2. Forgejo admin (once)
+```sh
+cd deploy
+cp .env.example .env
+mkdir -m 700 .secrets
+for name in pg-super-password forge-db-password platform-db-password lfs-jwt-secret; do
+  openssl rand -base64 32 > ".secrets/$name"
+  chmod 600 ".secrets/$name"
+done
+```
 
-    docker compose -f docker-compose.prod.yml exec -u 1000 forgejo \
-      forgejo admin user create --admin --username "$FORGE_ADMIN_USER" \
-      --password "$FORGE_ADMIN_PASS" --email admin@your-domain
+Create `.secrets/r2-access-key` and `.secrets/r2-secret-key` from a credential
+limited to the Forge LFS bucket. Create an empty `.secrets/forge-token` for the
+first boot. Fill `.env`, including the exact HTTPS origins and a rotating alpha
+invite code. Neither `.env` nor `.secrets/` is tracked by Git.
 
-## 3. Mint the platform token (once)
+## 3. First boot and scoped Forgejo service account
 
-    curl -s -u "$FORGE_ADMIN_USER:$FORGE_ADMIN_PASS" -X POST \
-      -H "Content-Type: application/json" -d '{"name":"platform","scopes":["all"]}' \
-      http://localhost:3000/api/v1/users/$FORGE_ADMIN_USER/tokens
-    # → put the sha1 into .env as FORGE_TOKEN, then: docker compose ... up -d gateway
+Start Postgres and Forgejo first:
 
-## 4. Verify — the same suites that verified everything else
+```sh
+docker compose -f docker-compose.prod.yml up -d db forgejo
+docker compose -f docker-compose.prod.yml exec -u 1000 forgejo \
+  forgejo admin user create --admin --username forge-platform-bootstrap \
+  --email admin@example.invalid --random-password
+```
 
-    ./store2-pg-test.sh                                   # both DB drivers conformant
-    FORGE_URL=http://localhost:3000 ./journey-forgejo.sh  # 30 assertions, full prod profile
-    curl -s localhost:8420/healthz
+Use that one-time bootstrap account to create a dedicated platform service
+account/token with only the repository/user scopes the tested Store-1 adapter
+needs. Save the token (and only the token) in `.secrets/forge-token`, remove or
+demote the bootstrap account, then start the gateway:
 
-## 5. Edge
+```sh
+chmod 600 .secrets/forge-token
+docker compose -f docker-compose.prod.yml up -d
+```
 
-Put a CDN/reverse proxy (Cloudflare in front of :8420) with TLS.
-`/cache/*` responses already carry `immutable, max-age=31536000` — let the CDN
-honor them and the TTS-links-never-rot property costs you almost nothing.
-Rate limiting also exists in-process (120/min/IP) as a second layer.
+Do not put a Forgejo admin password in the gateway environment. Rotate the
+service token by updating the secret file and recreating only the gateway.
 
-## 6. Backups (drill it once before launch)
+## 4. Edge contract
 
-    # Store 1 — the product:
-    docker compose -f docker-compose.prod.yml exec -u 1000 forgejo forgejo dump -f /tmp/dump.zip
-    # Store 2 — people & conversation:
-    docker compose -f docker-compose.prod.yml exec db pg_dump -U postgres platform > platform.sql
-    # Store 3 — nothing to back up, ever (DA-5: derived).
+Terminate TLS at the host proxy/CDN and forward to `127.0.0.1:8420`. Preserve
+the real client address and set `FORGE_TRUST_PROXY=1` only for that trusted
+proxy path. Forward the original `Host` and `X-Forwarded-Proto`. Do not cache
+API or HTML responses. Immutable `/cache/*` responses may be cached only when
+Forge itself returns `public, max-age=31536000, immutable`.
 
-## 7. Known-by-test production facts
+The application refuses production startup with HTTP, local Store-1, missing
+Forge credentials, or open registration. Browser sessions are HttpOnly,
+Secure, SameSite cookies; connector sessions remain revocable bearer tokens.
 
-- `webhook.ALLOWED_HOST_LIST` must name the gateway host — Forgejo's SSRF
-  guard silently drops deliveries to private addresses otherwise (spike F1).
-- LFS routes 404 unless `LFS_START_SERVER=true` + a JWT secret (spike C2).
-- R2-as-minio needs `MINIO_CHECKSUM_ALGORITHM=md5` and `SERVE_DIRECT=false`
-  first (gitea #32407); revisit SERVE_DIRECT once stable for direct-to-R2 serving.
-- Forgejo 11's contents API honors `.gitattributes` (the #18297 bypass is
-  fixed); the platform still writes LFS explicitly — correct on every version.
-- Postgres `INTEGER` is 32-bit: epoch-ms columns are `BIGINT` in migrations.
-- `pg` is the single production npm dependency; dev and CI stay zero-dep.
+## 5. Release gate
+
+Run the single release gate against the exact release commit before deploying:
+
+```sh
+npm ci
+FORGE_REQUIRE_CLEAN_TREE=1 \
+FORGE_CONFORMANCE_PG_URL='postgres://…/forge_conformance' \
+FORGE_LIVE_URL='http://127.0.0.1:3000' \
+FORGE_LIVE_ADMIN_USER='launch-gate' \
+FORGE_LIVE_ADMIN_PASS='…' \
+REQUIRE_PRODUCTION_BACKENDS=1 \
+./launch-gate.sh
+```
+
+Use dedicated disposable backend instances. The live journey purges its exact
+fixture users and refuses to run without the guard set by `launch-gate.sh`. Do
+not point conformance at a database or Forgejo server that contains user work.
+
+After deployment verify `/healthz`, a login/logout cycle, a private-project
+404 while signed out, a Sheet dry run and commit, a PR approval/merge, and one
+release with PnP/TTS/TTC/project receipts.
+
+## 6. Backup and restore drill
+
+Back up before every Forgejo/database upgrade and daily during the alpha:
+
+```sh
+docker compose -f docker-compose.prod.yml exec -u 1000 forgejo \
+  forgejo dump --file /data/backup/forgejo.zip
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_dump -U postgres -Fc platform > platform.dump
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_dump -U postgres -Fc forgejo > forgejo.dump
+```
+
+R2 versioning must be enabled for the LFS bucket. Store encrypted copies away
+from this host. At least once before inviting users, restore all three stores
+into a disposable environment and run the Forgejo journey. Store-3 render and
+export cache is derived and is deliberately not backed up.
+
+## 7. Operational stop conditions
+
+Pause invitations if any of these occur: restore drill fails, private content
+is readable signed out, release receipts do not reproduce, export workers
+exceed quotas, the Sheets connector promotes a candidate that was not the one
+reviewed, or moderation/takedown contact is unavailable. The controlled alpha
+is a learning launch, not permission to weaken those boundaries.

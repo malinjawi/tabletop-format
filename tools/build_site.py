@@ -64,7 +64,7 @@ def main():
     decks = load_dir(game_dir, "decks")
     faces = game_dir / "exports" / "faces"
     if not faces.is_dir():
-        subprocess.run([sys.executable, str(ROOT / "tools/render_cards.py"), str(game_dir)], check=True)
+        subprocess.run(["node", str(ROOT / "tools/render_cards.mjs"), str(game_dir)], check=True)
 
     cards_by_id = {c["id"]: c for c in cards}
     first_printing = {}
@@ -80,7 +80,7 @@ def main():
             tmp = Path(td) / "g"
             subprocess.run(["cp", "-r", str(game_dir), str(tmp)], check=True)
             (tmp / "components/cards.json").write_text(json.dumps(new_cards))
-            subprocess.run([sys.executable, str(ROOT / "tools/render_cards.py"), str(tmp), str(tmp / "faces2")], check=True)
+            subprocess.run(["node", str(ROOT / "tools/render_cards.mjs"), str(tmp), str(tmp / "faces2")], check=True)
             for ch in changes:
                 if ch["kind"] != "removed":
                     pid = first_printing.get(ch["id"], {}).get("id")

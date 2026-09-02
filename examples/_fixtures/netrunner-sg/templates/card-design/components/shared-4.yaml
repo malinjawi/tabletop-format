@@ -1,0 +1,113 @@
+name: Shared by Event, Hardware, Operation, Program, Resource
+description: 12 ordered regions reused by event, hardware, operation, program, resource.
+regions:
+  - id: credit_dial_shadow
+    type: badge
+    text: ""
+    x: 2.65
+    "y": 2.05
+    d: 11.75
+    bg: "#07090b"
+    color: "#ffffff"
+    shadow: 0 .75mm 1.2mm rgba(0,0,0,.56)
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_dial_rim
+    type: badge
+    text: ""
+    x: 2.85
+    "y": 2.25
+    d: 11.35
+    bg: linear-gradient(145deg,#f7df58 0%,#d4bb36 43%,#8c7a20 78%,#62571b 100%)
+    color: "#ffffff"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_dial_face
+    type: badge
+    text: ""
+    x: 3.9
+    "y": 3.2
+    d: 9.25
+    bg: repeating-linear-gradient(0deg,rgba(255,255,255,.055) 0 .12mm,transparent .12mm .48mm),radial-gradient(circle at 50% 43%,#343b3e 0%,#161b1e 55%,#07090b 100%)
+    color: "#ffffff"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_dial_inner
+    type: badge
+    text: ""
+    x: 4.15
+    "y": 3.45
+    d: 8.75
+    bg: radial-gradient(circle,transparent 0 68%,rgba(248,249,246,.96) 69% 71%,rgba(102,111,117,.78) 72%,transparent 74%)
+    color: "#ffffff"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_dial_number
+    type: text
+    src: card.attributes.cost
+    x: 4.15
+    "y": 4
+    w: 8.75
+    h: 6.8
+    font: stat
+    size_pt: 14.7
+    align: center
+    valign: middle
+    color: "#ffffff"
+    text_shadow: "0 .18mm .18mm #000,0 0 .35mm #000"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_l1
+    type: rect
+    x: 4.75
+    "y": 10.75
+    w: 0.92
+    h: 0.18
+    fill: "#eef1ef"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_l2
+    type: rect
+    x: 5.95
+    "y": 11.35
+    w: 0.74
+    h: 0.18
+    fill: "#eef1ef"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_dot_l
+    type: badge
+    text: ""
+    x: 7.3
+    "y": 11.62
+    d: 0.38
+    bg: "#eef1ef"
+    color: "#ffffff"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_dot_c
+    type: badge
+    text: ""
+    x: 8.15
+    "y": 11.64
+    d: 0.52
+    bg: "#eef1ef"
+    color: "#ffffff"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_dot_r
+    type: badge
+    text: ""
+    x: 9.14
+    "y": 11.62
+    d: 0.38
+    bg: "#eef1ef"
+    color: "#ffffff"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_r2
+    type: rect
+    x: 10.16
+    "y": 11.35
+    w: 0.74
+    h: 0.18
+    fill: "#eef1ef"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_tick_r1
+    type: rect
+    x: 11.18
+    "y": 10.75
+    w: 0.92
+    h: 0.18
+    fill: "#eef1ef"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource

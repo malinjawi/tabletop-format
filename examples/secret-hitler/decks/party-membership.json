@@ -1,0 +1,10 @@
+{
+  "id": "party-membership",
+  "name": "Party Membership supply",
+  "format_id": "standard",
+  "author": "Goat, Wolf, & Cabbage",
+  "cards": {
+    "party_liberal": 6,
+    "party_fascist": 4
+  }
+}

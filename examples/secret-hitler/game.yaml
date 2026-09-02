@@ -68,6 +68,7 @@ type_colors:
   policy:   { fg: "#4a3a1f", bg: "#f2e9d6" }
   ballot:   { fg: "#333333", bg: "#f4f1e8" }
   placard:  { fg: "#5a4a1f", bg: "#f5edd0" }
+  pile-marker: { fg: "#555555", bg: "#eeeeee" }
 faction_colors:
   liberal:  { fg: "#123a7a", bg: "#dbe6f7" }
   fascist:  { fg: "#7a1f12", bg: "#f7ded9" }

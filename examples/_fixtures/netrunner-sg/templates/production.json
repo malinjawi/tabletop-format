@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "kind": "forge-production",
+  "enabled": false,
+  "private_only": true,
+  "notice": "Private playtest reconstruction using an altered NSG source face. Do not publish or redistribute without permission.",
+  "card": {
+    "w_mm": 63.0,
+    "h_mm": 87.21,
+    "radius_mm": 2.5
+  },
+  "templates": [
+    {
+      "id": "offworld_office",
+      "renderer": "svg",
+      "match": {
+        "id": "offworld_office"
+      },
+      "template": "templates/affinity/offworld-office-editable.svg",
+      "resources": [
+        "assets/source-faces/p_offworld_office_sg.png",
+        "assets/source-patches/offworld_office/title-background.png",
+        "assets/source-patches/offworld_office/type-background.png",
+        "assets/source-patches/offworld_office/subtypes-background.png",
+        "assets/source-patches/offworld_office/rules-background.png",
+        "assets/source-patches/offworld_office/advancement_cost-3.png",
+        "assets/source-patches/offworld_office/advancement_cost-5.png",
+        "assets/source-patches/offworld_office/agenda_points-1.png",
+        "assets/source-patches/offworld_office/agenda_points-3.png",
+        "assets/nsg-symbols/NSG_CREDIT.svg",
+        "assets/source-fonts/Cinzel-Variable.ttf",
+        "assets/source-fonts/Cinzel-Bold.ttf",
+        "assets/source-fonts/Orbitron-Variable.ttf",
+        "assets/source-fonts/Orbitron-Black.ttf",
+        "assets/source-fonts/Lato-Regular.ttf",
+        "assets/source-fonts/Lato-Bold.ttf",
+        "assets/source-fonts/NotoSerif-Variable.ttf",
+        "assets/source-fonts/NotoSerif-Italic-Variable.ttf"
+      ],
+      "bindings": [
+        {
+          "field": "name",
+          "layer": "forge:name",
+          "aliases": ["field-name"],
+          "font_family": "Cinzel",
+          "font_postscript": "CinzelRoman-Bold",
+          "font_weight": 700
+        },
+        {
+          "field": "type",
+          "layer": "forge:type",
+          "aliases": ["field-type"],
+          "transform": "type-label",
+          "font_family": "Orbitron",
+          "font_postscript": "Orbitron-Black",
+          "font_weight": 900
+        },
+        {
+          "field": "subtypes",
+          "layer": "forge:subtypes",
+          "aliases": ["field-subtypes"],
+          "transform": "join",
+          "separator": " · ",
+          "font_family": "Lato",
+          "font_postscript": "Lato-Regular",
+          "font_weight": 400
+        },
+        {
+          "field": "text",
+          "layer": "forge:text",
+          "aliases": ["field-rules-text"],
+          "mode": "token-text",
+          "token": "credit",
+          "font_family": "Noto Serif",
+          "font_postscript": "NotoSerif-Regular",
+          "font_weight": 400
+        },
+        {
+          "field": "attributes.advancement_cost",
+          "layer": "forge:advancement_cost",
+          "aliases": ["field-advancement-cost"],
+          "mode": "choice"
+        },
+        {
+          "field": "attributes.agenda_points",
+          "layer": "forge:agenda_points",
+          "aliases": ["field-agenda-points"],
+          "mode": "choice"
+        }
+      ],
+      "baselines": {
+        "offworld_office": {
+          "signature": "fnv1a:80e3d283",
+          "values": {
+            "name": "Offworld Office",
+            "type": "agenda",
+            "subtypes": ["Expansion"],
+            "text": "When you score this agenda, gain 7[credit].",
+            "attributes.advancement_cost": 4,
+            "attributes.agenda_points": 2
+          }
+        }
+      }
+    }
+  ]
+}

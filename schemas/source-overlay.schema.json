@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/source-overlay.schema.json",
+  "title": "Source-backed semantic overlay",
+  "description": "Maps explicitly supported semantic card fields onto immutable composed source faces. Intended for private proofing unless the source license permits redistribution.",
+  "type": "object",
+  "required": ["schema_version", "card", "regions", "baselines"],
+  "additionalProperties": false,
+  "properties": {
+    "enabled": { "type": "boolean", "default": true },
+    "schema_version": { "const": 5 },
+    "private_only": { "type": "boolean", "default": true },
+    "notice": { "type": "string" },
+    "baseline_data": {
+      "type": "string",
+      "description": "Optional pinned semantic snapshot represented by the flattened source faces."
+    },
+    "source_ref": {
+      "type": "string",
+      "description": "Human-auditable repository commit or release identifier for baseline_data."
+    },
+    "nonvisual_card_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Semantic fields that do not appear on the composed face. They remain versioned but do not invalidate source artwork.",
+      "items": { "type": "string", "pattern": "^[a-zA-Z0-9_.]+$" }
+    },
+    "frame_defining_card_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Printed semantic fields whose change selects or alters the production frame rather than repainting one bounded source region. They remain part of the baseline signature and therefore fail closed until a matching template is onboarded.",
+      "items": { "type": "string", "pattern": "^[a-zA-Z0-9_.]+$" }
+    },
+    "card": {
+      "type": "object",
+      "required": ["w_mm", "h_mm"],
+      "additionalProperties": false,
+      "properties": {
+        "w_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "h_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "radius_mm": { "type": "number", "minimum": 0 }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Editable source-face regions. An empty list is valid for an exact immutable source snapshot: any semantic edit then fails closed to the game's editable layout.",
+      "items": {
+        "type": "object",
+        "required": ["id", "src", "x_pct", "y_pct", "w_pct", "h_pct"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "source": {
+            "enum": ["card", "printing"],
+            "default": "card",
+            "description": "Object that owns src. Printing fields cover flavor, artist, and other appearance-specific metadata."
+          },
+          "src": { "type": "string", "pattern": "^[a-zA-Z0-9_.]+$" },
+          "transform": { "enum": ["type-label", "join", "uppercase", "lowercase", "before-colon", "after-colon", "json"] },
+          "separator": { "type": "string" },
+          "prefix": { "type": "string" },
+          "suffix": { "type": "string" },
+          "x_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+          "y_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+          "w_pct": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+          "h_pct": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+          "sample_x_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+          "sample_y_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+          "sample_w_pct": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+          "sample_h_pct": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+          "match": {
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-zA-Z0-9_.]+$" },
+            "additionalProperties": {
+              "oneOf": [
+                { "type": ["string", "number", "boolean", "null"] },
+                {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": ["string", "number", "boolean", "null"] }
+                }
+              ]
+            }
+          },
+          "samples": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "additionalProperties": { "type": "string", "pattern": "^[a-z0-9_]+$" }
+          },
+          "patches": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "additionalProperties": { "type": "string", "minLength": 1 }
+          },
+          "render": {
+            "type": "object",
+            "description": "A deliberately mapped live renderer for values that cannot be represented by a finite patch table. Version 4 supports rich text only; it repaints exactly the declared rectangle over the immutable source face.",
+            "required": ["type", "font_family", "size_cqw"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "const": "richtext" },
+              "font_family": { "type": "string", "minLength": 1 },
+              "font_asset": { "type": "string", "minLength": 1 },
+              "font_weight": { "type": "integer", "minimum": 100, "maximum": 900, "default": 400 },
+              "font_style": { "type": "string", "enum": ["normal", "italic"], "default": "normal" },
+              "text_align": { "type": "string", "enum": ["left", "center", "right"], "default": "left" },
+              "vertical_align": { "type": "string", "enum": ["top", "middle", "bottom"], "default": "top" },
+              "rotation_deg": { "type": "number", "minimum": -360, "maximum": 360, "default": 0 },
+              "size_cqw": { "type": "number", "exclusiveMinimum": 0, "maximum": 20 },
+              "min_size_cqw": { "type": "number", "exclusiveMinimum": 0, "maximum": 20 },
+              "line_height": { "type": "number", "minimum": 0.8, "maximum": 3, "default": 1.25 },
+              "letter_spacing_cqw": { "type": "number", "minimum": -2, "maximum": 10, "default": 0 },
+              "average_glyph_width_em": { "type": "number", "minimum": 0.1, "maximum": 2, "default": 0.56 },
+              "color": { "type": "string", "default": "#111111" },
+              "text_stroke_color": { "type": "string" },
+              "text_stroke_cqw": { "type": "number", "minimum": 0, "maximum": 2, "default": 0 },
+              "background": { "type": "string", "default": "#f4f5f3" },
+              "background_asset": { "type": "string", "minLength": 1 },
+              "background_pattern": { "type": "boolean", "default": false },
+              "pattern_color": { "type": "string", "default": "#e7e9e7" },
+              "padding_top_cqw": { "type": "number", "minimum": 0, "maximum": 10, "default": 0 },
+              "padding_right_cqw": { "type": "number", "minimum": 0, "maximum": 10, "default": 0 },
+              "padding_bottom_cqw": { "type": "number", "minimum": 0, "maximum": 10, "default": 0 },
+              "padding_left_cqw": { "type": "number", "minimum": 0, "maximum": 10, "default": 0 },
+              "symbols": { "type": "boolean", "default": true },
+              "autoshrink": { "type": "boolean", "default": true },
+              "max_lines": { "type": "integer", "minimum": 1, "maximum": 12 }
+            }
+          }
+        }
+      }
+    },
+    "baselines": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["signature", "printing_signature", "values"],
+        "additionalProperties": false,
+        "properties": {
+          "signature": { "type": "string", "pattern": "^fnv1a:[0-9a-f]{8}$" },
+          "printing_signature": {
+            "type": "string",
+            "pattern": "^fnv1a:[0-9a-f]{8}$",
+            "description": "Hash of visible printing metadata after mapped printing fields are removed."
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": ["string", "number", "boolean", "null"] },
+                { "type": "array", "items": { "type": ["string", "number", "boolean", "null"] } }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

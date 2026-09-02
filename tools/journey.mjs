@@ -41,6 +41,16 @@ const repoRead = async (slug, rel) => {
   const r = await fapi(`/repos/${OWNERS[slug]}/${slug}/raw/${rel}?ref=main`);
   return r.ok ? await r.text() : null;
 };
+const releaseTag = async (slug, tag) => {
+  if (!FORGE) {
+    const ref = `refs/tags/forge/${slug}/${tag}`;
+    return { annotated: git("cat-file", "-t", ref) === "tag",
+      object: git("rev-parse", ref), target: git("rev-parse", `${ref}^{}`) };
+  }
+  const listed = await fapi(`/repos/${OWNERS[slug]}/${slug}/tags/${tag}`), value = await listed.json();
+  const annotated = await fapi(`/repos/${OWNERS[slug]}/${slug}/git/tags/${value.id}`), object = await annotated.json();
+  return { annotated: annotated.ok, object: value.id, target: object.object?.sha };
+};
 const api = async (method, path, { token, body, raw } = {}) => {
   const r = await fetch(BASE + path, { method,
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -92,13 +102,13 @@ assert((await repoRead("tidepool", "assets/art/riptide.png")).startsWith("versio
   "git holds the 3-line pointer, not the binary (Store 1)");
 assert(/alice/.test((await lastCommit("tidepool")).an), "asset commit authored as alice");
 
-const artBack = await api("GET", "/api/games/tidepool/assets/art/riptide.png");
+const artBack = await api("GET", "/api/games/tidepool/assets/art/riptide.png", { token: A });
 assert(artBack.status === 200 && Buffer.compare(artBack.data, PNG) === 0,
   "GET asset materializes from LFS — bytes identical round-trip");
 const artAssign = await api("PUT", "/api/games/tidepool/art", { token: A,
   body: { printing_id: "p_riptide_core", art: "assets/art/riptide.png", artist: "Alice", license: "CC-BY-4.0" } });
 assert(artAssign.status === 200 && artAssign.data.art === "assets/art/riptide.png",
-  "alice assigns the uploaded art to the riptide printing with credit");
+  "alice assigns the uploaded art to the riptide printing with credit", artAssign.data);
 const pj = JSON.parse(await repoRead("tidepool", "components/printings.json"));
 const rp = pj.find(p => p.id === "p_riptide_core");
 assert(rp && rp.art === "assets/art/riptide.png" && rp.provenance && rp.provenance.creator === "Alice",
@@ -115,9 +125,10 @@ const hist = (await api("GET", "/api/games/tidepool/history")).data;
 assert(hist[0].author === "alice" && hist[0].changes.some(c => c.card === "riptide"),
   "history endpoint: alice's semantic change on record");
 
-const exp = await api("POST", "/api/games/tidepool/export/tts", { token: A });
-assert(exp.status === 200 && exp.data.urls[0].includes(exp.data.ref),
-  `export frozen at sha ${exp.data.ref} (Store 3)`);
+const exp = await api("POST", "/api/games/tidepool/export/tts?wait=1", { token: A });
+assert(exp.status === 200 && exp.data.urls[0].includes(exp.data.ref)
+  && exp.data.job?.status === "succeeded" && exp.data.manifest?.files?.length > 0,
+  `isolated export job succeeded and froze sha ${exp.data.ref} with a checked manifest (Store 3)`);
 const cached = await api("GET", exp.data.urls[0]);
 assert(cached.status === 200 && cached.headers.get("cache-control").includes("immutable"),
   "cache URL serves with immutable headers");
@@ -176,13 +187,17 @@ const prId = prOpen.data.id;
 const noMerge = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: B });
 assert(noMerge.status === 403, "bob CANNOT merge into alice's game (owner-only rule)");
 const prView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { token: A })).data;
-assert(prView.author === "bob" && prView.status === "open" && prView.conflicts.length === 0,
-  "alice reviews: bob's PR, open, conflict-free");
+assert(prView.author === "bob" && prView.status === "open" && prView.conflicts.length === 0
+  && prView.mergeable === false && prView.required_approvals === 1,
+  "alice reviews: bob's PR is conflict-free but protected until one approval");
 const bobReview = await api("POST", `/api/games/tidepool/prs/${prId}/review`, { token: B, body: { verdict: "approve" } });
 assert(bobReview.status === 403, "bob can't review — he's the proposer, not a maintainer (403)");
 const aliceApprove = await api("POST", `/api/games/tidepool/prs/${prId}/review`, { token: A, body: { verdict: "approve" } });
 assert(aliceApprove.status === 201 && aliceApprove.data.reviews.some(r => r.verdict === "approve" && r.reviewer_handle === "alice"),
   "alice approves the PR — maintainer sign-off recorded before merge");
+const approvedView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { token: A })).data;
+assert(approvedView.mergeable === true && approvedView.checks.find(check => check.key === "approvals")?.pass === true,
+  "the repository policy now reports the exact proposal mergeable");
 const prMerged = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: A });
 assert(prMerged.status === 200 && prMerged.data.merged, "alice merges bob's PR", prMerged.data);
 const tpCards = (await api("GET", "/api/games/tidepool/cards")).data;
@@ -232,10 +247,10 @@ const jamAnon = await api("POST", "/api/jams/spark-jam/join", {});
 assert(jamAnon.status === 401, "anonymous cannot join a jam (401)");
 const jamJoin = await api("POST", "/api/jams/spark-jam/join", { token: A });
 assert(jamJoin.status === 201 && jamJoin.data.entered && jamJoin.data.slug,
-  "alice one-click joins Spark Jam → a starter game is forked into her account and entered", jamJoin.data);
+  "alice one-click joins Spark Jam → a licensed draft starter is created in her account", jamJoin.data);
 const jamView = (await api("GET", "/api/jams/spark-jam")).data;
-assert(jamView.entries.some(e => e.game_slug === jamJoin.data.slug && e.qualified && e.author === "alice"),
-  "her entry is live on the jam page — qualified and attributed (Store-2 backed)");
+assert(jamView.status === "open" && jamView.entries.some(e => e.game_slug === jamJoin.data.slug && e.state === "draft" && e.author === "alice"),
+  "the server-derived jam clock is open and her starter remains an attributed draft");
 const offTheme = await api("POST", "/api/jams/spark-jam/submit", { token: B, body: { game: "tidepool-bob" } });
 assert(offTheme.status === 422 && (offTheme.data.reasons || []).some(r => /theme word/.test(r)),
   "an off-theme game is refused — qualification is a machine check, not a mod ruling");
@@ -259,14 +274,54 @@ const relBad = await api("POST", "/api/games/tidepool/releases", { token: A, bod
 assert(relBad.status === 422, "a malformed tag is rejected (422)");
 const relBob = await api("POST", "/api/games/tidepool/releases", { token: B, body: { tag: "v0.1" } });
 assert(relBob.status === 403, "only the owner can cut a release (403)");
+const unknownAsset = await api("POST", "/api/games/tidepool/assets?path=assets/art/unclassified.png", { token: A, raw: PNG });
+assert(unknownAsset.status === 200 && unknownAsset.data.rights_status === "unknown",
+  "an upload without a rights declaration is committed as private-only/unknown");
+const rightsBlocked = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1" } });
+assert(rightsBlocked.status === 422 && rightsBlocked.data.rights?.blockers?.some(value => /unclassified/.test(value)),
+  "unknown file rights block release before exports or a Git tag are created");
+const declareRights = await api("PUT", "/api/games/tidepool/rights", { token: A, body: {
+  path: "assets/art/unclassified.png", status: "original", license: "CC-BY-4.0",
+  copyright: ["Alice"], redistribution: "allowed" } });
+assert(declareRights.status === 200 && declareRights.data.rights.publishable,
+  "the owner records an auditable per-file declaration and clears the gate");
 const rel = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1", title: "First cut" } });
-assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").startsWith("- "),
-  "alice cuts v0.1 → pinned to a sha with an auto-changelog", rel.data);
+assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").startsWith("- ")
+  && rel.data.repository_tag?.annotated && rel.data.repository_tag?.protected
+  && rel.data.artifacts?.some(item => item.name === "forge-rights-receipt.json")
+  && rel.data.rights?.publishable && rel.data.rights?.source_sha === rel.data.sha,
+  "alice cuts v0.1 → required artifacts, protected tag, and a per-file rights receipt", rel.data);
+const actualTag = await releaseTag("tidepool", "v0.1");
+assert(actualTag.annotated && actualTag.target.startsWith(rel.data.sha),
+  "the release exists as a real annotated Git tag pointing at the exact source commit");
 const relList = (await api("GET", "/api/games/tidepool/releases")).data;
-assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha, "releases list shows the pinned version");
+assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha
+  && relList[0].tag_annotated && relList[0].tag_protected && relList[0].artifacts.length >= 6
+  && relList[0].rights?.publishable && relList[0].rights?.file_count > 0,
+  "releases list shows the pinned version and its immutable receipt");
 const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
+assert(relDet.repository_tag.verified_now, "release detail re-verifies the protected annotated tag against Store 1");
+assert(relDet.rights?.publishable && relDet.rights.files.some(file => file.path === "assets/art/unclassified.png"),
+  "release detail preserves the exact rights and hash of every shipped source file");
 const frozen = await api("GET", relDet.downloads.ttc);
 assert(frozen.status === 200, "the frozen TTC download serves at the pinned sha — a citable, immutable version");
+
+const jamRel = await api("POST", `/api/games/${jamJoin.data.slug}/releases`, { token: A,
+  body: { tag: "v0.1", title: "Spark Jam submission" } });
+assert(jamRel.status === 201 && jamRel.data.sha, "a jam candidate is packaged as a rights-checked immutable release");
+const jamSubmit = await api("POST", "/api/jams/spark-jam/submit", { token: A,
+  body: { game: jamJoin.data.slug, release: "v0.1", team: ["alice"] } });
+assert(jamSubmit.status === 201 && jamSubmit.data.release.sha === jamRel.data.sha && jamSubmit.data.receipt.sha256,
+  "jam submission pins the reviewed release and returns an immutable qualification receipt");
+const jamDraftCards = (await api("GET", `/api/games/${jamJoin.data.slug}/cards`)).data;
+jamDraftCards[0].text += " Later draft edit.";
+const jamLater = await api("PUT", `/api/games/${jamJoin.data.slug}/cards`, { token: A, body: jamDraftCards });
+const pinnedEntry = (await api("GET", "/api/jams/spark-jam")).data.entries.find(e => e.game_slug === jamJoin.data.slug);
+assert(jamLater.status === 200 && pinnedEntry.release.sha === jamRel.data.sha && jamLater.data.commit !== jamRel.data.sha,
+  "later project edits cannot move the submitted jam release");
+const jamHistory = await api("GET", `/api/jams/spark-jam/entries/${jamJoin.data.slug}/history`, { token: A });
+assert(jamHistory.status === 200 && jamHistory.data.length === 1 && jamHistory.data[0].release_sha === jamRel.data.sha,
+  "submission history preserves the exact release selection independently of mutable HEAD");
 
 console.log("== ACT 10: discovery & the activity feed — the front door ==");
 const disc = (await api("GET", "/api/discover?q=tidepool")).data;
@@ -287,6 +342,23 @@ assert(bobN.items.some(n => n.kind === "pr_merge" && n.actor_handle === "alice")
   "bob was notified that alice merged his PR (unread inbox)");
 assert((await api("POST", "/api/notifications/read", { token: B })).status === 200, "bob marks all read");
 assert((await api("GET", "/api/notifications", { token: B })).data.unread === 0, "bob's unread count is now zero");
+
+console.log("== ACT 12: namespaced repository identity ==");
+const charlieReg = await api("POST", "/api/auth/register",
+  { body: { handle: "charlie", email: "charlie@tidepool.games", password: "correct-horse-3" } });
+assert(charlieReg.status === 201 && charlieReg.data.token, "charlie registers");
+const sameName = await api("POST", "/api/games", { token: charlieReg.data.token,
+  body: { title: "Tidepool", csv: ALICE_CSV } });
+assert(sameName.status === 201 && sameName.data.slug !== "tidepool"
+  && sameName.data.namespace === "charlie" && sameName.data.repo_slug === "tidepool"
+  && /^p_[a-f0-9]{16}$/.test(sameName.data.project_id),
+  "a second owner can host the same repository slug under a distinct stable project id", sameName.data);
+const aliceProject = await api("GET", "/api/projects/alice/tidepool");
+const charlieProject = await api("GET", "/api/projects/charlie/tidepool");
+assert(aliceProject.status === 200 && charlieProject.status === 200
+  && aliceProject.data.project_id !== charlieProject.data.project_id
+  && aliceProject.data.storage_key !== charlieProject.data.storage_key,
+  "owner/slug routes resolve unambiguously to two different repositories");
 
 console.log(`\nJOURNEY COMPLETE — ${step} assertions, 0 failures.`);
 console.log("The system is confirmed: host → own → author → fork → isolate → propose → merge → agree.");

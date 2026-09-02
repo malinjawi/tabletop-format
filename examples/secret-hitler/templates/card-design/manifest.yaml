@@ -1,0 +1,19 @@
+version: 1
+name: Secret Hitler production components
+description: Six editable semantic component families sit beside the immutable official PnP visual edition and remain independently reviewable.
+system: templates/card-design/system.yaml
+legacy_source: templates/layout.yaml
+components:
+  - id: foundation
+    label: Shared printed component
+    description: Trim, bleed, paper, and inner rule shared across all card-sized components.
+    source: templates/card-design/components/foundation.yaml
+    applies_to: "*"
+families:
+  - { id: role, label: Secret Role, match: { type: role }, source: templates/card-design/families/role.yaml, specimens: [role_liberal, role_fascist, role_hitler] }
+  - { id: party, label: Party Membership, match: { type: party }, source: templates/card-design/families/party.yaml, specimens: [party_liberal, party_fascist] }
+  - { id: policy, label: Policy, match: { type: policy }, source: templates/card-design/families/policy.yaml, specimens: [policy_liberal, policy_fascist] }
+  - { id: ballot, label: Ballot, match: { type: ballot }, source: templates/card-design/families/ballot.yaml, specimens: [ballot_ja, ballot_nein] }
+  - { id: placard, label: Government Placard, match: { type: placard }, source: templates/card-design/families/placard.yaml, specimens: [placard_president, placard_chancellor] }
+  - { id: pile-marker, label: Policy Pile Marker, match: { type: pile-marker }, source: templates/card-design/families/pile-marker.yaml, specimens: [pile_draw, pile_discard] }
+region_order: [paper, inner-rule, role-panel, party-band, policy-field, policy-rule, placard-band, pile-band, role-label, party-label, policy-label, ballot-label, placard-label, pile-label, role-title, party-title, policy-title, ballot-title, placard-title, pile-title, role-body, party-body, policy-body, ballot-body, placard-body, pile-body, role-footer, party-footer, policy-footer, ballot-footer, placard-footer, pile-footer]

@@ -4,10 +4,66 @@
 # PASS/FAIL, exits nonzero on any failure. This is the repo's standing
 # integration test: keep it green (CONTRIBUTING.md makes it law).
 #
-# Requires: python3 (+PyYAML, jsonschema, Pillow), node >= 20, git.
+# Requires: the repository virtualenv (preferred) or python3 with PyYAML,
+# jsonschema, Pillow, and ReportLab; node >= 20; git.
 # Node validator (ajv) is used when node_modules exists; Python twin otherwise.
 REPO="$(cd "$(dirname "$0")" && pwd)"
-SCRATCH="$(mktemp -d)"
+TEST_TMP_ROOT="${FORGE_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+mkdir -p "$TEST_TMP_ROOT"
+SCRATCH="$(mktemp -d "$TEST_TMP_ROOT/forge-e2e.XXXXXX")"
+SCRATCH_LIMIT_MB="${FORGE_E2E_SCRATCH_LIMIT_MB:-2048}"
+SCRATCH_LIMIT_KB=$((SCRATCH_LIMIT_MB * 1024))
+if [ -x "$REPO/.venv/bin/python" ]; then
+  PYTHON_BIN="$REPO/.venv/bin/python"
+else
+  PYTHON_BIN="$(command -v python3 || true)"
+fi
+[ -n "$PYTHON_BIN" ] || { echo "FATAL: no Python runtime; run npm run setup:dev"; exit 2; }
+export FORGE_PYTHON="$PYTHON_BIN"
+# Keep the existing readable test commands while forcing every invocation,
+# including JSON one-liners, through the same selected interpreter.
+python3() { "$PYTHON_BIN" "$@"; }
+
+E2E_PID=$$
+WATCHDOG_PID=""
+cleanup() {
+  local status=$?
+  trap - EXIT INT TERM
+  [ -z "$WATCHDOG_PID" ] || kill "$WATCHDOG_PID" 2>/dev/null || true
+  local child
+  for child in $(jobs -pr 2>/dev/null); do kill "$child" 2>/dev/null || true; done
+  if [ "${FORGE_KEEP_SCRATCH:-0}" = "1" ]; then
+    echo "e2e: preserving scratch at $SCRATCH" >&2
+  else
+    case "$SCRATCH" in
+      "$TEST_TMP_ROOT"/forge-e2e.*)
+        chmod -R u+w "$SCRATCH" 2>/dev/null || true
+        rm -rf -- "$SCRATCH"
+        ;;
+      *) echo "WARN: refusing to clean unexpected scratch path: $SCRATCH" >&2 ;;
+    esac
+  fi
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+watch_scratch_budget() {
+  while :; do
+    sleep 5
+    local used_kb
+    used_kb=$(du -sk "$SCRATCH" 2>/dev/null | awk '{print $1}')
+    [ -z "$used_kb" ] && continue
+    if [ "$used_kb" -gt "$SCRATCH_LIMIT_KB" ]; then
+      echo "FATAL: e2e scratch exceeded ${SCRATCH_LIMIT_MB} MB (${used_kb} KB at $SCRATCH)" >&2
+      kill -TERM "$E2E_PID" 2>/dev/null || true
+      return
+    fi
+  done
+}
+watch_scratch_budget &
+WATCHDOG_PID=$!
 PASS=0; FAIL=0; FAILED=()
 
 say()  { printf '%s\n' "$*"; }
@@ -24,9 +80,30 @@ check_fails(){ # inverse: command MUST exit nonzero
   local name="$1"; shift
   if "$@" >/dev/null 2>&1; then bad "$name" "expected failure, got success"; else ok "$name"; fi
 }
+wait_server(){ # wait_server <port> <log>; startup performs migrations + repository indexing
+  local port="$1" log="$2"
+  for _ in $(seq 1 120); do
+    curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && return 0
+    sleep .25
+  done
+  say "server on :$port did not become healthy; log tail:"
+  tail -20 "$log" 2>/dev/null || true
+  return 1
+}
 
 say "e2e: scratch at $SCRATCH"
-tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='tmp' --exclude='examples/*/exports' -cf - . | tar -C "$SCRATCH" -xf -
+tar -C "$REPO" \
+  --exclude='.git' \
+  --exclude='.venv' \
+  --exclude='node_modules' \
+  --exclude='tmp' \
+  --exclude='output' \
+  --exclude='hub.html' \
+  --exclude='data/cache' \
+  --exclude='data/forge-farm' \
+  --exclude='examples/*/exports' \
+  --exclude='examples/_fixtures' \
+  -cf - . | tar -C "$SCRATCH" -xf -
 cd "$SCRATCH" || { echo "FATAL: cannot cd to scratch"; exit 2; }
 # The scratch copy intentionally excludes dependency bytes, but Node tools still
 # resolve the exact dependencies installed for this checkout.
@@ -45,6 +122,24 @@ for f in schemas/*.schema.json; do python3 -c "import json;json.load(open('$f'))
 check "node validator syntax" node --check tools/validate.mjs
 for t in tools/*.mjs tools/lib/*.mjs; do node --check "$t" 2>/dev/null || bad "syntax: $t"; done
 ok "all .mjs tools pass node --check"
+check "source-overlay editor field contract" node tools/source-overlay-field-audit.mjs "$REPO/examples/_fixtures/netrunner-sg"
+check "versioned adapter contracts" node tools/check-adapters.mjs
+
+# A declared source-backed field is the editable part of an immutable source
+# face. Its value must be allowed to diverge from the baseline so the editor can
+# commit the overlay; the remaining signature still guards every unsupported
+# visual change.
+cp examples/secret-hitler/components/cards.json "$SCRATCH/secret-hitler-cards.before.json"
+python3 - <<'PY'
+import json
+path = 'examples/secret-hitler/components/cards.json'
+cards = json.load(open(path))
+cards[0]['name'] = 'Liberal Editor Contract'
+json.dump(cards, open(path, 'w'), indent=2)
+PY
+check "mapped source-overlay edit validates (python)" python3 tools/validate.py examples/secret-hitler
+check "mapped source-overlay edit validates (node)" node tools/validate.mjs examples/secret-hitler
+cp "$SCRATCH/secret-hitler-cards.before.json" examples/secret-hitler/components/cards.json
 
 say ""
 say "== validation (3 example games) =="
@@ -235,12 +330,19 @@ python3 tools/build_hub.py -o "$SCRATCH/hub.html" >/dev/null 2>&1 \
 import re,json
 src=open('$SCRATCH/hub.html').read()
 js=re.findall(r'<script>(.*?)</script>',src,re.S)[-1]
-d=json.loads(re.search(r'const DATA = (\{.*?\});\n',js,re.S).group(1))
+d=json.loads(re.search(r'(?:const|let) DATA = (\{.*?\});\n',js,re.S).group(1))
 names=[p['name'] for p in d['people']]
 assert 'Sam' in names and 'Priya' in names, names
 sam=[p for p in d['people'] if p['name']=='Sam'][0]
 assert sam['sessions']>=2 and sam['entries']==[]
 " && ok "hub computes user profiles from git+playtests" || bad "hub profiles"
+python3 -c "
+import re
+src=open('$SCRATCH/hub.html').read()
+js=re.findall(r'<script>(.*?)</script>',src,re.S)[-1]
+open('$SCRATCH/hubjs.js','w').write(js)"
+node --check "$SCRATCH/hubjs.js" && ok "hub application JavaScript parses" || bad "hub JavaScript syntax"
+grep -q 'aria-label="Topic filters"' "$SCRATCH/hub.html" && ok "catalog exposes topic facets" || bad "catalog topic facets"
 check "game page builds" python3 tools/build_site.py examples/ember --diff "$SCRATCH/patched.json" -o "$SCRATCH/site.html"
 [ -s "$SCRATCH/site.html" ] && grep -q "Remix this game" "$SCRATCH/site.html" && ok "game page has remix affordance" || bad "game page content"
 check "editor builds" python3 tools/build_editor.py examples/ember -o "$SCRATCH/editor.html"
@@ -283,9 +385,9 @@ say "== platform server (Block G v0) =="
 PORT=$(( (RANDOM % 2000) + 18000 ))
 node server.mjs --port $PORT > "$SCRATCH/srv.log" 2>&1 &
 SRVPID=$!
-sleep 1.5
-NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;d=json.load(sys.stdin);need={'ember','harbor-nine','netrunner-urbp'};slugs={g['slug'] for g in d};assert need<=slugs;print(len(d))" 2>/dev/null)
-[ -n "$NGAMES" ] && ok "server discovers the game catalog ($NGAMES games, core examples present)" || bad "server discovery" "missing core examples"
+wait_server "$PORT" "$SCRATCH/srv.log" || bad "platform server startup"
+NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;d=json.load(sys.stdin);slugs={g['slug'] for g in d};assert {'ember','harbor-nine'}<=slugs;assert 'netrunner-urbp' not in slugs;print(len(d))" 2>/dev/null)
+[ -n "$NGAMES" ] && ok "catalog shows rights-cleared demos and hides unverified imports ($NGAMES public games)" || bad "server discovery" "public/private rights boundary is wrong"
 curl -s "localhost:$PORT/api/games/ember/cards" | python3 -c "
 import json,sys
 cards=json.load(sys.stdin)
@@ -321,12 +423,26 @@ say "== beta hardening =="
 PORT2=$(( (RANDOM % 2000) + 21000 ))
 node server.mjs --port $PORT2 --readonly > "$SCRATCH/ro.log" 2>&1 &
 ROPID=$!
-sleep 1.5
+wait_server "$PORT2" "$SCRATCH/ro.log" || bad "readonly server startup"
 ROCODE=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -d '[]' "localhost:$PORT2/api/games/ember/cards")
 [ "$ROCODE" = "403" ] && ok "readonly mode blocks writes (403)" || bad "readonly mode" "got $ROCODE"
 GETCODE=$(curl -s -o /dev/null -w '%{http_code}' "localhost:$PORT2/api/games")
 [ "$GETCODE" = "200" ] && ok "readonly mode still serves reads" || bad "readonly reads" "got $GETCODE"
 kill $ROPID 2>/dev/null
+
+say ""
+say "== public-boundary security =="
+SECPORT=$(( (RANDOM % 2000) + 22500 ))
+SECDB="$SCRATCH/security.db"
+DB_PATH="$SECDB" node server.mjs --port $SECPORT > "$SCRATCH/security.log" 2>&1 &
+SECPID=$!
+wait_server "$SECPORT" "$SCRATCH/security.log" || bad "security server startup"
+if node tools/security-check.mjs "http://127.0.0.1:$SECPORT" "$SECDB" > "$SCRATCH/security-check.log" 2>&1; then
+  ok "headers, CORS, cookies, private visibility, media admission, token storage, revocation, and rate limits"
+else
+  bad "public-boundary security" "$(tail -1 "$SCRATCH/security-check.log")"
+fi
+kill $SECPID 2>/dev/null
 
 say ""
 say "== fork demo (full publish→fork→PR→merge loop) =="
@@ -391,16 +507,16 @@ say "== asset pipeline over HTTP (server → LFS/portable → commit → render)
 APORT=$(( (RANDOM % 2000) + 26000 ))
 LFS_URL="http://localhost:$LPORT" node server.mjs --port $APORT > "$SCRATCH/asrv.log" 2>&1 &
 APID=$!
-sleep 1.5
+wait_server "$APORT" "$SCRATCH/asrv.log" || bad "asset server startup"
 python3 -c "
 from PIL import Image
 Image.new('RGB',(200,120),(30,120,200)).save('$SCRATCH/blue.png')"
 ATOK=$(mint $APORT)
-RSP=$(curl -s -X POST -H "Authorization: Bearer $ATOK" --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/art/e2e_blue.png")
+RSP=$(curl -s -X POST -H "Authorization: Bearer $ATOK" --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/art/e2e_blue.png&rights_status=original&license=CC0-1.0&creator=E2E")
 echo "$RSP" | grep -q '"mode": "lfs"' && ok "server upload → LFS mode (pointer committed)" || bad "server LFS upload" "$RSP"
 head -1 examples/ember/assets/art/e2e_blue.png | grep -q "git-lfs" && ok "repo holds pointer, not binary" || bad "server pointer on disk"
 git log -1 --format=%s | grep -q "assets: add assets/art/e2e_blue.png" && ok "asset auto-committed" || bad "asset commit"
-curl -s "localhost:$APORT/api/games/ember/assets/art/e2e_blue.png" -o "$SCRATCH/blue_back.png"
+curl -s -H "Authorization: Bearer $ATOK" "localhost:$APORT/api/games/ember/assets/art/e2e_blue.png" -o "$SCRATCH/blue_back.png"
 python3 -c "
 import hashlib
 a=hashlib.sha256(open('$SCRATCH/blue.png','rb').read()).hexdigest()
@@ -409,6 +525,32 @@ assert a==b, (a,b)" && ok "GET materializes pointer from LFS, bytes identical" |
 BADRSP=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $ATOK" --data-binary @"$SCRATCH/blue.png" "localhost:$APORT/api/games/ember/assets?path=assets/x.exe")
 [ "$BADRSP" = "422" ] && ok "server rejects disallowed type (422)" || bad "server type gate" "got $BADRSP"
 kill $APID 2>/dev/null
+node --input-type=module -e "
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createLocalStore } from './platform/store1-local.mjs';
+const root='$SCRATCH/local-lfs-root', game=join(root,'examples','lfs-game');
+mkdirSync(join(game,'assets'),{recursive:true});
+writeFileSync(join(game,'game.yaml'),'format_version: 1\\nid: lfs-game\\ntitle: LFS Game\\nlicense: CC0-1.0\\n');
+const payload=Buffer.from('historical production asset');
+const oid=createHash('sha256').update(payload).digest('hex');
+const pointer='version https://git-lfs.github.com/spec/v1\\noid sha256:'+oid+'\\nsize '+payload.length+'\\n';
+writeFileSync(join(game,'assets','face.png'),pointer);
+execFileSync('git',['-C',root,'init','-q']);
+execFileSync('git',['-C',root,'add','.']);
+execFileSync('git',['-C',root,'-c','user.name=E2E','-c','user.email=e2e@example.invalid','commit','-qm','pointer']);
+const object=join(root,'.git','lfs','objects',oid.slice(0,2),oid.slice(2,4),oid);
+mkdirSync(join(object,'..'),{recursive:true}); writeFileSync(object,payload);
+const store=createLocalStore({root,gamesDir:join(root,'examples')});
+const live=await store.getAsset('lfs-game','assets/face.png');
+const at=await store.materialize('lfs-game','HEAD');
+try {
+  const historical=readFileSync(join(at.dir,'assets','face.png'));
+  if(!live.equals(payload)||!historical.equals(payload)) process.exit(1);
+} finally { at.cleanup(); }
+" && ok "local store hydrates verified Git LFS bytes at HEAD and historical refs" || bad "local Git LFS materialization"
 say ""
 say "== renderer uses real art =="
 python3 tools/render_cards.py examples/ember >/dev/null 2>&1
@@ -423,7 +565,7 @@ say "== Store 2 slice 1: auth, stars, claims, games index (real SQL via node:sql
 SPORT=$(( (RANDOM % 2000) + 30000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $SPORT > "$SCRATCH/s2.log" 2>&1 &
 SPID2=$!
-sleep 1.5
+wait_server "$SPORT" "$SCRATCH/s2.log" || bad "Store 2 server startup"
 REG=$(curl -s -X POST -H 'content-type: application/json' -d '{"handle":"linja","email":"l@example.com","password":"hunter2hunter2"}' "localhost:$SPORT/api/auth/register")
 TOKEN=$(echo "$REG" | python3 -c "import json,sys;print(json.load(sys.stdin).get('token',''))")
 [ ${#TOKEN} = 64 ] && ok "register → session token" || bad "register" "$REG"
@@ -454,15 +596,15 @@ CPORT3=$(( (RANDOM % 2000) + 32000 ))
 export CACHE_DIR="$SCRATCH/cache"
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $CPORT3 > "$SCRATCH/s3.log" 2>&1 &
 SPID3=$!
-sleep 1.5
+wait_server "$CPORT3" "$SCRATCH/s3.log" || bad "Store 3 server startup"
 SHA0=$(git rev-parse --short HEAD)
-EXP=$(curl -s -X POST "localhost:$CPORT3/api/games/ember/export/tts")
+EXP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP" | grep -q "\"ref\": \"$SHA0\"" && ok "export keyed by current sha ($SHA0)" || bad "export sha key" "$EXP"
 TTSURL=$(echo "$EXP" | python3 -c "import json,sys;print(json.load(sys.stdin)['urls'][0])")
 HDR=$(curl -s -D - -o "$SCRATCH/tts_cached.json" "localhost:$CPORT3$TTSURL" | tr -d '\r')
 echo "$HDR" | grep -q "max-age=31536000, immutable" && ok "immutable cache headers on cache URL" || bad "immutable headers"
 python3 -c "import json; json.load(open('$SCRATCH/tts_cached.json'))" && ok "cached TTS save parses" || bad "cached tts"
-EXP2=$(curl -s -X POST "localhost:$CPORT3/api/games/ember/export/tts")
+EXP2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP2" | grep -q '"cached": true' && ok "second export = cache hit (idempotent per key)" || bad "cache hit" "$EXP2"
 # history immutability: change a card, new sha exports separately; OLD url still serves
 python3 -c "
@@ -471,7 +613,7 @@ p='examples/ember/components/cards.json'; c=json.load(open(p))
 c[0]['attributes']['power']=4; json.dump(c,open(p,'w'),indent=2)"
 git commit -qam "e2e: bump kindling power"
 SHA1=$(git rev-parse --short HEAD)
-EXP3=$(curl -s -X POST "localhost:$CPORT3/api/games/ember/export/tts")
+EXP3=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP3" | grep -q "\"ref\": \"$SHA1\"" && ok "new commit → new cache ref ($SHA1)" || bad "new ref" "$EXP3"
 curl -s -o /dev/null -w '%{http_code}' "localhost:$CPORT3$TTSURL" | grep -q 200 && ok "OLD sha URL still serves (immutability across edits)" || bad "old url"
 [ -d "$SCRATCH/cache/exports/ember/$SHA0" ] && [ -d "$SCRATCH/cache/exports/ember/$SHA1" ] && ok "both refs coexist under R2-layout keys" || bad "key layout"
@@ -491,7 +633,7 @@ say "== FEATURE: live editor → Save → git commit (complete loop) =="
 EPORT=$(( (RANDOM % 2000) + 34000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $EPORT > "$SCRATCH/ed.log" 2>&1 &
 EPID=$!
-sleep 1.5
+wait_server "$EPORT" "$SCRATCH/ed.log" || bad "editor server startup"
 ETOK=$(mint $EPORT)
 curl -s "localhost:$EPORT/edit/ember?raw" > "$SCRATCH/live-editor.html"
 grep -q "saveToServer" "$SCRATCH/live-editor.html" && grep -q '"live_slug": "ember"' "$SCRATCH/live-editor.html" \
@@ -528,17 +670,21 @@ say "== FEATURE: hub auth UI + live stars =="
 HPORT=$(( (RANDOM % 2000) + 36000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $HPORT > "$SCRATCH/hub2.log" 2>&1 &
 HPID=$!
-sleep 2
+wait_server "$HPORT" "$SCRATCH/hub2.log" || bad "hub server startup"
 curl -s "localhost:$HPORT/" > "$SCRATCH/live-hub.html"
+curl -s -H 'Accept-Encoding: gzip' "localhost:$HPORT/" > "$SCRATCH/live-hub.html.gz"
+[ "$(wc -c < "$SCRATCH/live-hub.html.gz" | tr -d ' ')" -lt 256000 ] \
+  && ! grep -q '"cards": \[' "$SCRATCH/live-hub.html" \
+  && ok "live app shell is under 250 KB compressed and embeds no card catalog" || bad "bounded app shell"
 grep -q "authModal" "$SCRATCH/live-hub.html" && grep -q "toggleStar" "$SCRATCH/live-hub.html" \
   && grep -q "refreshLive" "$SCRATCH/live-hub.html" && ok "live hub ships auth modal + star wiring" || bad "hub auth UI markers"
 grep -q "liveSuggestions" "$SCRATCH/live-hub.html" && grep -q "proposePr" "$SCRATCH/live-hub.html" \
   && grep -q "mergePr" "$SCRATCH/live-hub.html" && ok "live hub ships PR review+merge wiring" || bad "hub PR wiring"
 grep -q "function play(g)" "$SCRATCH/live-hub.html" && grep -q "_pshuffle" "$SCRATCH/live-hub.html" && ok "live hub ships the Play tab (seeded deterministic draw)" || bad "hub play wiring"
 grep -q "liveAnalytics" "$SCRATCH/live-hub.html" && grep -q "liveReleases" "$SCRATCH/live-hub.html" && grep -q "loadFeed" "$SCRATCH/live-hub.html" && ok "live hub ships analytics + releases + activity feed wiring" || bad "hub round-2/3 wiring"
-grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q "ed-canvas" "$SCRATCH/live-hub.html" \
+grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q 'id="ed-preview"' "$SCRATCH/live-hub.html" \
   && grep -q "edPreview" "$SCRATCH/live-hub.html" && grep -q "edCommit" "$SCRATCH/live-hub.html" \
-  && ok "live hub ships the IN-HUB card editor (drawer + live canvas preview + commit/propose)" || bad "hub editor wiring"
+  && ok "live hub ships the routed card editor (live production preview + commit/propose)" || bad "hub editor wiring"
 grep -q "liveIssues" "$SCRATCH/live-hub.html" && grep -q "commentThread" "$SCRATCH/live-hub.html" \
   && grep -q "commentPr" "$SCRATCH/live-hub.html" && ok "live hub ships Issues tab + comment threads (issues & PRs)" || bad "hub issues wiring"
 grep -q "EDITABLE_TABS" "$SCRATCH/live-hub.html" && grep -q "rulesEdit" "$SCRATCH/live-hub.html" \
@@ -548,6 +694,8 @@ grep -q "exportMenu" "$SCRATCH/live-hub.html" && grep -q "Tabletop Club" "$SCRAT
 grep -q "Create my edition" "$SCRATCH/live-hub.html" && grep -q "Nothing is sent upstream" "$SCRATCH/live-hub.html" \
   && grep -q "Your independent edition" "$SCRATCH/live-hub.html" && grep -q "Propose upstream" "$SCRATCH/live-hub.html" \
   && ok "north-star UI: exact-version edition is independent; upstream proposal stays optional" || bad "north-star edition UI"
+curl -s "localhost:$HPORT/api/games/ember/ui" | python3 -c 'import json,sys; assert json.load(sys.stdin)["releases"] == []' \
+  && ok "project view uses hosted releases, never inherited demo tags" || bad "project release isolation"
 # the exact sequence the UI runs: register → star → counts reflect → unstar
 node -e "
 (async () => {
@@ -573,7 +721,7 @@ say "== FEATURE: one-click fork with attribution =="
 FPORT=$(( (RANDOM % 2000) + 38000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $FPORT > "$SCRATCH/fork2.log" 2>&1 &
 FPID=$!
-sleep 1.5
+wait_server "$FPORT" "$SCRATCH/fork2.log" || bad "fork server startup"
 node -e "
 (async () => {
   const base='http://localhost:$FPORT';
@@ -608,20 +756,21 @@ grep -q "attribution:" "$SCRATCH/examples/ember-forker/game.yaml" \
   && ok "fork's game.yaml: new id + exact source ref + SPEC §9 attribution" || bad "fork attribution yaml"
 git log -1 --format='%an %s' | grep -q "forker fork: ember@.* → ember-forker" && ok "fork commit authored by the forker and pins its source" || bad "fork commit author"
 python3 tools/validate.py "$SCRATCH/examples/ember-forker" >/dev/null 2>&1 && ok "fork validates as a complete game" || bad "fork validates"
-curl -s "localhost:$FPORT/" | grep -q "ember-forker" && ok "hub rebake includes the fork" || bad "hub shows fork"
+curl -s "localhost:$FPORT/api/catalog?q=ember-forker" | grep -q '"slug": "ember-forker"' \
+  && ok "indexed catalog includes the fork without rebaking the app" || bad "catalog shows fork"
 kill $FPID 2>/dev/null
 
 say "== FEATURE: pull requests across forks (the remix loop) =="
 PRPORT=$(( (RANDOM % 2000) + 36000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $PRPORT > "$SCRATCH/pr.log" 2>&1 &
 PRPID=$!
-sleep 1.5
+wait_server "$PRPORT" "$SCRATCH/pr.log" || bad "PR server startup"
 node -e "
 (async () => {
   const base='http://localhost:$PRPORT';
   const j=(r)=>r.json();
   const reg=async(h)=>(await j(await fetch(base+'/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({handle:h,email:h+'@x.co',password:'longenough1'})}))).token;
-  const T1=await reg('prhost'), T2=await reg('prbuddy');
+  const T1=await reg('prhost'), T2=await reg('prbuddy'), T3=await reg('assetbuddy');
   const A=(t)=>({Authorization:'Bearer '+t,'content-type':'application/json'});
   const csv='name,type,text,cost\nSpark,unit,Deal 1.,1\nWall,unit,Block.,2';
   const host=await j(await fetch(base+'/api/games',{method:'POST',headers:A(T1),body:JSON.stringify({title:'Pr Demo',csv})}));
@@ -663,10 +812,43 @@ node -e "
   if(!(cj.conflicts||[]).includes('wall')) process.exit(13);
   const list=await j(await fetch(base+'/api/games/pr-demo/prs'));
   if(!(list.length===2 && list.some(x=>x.status==='merged') && list.some(x=>x.status==='open'))) process.exit(14);
+  // Reusable files use the same fork -> visual PR -> atomic merge loop.
+  const afk=await j(await fetch(base+'/api/games/pr-demo/fork',{method:'POST',headers:A(T3)}));
+  if(afk.slug!=='pr-demo-assetbuddy') process.exit(19);
+  const svg='<svg><circle/></svg>\n';
+  const up=await j(await fetch(base+'/api/games/'+afk.slug+'/assets?path='+encodeURIComponent('assets/icons/community.svg')+'&rights_status=original&license=CC-BY-4.0&creator=assetbuddy',{method:'POST',headers:{Authorization:'Bearer '+T3},body:svg}));
+  if(!(up.saved&&up.commit)) process.exit(20);
+  const apr=await j(await fetch(base+'/api/games/pr-demo/prs',{method:'POST',headers:A(T3),body:JSON.stringify({from:afk.slug,title:'Add community icon'})}));
+  if(!(apr.file_changes||[]).some(x=>x.path==='assets/icons/community.svg'&&x.kind==='added')) process.exit(21);
+  const adet=await j(await fetch(base+'/api/games/pr-demo/prs/'+apr.id));
+  if(!(adet.file_changes||[]).some(x=>x.after_url&&x.asset_kind==='image')) process.exit(22);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+apr.id+'/merge',{method:'POST',headers:A(T1)})).status!==409) process.exit(27);
+  if((await fetch(base+'/api/games/pr-demo/prs/'+apr.id+'/review',{method:'POST',headers:A(T1),body:JSON.stringify({verdict:'approve'})})).status!==201) process.exit(28);
+  const am=await j(await fetch(base+'/api/games/pr-demo/prs/'+apr.id+'/merge',{method:'POST',headers:A(T1)}));
+  if(!(am.merged&&(am.file_changes||[]).some(x=>x.path==='assets/icons/community.svg'))) { console.error('asset merge failed',am); process.exit(23); }
+  const mergedAsset=await fetch(base+'/api/games/pr-demo/repository/file/assets/icons/community.svg');
+  if(mergedAsset.status!==200) { console.error('merged asset unavailable',mergedAsset.status,await mergedAsset.text()); process.exit(24); }
+  // Merge base is the exact source_ref captured at fork time. If both the
+  // long-lived fork and target changed one file BEFORE the PR opens, refuse it.
+  let frules=await (await fetch(base+'/api/games/'+afk.slug+'/repository/file/rules/rules.md')).text();
+  let trules=await (await fetch(base+'/api/games/pr-demo/repository/file/rules/rules.md')).text();
+  await fetch(base+'/api/games/'+afk.slug+'/repository/file/rules/rules.md',{method:'PUT',headers:A(T3),body:JSON.stringify({content:frules+'\n<!-- fork side -->\n',message:'rules: fork-side edit'})});
+  await fetch(base+'/api/games/pr-demo/repository/file/rules/rules.md',{method:'PUT',headers:A(T1),body:JSON.stringify({content:trules+'\n<!-- target side -->\n',message:'rules: target-side edit'})});
+  const fpr=await j(await fetch(base+'/api/games/pr-demo/prs',{method:'POST',headers:A(T3),body:JSON.stringify({from:afk.slug,title:'Conflicting rules'})}));
+  const fdet=await j(await fetch(base+'/api/games/pr-demo/prs/'+fpr.id));
+  if(!(fdet.file_conflicts||[]).includes('rules/rules.md')) { console.error('expected rule conflict in PR detail',fpr,fdet); process.exit(25); }
+  const fm=await fetch(base+'/api/games/pr-demo/prs/'+fpr.id+'/merge',{method:'POST',headers:A(T1)});
+  const fmj=await fm.json();
+  if(fm.status!==409||!(fmj.file_conflicts||[]).includes('rules/rules.md')) { console.error('expected rule conflict at merge',fm.status,fmj); process.exit(26); }
   console.log('pr flow complete');
 })().catch(e=>{console.error(e);process.exit(9)})" && ok "PR flow: open → review (401 anon/403 non-maintainer/422 bad verdict/owner approves) → owner merges → change applied → 409 on re-merge" || bad "PR flow"
-git log -5 --format='%an|%s' | grep -q "prbuddy|merge: Spark buff" && ok "merge commit AUTHORED AS THE PROPOSER (credit follows the work)" || bad "merge authorship"
-git log -5 --format='%b' | grep -q "merged-by: prhost" && ok "merge trailer records merged-by (owner accountability)" || bad "merged-by trailer"
+git show HEAD:examples/pr-demo/assets/icons/community.svg >/dev/null 2>&1 && ok "asset PR: visual file diff → merge → repository byte available" || bad "asset PR merge"
+git show HEAD:examples/pr-demo/game.yaml | grep -q '^id: pr-demo$' \
+  && git show HEAD:examples/pr-demo/CODEOWNERS | grep -q '@prhost' \
+  && ok "PR preserves destination project identity and review ownership" || bad "PR destination governance isolation"
+git show HEAD:examples/pr-demo/rules/rules.md | grep -q 'target side' && ok "asset PR conflict: exact fork source_ref prevents an older edition overwriting newer source" || bad "asset PR merge-base conflict"
+git log -15 --format='%an|%s' | grep -q "prbuddy|merge: Spark buff" && ok "merge commit AUTHORED AS THE PROPOSER (credit follows the work)" || bad "merge authorship"
+git log -15 --format='%b' | grep -q "merged-by: prhost" && ok "merge trailer records merged-by (owner accountability)" || bad "merged-by trailer"
 node -e "process.exit(0)" && python3 tools/validate.py "$SCRATCH/examples/pr-demo" >/dev/null 2>&1 && ok "post-merge game still validates" || bad "post-merge validation"
 kill $PRPID 2>/dev/null
 
@@ -674,7 +856,7 @@ say "== ACCESS CONTROL: owner/collaborator matrix + edit-as-PR =="
 AZPORT=$(( (RANDOM % 2000) + 32000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $AZPORT > "$SCRATCH/az.log" 2>&1 &
 AZPID=$!
-sleep 1.5
+wait_server "$AZPORT" "$SCRATCH/az.log" || bad "authorization server startup"
 node -e "
 (async () => {
   const base='http://localhost:$AZPORT';
@@ -684,6 +866,12 @@ node -e "
   const TD=await reg('dana'), TC=await reg('carol');
   const host=await j(await fetch(base+'/api/games',{method:'POST',headers:A(TD),body:JSON.stringify({title:'Az Demo',csv:'name,type,text,cost\\nBolt,spell,Zap.,1\\nShield,gear,Guard.,2'})}));
   if(host.slug!=='az-demo') process.exit(1);
+  const printings=JSON.parse(await (await fetch(base+'/api/games/az-demo/repository/file/components/printings.json')).text());
+  printings[0].quantity=2;
+  const sourceEdit=await fetch(base+'/api/games/az-demo/repository/file/components/printings.json',{method:'PUT',headers:A(TD),body:JSON.stringify({content:JSON.stringify(printings,null,2)+'\\n',message:'print: change component quantity'})});
+  if(sourceEdit.status!==200 || !(await j(sourceEdit)).saved) process.exit(24);
+  const rawCards=await fetch(base+'/api/games/az-demo/repository/file/components/cards.json',{method:'PUT',headers:A(TD),body:JSON.stringify({content:'[]'})});
+  if(rawCards.status!==422 || !/semantic card endpoint/.test((await j(rawCards)).error||'')) process.exit(25);
   const cards=await j(await fetch(base+'/api/games/az-demo/cards'));
   cards[0].text='Zap 2.';
   // access endpoint drives the editor's commit-vs-propose choice
@@ -699,17 +887,26 @@ node -e "
   if(!(prop.proposed && prop.pr && prop.fork==='az-demo-carol')) process.exit(3);
   const prs=await j(await fetch(base+'/api/games/az-demo/prs'));
   if(!(prs.length===1 && prs[0].author_handle==='carol' && prs[0].from_slug==='az-demo-carol')) process.exit(4);
-  // dana merges carol's proposal
+  // The owner cannot merge an unreviewed proposal; then explicitly approves it.
+  if((await fetch(base+'/api/games/az-demo/prs/'+prop.pr+'/merge',{method:'POST',headers:A(TD)})).status!==409) process.exit(22);
+  if((await fetch(base+'/api/games/az-demo/prs/'+prop.pr+'/review',{method:'POST',headers:A(TD),body:JSON.stringify({verdict:'approve'})})).status!==201) process.exit(23);
   const m=await j(await fetch(base+'/api/games/az-demo/prs/'+prop.pr+'/merge',{method:'POST',headers:A(TD)}));
   if(!m.merged) process.exit(5);
   const after=await j(await fetch(base+'/api/games/az-demo/cards'));
   if(after[0].text!=='Zap 2.') process.exit(6);
-  // collaborator lifecycle: grant → direct commit OK → revoke → 403 again
-  const g=await fetch(base+'/api/games/az-demo/collaborators/carol',{method:'PUT',headers:A(TD)});
-  if(g.status!==200) process.exit(7);
+  // collaborator lifecycle: contributor can commit but cannot review/merge;
+  // promotion to maintainer changes those capabilities and CODEOWNERS.
+  const g=await fetch(base+'/api/games/az-demo/collaborators/carol',{method:'PUT',headers:A(TD),body:JSON.stringify({role:'contributor'})});
+  if(g.status!==200 || (await j(g)).role!=='contributor') process.exit(7);
+  const contributorAccess=await j(await fetch(base+'/api/games/az-demo/access',{headers:A(TC)}));
+  if(!(contributorAccess.canWrite===true && contributorAccess.canReview===false && contributorAccess.canMerge===false && contributorAccess.role==='contributor')) process.exit(24);
   after[1].text='Guard 2.';
   const direct=await fetch(base+'/api/games/az-demo/cards',{method:'PUT',headers:A(TC),body:JSON.stringify(after)});
   if(direct.status!==200) process.exit(8);
+  const promote=await fetch(base+'/api/games/az-demo/collaborators/carol',{method:'PUT',headers:A(TD),body:JSON.stringify({role:'maintainer'})});
+  if(promote.status!==200) process.exit(25);
+  const maintainerAccess=await j(await fetch(base+'/api/games/az-demo/access',{headers:A(TC)}));
+  if(!(maintainerAccess.canReview===true && maintainerAccess.canMerge===true && maintainerAccess.canRelease===false && maintainerAccess.role==='maintainer')) process.exit(26);
   // non-owner cannot manage access
   if((await fetch(base+'/api/games/az-demo/collaborators/dana',{method:'PUT',headers:A(TC)})).status!==403) process.exit(9);
   const r=await fetch(base+'/api/games/az-demo/collaborators/carol',{method:'DELETE',headers:A(TD)});
@@ -725,7 +922,7 @@ say "== FEATURE: issues + threaded comments (the community layer) =="
 ISPORT=$(( (RANDOM % 2000) + 30000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $ISPORT > "$SCRATCH/iss.log" 2>&1 &
 ISPID=$!
-sleep 1.5
+wait_server "$ISPORT" "$SCRATCH/iss.log" || bad "issues server startup"
 node -e "
 (async () => {
   const base='http://localhost:$ISPORT';
@@ -773,7 +970,7 @@ SHEETPID=$!
 DB_PATH="$SCRATCH/sheet-sync.db" CACHE_DIR="$SCRATCH/sheet-sync-cache" \
   node server.mjs --port $SYNCPORT > "$SCRATCH/sheet-sync-server.log" 2>&1 &
 SYNCPID=$!
-sleep 1.5
+wait_server "$SYNCPORT" "$SCRATCH/sheet-sync-server.log" || bad "Sheets server startup"
 if node tools/sync-check.mjs "http://127.0.0.1:$SYNCPORT" "http://127.0.0.1:$SHEETPORT/sheet.csv" > "$SCRATCH/sheet-sync-check.log" 2>&1; then
   ok "Sheets: stable ids → candidate token → validation/render payload → three-way merge → stale-review guards → all exports"
 else

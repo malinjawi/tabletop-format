@@ -44,3 +44,4 @@ plugins). `fmt import cockatrice ...` and the help text now just work.
 - `import-csv.mjs` — zero-dep parsing, attribute inference, scaffolding
 - `import-nrdb.mjs` — two-tier dedupe (printings→cards), HTML stripping, symbol mapping
 - `export_tts.py` — sheet math, external-format constraints (4096px, 10x7)
+- `export_vtt.py` — versioned setup → native VirtualTabletop state + embedded-asset `.vtt`

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.games/schemas/affinity-binding.schema.json",
+  "title": "Forge Affinity production binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "card_id", "printing_id"],
+  "oneOf": [
+    {
+      "required": ["template", "bindings"],
+      "properties": { "template": true, "bindings": true }
+    },
+    {
+      "required": ["production", "production_template"],
+      "properties": { "production": true, "production_template": true }
+    }
+  ],
+  "properties": {
+    "schema_version": { "enum": [1, 2] },
+    "kind": { "const": "forge-affinity-binding" },
+    "game": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "layout_source": { "enum": ["commit", "working-tree"] },
+    "cards": { "$ref": "#/$defs/relativePath" },
+    "printings": { "$ref": "#/$defs/relativePath" },
+    "card_id": { "$ref": "#/$defs/safeId" },
+    "printing_id": { "$ref": "#/$defs/safeId" },
+    "bridge_dir": { "type": "string", "minLength": 1 },
+    "production": { "$ref": "#/$defs/relativePath" },
+    "production_template": { "$ref": "#/$defs/safeId" },
+    "template": { "$ref": "#/$defs/relativePath" },
+    "native_document": { "type": "string", "pattern": "^[^/\\\\]+\\.af$" },
+    "resources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relativePath" },
+      "uniqueItems": true
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "check_document_bounds": { "type": "boolean" },
+        "tolerance": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/binding" }
+    }
+  },
+  "$defs": {
+    "safeId": { "type": "string", "minLength": 1, "pattern": "^[^/\\\\]+$" },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "layer"],
+      "properties": {
+        "source": { "enum": ["card", "printing"] },
+        "field": { "type": "string", "pattern": "^[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*$" },
+        "layer": { "type": "string", "minLength": 1 },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "optional": { "type": "boolean" },
+        "mode": { "enum": ["plain", "token-text", "choice"] },
+        "token": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+        "font_family": { "type": "string", "minLength": 1 },
+        "font_postscript": { "type": "string", "minLength": 1 },
+        "font_weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+        "transform": { "enum": ["type-label", "join", "uppercase", "lowercase", "json"] },
+        "separator": { "type": "string" },
+        "preflight": { "type": "boolean" }
+      }
+    }
+  }
+}

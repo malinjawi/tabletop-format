@@ -1,0 +1,7 @@
+regions:
+  - { id: policy-field, type: rect, x: 3.2, y: 3.2, w: 57.1, h: 82.5, fill: palette-soft, radius_mm: 1, show_if: "type == policy" }
+  - { id: policy-rule, type: rect, x: 8, y: 9, w: 47.5, h: 66, fill: none, stroke: palette, stroke_w_mm: 1, radius_mm: 2, show_if: "type == policy" }
+  - { id: policy-label, type: text, text: "ENACTED POLICY", x: 8, y: 14, w: 47.5, h: 6, font: label, size_pt: 8, align: center, color: palette-deep, letter_spacing_em: 0.14, show_if: "type == policy" }
+  - { id: policy-title, type: text, src: "card.name", transform: uppercase, x: 7, y: 29, w: 49.5, h: 16, font: display, size_pt: 21, min_size_pt: 14, align: center, color: palette-deep, no_wrap: true, autoshrink: true, show_if: "type == policy" }
+  - { id: policy-body, type: richtext, src: "card.text", x: 10, y: 50, w: 43.5, h: 20, font: body, size_pt: 8, min_size_pt: 5.5, align: center, color: "#28231d", autoshrink: true, show_if: "type == policy" }
+  - { id: policy-footer, type: text, text: "SECRET HITLER", x: 8, y: 78, w: 47.5, h: 4, font: label, size_pt: 6, align: center, color: palette-deep, letter_spacing_em: 0.13, show_if: "type == policy" }

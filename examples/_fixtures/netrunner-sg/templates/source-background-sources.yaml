@@ -1,0 +1,385 @@
+# Auditable field-background recovery for the Offworld Office private proof.
+# Coordinates are native pixels on the lossless 744x1030 PDF crop.  These
+# assets remove only the printed semantic field; all art and surrounding frame
+# pixels continue to come from the immutable source face.
+
+schema_version: 1
+source: assets/source-faces/p_offworld_office_sg.png
+canonical_size_px: [744, 1030]
+
+backgrounds:
+  - id: offworld_title_background
+    crop_px: [20, 35, 520, 82]
+    method: row_profile
+    sample_x_px: [410, 520]
+    output: assets/source-patches/offworld_office/title-background.png
+
+  - id: offworld_type_background
+    crop_px: [82, 570, 208, 614]
+    method: clone
+    sample_px: [420, 570, 546, 614]
+    output: assets/source-patches/offworld_office/type-background.png
+
+  - id: offworld_subtypes_background
+    crop_px: [208, 570, 420, 614]
+    method: clone
+    sample_px: [450, 570, 662, 614]
+    output: assets/source-patches/offworld_office/subtypes-background.png
+
+  - id: offworld_flavor_background
+    source: assets/source-faces/p_offworld_office_sg.png
+    crop_px: [86, 687, 660, 835]
+    method: inpaint_dark
+    threshold: 180
+    dilate_px: 2
+    radius_px: 5
+    output: assets/source-patches/offworld_office/flavor-background.png
+
+  # One inspected representative of each remaining System Gateway structural
+  # card family. The same generic recovery methods can be used by any game;
+  # these coordinates are deliberately game-owned profile data.
+  - id: rene_title_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [190, 35, 610, 84]
+    method: row_profile
+    sample_x_px: [600, 680]
+    output: assets/source-patches/rene_loup_arcemont_party_animal/title-background.png
+  - id: rene_subtitle_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [225, 92, 410, 125]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/rene_loup_arcemont_party_animal/subtitle-background.png
+  - id: rene_subtype_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [270, 690, 430, 735]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/rene_loup_arcemont_party_animal/subtype-background.png
+  - id: rene_base_link_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [56, 62, 115, 120]
+    method: inpaint_light
+    threshold: 110
+    dilate_px: 2
+    radius_px: 4
+    output: assets/source-patches/rene_loup_arcemont_party_animal/base-link-background.png
+  - id: rene_minimum_deck_size_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [48, 957, 116, 1005]
+    method: inpaint_light
+    threshold: 175
+    dilate_px: 1
+    radius_px: 3
+    output: assets/source-patches/rene_loup_arcemont_party_animal/minimum-deck-size-background.png
+  - id: rene_influence_limit_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [635, 957, 704, 1005]
+    method: inpaint_light
+    threshold: 175
+    dilate_px: 1
+    radius_px: 3
+    output: assets/source-patches/rene_loup_arcemont_party_animal/influence-limit-background.png
+  - id: rene_rules_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [132, 750, 680, 872]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/rene_loup_arcemont_party_animal/rules-background.png
+  - id: rene_flavor_background
+    source: assets/source-faces/p_rene_loup_arcemont_party_animal_sg.png
+    crop_px: [132, 885, 390, 925]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/rene_loup_arcemont_party_animal/flavor-background.png
+
+  - id: spin_title_background
+    source: assets/source-faces/p_spin_doctor_sg.png
+    crop_px: [255, 35, 620, 86]
+    method: row_profile
+    sample_x_px: [600, 690]
+    output: assets/source-patches/spin_doctor/title-background.png
+  - id: spin_subtypes_background
+    source: assets/source-faces/p_spin_doctor_sg.png
+    crop_px: [190, 570, 410, 616]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/spin_doctor/subtypes-background.png
+  - id: spin_rules_background
+    source: assets/source-faces/p_spin_doctor_sg.png
+    crop_px: [86, 630, 665, 765]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/spin_doctor/rules-background.png
+  - id: spin_flavor_background
+    source: assets/source-faces/p_spin_doctor_sg.png
+    crop_px: [86, 775, 665, 950]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/spin_doctor/flavor-background.png
+  - id: spin_cost_background
+    source: assets/source-faces/p_spin_doctor_sg.png
+    crop_px: [55, 38, 120, 108]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[65, 50, 112, 101]]
+    output: assets/source-patches/spin_doctor/cost-background.png
+  - id: spin_trash_background
+    source: assets/source-faces/p_spin_doctor_sg.png
+    crop_px: [674, 908, 735, 982]
+    method: inpaint_dark
+    threshold: 115
+    mask_rects_px: [[690, 925, 724, 970]]
+    output: assets/source-patches/spin_doctor/trash-background.png
+
+  - id: anoetic_title_background
+    source: assets/source-faces/p_anoetic_void_sg.png
+    crop_px: [245, 36, 630, 92]
+    method: row_profile
+    sample_x_px: [600, 690]
+    output: assets/source-patches/anoetic_void/title-background.png
+  - id: anoetic_rules_background
+    source: assets/source-faces/p_anoetic_void_sg.png
+    crop_px: [86, 630, 660, 755]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/anoetic_void/rules-background.png
+  - id: anoetic_subtypes_background
+    source: assets/source-faces/p_anoetic_void_sg.png
+    crop_px: [220, 570, 500, 616]
+    method: inpaint_dark
+    threshold: 160
+    output: assets/source-patches/anoetic_void/subtypes-background.png
+  - id: anoetic_flavor_background
+    source: assets/source-faces/p_anoetic_void_sg.png
+    crop_px: [86, 765, 660, 960]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/anoetic_void/flavor-background.png
+  - id: anoetic_cost_background
+    source: assets/source-faces/p_anoetic_void_sg.png
+    crop_px: [55, 38, 120, 108]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[65, 50, 112, 101]]
+    output: assets/source-patches/anoetic_void/cost-background.png
+  - id: anoetic_trash_background
+    source: assets/source-faces/p_anoetic_void_sg.png
+    crop_px: [674, 908, 735, 982]
+    method: inpaint_dark
+    threshold: 115
+    mask_rects_px: [[690, 925, 724, 970]]
+    output: assets/source-patches/anoetic_void/trash-background.png
+
+  - id: hedge_title_background
+    source: assets/source-faces/p_hedge_fund_sg.png
+    crop_px: [210, 35, 620, 88]
+    method: row_profile
+    sample_x_px: [560, 680]
+    output: assets/source-patches/hedge_fund/title-background.png
+  - id: hedge_subtypes_background
+    source: assets/source-faces/p_hedge_fund_sg.png
+    crop_px: [250, 570, 500, 615]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/hedge_fund/subtypes-background.png
+  - id: hedge_rules_background
+    source: assets/source-faces/p_hedge_fund_sg.png
+    crop_px: [86, 625, 650, 685]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/hedge_fund/rules-background.png
+  - id: hedge_flavor_background
+    source: assets/source-faces/p_hedge_fund_sg.png
+    crop_px: [86, 690, 650, 775]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/hedge_fund/flavor-background.png
+  - id: hedge_cost_background
+    source: assets/source-faces/p_hedge_fund_sg.png
+    crop_px: [55, 35, 145, 140]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[75, 55, 130, 120]]
+    output: assets/source-patches/hedge_fund/cost-background.png
+
+  - id: ballista_title_background
+    source: assets/source-faces/p_ballista_sg.png
+    crop_px: [155, 24, 610, 82]
+    method: row_profile
+    sample_x_px: [500, 650]
+    output: assets/source-patches/ballista/title-background.png
+  - id: ballista_subtypes_background
+    source: assets/source-faces/p_ballista_sg.png
+    crop_px: [25, 145, 98, 535]
+    method: column_profile_light
+    sample_y_px: [150, 525]
+    output: assets/source-patches/ballista/subtypes-background.png
+  - id: ballista_rules_background
+    source: assets/source-faces/p_ballista_sg.png
+    crop_px: [128, 112, 665, 205]
+    method: inpaint_dark
+    threshold: 120
+    output: assets/source-patches/ballista/rules-background.png
+  - id: ballista_flavor_background
+    source: assets/source-faces/p_ballista_sg.png
+    crop_px: [128, 215, 665, 300]
+    method: inpaint_dark
+    threshold: 125
+    output: assets/source-patches/ballista/flavor-background.png
+  - id: ballista_cost_background
+    source: assets/source-faces/p_ballista_sg.png
+    crop_px: [55, 30, 120, 105]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[65, 42, 112, 95]]
+    output: assets/source-patches/ballista/cost-background.png
+  - id: ballista_strength_background
+    source: assets/source-faces/p_ballista_sg.png
+    crop_px: [35, 946, 113, 1025]
+    method: inpaint_dark
+    threshold: 200
+    mask_rects_px: [[52, 968, 100, 1018]]
+    output: assets/source-patches/ballista/strength-background.png
+
+  - id: carmen_title_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [205, 35, 610, 92]
+    method: row_profile
+    sample_x_px: [560, 680]
+    output: assets/source-patches/carmen/title-background.png
+  - id: carmen_subtypes_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [215, 570, 535, 620]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/carmen/subtypes-background.png
+  - id: carmen_rules_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [65, 640, 655, 820]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/carmen/rules-background.png
+  - id: carmen_flavor_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [65, 830, 625, 925]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/carmen/flavor-background.png
+  - id: carmen_cost_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [55, 38, 140, 145]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[75, 55, 125, 120]]
+    output: assets/source-patches/carmen/cost-background.png
+  - id: carmen_memory_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [36, 170, 104, 220]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[48, 178, 82, 210]]
+    output: assets/source-patches/carmen/memory-background.png
+  - id: carmen_strength_background
+    source: assets/source-faces/p_carmen_sg.png
+    crop_px: [65, 946, 137, 1025]
+    method: inpaint_dark
+    threshold: 200
+    mask_rects_px: [[82, 968, 126, 1018]]
+    output: assets/source-patches/carmen/strength-background.png
+
+  - id: carnivore_title_background
+    source: assets/source-faces/p_carnivore_sg.png
+    crop_px: [255, 38, 630, 92]
+    method: row_profile
+    sample_x_px: [600, 700]
+    output: assets/source-patches/carnivore/title-background.png
+  - id: carnivore_subtypes_background
+    source: assets/source-faces/p_carnivore_sg.png
+    crop_px: [235, 570, 500, 620]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/carnivore/subtypes-background.png
+  - id: carnivore_rules_background
+    source: assets/source-faces/p_carnivore_sg.png
+    crop_px: [65, 635, 655, 860]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/carnivore/rules-background.png
+  - id: carnivore_flavor_background
+    source: assets/source-faces/p_carnivore_sg.png
+    crop_px: [65, 870, 685, 950]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/carnivore/flavor-background.png
+  - id: carnivore_cost_background
+    source: assets/source-faces/p_carnivore_sg.png
+    crop_px: [55, 38, 140, 145]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[75, 55, 125, 120]]
+    output: assets/source-patches/carnivore/cost-background.png
+
+  - id: smartware_title_background
+    source: assets/source-faces/p_smartware_distributor_sg.png
+    crop_px: [235, 25, 690, 80]
+    method: row_profile
+    sample_x_px: [680, 730]
+    output: assets/source-patches/smartware_distributor/title-background.png
+  - id: smartware_subtypes_background
+    source: assets/source-faces/p_smartware_distributor_sg.png
+    crop_px: [220, 570, 510, 620]
+    method: inpaint_dark
+    threshold: 115
+    output: assets/source-patches/smartware_distributor/subtypes-background.png
+  - id: smartware_rules_background
+    source: assets/source-faces/p_smartware_distributor_sg.png
+    crop_px: [65, 635, 650, 780]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/smartware_distributor/rules-background.png
+  - id: smartware_flavor_background
+    source: assets/source-faces/p_smartware_distributor_sg.png
+    crop_px: [65, 785, 680, 865]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/smartware_distributor/flavor-background.png
+  - id: smartware_cost_background
+    source: assets/source-faces/p_smartware_distributor_sg.png
+    crop_px: [55, 38, 140, 145]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[75, 55, 125, 120]]
+    output: assets/source-patches/smartware_distributor/cost-background.png
+
+  - id: sure_title_background
+    source: assets/source-faces/p_sure_gamble_sg.png
+    crop_px: [200, 28, 610, 88]
+    method: row_profile
+    sample_x_px: [560, 680]
+    output: assets/source-patches/sure_gamble/title-background.png
+  - id: sure_rules_background
+    source: assets/source-faces/p_sure_gamble_sg.png
+    crop_px: [65, 680, 630, 745]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/sure_gamble/rules-background.png
+  - id: sure_subtypes_background
+    source: assets/source-faces/p_sure_gamble_sg.png
+    crop_px: [160, 625, 430, 670]
+    method: inpaint_dark
+    threshold: 160
+    output: assets/source-patches/sure_gamble/subtypes-background.png
+  - id: sure_flavor_background
+    source: assets/source-faces/p_sure_gamble_sg.png
+    crop_px: [65, 755, 640, 855]
+    method: inpaint_dark
+    threshold: 180
+    output: assets/source-patches/sure_gamble/flavor-background.png
+  - id: sure_cost_background
+    source: assets/source-faces/p_sure_gamble_sg.png
+    crop_px: [55, 38, 140, 145]
+    method: inpaint_light
+    threshold: 160
+    mask_rects_px: [[75, 55, 125, 120]]
+    output: assets/source-patches/sure_gamble/cost-background.png

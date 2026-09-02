@@ -62,10 +62,10 @@ per the site footer: **Goat, Wolf, & Cabbage**.
   of that fetched text, not a verbatim copy.
 - **Official Print & Play PDF**
   (https://www.secrethitler.com/assets/Secret_Hitler_Print_and_Play.pdf)
-  was also fetched directly and its URL is recorded in `game.yaml`'s
-  `official_docs`, but the fetch returned no extractable text (it's built
-  from card/board artwork images, not a text layer) -- so it could not be
-  used as a data source, only linked as the official download.
+  is now pinned by SHA-256 in `assets/official-pnp/manifest.json`. Forge's
+  importer extracts the native 300-DPI page images without resampling,
+  records every crop, preserves the full foldable placards and all four
+  board faces, and keeps the original 13-page PDF as the print truth.
 - **Role distribution by player count** (the 3/1/1 ... 6/3/1 table in
   rules.md) and **the Presidential Power assignment per Fascist track**
   (which power unlocks at which enacted-Fascist-Policy count, for 5-6 /
@@ -106,9 +106,9 @@ per the site footer: **Goat, Wolf, & Cabbage**.
 ## What's sourced vs. reconstructed
 
 **Directly sourced** (verbatim component counts + fully-fetched rules
-text): the 12 card definitions' names/types, all component quantities
-(role 6/3/1, party 6/4, policy 6/11, ballot 10/10, placard 1/1/1 — summing
-to the officially-stated 60 pieces), the full Election / Legislative
+text): the 13 printable identities' names/types, all component quantities
+(role 6/3/1, party 6/4, policy 6/11, ballot 10/10, placard 1/1, pile marker
+1/1 — 61 printed pieces), the full Election / Legislative
 Session / Executive Action flow, term-limit rules, the Election Tracker
 and chaos-policy rule, all four Presidential Powers' mechanics, the Veto
 Power, both win conditions, the lying rule, and the CC BY-NC-SA 4.0
@@ -125,13 +125,13 @@ presented as directly quoted.
 
 ## Scope
 
-- All 12 distinct "rules identities" the physical game ships (role,
-  party, policy, ballot, placard), at their full 10-player-maximum
-  quantities (60 physical pieces total) in one set, `standard-edition`.
-- Not modeled as separate cards: the 10 card envelopes, the draw-pile and
-  discard-pile marker cards, and the 3 physical Fascist-track boards --
-  none of these are "cards" in the role/party/policy/ballot/placard sense
-  this port's schema models, so they're described in `rules.md` instead.
-- No physical art assets (`printings.json` entries are template-only, no
-  `art` field) — this port is card *data*, not scanned/illustrated card
-  images.
+- All 13 distinct printable identities in the official PnP at their full
+  ten-player quantities, including the Draw and Discard Pile cards.
+- The Election Tracker is correctly modeled as a setup counter on the
+  Liberal board rather than as a made-up card. Ten player-supplied envelopes
+  remain setup equipment, not printable faces.
+- Exact source-backed art for every printable identity, both full foldable
+  placards, the Liberal board, and all three player-count Fascist boards.
+- The publisher PDF is the canonical PnP export. Forge's editable community
+  template is an explicitly separate derivative: changing semantic data never
+  silently alters or mislabels the immutable official artwork.

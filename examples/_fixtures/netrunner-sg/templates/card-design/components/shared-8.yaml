@@ -1,0 +1,152 @@
+name: Shared by Corp Identity, Runner Identity
+description: 11 ordered regions reused by corp-identity, runner-identity.
+regions:
+  - id: identity_circuit_left
+    type: rect
+    x: 1.2
+    "y": 12
+    w: 7
+    h: 45
+    fill: repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 .35mm,transparent .35mm 2.4mm)
+    opacity: 0.55
+    show_if: type == identity
+  - id: identity_circuit_right
+    type: rect
+    x: 55
+    "y": 12
+    w: 6.8
+    h: 45
+    fill: repeating-linear-gradient(45deg,rgba(255,255,255,.24) 0 .3mm,transparent .3mm 2.2mm)
+    opacity: 0.5
+    show_if: type == identity
+  - id: identity_panel_shadow
+    type: rect
+    x: 3
+    "y": 57.3
+    w: 57
+    h: 27
+    fill: "#05080b"
+    radius_mm: 1
+    shadow: 0 -1mm 1.4mm rgba(0,0,0,.4)
+    show_if: type == identity
+  - id: identity_panel
+    type: rect
+    x: 3.8
+    "y": 56.6
+    w: 55.4
+    h: 27
+    fill: linear-gradient(145deg,#fafbf8,#edf1ed)
+    stroke: palette-dark
+    stroke_w_mm: 0.5
+    radius_mm: 0.9
+    show_if: type == identity
+  - id: identity_watermark
+    type: richtext
+    src: card.attributes.faction
+    map:
+      anarch: "[faction_anarch]"
+      criminal: "[faction_criminal]"
+      shaper: "[faction_shaper]"
+      haas-bioroid: "[faction_hb]"
+      jinteki: "[faction_jinteki]"
+      nbn: "[faction_nbn]"
+      weyland-consortium: "[faction_weyland]"
+    x: 39
+    "y": 64.2
+    w: 13
+    h: 13
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    opacity: 0.065
+    filter: grayscale(1) contrast(1.5)
+    show_if: type == identity && attributes.faction != neutral-corp && attributes.faction != neutral-runner
+  - id: identity_type
+    type: text
+    text: "IDENTITY:"
+    x: 11.5
+    "y": 57.4
+    w: 14.2
+    h: 4.2
+    font: tech
+    size_pt: 6.4
+    align: left
+    valign: middle
+    color: "#10171d"
+    show_if: type == identity
+  - id: identity_subtypes
+    type: richtext
+    src: card.subtypes
+    transform: join
+    separator: " · "
+    x: 26.4
+    "y": 57.25
+    w: 27.5
+    h: 4.45
+    font: subtype
+    size_pt: 6.6
+    min_size_pt: 4.8
+    char_width_em: 0.58
+    line_height: 1
+    align: left
+    valign: middle
+    color: "#303a43"
+    no_wrap: true
+    autoshrink: true
+    show_if: type == identity
+  - id: identity_rule
+    type: rect
+    x: 11.5
+    "y": 61.5
+    w: 42.1
+    h: 0.62
+    fill: palette
+    clip_path: polygon(0 0,70% 0,72% 100%,100% 100%,100% 100%,0 100%)
+    show_if: type == identity
+  - id: identity_body
+    type: body
+    src: card.text
+    secondary_src: printing.flavor_text
+    secondary_font: flavor
+    secondary_color: "#414950"
+    secondary_scale: 0.84
+    x: 10.9
+    "y": 63
+    w: 41
+    h: 17.5
+    font: body
+    size_pt: 7.8
+    min_size_pt: 5.8
+    line_height: 1.14
+    secondary_line_height: 1.06
+    color: "#151b21"
+    symbols: true
+    symbol_style: plain
+    autoshrink: true
+    show_if: type == identity
+  - id: identity_set_icon
+    type: richtext
+    text: "[set_system_gateway]"
+    x: 27
+    "y": 82.3
+    w: 3.45
+    h: 3.45
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: invert(1)
+    opacity: 0.92
+    show_if: type == identity
+  - id: identity_collector
+    type: text
+    src: printing.collector_number
+    x: 31
+    "y": 82.75
+    w: 5
+    h: 2.8
+    font: label
+    size_pt: 4.1
+    align: left
+    valign: middle
+    color: "#ffffff"
+    show_if: type == identity

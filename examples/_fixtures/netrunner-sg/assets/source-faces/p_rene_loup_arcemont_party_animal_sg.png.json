@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "forge-pnp-face-extraction",
+  "printing_id": "p_rene_loup_arcemont_party_animal_sg",
+  "card_id": "rene_loup_arcemont_party_animal",
+  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "pdf_page": 2,
+  "slot": {
+    "row": 0,
+    "column": 0
+  },
+  "page_size_px": [
+    2481,
+    3508
+  ],
+  "grid_axes_px": {
+    "x": [
+      124,
+      868,
+      1612,
+      2356
+    ],
+    "y": [
+      208,
+      1238,
+      2270,
+      3300
+    ]
+  },
+  "source_box_px": [
+    124,
+    208,
+    868,
+    1238
+  ],
+  "normalization_crop_px": [
+    0,
+    0
+  ],
+  "output_size_px": [
+    744,
+    1030
+  ],
+  "dpi": 300,
+  "encoding": "lossless-png"
+}

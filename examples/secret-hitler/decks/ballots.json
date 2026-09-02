@@ -1,0 +1,10 @@
+{
+  "id": "ballot-supply",
+  "name": "Ballot supply",
+  "format_id": "standard",
+  "author": "Goat, Wolf, & Cabbage",
+  "cards": {
+    "ballot_ja": 10,
+    "ballot_nein": 10
+  }
+}

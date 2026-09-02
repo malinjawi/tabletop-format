@@ -1,0 +1,10 @@
+{
+  "id": "policy-deck",
+  "name": "Policy deck",
+  "format_id": "standard",
+  "author": "Goat, Wolf, & Cabbage",
+  "cards": {
+    "policy_liberal": 6,
+    "policy_fascist": 11
+  }
+}

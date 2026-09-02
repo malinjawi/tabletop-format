@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.example/schemas/forge-project.schema.json",
+  "title": "Forge portable game-design project manifest",
+  "type": "object",
+  "required": ["format", "version", "game", "source", "tables", "files"],
+  "properties": {
+    "format": { "const": "forge-design-project" },
+    "version": { "const": 1 },
+    "game": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["generated_at", "with_art", "hash"],
+      "properties": {
+        "generated_at": { "const": "deterministic" },
+        "with_art": { "type": "boolean" },
+        "ref": { "type": "string" },
+        "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "engines": { "type": ["object", "null"] },
+    "adapters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "root": { "type": "string", "minLength": 1 },
+          "format": { "type": "string", "minLength": 1 },
+          "version": { "type": "integer", "minimum": 1 },
+          "source_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "families": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "unavailable": { "type": "boolean" },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "tables": {
+      "type": "object",
+      "required": ["cards", "printings"],
+      "properties": {
+        "cards": { "$ref": "#/$defs/table" },
+        "printings": { "$ref": "#/$defs/table" }
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/file" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "table": {
+      "type": "object",
+      "required": ["editable_path", "base_path", "project_path", "id", "columns"],
+      "properties": {
+        "editable_path": { "type": "string" },
+        "base_path": { "type": "string" },
+        "project_path": { "type": "string" },
+        "id": { "const": "id" },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "type"],
+            "properties": {
+              "path": { "type": "string" },
+              "type": { "enum": ["string", "integer", "number", "boolean", "json"] }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "file": {
+      "type": "object",
+      "required": ["source_path", "project_path", "role", "sha256", "size"],
+      "properties": {
+        "source_path": { "type": "string" },
+        "project_path": { "type": "string" },
+        "role": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "size": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

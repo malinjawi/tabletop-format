@@ -12,12 +12,40 @@
     "typecheck": "tsc -p tsconfig.json",
     "validate:ember": "node tools/fmt.mjs validate examples/ember",
     "test": "./e2e.sh",
-    "test:quick": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp"
+    "test:affinity": "node tools/test-affinity-bridge.mjs",
+    "test:affinity:live": "node tools/affinity-live-stress.mjs",
+    "test:card-design": "node tools/test-card-design.mjs examples/_fixtures/netrunner-sg",
+    "test:design-engines": "node tools/test-design-engines.mjs examples/_fixtures/netrunner-sg",
+    "test:forge-project": "node tools/test-forge-project.mjs",
+    "test:forge-project:server": "node tools/test-forge-project-server.mjs",
+    "test:adapters": "node tools/check-adapters.mjs",
+    "test:security": "node tools/security-check.mjs",
+    "test:ui": "node tools/ui-smoke.mjs",
+    "test:nandeck": "node tools/test-nandeck-layout.mjs",
+    "test:rulebook-publication": "node tools/test-rulebook-publication.mjs",
+    "build:rulebook-publication": "node tools/build-rulebook-publication.mjs examples/_fixtures/netrunner-sg output/pdf/netrunner-sg-rulebook-publication",
+    "setup:dev": "node tools/setup-dev.mjs",
+    "doctor": "node tools/doctor.mjs",
+    "launch:gate": "./launch-gate.sh",
+    "export:pnpink-proof": "node tools/export-pnpink.mjs examples/_fixtures/netrunner-sg tmp/pnpink-proof",
+    "split:card-design": "node tools/split-layout-families.mjs",
+    "test:quick": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp",
+    "vtt:up": "docker compose -f deploy/docker-compose.vtt.yml up -d",
+    "vtt:down": "docker compose -f deploy/docker-compose.vtt.yml down"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "ajv": "^8.17.0",
     "ajv-formats": "^3.0.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "playwright-core": "^1.55.0",
+    "pg": "8.23.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.0",
+    "@types/pg": "8.23.1",
+    "typescript": "7.0.2"
   },
   "engines": {
     "node": ">=20"

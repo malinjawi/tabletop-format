@@ -1,0 +1,23 @@
+version: 1
+name: Cards Against Humanity production cards
+description: Two small, reviewable families preserve the black-prompt and white-answer visual language while every word remains live data.
+system: templates/card-design/system.yaml
+legacy_source: templates/layout.yaml
+components:
+  - id: foundation
+    label: Shared physical card
+    description: Poker-card trim, bleed, background, and radius shared by both families.
+    source: templates/card-design/components/foundation.yaml
+    applies_to: "*"
+families:
+  - id: white
+    label: White answer
+    match: { type: white }
+    source: templates/card-design/families/white.yaml
+    specimens: [white_01, white_09, white_40]
+  - id: black
+    label: Black prompt
+    match: { type: black }
+    source: templates/card-design/families/black.yaml
+    specimens: [black_01, black_14, black_15]
+region_order: [background, white-copy, black-copy, black-pick, white-brand, black-brand, white-edge, black-edge]

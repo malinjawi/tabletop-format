@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/design-engines.schema.json",
+  "title": "Card design engine registry",
+  "description": "Selects one active production renderer while allowing experimental editor adapters to be versioned and reviewed without changing releases.",
+  "type": "object",
+  "required": ["version", "active", "engines"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "active": { "$ref": "#/$defs/id" },
+    "engines": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/engine" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "path": {
+      "type": "string",
+      "pattern": "^templates/card-design/[A-Za-z0-9_./-]+\\.(?:yaml|yml)$"
+    },
+    "engine": {
+      "type": "object",
+      "required": ["id", "type", "label", "source", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["forge-native", "pnpink"] },
+        "label": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "source": { "$ref": "#/$defs/path" },
+        "status": { "enum": ["active", "experimental", "disabled"] },
+        "families": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    }
+  }
+}
