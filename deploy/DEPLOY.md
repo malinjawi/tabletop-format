@@ -157,6 +157,26 @@ Without `--require-current`, an intact older receipt is reported as
 cohort that requires the current terms. A corrupt snapshot or a missing current
 receipt exits nonzero.
 
+## Participant data access and privacy requests
+
+A signed-in participant can choose **Download my data** from the account menu.
+`GET /api/me/export` returns a `no-store` JSON attachment built from an explicit
+field allowlist: account and policy evidence, authored discussion/review
+activity, social state, connector metadata, and operator access events. It
+contains no password hash, session/invitation/recovery token or digest, PR
+repository snapshot, generated artifact body, release rights manifest, or
+build receipt. The production restore drill verifies that this export survives
+recovery with those exclusions intact.
+
+The export points participants to the separate Forge project package for their
+portable game source. Requests for retained security logs, correction,
+deletion, or an export when login is unavailable go to `FORGE_CONTACT_EMAIL`.
+Authenticate the requester through the agreed pilot channel, issue account
+recovery when appropriate, and preserve authorship required by shared Git
+history. Do not perform direct row deletion: document what can be corrected,
+removed, anonymized, or de-indexed and obtain jurisdiction-specific advice for
+the real operator before public registration or paid service.
+
 If a participant loses access, issue a short-lived recovery token instead of
 editing the database or setting a password for them:
 

@@ -125,3 +125,8 @@ operator cannot respond to support/moderation reports.
    their identity or authored work. Record the access-event ID, confirm an old
    session and login both fail, and use `restore` only after the operator has
    documented why access may resume.
+10. Have one internal pilot use **Download my data** and confirm that the JSON
+    contains their account and policy receipt but no credential/token fields.
+    Handle correction, deletion, retained-log, or inaccessible-account requests
+    through the named contact and the privacy-request runbook; never erase Git
+    authorship ad hoc.

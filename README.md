@@ -67,7 +67,7 @@ inputs are recorded in
 
 ```
 ./e2e.sh                                             # 185-check functional integration gate
-./journey.sh                                         # 94-assertion two-user golden path
+./journey.sh                                         # 96-assertion two-user golden path
 ./perf.sh                                            # bounded scale + concurrent-write smoke
 ./launch-gate.sh                                     # all mandatory controlled-beta gates
 ./demo.sh                                            # the whole loop, one command, narrated
