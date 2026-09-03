@@ -53,6 +53,35 @@ regenerate every frozen release artifact from an empty cache. Set
 
 ## 2. Create configuration and secrets
 
+The recommended path creates a new configuration and all ten protected secret
+files without putting credential values on the command line or in terminal
+output. Supply R2 credentials as existing owner-readable files. The command
+defaults Forgejo and PostgreSQL to the recovery-qualified digests, generates
+their database and installation secrets, copies the R2 values with mode `0600`,
+and deliberately leaves only the first-boot Forge token empty. It refuses to
+overwrite either target:
+
+```sh
+node deploy/bootstrap.mjs \
+  --forge-origin https://forge.example \
+  --git-origin https://git.forge.example \
+  --operator "Named accountable operator" \
+  --contact support@example.com \
+  --gateway-image registry.example/forge/platform@sha256:<promoted-digest> \
+  --r2-account-id <32-hex-account-id> \
+  --r2-bucket forge-lfs \
+  --r2-access-key-file /secure/input/r2-access-key \
+  --r2-secret-key-file /secure/input/r2-secret-key \
+  --backup-destination /encrypted/off-host/forge-backups
+
+node deploy/preflight.mjs --env deploy/.env --first-boot
+```
+
+The generated `.env` is safe to load with the shell commands in this runbook.
+Inspect it before first boot; it contains public configuration and image
+references, never secret values. The expanded commands below document the same
+process for recovery and manual audit.
+
 ```sh
 cd deploy
 cp .env.example .env

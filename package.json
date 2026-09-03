@@ -30,6 +30,8 @@
     "smoke:alpha": "node tools/alpha-readiness.mjs",
     "test:production-config": "node tools/production-config-check.mjs",
     "test:production-preflight": "node tools/test-deploy-preflight.mjs",
+    "deploy:bootstrap": "node deploy/bootstrap.mjs",
+    "test:deploy-bootstrap": "node tools/test-deploy-bootstrap.mjs",
     "pilot:invite": "node tools/pilot-invite.mjs",
     "pilot:account": "node tools/pilot-account.mjs",
     "test:pilot-invite": "node tools/test-pilot-invite-registration.mjs",

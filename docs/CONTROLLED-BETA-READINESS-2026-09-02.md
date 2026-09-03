@@ -29,7 +29,7 @@ The strict gate at the candidate commit produced:
 
 - dependency audit: 0 production vulnerabilities;
 - 13 adapter contracts: 5 stable, 8 explicitly limited;
-- 185 functional integration tests, including 37 assertions through the real
+- 186 functional integration tests, including 37 assertions through the real
   Apps Script connector plus browser-executed sidebar recovery states;
 - 12 focused CSV mapping contract checks plus a real-browser noncanonical-header
   import, 320-pixel layout check, and exact committed-receipt verification;

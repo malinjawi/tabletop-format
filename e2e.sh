@@ -126,6 +126,7 @@ check "source-overlay editor field contract" node tools/source-overlay-field-aud
 check "versioned adapter contracts" node tools/check-adapters.mjs
 check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint
 check "strict production host preflight" node tools/test-deploy-preflight.mjs
+check "safe production deployment bootstrap" node tools/test-deploy-bootstrap.mjs
 check "five-person pilot decision contract" node tools/test-pilot-report.mjs
 check "production source package contracts" node tools/test-source-assets.mjs
 check "source-packaged Secret Hitler validates" node tools/validate.mjs examples/secret-hitler

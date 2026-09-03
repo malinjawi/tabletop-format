@@ -66,7 +66,7 @@ inputs are recorded in
 [`docs/CONTROLLED-BETA-READINESS-2026-09-02.md`](docs/CONTROLLED-BETA-READINESS-2026-09-02.md).
 
 ```
-./e2e.sh                                             # 185-check functional integration gate
+./e2e.sh                                             # 186-check functional integration gate
 ./journey.sh                                         # 96-assertion two-user golden path
 ./perf.sh                                            # bounded scale + concurrent-write smoke
 ./launch-gate.sh                                     # all mandatory controlled-beta gates
