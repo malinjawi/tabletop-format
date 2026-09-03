@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 
 const root = resolve(import.meta.dirname, ".."), temp = mkdtempSync(join(tmpdir(), "forge-bootstrap-test-"));
 try {
+  const realForgejo = process.argv.includes("--real-forgejo");
   const input = join(temp, "input"), access = join(input, "access"), secret = join(input, "secret");
   mkdirSync(input, { mode: 0o700 });
   writeFileSync(access, "r2-test-access-0123456789\n", { mode: 0o600 });
@@ -14,7 +15,7 @@ try {
   chmodSync(access, 0o600); chmodSync(secret, 0o600);
   const env = join(temp, "deployment", ".env"), secrets = join(temp, "deployment", ".secrets");
   const digest = letter => letter.repeat(64);
-  const args = ["deploy/bootstrap.mjs", "--test-deterministic-secrets",
+  const args = ["deploy/bootstrap.mjs", ...(realForgejo ? [] : ["--test-deterministic-secrets"]),
     "--forge-origin", "https://forge.pilot.test", "--git-origin", "https://git.forge.pilot.test",
     "--operator", "Forge Pilot Operator", "--contact", "ops@forge.test",
     "--gateway-image", `registry.forge.test/platform@sha256:${digest("a")}`,
@@ -45,17 +46,19 @@ try {
   assert.notEqual(overwrite.status, 0);
   assert.match(overwrite.stderr, /refusing to overwrite/);
   assert.doesNotMatch(`${overwrite.stdout}${overwrite.stderr}`, /r2-test-(?:access|secret)/);
-  const unsafeArgs = [...args];
-  unsafeArgs[unsafeArgs.indexOf("--operator") + 1] = "Operator $(touch should-not-run)";
-  const unsafeEnv = join(temp, "unsafe", ".env"), unsafeSecrets = join(temp, "unsafe", ".secrets");
-  unsafeArgs[unsafeArgs.indexOf("--env") + 1] = unsafeEnv;
-  unsafeArgs[unsafeArgs.indexOf("--secret-dir") + 1] = unsafeSecrets;
-  const unsafe = spawnSync(process.execPath, unsafeArgs, { cwd: root, encoding: "utf8" });
-  assert.notEqual(unsafe.status, 0);
-  assert.match(unsafe.stderr, /unsafe in a deployment environment file/);
-  assert.equal(existsSync(unsafeEnv), false);
-  assert.equal(existsSync(unsafeSecrets), false);
-  console.log("DEPLOYMENT BOOTSTRAP GREEN — exact config and unique protected secrets are created atomically; overwrite is refused without disclosure.");
+  if (!realForgejo) {
+    const unsafeArgs = [...args];
+    unsafeArgs[unsafeArgs.indexOf("--operator") + 1] = "Operator $(touch should-not-run)";
+    const unsafeEnv = join(temp, "unsafe", ".env"), unsafeSecrets = join(temp, "unsafe", ".secrets");
+    unsafeArgs[unsafeArgs.indexOf("--env") + 1] = unsafeEnv;
+    unsafeArgs[unsafeArgs.indexOf("--secret-dir") + 1] = unsafeSecrets;
+    const unsafe = spawnSync(process.execPath, unsafeArgs, { cwd: root, encoding: "utf8" });
+    assert.notEqual(unsafe.status, 0);
+    assert.match(unsafe.stderr, /unsafe in a deployment environment file/);
+    assert.equal(existsSync(unsafeEnv), false);
+    assert.equal(existsSync(unsafeSecrets), false);
+  }
+  console.log(`DEPLOYMENT BOOTSTRAP GREEN — ${realForgejo ? "the pinned Forgejo CLI generated" : "test generation produced"} exact config and unique protected secrets atomically; overwrite is refused without disclosure.`);
 } finally {
   rmSync(temp, { recursive: true, force: true });
 }

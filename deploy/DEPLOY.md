@@ -82,6 +82,14 @@ Inspect it before first boot; it contains public configuration and image
 references, never secret values. The expanded commands below document the same
 process for recovery and manual audit.
 
+The normal automated test uses non-sensitive temporary values. Before changing
+the qualified Forgejo image, exercise its real secret CLI in an isolated,
+networkless, read-only container:
+
+```sh
+node tools/test-deploy-bootstrap.mjs --real-forgejo
+```
+
 ```sh
 cd deploy
 cp .env.example .env

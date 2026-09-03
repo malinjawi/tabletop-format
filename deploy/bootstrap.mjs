@@ -111,7 +111,8 @@ if (failures.length) {
 
 const forgejoSecret = kind => {
   if (testSecrets) return `test-${kind.toLowerCase()}-${randomBytes(16).toString("hex")}`;
-  const result = spawnSync("docker", ["run", "--rm", "--entrypoint", "forgejo", forgejoImage, "generate", "secret", kind],
+  const result = spawnSync("docker", ["run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
+    "--security-opt", "no-new-privileges:true", "--entrypoint", "forgejo", forgejoImage, "generate", "secret", kind],
     { cwd: ROOT, encoding: "utf8", timeout: 120_000, maxBuffer: 1024 * 1024 });
   const value = result.stdout.trim();
   if (result.status !== 0 || value.length < 16)
