@@ -18,6 +18,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { validPolicySet } from "./policy-acceptance.mjs";
+import { normalizePersonalData, personalDataQueries } from "./personal-data.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -219,6 +220,9 @@ export const q = {
             s.terms_sha256, s.privacy_sha256, s.community_sha256, s.notice_sha256
      FROM policy_acceptances a JOIN policy_sets s ON s.id = a.policy_set_id
      WHERE a.user_id = $1 ORDER BY a.accepted_at DESC`, [userId]),
+  personalDataExport: async (db, userId) => normalizePersonalData(Object.fromEntries(
+    await Promise.all(Object.entries(personalDataQueries("$1")).map(async ([key, query]) => [key,
+      query.one ? await one(db, query.sql, [userId]) : await all(db, query.sql, [userId])])))),
 
   accountAccessByHandle: (db, handle) => one(db,
     `SELECT id, handle, created_at, suspended_at, suspension_reason,

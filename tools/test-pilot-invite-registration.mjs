@@ -2,7 +2,7 @@
 /** Prove the operator CLI and production registration route as one workflow. */
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -118,6 +118,18 @@ try {
   const browserRegistration = await registrationResponse;
   assert.equal(browserRegistration.status(), 201, await browserRegistration.text());
   await page.locator("#authArea").getByText("@amina").waitFor();
+  await page.locator(".account-menu summary").click();
+  const personalDataLink = page.getByRole("link", { name: "Download my data" });
+  assert.ok(await personalDataLink.isVisible());
+  const [personalDataDownload] = await Promise.all([
+    page.waitForEvent("download"), personalDataLink.click(),
+  ]);
+  assert.equal(personalDataDownload.suggestedFilename(), "forge-amina-account-data.json");
+  const downloadedData = JSON.parse(readFileSync(await personalDataDownload.path(), "utf8"));
+  assert.equal(downloadedData.format, "forge-account-data");
+  assert.equal(downloadedData.account.email, "amina@example.com");
+  assert.equal(downloadedData.policy_acceptances[0].policy_set_id, health.policy_set);
+  assert.doesNotMatch(JSON.stringify(downloadedData), /pass_hash|token_hash|\"token\"|\"base\"|\"proposed\"/);
   assert.equal(await page.locator("#amInvite").inputValue(), "", "browser clears the bearer token immediately");
   assert.equal(await page.locator("#amPass").inputValue(), "", "browser clears the password immediately");
   const receiptDb = new DatabaseSync(dbPath);
@@ -273,7 +285,7 @@ try {
   assert.equal(listed.status, 0, listed.stderr);
   assert.match(listed.stdout, /redeemed[\s\S]*Amina designer[\s\S]*amina/);
   assert.doesNotMatch(listed.stdout, /fpi_|[a-f0-9]{64}/i);
-  console.log("PILOT ACCOUNT ACCESS GREEN — policy acceptance, single-use admission, recovery, suspension, and restoration are auditable and safe.");
+  console.log("PILOT ACCOUNT ACCESS GREEN — policy acceptance, personal-data export, single-use admission, recovery, suspension, and restoration are auditable and safe.");
 } finally {
   if (browser) await browser.close();
   if (server && !server.killed) server.kill("SIGTERM");

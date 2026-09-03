@@ -21,7 +21,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 #top .spacer{flex:1}
 #top .av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#8c2f1b,#e0a458);border:1.5px solid rgba(255,255,255,.4)}
 #authArea{display:flex;align-items:center;white-space:nowrap}
-.account-menu{position:relative}.account-menu summary{list-style:none;color:#d6dae0;font-size:13px;cursor:pointer;padding:5px 7px;border-radius:6px}.account-menu summary::-webkit-details-marker{display:none}.account-menu summary:hover{background:#ffffff12;color:#fff}.account-popover{position:absolute;right:0;top:calc(100% + 7px);z-index:95;width:150px;padding:6px;background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 10px 30px #0003}.account-popover button{display:block;width:100%;min-height:44px;padding:7px 9px;border:0;background:none;text-align:left;font:inherit;color:var(--fg);cursor:pointer;border-radius:5px}.account-popover button:hover{background:var(--bg)}
+.account-menu{position:relative}.account-menu summary{list-style:none;color:#d6dae0;font-size:13px;cursor:pointer;padding:5px 7px;border-radius:6px}.account-menu summary::-webkit-details-marker{display:none}.account-menu summary:hover{background:#ffffff12;color:#fff}.account-popover{position:absolute;right:0;top:calc(100% + 7px);z-index:95;width:180px;padding:6px;background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 10px 30px #0003}.account-popover button,.account-popover a{display:block;width:100%;min-height:44px;padding:11px 9px;border:0;background:none;text-align:left;font:inherit;color:var(--fg);cursor:pointer;border-radius:5px;text-decoration:none;box-sizing:border-box}.account-popover button:hover,.account-popover a:hover{background:var(--bg)}
 /* buttons & badges */
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);background:var(--bg);border-radius:6px;padding:5px 14px;font-size:13px;font-weight:600;color:var(--fg);cursor:pointer}
 .btn:hover{background:#eef1f4}
@@ -330,7 +330,7 @@ function renderAuthArea(){
   const el=document.getElementById("authArea");
   if(!LIVE){ el.innerHTML='<div class="av" title="you"></div>'; return; }
   el.innerHTML = ME
-    ? `<details class="account-menu"><summary>@${esc(ME.handle)} ▾</summary><div class="account-popover"><button onclick="signOut()">Sign out</button></div></details>`
+    ? `<details class="account-menu"><summary>@${esc(ME.handle)} ▾</summary><div class="account-popover"><a href="/api/me/export">Download my data</a><button onclick="signOut()">Sign out</button></div></details>`
     : `<button class="btn" style="background:#e0632f;color:#fff;border:none" onclick="authOpen()">Sign in</button>`;
 }
 function authOpen(mode){ authMode(mode||"login"); document.getElementById("authModal").style.display="flex"; }

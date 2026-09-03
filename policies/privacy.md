@@ -10,4 +10,6 @@ Service providers may include the deployment host, Forgejo/Postgres host, object
 
 Beta retention: expired sessions are removed automatically; operational logs should be retained no longer than 30 days unless needed for security; account/conversation and audit data remain while the account or legal obligation exists; immutable published release and jam receipts remain part of the public provenance record. Ask {{CONTACT}} for access, correction, export, or deletion. Some public Git/release history cannot be rewritten without breaking other contributors’ provenance; Forge will explain what can be removed or de-indexed.
 
+Signed-in participants can use **Download my data** in the account menu for an allowlisted JSON copy of their account, policy receipts, authored discussion and review activity, social state, connector metadata, and operator access events. Authentication secrets, repository snapshots, and generated artifact bodies are excluded. Download each owned project's portable Forge package separately; ask {{CONTACT}} for relevant retained security logs, correction, deletion, or help when account access is unavailable.
+
 Do not place sensitive personal information in game repositories, cards, commit messages, Sheets cells promoted to Forge, or public discussion.

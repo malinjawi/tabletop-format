@@ -109,6 +109,17 @@ assert(me1.data.policy_acceptances?.length === 1
   && me1.data.policy_acceptances[0].policy_set_id === health.data.policy_set
   && me1.data.policy_acceptances[0].method === "clickwrap",
   "alice can inspect the exact policy-set receipt attached to her account");
+assert((await api("GET", "/api/me/export")).status === 401,
+  "private account-data export cannot be downloaded anonymously");
+const aliceDataExport = await api("GET", "/api/me/export", { token: A });
+const exportText = JSON.stringify(aliceDataExport.data);
+assert(aliceDataExport.status === 200
+  && aliceDataExport.headers.get("content-disposition")?.includes("forge-alice-account-data.json")
+  && aliceDataExport.headers.get("cache-control")?.includes("no-store")
+  && aliceDataExport.data.account?.email === "alice@tidepool.games"
+  && aliceDataExport.data.policy_acceptances?.[0]?.policy_set_id === health.data.policy_set
+  && !/pass_hash|token_hash|\"token\"|\"base\"|\"proposed\"/.test(exportText),
+  "alice downloads an allowlisted private-data export without credentials or repository snapshots");
 
 console.log("== ACT 2: Alice works on it ==");
 const art = await api("POST", "/api/games/tidepool/assets?path=assets/art/riptide.png",

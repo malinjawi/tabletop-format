@@ -46,6 +46,15 @@ assert(restoredAlice.policy_acceptances?.length===1&&restoredBob.policy_acceptan
   &&/^[a-f0-9]{64}$/.test(restoredAlice.policy_acceptances[0].terms_sha256||""),
   "exact account-policy receipts survived PostgreSQL backup and restore",
   {alice:restoredAlice.policy_acceptances,bob:restoredBob.policy_acceptances});
+const restoredExport=await request("GET","/api/me/export",{token:A});
+const restoredExportText=JSON.stringify(restoredExport.data);
+assert(restoredExport.response.ok
+  &&restoredExport.response.headers.get("cache-control")?.includes("no-store")
+  &&restoredExport.data.account?.email==="alice@tidepool.games"
+  &&restoredExport.data.policy_acceptances?.[0]?.policy_set_id===health.data.policy_set
+  &&restoredExport.data.authored_proposals?.length===0
+  &&!/pass_hash|token_hash|\"token\"|\"base\"|\"proposed\"/.test(restoredExportText),
+  "allowlisted participant data export survived restore without credential or repository snapshots");
 
 const catalog=(await request("GET","/api/games")).data;
 const original=catalog.find(game=>game.slug==="tidepool");

@@ -10,6 +10,7 @@
 const PG = process.env.DB === "postgres";
 import { createHash } from "node:crypto";
 import { makePolicySet, validPolicySet } from "../platform/policy-acceptance.mjs";
+import { assertPersonalDataSafe } from "../platform/personal-data.mjs";
 const { openDb, q, newId } = PG
   ? await import("../platform/db-pg.mjs")
   : await import("../platform/db.mjs");
@@ -67,6 +68,10 @@ assert(invitedEvidence.length === 1 && validPolicySet({ id: invitedEvidence[0].p
   terms_sha256: invitedEvidence[0].terms_sha256, privacy_sha256: invitedEvidence[0].privacy_sha256,
   community_sha256: invitedEvidence[0].community_sha256, notice_sha256: invitedEvidence[0].notice_sha256 }),
   "operator evidence surface can cryptographically verify the stored policy snapshot");
+const invitedExport = assertPersonalDataSafe(await q.personalDataExport(db, invited.id));
+assert(invitedExport.account.handle === invited.handle && invitedExport.invitation.length === 1
+  && invitedExport.policy_acceptances[0].policy_set_id === policySet.id,
+  "participant export includes admission and exact policy evidence without bearer secrets");
 let replayed = false;
 try {
   await q.registerUserWithInvite(db,
@@ -355,6 +360,15 @@ await q.connectSource(db, { game_slug: slug, kind: "sheet", url: "https://exampl
 src = await q.sourceFor(db, slug, "sheet");
 assert(src.last_sha === "base999" && src.source_hash == null && src.last_sync == null,
   "reconnecting resets stale synchronization metadata");
+const personalExport = assertPersonalDataSafe(await q.personalDataExport(db, ana.id));
+assert(personalExport.account.email === ana.email && personalExport.author_claims.length === 1
+  && personalExport.owned_projects.some(project => project.slug === slug)
+  && personalExport.authored_proposals.some(proposal => proposal.id === prId)
+  && personalExport.authored_issues.some(issue => issue.id === iid)
+  && personalExport.authored_comments.length === 2
+  && personalExport.authored_releases.some(release => release.tag === "v1.0")
+  && personalExport.activity.length >= 2 && personalExport.connected_sources.length === 1,
+  "allowlisted export covers the participant's account, authorship, activity, and connector record");
 await q.disconnectSource(db, slug, "sheet");
 assert(!(await q.sourceFor(db, slug, "sheet")), "disconnectSource removes the connector");
 

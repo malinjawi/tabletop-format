@@ -49,6 +49,7 @@ import { RIGHTS_MANIFEST, auditRights, forkRightsManifest, parseRights, rightsMa
   rightsReceiptBytes, setFileRight } from "./platform/rights.mjs";
 import { loadRegistrationPolicySet, POLICY_ACCEPTANCE_NOTICE,
   renderPolicyText } from "./platform/policy-acceptance.mjs";
+import { assertPersonalDataSafe } from "./platform/personal-data.mjs";
 
 /* ---------- config ---------- */
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -771,6 +772,15 @@ gw.route("GET", "/api/me", async (ctx) => {
     games: await q.gamesOwnedBy(db, u.id),
     policy_acceptances: await q.policyAcceptancesByUser(db, u.id) });
 }, "who am I + claims + stars + owned games + policy receipts");
+gw.route("GET", "/api/me/export", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const data = assertPersonalDataSafe(await q.personalDataExport(db, u.id));
+  ctx.setHeader("cache-control", "private, no-store");
+  ctx.setHeader("content-disposition", `attachment; filename="forge-${u.handle}-account-data.json"`);
+  ctx.send(200, { format: "forge-account-data", version: 1, generated_at: Date.now(),
+    repository_source: "Download each owned project's Forge project package separately; game Git history is not duplicated here.",
+    ...data });
+}, "download the authenticated participant's allowlisted account and activity data");
 /** @param {any} u @param {string} title @param {string|undefined} csv @param {string} authorStr
  * @param {{brief?: any, license?: string, csvImport?: any}} [options] */
 async function hostGame(u, title, csv, authorStr, options = {}) {
