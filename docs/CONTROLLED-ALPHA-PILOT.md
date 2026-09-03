@@ -71,6 +71,14 @@ npm run pilot:report -- /encrypted/off-host/evidence/alpha-01.json
 The report is deliberately fail-closed: an integrity stop condition produces
 `HOLD` even when completion numbers look good.
 
+It also opens the referenced production-preflight evidence and Sheets package
+receipt. `PROCEED` is impossible when either file is missing, failed, belongs
+to another commit/origin/image, was packaged from dirty connector sources, or
+no longer matches the recorded add-on file hashes. Relative paths resolve from
+the cohort record, so keep the record, preflight JSON, and connector package
+together in the protected evidence directory. A checked box or copied path is
+not launch evidence by itself.
+
 Afterward ask only: what did you expect to happen, where did you lose trust,
 what tool would you return to instead, and would you use Forge for the next
 iteration of this same game?

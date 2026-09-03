@@ -322,7 +322,12 @@ Then run the mutating two-person path with disposable pilot accounts. Use the
 cohort protocol and success/stop thresholds in
 [`../docs/CONTROLLED-ALPHA-PILOT.md`](../docs/CONTROLLED-ALPHA-PILOT.md).
 The first cohort is exactly five people; its evidence remains outside Git and
-is evaluated with `npm run pilot:report -- /path/to/cohort.json`.
+is evaluated with `npm run pilot:report -- /path/to/cohort.json`. The evaluator
+opens both `preflight_evidence` and the Sheets `package_receipt`, verifies their
+green checks and file hashes, and binds their commit, origin, and image digests
+to the candidate in the cohort record. Keep those files available beside the
+private record; manually setting the result fields cannot substitute evidence
+from the exact deployed candidate.
 
 ## 7. Backup and restore drill
 
