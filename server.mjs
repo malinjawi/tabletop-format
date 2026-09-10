@@ -1592,6 +1592,7 @@ function componentSetupDocuments(dir) {
 }
 function componentSetupBytes(path, document, before = "") {
   if (path.toLowerCase().endsWith(".json")) return `${JSON.stringify(document, null, 2)}\n`;
+  if (!String(before).trim()) return yaml.dump(document, { noRefs: true, lineWidth: -1, sortKeys: false });
   const source = YAML.parseDocument(before, { keepSourceTokens: true });
   if (source.errors.length) throw new Error(`existing setup YAML is invalid: ${source.errors[0].message}`);
   source.set("pieces", document.pieces || []);
@@ -1599,17 +1600,19 @@ function componentSetupBytes(path, document, before = "") {
 }
 gw.route("GET", "/api/games/:slug/components/pieces", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const user = await authedUser(ctx), raw = await store.readFile(slug, "components/tokens.json");
+  const user = await authedUser(ctx);
   const ref = await store.headSha(slug);
   const materialized = await store.materialize(slug, ref);
   try {
+    const piecePath = join(materialized.dir, "components/tokens.json");
+    const designPath = join(materialized.dir, COMPONENT_DESIGN_PATH);
     let design;
     try { design = loadComponentDesign(materialized.dir); } catch (error) {
       return ctx.send(422, { error: `component design is invalid: ${error.message}` });
     }
-    ctx.send(200, { ref, pieces: raw ? JSON.parse(raw.toString()) : [], design,
+    ctx.send(200, { ref, pieces: existsSync(piecePath) ? JSON.parse(readFileSync(piecePath, "utf8")) : [], design,
       setups: componentSetupDocuments(materialized.dir), design_source: COMPONENT_DESIGN_PATH,
-      inferred_design: !(await store.readFile(slug, COMPONENT_DESIGN_PATH)),
+      inferred_design: !existsSync(designPath),
       access: { signed_in: !!user, can_write: await canWrite(user, slug) } });
   } finally { materialized.cleanup(); }
 }, "versioned pieces plus reusable visual families");
@@ -1622,10 +1625,13 @@ gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
   if (setup && (!/^setups\/[A-Za-z0-9_.-]+\.(?:json|ya?ml)$/.test(setup.path || "")
     || !setup.document || typeof setup.document !== "object" || Array.isArray(setup.document)))
     return ctx.send(422, { error: "setup must contain a safe setups/*.yaml or .json path and document object" });
+  const requestedRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(requestedRef))
+    return ctx.send(422, { error: "base_ref must be the exact Git revision opened by Piece Studio", written: false });
   const ref = await store.headSha(slug);
-  if (body.base_ref && body.base_ref !== ref)
+  if (requestedRef !== ref)
     return ctx.send(409, { error: "Component source changed since this draft opened. Reload Piece Studio before reviewing it.",
-      base_ref: body.base_ref, current_ref: ref, written: false });
+      base_ref: requestedRef, current_ref: ref, written: false });
   const materialized = await store.materialize(slug, ref);
   try {
     const pieceContent = `${JSON.stringify(pieces, null, 2)}\n`, designContent = `${JSON.stringify(design, null, 2)}\n`;
@@ -1634,8 +1640,11 @@ gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
     writeFileSync(piecePath, pieceContent); writeFileSync(designPath, designContent);
     if (setup) {
       const path = join(materialized.dir, setup.path);
-      if (!existsSync(path)) return ctx.send(422, { error: `setup '${setup.path}' does not exist; create setup documents through the setup workflow` });
-      try { writeFileSync(path, componentSetupBytes(setup.path, setup.document, readFileSync(path, "utf8"))); }
+      try {
+        const before = existsSync(path) ? readFileSync(path, "utf8") : "";
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, componentSetupBytes(setup.path, setup.document, before));
+      }
       catch (error) { return ctx.send(422, { error: error.message }); }
     }
     const validation = py("validate.py", [materialized.dir]);
@@ -1647,7 +1656,8 @@ gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
     try { built = buildComponentProduction(materialized.dir, { sourceRef: `draft:${candidateHash.slice(0, 16)}@${ref.slice(0, 12)}` }); }
     catch (error) { return ctx.send(422, { error: `component production proof failed: ${error.message}` }); }
     const previewFiles = [built.manifest.cut_sheets[0], built.manifest.back_cut_sheets[0],
-      built.manifest.large_piece_tiles[0]?.files?.[0]?.file].filter(Boolean);
+      built.manifest.large_piece_tiles[0]?.files?.[0]?.file,
+      built.manifest.setup_maps[0]?.file].filter(Boolean);
     ctx.setHeader("cache-control", "private, no-store");
     ctx.send(200, { ok: true, written: false, ref, manifest: built.manifest,
       previews: previewFiles.map(file => ({ file, svg: built.entries.get(file).toString("utf8") })) });
@@ -1662,44 +1672,68 @@ gw.route("PUT", "/api/games/:slug/components/pieces", async (ctx) => {
   if (setup && (!/^setups\/[A-Za-z0-9_.-]+\.(?:json|ya?ml)$/.test(setup.path || "")
     || !setup.document || typeof setup.document !== "object" || Array.isArray(setup.document)))
     return ctx.send(422, { error: "setup must contain a safe setups/*.yaml or .json path and document object" });
+  const requestedRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(requestedRef))
+    return ctx.send(422, { saved: false, written: false,
+      error: "base_ref must be the exact Git revision opened by Piece Studio" });
   const currentRef = await store.headSha(slug);
-  if (body.base_ref && body.base_ref !== currentRef)
+  if (requestedRef !== currentRef)
     return ctx.send(409, { saved: false, error: "Component source changed since this draft opened. Reload Piece Studio; Forge did not overwrite it.",
-      base_ref: body.base_ref, current_ref: currentRef });
+      base_ref: requestedRef, current_ref: currentRef, written: false });
   const pieceContent = JSON.stringify(pieces, null, 2) + "\n", designContent = JSON.stringify(design, null, 2) + "\n";
-  const beforePieces = (await store.readFile(slug, "components/tokens.json"))?.toString() || "[]\n";
-  const beforeDesign = (await store.readFile(slug, COMPONENT_DESIGN_PATH))?.toString() || "";
-  const beforeSetupBuffer = setup ? await store.readFile(slug, setup.path) : null;
-  if (setup && !beforeSetupBuffer) return ctx.send(422, { error: `setup '${setup.path}' does not exist; create setup documents through the setup workflow` });
-  let setupContent = null, setupChanged = false;
+  const beforePieces = (await exactFileBytes(slug, currentRef, "components/tokens.json"))?.toString() || "[]\n";
+  const beforeDesign = (await exactFileBytes(slug, currentRef, COMPONENT_DESIGN_PATH))?.toString() || "";
+  const beforeSetupBuffer = setup ? await exactFileBytes(slug, currentRef, setup.path) : null;
+  let setupContent = null, setupChanged = false, setupCreated = false;
   try {
     if (setup) {
-      const beforeSetupText = beforeSetupBuffer.toString(), beforeSetupDocument = setup.path.toLowerCase().endsWith(".json")
-        ? JSON.parse(beforeSetupText) : yaml.load(beforeSetupText);
-      setupChanged = JSON.stringify(beforeSetupDocument?.pieces || []) !== JSON.stringify(setup.document.pieces || []);
+      const beforeSetupText = beforeSetupBuffer?.toString() || "";
+      const beforeSetupDocument = beforeSetupBuffer ? (setup.path.toLowerCase().endsWith(".json")
+        ? JSON.parse(beforeSetupText) : yaml.load(beforeSetupText)) : null;
+      setupCreated = !beforeSetupBuffer;
+      setupChanged = setupCreated
+        || JSON.stringify(beforeSetupDocument?.pieces || []) !== JSON.stringify(setup.document.pieces || []);
       if (setupChanged) setupContent = componentSetupBytes(setup.path, setup.document, beforeSetupText);
     }
   }
   catch (error) { return ctx.send(422, { error: error.message }); }
   if (beforePieces === pieceContent && beforeDesign === designContent && !setupChanged)
     return ctx.send(200, { saved: false, message: "no component changes" });
-  const validation = await validateCandidate(slug, "components/tokens.json", pieceContent,
+  const validation = await validateCandidateAt(slug, currentRef, "components/tokens.json", pieceContent,
     { [COMPONENT_DESIGN_PATH]: designContent, ...(setupChanged ? { [setup.path]: setupContent } : {}) });
   if (!validation.ok) return ctx.send(422, { saved: false, error: "component design failed validation", report: validation.report });
+  if (await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: "Component source changed during validation. Reload Piece Studio; Forge did not overwrite it.",
+      base_ref: currentRef, current_ref: await store.headSha(slug) });
   const beforeRows = JSON.parse(beforePieces), changes = diffRows(beforeRows, pieces);
   const baselineDesign = beforeDesign ? JSON.parse(beforeDesign) : defaultComponentDesign();
   const familiesChanged = design.families.filter(family => JSON.stringify(family)
     !== JSON.stringify(baselineDesign.families.find(candidate => candidate.id === family.id))).map(family => family.id);
-  const summary = `pieces: ${changes.changed.length} changed, ${changes.added.length} added, ${changes.removed.length} removed${setupChanged ? "; setup placement changed" : ""}`;
+  const summary = `pieces: ${changes.changed.length} changed, ${changes.added.length} added, ${changes.removed.length} removed${setupCreated ? "; playable setup created" : setupChanged ? "; setup placement changed" : ""}`;
   const files = [
     { path: "components/tokens.json", content: pieceContent },
     { path: COMPONENT_DESIGN_PATH, content: designContent },
     ...(setupChanged ? [{ path: setup.path, content: setupContent }] : []),
   ];
-  const { sha } = await store.writeFiles(slug, files,
-  `components: update production pieces\n\n${summary}\nFamilies changed: ${familiesChanged.join(", ") || "none"}`,
-  `${user.handle} <${user.email}>`);
-  ctx.send(200, { saved: true, commit: sha, changes, families_changed: familiesChanged, setup_changed: setupChanged, summary });
+  let sha;
+  try {
+    // Local Store-1 is a shared working-tree driver, so its expected-ref check
+    // must run inside the storage mutation lock. Hosted Forgejo keeps its
+    // existing API behavior until that backend has a real remote CAS contract.
+    ({ sha } = await store.writeFiles(slug, files,
+      `components: update production pieces\n\n${summary}\nFamilies changed: ${familiesChanged.join(", ") || "none"}`,
+      `${user.handle} <${user.email}>`, store.kind === "local" ? { expectedRef: currentRef } : undefined));
+  }
+  catch (error) {
+    if (error?.code === "STORE1_EXPECTED_REF_MISMATCH")
+      return ctx.send(409, { saved: false, written: false,
+        error: "Component source changed before the commit. Reload Piece Studio; Forge did not overwrite it.",
+        base_ref: error.expectedRef, current_ref: error.currentRef });
+    throw error;
+  }
+  ctx.send(200, { saved: true, commit: sha, changes, families_changed: familiesChanged,
+    setup_changed: setupChanged, setup_created: setupCreated, setup_path: setup?.path || null, summary });
 }, "commit component data, reusable visual families, and an optional setup placement atomically");
 gw.route("POST", "/api/games/:slug/components/pieces/:piece/art", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;

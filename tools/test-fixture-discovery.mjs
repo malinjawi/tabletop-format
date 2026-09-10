@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createLocalStore } from "../platform/store1-local.mjs";
@@ -51,6 +51,31 @@ try {
     assert.equal(existsSync(join(released.dir, "game.yaml")), true,
       "a validated public v* release name resolves only to this local game's namespaced tag");
   } finally { released.cleanup(); }
+
+  const raceBase = safeStore.headSha("public-game");
+  const raceContents = [
+    "title: concurrent alpha\nlicense: CC0-1.0\n",
+    "title: concurrent beta\nlicense: CC0-1.0\n",
+  ];
+  const race = await Promise.allSettled(raceContents.map((content, index) =>
+    safeStore.writeFiles("public-game", [{ path: "game.yaml", content }],
+      `concurrent update ${index + 1}`, "Forge Test <forge@example.test>", { expectedRef: raceBase })));
+  const winners = race.map((result, index) => ({ result, index }))
+    .filter(({ result }) => result.status === "fulfilled");
+  const losers = race.map((result, index) => ({ result, index }))
+    .filter(({ result }) => result.status === "rejected");
+  assert.equal(winners.length, 1, "exactly one same-base local write commits");
+  assert.equal(losers.length, 1, "the competing same-base local write is rejected");
+  const winner = winners[0], loser = losers[0];
+  assert.equal(loser.result.reason?.code, "STORE1_EXPECTED_REF_MISMATCH");
+  assert.equal(loser.result.reason?.status, 409);
+  assert.equal(loser.result.reason?.written, false);
+  assert.equal(loser.result.reason?.expectedRef, raceBase);
+  assert.equal(loser.result.reason?.currentRef, winner.result.value.sha);
+  assert.equal(readFileSync(join(games, "public-game", "game.yaml"), "utf8"), raceContents[winner.index],
+    "the rejected concurrent write cannot overwrite the winning committed tree");
+  assert.equal(safeStore.headSha("public-game"), winner.result.value.sha,
+    "the project head remains the single winning compare-and-commit revision");
 
   const updated = await safeStore.writeFiles("public-game", [{ path: "game.yaml",
     content: "title: updated\nlicense: CC0-1.0\n" }], "update public game", "Forge Test <forge@example.test>");

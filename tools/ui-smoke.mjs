@@ -493,6 +493,101 @@ w.save(p)
     && artAssignment.tags.some(record=>record.path===artAssignment.paths[0]&&record.tags.join(",")==="portrait,cyberpunk"),
     "one explicit target set batch-assigns the same versioned art and credit without flattening per-printing data",JSON.stringify(artAssignment));
   await page.getByRole("button",{name:"Layout",exact:true}).click();
+  const dragRegion=await page.evaluate(()=>{
+    const geom=desGeom(),regions=DES.layout.regions||[];
+    const movable=regions.filter(region=>!["rect","background"].includes(region.type)&&!region.group).find(region=>{
+      const box=desRegionBounds(region);return Math.max(box.x,box.y,geom.W-box.right,geom.H-box.bottom)>=2;
+    })||regions.find(region=>!["rect","background"].includes(region.type));
+    if(!movable)throw new Error("No direct-manipulation layer is available");
+    desSelectRegion(movable.id,{individual:true,focus:true});const box=desRegionBounds(movable);
+    return{id:movable.id,x:movable.x||0,y:movable.y||0,undo:DES.undo.length,
+      dx:geom.W-box.right>=2?12:box.x>=2?-12:0,dy:geom.H-box.bottom>=2?8:box.y>=2?-8:0};
+  });
+  let dragBox=page.locator(`.des-box[data-rid="${dragRegion.id}"]`),dragBounds=await dragBox.boundingBox();
+  assert(dragBounds,"the selected production layer has a visible pointer target");
+  const mouseDrag=await page.evaluate(({id,dx,dy})=>{
+    const box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),rect=box.getBoundingClientRect(),pointerId=1,
+      fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"mouse",isPrimary:true,button:type==="pointermove"?-1:0,buttons,clientX:x,clientY:y}));
+    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;fire(box,"pointerdown",x,y,1);fire(document,"pointermove",x+dx/2,y+dy/2,1);fire(document,"pointermove",x+dx,y+dy,1);fire(document,"pointerup",x+dx,y+dy,0);
+    const region=desRegion(id);return{x:region?.x,y:region?.y,undo:DES.undo.length,focus:document.activeElement?.dataset?.rid,drag:DES_DRAG};
+  },dragRegion);
+  assert((mouseDrag.x!==dragRegion.x||mouseDrag.y!==dragRegion.y)&&mouseDrag.undo===dragRegion.undo+1
+    &&mouseDrag.focus===dragRegion.id&&mouseDrag.drag===null,
+    "mouse pointer dragging survives canvas redraws, restores focus, and creates one undo step",JSON.stringify(mouseDrag));
+
+  const touchDrag=await page.evaluate(id=>{
+    const region=desRegion(id),geom=desGeom(),bounds=desRegionBounds(region),before={x:region.x||0,y:region.y||0,undo:DES.undo.length},box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),rect=box.getBoundingClientRect(),pointerId=71,
+      dx=geom.W-bounds.right>=2?10:bounds.x>=2?-10:0,dy=geom.H-bounds.bottom>=2?11:bounds.y>=2?-11:0;
+    const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"touch",isPrimary:true,button:0,buttons,clientX:x,clientY:y}));
+    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;fire(box,"pointerdown",x,y,1);fire(document,"pointermove",x+dx,y+dy,1);fire(document,"pointerup",x+dx,y+dy,0);
+    const after=desRegion(id);return{before,after:{x:after.x||0,y:after.y||0},undo:DES.undo.length,focus:document.activeElement?.dataset?.rid,drag:DES_DRAG};
+  },dragRegion.id);
+  assert((touchDrag.after.x!==touchDrag.before.x||touchDrag.after.y!==touchDrag.before.y)
+    &&touchDrag.undo===touchDrag.before.undo+1&&touchDrag.focus===dragRegion.id&&touchDrag.drag===null,
+    "touch pointer dragging uses the same exact geometry and one-step undo path",JSON.stringify(touchDrag));
+
+  const cancelledDrag=await page.evaluate(id=>{
+    const region=desRegion(id),before={x:region.x||0,y:region.y||0,undo:DES.undo.length,layout:JSON.stringify(DES.layout)},box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),rect=box.getBoundingClientRect(),pointerId=72;
+    const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"pen",isPrimary:true,button:0,buttons,clientX:x,clientY:y}));
+    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;fire(box,"pointerdown",x,y,1);fire(document,"pointermove",x+18,y+14,1);fire(document,"pointercancel",x+18,y+14,0);
+    const after=desRegion(id),layout=JSON.stringify(DES.layout);return{before:{x:before.x,y:before.y,undo:before.undo},after:{x:after.x||0,y:after.y||0,undo:DES.undo.length},sameLayout:layout===before.layout,focus:document.activeElement?.dataset?.rid,drag:DES_DRAG};
+  },dragRegion.id);
+  assert(cancelledDrag.after.x===cancelledDrag.before.x&&cancelledDrag.after.y===cancelledDrag.before.y
+    &&cancelledDrag.after.undo===cancelledDrag.before.undo&&cancelledDrag.sameLayout
+    &&cancelledDrag.focus===dragRegion.id&&cancelledDrag.drag===null,
+    "a cancelled stylus gesture rolls back completely without polluting undo history",JSON.stringify(cancelledDrag));
+
+  dragBox=page.locator(`.des-box[data-rid="${dragRegion.id}"]`);
+  await dragBox.focus();
+  const keyboardBefore=await page.evaluate(id=>{const region=desRegion(id),geom=desGeom(),bounds=desRegionBounds(region),key=bounds.right+.5<=geom.W?"ArrowRight":bounds.x>=.5?"ArrowLeft":bounds.bottom+.5<=geom.H?"ArrowDown":"ArrowUp";return{x:region.x||0,y:region.y||0,key,undo:DES.undo.length};},dragRegion.id);
+  await dragBox.press(keyboardBefore.key);
+  const keyboardAfter=await page.evaluate(id=>{const region=desRegion(id),box=document.activeElement;return{x:region.x||0,y:region.y||0,undo:DES.undo.length,focus:box?.dataset?.rid,role:box?.getAttribute("role"),pressed:box?.getAttribute("aria-pressed"),describedBy:box?.getAttribute("aria-describedby")};},dragRegion.id);
+  assert((Math.abs(keyboardAfter.x-keyboardBefore.x)===.5||Math.abs(keyboardAfter.y-keyboardBefore.y)===.5)
+    &&keyboardAfter.undo===keyboardBefore.undo+1&&keyboardAfter.focus===dragRegion.id
+    &&keyboardAfter.role==="button"&&keyboardAfter.pressed==="true"&&keyboardAfter.describedBy==="des-canvas-instructions",
+    "keyboard geometry keeps focus on the selected accessible layer after each redraw",JSON.stringify({keyboardBefore,keyboardAfter}));
+
+  const keyboardActivation=await page.evaluate(id=>{
+    const activate=key=>{
+      DES.selRegion=null;DES.selRegions=[];
+      const box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),event=new KeyboardEvent("keydown",{key,bubbles:true,cancelable:true});
+      box.dispatchEvent(event);return{selected:DES.selRegion,pressed:document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`)?.getAttribute("aria-pressed"),prevented:event.defaultPrevented,focus:document.activeElement?.dataset?.rid};
+    };
+    return{enter:activate("Enter"),space:activate(" ")};
+  },dragRegion.id);
+  assert(keyboardActivation.enter.selected===dragRegion.id&&keyboardActivation.enter.pressed==="true"&&keyboardActivation.enter.prevented
+    &&keyboardActivation.space.selected===dragRegion.id&&keyboardActivation.space.pressed==="true"&&keyboardActivation.space.prevented,
+    "Enter and Space activate and select a layer exposed as an accessible button",JSON.stringify(keyboardActivation));
+
+  for(const width of [320,390]){
+    await page.setViewportSize({width,height:844});await page.waitForTimeout(80);
+    const mobileStudio=await page.evaluate(()=>{
+      const visible=node=>{const rect=node.getBoundingClientRect(),style=getComputedStyle(node);return rect.width>0&&rect.height>0&&style.visibility!=="hidden"&&style.display!=="none";};
+      const stage=document.getElementById("des-stage"),work=document.querySelector(".forge-studio-workarea"),workStyle=getComputedStyle(work),available=work.clientWidth-(parseFloat(workStyle.paddingLeft)||0)-(parseFloat(workStyle.paddingRight)||0);
+      const controls=[...document.querySelectorAll(".forge-studio-top button,.forge-studio-top summary,.forge-studio-canvasbar button,.forge-studio-panel-tabs button")].filter(visible).map(node=>({label:node.getAttribute("aria-label")||node.textContent.trim(),height:node.getBoundingClientRect().height}));
+      const handles=[...document.querySelectorAll(".des-h")].filter(visible).map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height}));
+      const status=document.querySelector(".forge-studio-status");return{viewport:innerWidth,scroll:document.documentElement.scrollWidth,stage:stage.getBoundingClientRect().width,available,controls,handles,statusVisible:visible(status),statusRole:status.getAttribute("role"),statusLive:status.getAttribute("aria-live")};
+    });
+    assert(mobileStudio.scroll<=mobileStudio.viewport&&mobileStudio.stage<=mobileStudio.available+1,
+      `${width}px Studio fits the card canvas without page overflow`,JSON.stringify(mobileStudio));
+    assert(mobileStudio.controls.length>0&&mobileStudio.controls.every(control=>control.height>=44)
+      &&mobileStudio.handles.length===8&&mobileStudio.handles.every(handle=>handle.width>=44&&handle.height>=44),
+      `${width}px Studio chrome and resize handles expose touch-sized targets`,JSON.stringify(mobileStudio));
+    assert(mobileStudio.statusVisible&&mobileStudio.statusRole==="status"&&mobileStudio.statusLive==="polite",
+      `${width}px Studio keeps the local draft status visible to sighted and assistive users`,JSON.stringify(mobileStudio));
+  }
+  const handleEdgeResize=await page.evaluate(()=>{
+    const geom=desGeom(),region=desRegions().filter(item=>item.type!=="badge"&&Number(item.w||0)*geom.pxmm>70&&Number(item.h||0)*geom.pxmm>60)[0];
+    if(!region)throw new Error("No layer is large enough to isolate a coarse resize handle");
+    desSelectRegion(region.id,{individual:true,focus:true});
+    const before={w:region.w,undo:DES.undo.length},box=document.querySelector(`.des-box[data-rid="${CSS.escape(region.id)}"]`),handle=box.querySelector(".des-h-e"),rect=handle.getBoundingClientRect(),pointerId=92;
+    const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"touch",isPrimary:true,button:0,buttons,clientX:x,clientY:y}));
+    const x=rect.right-2,y=rect.top+rect.height/2;fire(handle,"pointerdown",x,y,1);const chosen=DES_DRAG?.handle;fire(document,"pointermove",x-16,y,1);fire(document,"pointerup",x-16,y,0);
+    return{id:region.id,target:{width:rect.width,height:rect.height,offsetFromGrip:Math.round(rect.width/2-2)},chosen,before,after:{w:desRegion(region.id)?.w,undo:DES.undo.length}};
+  });
+  assert(handleEdgeResize.target.width>=44&&handleEdgeResize.target.height>=44&&handleEdgeResize.target.offsetFromGrip>12
+    &&handleEdgeResize.chosen==="e"&&handleEdgeResize.after.w!==handleEdgeResize.before.w&&handleEdgeResize.after.undo===handleEdgeResize.before.undo+1,
+    "the outer edge of a 44px coarse-pointer handle still performs a resize",JSON.stringify(handleEdgeResize));
   const alignPair=await page.evaluate(()=>{const regions=DES.layout.regions||[];for(const first of regions)for(const second of regions)if(first.id!==second.id&&Math.abs(Number(first.x||0)-Number(second.x||0))>.5)return[first.id,second.id];return regions.slice(0,2).map(region=>region.id);});
   await page.evaluate(ids=>{desSelectRegion(ids[0]);desSelectRegion(ids[1],{toggle:true});},alignPair);
   await page.getByText("2 elements selected",{exact:true}).waitFor();
@@ -707,6 +802,37 @@ w.save(p)
   assert(await page.getByText(/Click the table to move Prototype board/).isVisible()
     && Number(await page.getByLabel("Setup X").inputValue())>0,
     "a non-card piece can be positioned visually in the existing versioned table setup");
+  const componentRecoveryBase=await page.evaluate(()=>COMPONENT_EDIT.ref);
+  await page.evaluate(()=>componentDraftFlush());
+  const storedComponentDraft=await page.evaluate(async()=>{
+    const identity=componentDraftIdentity(),record=(await desDraftAll()).find(item=>item.key===componentDraftKey(identity));
+    return record&&{actor:record.actor,slug:record.slug,ref:record.ref,pieces:record.state?.pieces?.map(piece=>piece.name),setupPieces:record.state?.setup?.document?.pieces?.length};
+  });
+  assert(storedComponentDraft?.actor===`user:${await page.evaluate(()=>ME?.id)}`&&storedComponentDraft.slug==="netrunner-sg"
+    &&storedComponentDraft.ref===componentRecoveryBase&&storedComponentDraft.pieces.includes("Alert marker")&&storedComponentDraft.setupPieces>0,
+    "Piece Studio keeps data, family, production, and setup edits under the exact account, game, and Git base",JSON.stringify(storedComponentDraft));
+  await page.getByRole("button",{name:"← Card design",exact:true}).click();
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  assert(await page.evaluate(()=>COMPONENT_EDIT.pieces.length)===0
+    &&await page.getByRole("button",{name:"Restore draft",exact:true}).isVisible()
+    &&await page.getByRole("button",{name:"Discard draft",exact:true}).isVisible(),
+    "returning after in-app navigation offers Restore and Discard without silently applying component work");
+  await page.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await page.locator(".component-studio-list button").filter({hasText:"Alert marker"}).isVisible()
+    &&await page.getByText(/browser recovery on/).isVisible(),
+    "Restore returns the complete Piece Studio draft after navigation");
+  await page.evaluate(()=>componentDraftFlush());
+  const componentUnloadProtection=await page.evaluate(()=>{const event=new Event("beforeunload",{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;});
+  assert(componentUnloadProtection,"dirty Piece Studio work protects an accidental reload or tab close");
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  await page.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await page.locator(".component-studio-list button").filter({hasText:"Alert marker"}).isVisible()
+    &&await page.getByLabel("Stage this piece in setup").isChecked(),
+    "the same exact-base Piece Studio draft survives a full page reload");
   await page.setViewportSize({width:390,height:844});
   const componentMobile=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,
     controls:[...document.querySelectorAll(".component-studio-head button,.component-studio-head select,.component-studio-head input")].map(control=>({label:control.textContent?.trim()||control.getAttribute("aria-label"),height:control.getBoundingClientRect().height})),
@@ -728,7 +854,7 @@ w.save(p)
   assert(await page.getByText(/Letter · 10 physical pieces/).isVisible()
     && await page.getByText(/1 front \+ 1 back sheets/).isVisible()
     && await page.getByText(/2 poster tiles/).isVisible()
-    && await page.locator(".component-proof-card img").count()===3
+    && await page.locator(".component-proof-card img").count()===4
     && await page.locator(".component-proof-card img").first().evaluate(image=>image.complete&&image.naturalWidth>0)
     && await page.getByRole("button",{name:"Commit component change"}).isEnabled(),
     "review renders canonical front, duplex-back, and poster-tile proofs before enabling commit",
@@ -740,8 +866,23 @@ w.save(p)
   assert(componentCommitResult.ok(),"component data and reusable design commit atomically through the UI",
     `${componentCommitResult.status()} ${await componentCommitResult.text()}`);
   await page.getByText(/3 stable piece types/).waitFor({timeout:15_000});
+  const componentDraftsAfterCommit=await page.evaluate(async()=>
+    (await desDraftAll()).filter(record=>record.kind==="component-studio"&&record.slug==="netrunner-sg").length);
+  assert(componentDraftsAfterCommit===0,"a successful Piece Studio commit clears its browser recovery copy");
   await page.locator(".component-section").getByRole("button",{name:"Open Piece Studio"}).click();
   await page.getByRole("heading",{name:/Pieces — Netrunner/}).waitFor();
+  await page.locator(".component-studio-list button").filter({hasText:"Run marker"}).click();
+  await page.getByLabel("Name",{exact:true}).fill("Discard this local marker name");
+  await page.evaluate(()=>componentDraftFlush());
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  await page.getByRole("button",{name:"Discard draft",exact:true}).click();
+  assert(await page.locator(".component-studio-list button").filter({hasText:"Run marker"}).isVisible()
+    &&await page.locator(".component-studio-list button").filter({hasText:"Discard this local marker name"}).count()===0
+    &&await page.evaluate(async()=>!(await desDraftAll()).some(record=>record.kind==="component-studio"&&record.slug==="netrunner-sg")),
+    "Discard after reload removes the recovery copy and keeps the committed component version visible");
   await page.locator(".component-studio-list button").filter({hasText:"Prototype board"}).click();
   const componentArtChooserPromise=page.waitForEvent("filechooser");
   await page.getByRole("button",{name:"Upload front art + rights"}).click();
@@ -1245,6 +1386,49 @@ w.save(p)
     return (await desDraftAll()).filter(record=>record.slug==="wizard-ui-smoke"&&record.family==="card").length;
   });
   assert(draftsAfterCommit===0,"a successful Studio commit clears its browser recovery copy");
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:/Pieces — Wizard UI Smoke/}).waitFor();
+  assert(await page.getByText("No playable table yet",{exact:true}).isVisible()
+    &&await page.getByText(/Create the first token, counter, tile, dial, or board above/).isVisible()
+    &&await page.getByRole("button",{name:"Create playable table",exact:true}).count()===0,
+    "an empty piece workspace explains the order without offering a dead table action");
+  await page.getByRole("button",{name:"Create first token",exact:true}).click();
+  await page.getByRole("button",{name:"Create playable table",exact:true}).click();
+  const firstTable=page.getByLabel("Wizard UI Smoke table component setup map");
+  assert(await firstTable.isVisible()
+    &&await page.getByText("LOCAL TABLE DRAFT",{exact:true}).isVisible()
+    &&await firstTable.locator("[data-setup-seat]").count()>0
+    &&await firstTable.getByText("Play area",{exact:true}).isVisible(),
+    "one click creates a visible freeform board, player seats, and public play area as a local draft");
+  await page.getByLabel("Stage this piece in setup",{exact:true}).check();
+  const setupXBefore=Number(await page.getByLabel("Setup X",{exact:true}).inputValue());
+  await firstTable.click({position:{x:250,y:180}});
+  const setupXAfter=Number(await page.getByLabel("Setup X",{exact:true}).inputValue());
+  assert(setupXAfter!==setupXBefore&&await page.getByText(/Click the table to move New token/).isVisible(),
+    "the first physical piece can be staged and positioned directly on the draft table");
+  await page.getByRole("button",{name:"Review changes",exact:true}).click();
+  await page.getByRole("heading",{name:"Review component production change",exact:true}).waitFor();
+  await page.getByText("Exact uncommitted manufacturing proof",{exact:true}).waitFor({timeout:15_000});
+  await page.getByText("setup-maps/table.svg",{exact:true}).waitFor();
+  assert(await page.getByText(/1 setup map/).isVisible()
+    &&await page.getByText(/setup map changed/).isVisible()
+    &&await page.getByRole("button",{name:"Commit component change",exact:true}).isEnabled(),
+    "the first table is rendered in the no-write manufacturing proof before commit");
+  const firstTableCommitResponse=page.waitForResponse(response=>response.request().method()==="PUT"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/components/pieces"));
+  const firstTableCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Commit component change",exact:true}).click();
+  const firstTableCommitHttp=await firstTableCommitResponse,firstTableCommitBody=await firstTableCommitHttp.json();
+  assert(firstTableCommitHttp.ok()&&firstTableCommitBody.saved&&firstTableCommitBody.setup_created
+    &&firstTableCommitBody.setup_path==="setups/table.yaml",
+    "the first piece, visual family state, and playable table land in one exact commit",JSON.stringify(firstTableCommitBody));
+  await firstTableCommitNavigation;
+  const firstTableSource=readFileSync(join(gamesRoot,"wizard-ui-smoke","setups","table.yaml"),"utf8");
+  assert(/id: table/.test(firstTableSource)&&/name: Wizard UI Smoke table/.test(firstTableSource)
+    &&/id: play-area/.test(firstTableSource)&&/component_id: new_token/.test(firstTableSource),
+    "the committed table remains portable, readable source with its staged component");
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("heading",{name:"Save the exact cards you intend to test or manufacture",exact:true}).waitFor();

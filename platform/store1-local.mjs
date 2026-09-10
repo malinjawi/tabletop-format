@@ -18,7 +18,8 @@
  *   readFile(slug, rel)           → Buffer | null
  *   readMeta(slug)                → { title, license, cardCount } (index fodder, DA-3)
  *   setVisibility(slug, value)     → storage-layer visibility reconciliation
- *   writeFiles(slug, files, message, author) → { sha }   // atomic multi-file commit
+ *   writeFiles(slug, files, message, author, { expectedRef? }) → { sha }
+ *                                      // atomic multi-file compare-and-commit
  *   createGame(slug, srcTree, message, author) → { sha } // import a validated tree
  *   fork(src, dest, transformYaml, message, author, ref?) → { sha }
  *   history(slug, rel, n)         → [{ full, sha, author, date, subject }]
@@ -36,6 +37,30 @@ import { tmpdir } from "node:os";
 import { uploadAsset, downloadAsset } from "../tools/lib/lfs.mjs";
 import { PROJECT_META, parseProjectMeta } from "./project-ref.mjs";
 import { fullStore1ObjectId, localStore1Ref } from "./store1-ref.mjs";
+
+// A local Store-1 instance uses one physical Git repository for every game.
+// Serialize every index/worktree mutation per repository root so concurrent
+// requests cannot stage into one another's commit. The map is module-wide so
+// two Store instances aimed at the same checkout share the same lock.
+const LOCAL_MUTATION_TAILS = new Map();
+
+function withLocalMutationLock(root, mutate) {
+  const previous = LOCAL_MUTATION_TAILS.get(root) ?? Promise.resolve();
+  const running = previous.catch(() => {}).then(mutate);
+  const settled = running.then(() => undefined, () => undefined);
+  LOCAL_MUTATION_TAILS.set(root, settled);
+  settled.then(() => {
+    if (LOCAL_MUTATION_TAILS.get(root) === settled) LOCAL_MUTATION_TAILS.delete(root);
+  });
+  return running;
+}
+
+function expectedRefConflict(slug, expectedRef, currentRef) {
+  return Object.assign(
+    new Error(`project '${slug}' changed from ${expectedRef} to ${currentRef}; no files were written`),
+    { code: "STORE1_EXPECTED_REF_MISMATCH", status: 409, expectedRef, currentRef, written: false },
+  );
+}
 
 /** @param {{root: string, gamesDir: string, lfsUrl?: string|null, includeFixtures?: boolean}} cfg */
 export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixtures = false }) {
@@ -171,37 +196,46 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixture
       return null;
     },
 
-    /** files: [{path, content:Buffer|string}] — one atomic commit, authored as the user. */
-    async writeFiles(slug, files, message, author) {
-      for (const f of files) {
-        const dest = join(abs(slug), f.path);
-        if (f.content === null) { rmSync(dest, { force: true }); continue; }
-        let content = f.content;
-        if (lfsUrl && f.path.startsWith("assets/") && !isPointer(content)) {
-          const bytes = Buffer.from(content);
-          const up = await uploadAsset(lfsUrl, f.path, bytes);
-          cacheLocalLfsObject(up.oid, bytes);
-          content = up.pointer;
+    /** files: [{path, content:Buffer|string}] — one atomic commit, authored as the user.
+     *  expectedRef must be the exact project head the editor opened. The check
+     *  happens inside the local mutation lock and before any live-tree write. */
+    async writeFiles(slug, files, message, author, { expectedRef = null } = {}) {
+      return withLocalMutationLock(root, async () => {
+        if (expectedRef !== null && expectedRef !== undefined) {
+          const expected = fullStore1ObjectId(expectedRef, "expected project revision");
+          const current = store.headSha(slug);
+          if (expected !== current) throw expectedRefConflict(slug, expected, current);
         }
-        mkdirSync(dirname(dest), { recursive: true });
-        writeFileSync(dest, content);
-      }
-      const add = ["add", "-A", "--", ...files.map(f => join(abs(slug), f.path))];
-      // Portable mode must stay portable even when the developer has Git LFS
-      // installed globally and this repository's .gitattributes names assets.
-      // Otherwise `git add` silently creates an unresolvable pointer while no
-      // LFS endpoint exists. Explicit LFS mode already uploads and stages the
-      // verified pointer, so only the no-service path bypasses clean filters.
-      git(lfsUrl ? add : ["-c", "filter.lfs.process=", "-c", "filter.lfs.clean=cat",
-        "-c", "filter.lfs.smudge=cat", "-c", "filter.lfs.required=false", ...add]);
-      try {
-        git(["diff", "--cached", "--quiet", "--", ...files.map(f => join(abs(slug), f.path))], QUIET);
-        return { sha: store.headSha(slug), unchanged: true };
-      } catch (error) {
-        if (error.status !== 1) throw error;
-      }
-      commit(["-m", message, "--author", author]);
-      return { sha: fullStore1ObjectId(git(["rev-parse", "HEAD"]), "committed revision") };
+        for (const f of files) {
+          const dest = join(abs(slug), f.path);
+          if (f.content === null) { rmSync(dest, { force: true }); continue; }
+          let content = f.content;
+          if (lfsUrl && f.path.startsWith("assets/") && !isPointer(content)) {
+            const bytes = Buffer.from(content);
+            const up = await uploadAsset(lfsUrl, f.path, bytes);
+            cacheLocalLfsObject(up.oid, bytes);
+            content = up.pointer;
+          }
+          mkdirSync(dirname(dest), { recursive: true });
+          writeFileSync(dest, content);
+        }
+        const add = ["add", "-A", "--", ...files.map(f => join(abs(slug), f.path))];
+        // Portable mode must stay portable even when the developer has Git LFS
+        // installed globally and this repository's .gitattributes names assets.
+        // Otherwise `git add` silently creates an unresolvable pointer while no
+        // LFS endpoint exists. Explicit LFS mode already uploads and stages the
+        // verified pointer, so only the no-service path bypasses clean filters.
+        git(lfsUrl ? add : ["-c", "filter.lfs.process=", "-c", "filter.lfs.clean=cat",
+          "-c", "filter.lfs.smudge=cat", "-c", "filter.lfs.required=false", ...add]);
+        try {
+          git(["diff", "--cached", "--quiet", "--", ...files.map(f => join(abs(slug), f.path))], QUIET);
+          return { sha: store.headSha(slug), unchanged: true };
+        } catch (error) {
+          if (error.status !== 1) throw error;
+        }
+        commit(["-m", message, "--author", author]);
+        return { sha: fullStore1ObjectId(git(["rev-parse", "HEAD"]), "committed revision") };
+      });
     },
 
     /** Import an already-validated tree as a new hosted game. */

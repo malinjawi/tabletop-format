@@ -233,14 +233,53 @@ w.save(p)
   const componentWorkspace = await api("/api/games/ember/components/pieces", { token: owner.token });
   assert.equal(componentWorkspace.pieces.length, 3);
   assert.equal(componentWorkspace.design.families.length, 2);
+  assert.deepEqual(componentWorkspace.setups, [], "Ember begins without a hand-authored playable setup fixture");
   assert.equal(componentWorkspace.access.can_write, true);
   const editedPieces = structuredClone(componentWorkspace.pieces), editedComponentDesign = structuredClone(componentWorkspace.design);
   editedPieces[0].name = "Spark production marker";
   editedComponentDesign.families[0].style.fill = "#33221a";
+  const firstSetup = { path: "setups/first-table.yaml", document: {
+    schema_version: 1, id: "first-table", name: "Ember first playable table",
+    description: "A versioned two-player starting table created inside Piece Studio.",
+    board: { width: 1600, height: 1000, background: "#17211f" },
+    seats: [
+      { id: "player-1", name: "Player 1", color: "#ef8354", position: { x: 720, y: 24 } },
+      { id: "player-2", name: "Player 2", color: "#4f9da6", position: { x: 720, y: 948 } },
+    ],
+    zones: [
+      { id: "play-area", name: "Play area", kind: "play", visibility: "public",
+        position: { x: 160, y: 140 }, size: { width: 1280, height: 720 }, layout: "free", card_face: "unchanged" },
+      { id: "draw-pile", name: "Burn Rush draw pile", kind: "draw", seat_id: "player-1",
+        position: { x: 1320, y: 360 }, size: { width: 120, height: 175 }, layout: "stack", card_face: "down" },
+    ],
+    stacks: [{ id: "burn-rush-stack", name: "Burn Rush", deck_id: "burn-rush", zone_id: "draw-pile",
+      face: "down", shuffle: true }], placements: [], pieces: [], counters: [],
+    instructions: ["Place the game components in the marked play area."],
+  } };
+  for (const [method, path] of [["POST", "preview"], ["PUT", "pieces"]]) {
+    const missingBaseResponse = await fetch(`${origin}/api/games/ember/components/${path}`, {
+      method, headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ pieces: editedPieces, design: editedComponentDesign, setup: firstSetup }),
+    });
+    const missingBase = await missingBaseResponse.json();
+    assert.equal(missingBaseResponse.status, 422, `${method} component drafts require their exact opened revision`);
+    assert.equal(missingBase.written, false);
+  }
+  const invalidFirstSetup = structuredClone(firstSetup);
+  invalidFirstSetup.document.seats = [];
+  const invalidSetupResponse = await fetch(`${origin}/api/games/ember/components/preview`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ base_ref: componentWorkspace.ref, pieces: editedPieces,
+      design: editedComponentDesign, setup: invalidFirstSetup }),
+  });
+  assert.equal(invalidSetupResponse.status, 422, "an invalid first setup cannot pass the no-write production proof");
+  assert.equal(existsSync(join(games, "ember", firstSetup.path)), false,
+    "an invalid first setup must not leave a source file behind");
   const previewHeadBefore = spawnSync("git", ["rev-parse", "HEAD"], { cwd: temp, encoding: "utf8" }).stdout.trim();
   const previewStatusBefore = spawnSync("git", ["status", "--porcelain"], { cwd: temp, encoding: "utf8" }).stdout;
   const componentPreview = await api("/api/games/ember/components/preview", {
-    method: "POST", token: owner.token, json: { base_ref: componentWorkspace.ref, pieces: editedPieces, design: editedComponentDesign },
+    method: "POST", token: owner.token,
+    json: { base_ref: componentWorkspace.ref, pieces: editedPieces, design: editedComponentDesign, setup: firstSetup },
   });
   assert.equal(componentPreview.written, false);
   assert(previewHeadBefore.startsWith(componentPreview.ref));
@@ -248,16 +287,54 @@ w.save(p)
   assert.match(componentPreview.previews[0].file, /cut-sheets\/01-a4\.svg$/);
   assert.match(componentPreview.previews[0].svg, /data-forge-page="1"/);
   assert.match(componentPreview.previews[0].svg, /Spark production marker/);
+  assert.equal(componentPreview.manifest.totals.setup_maps, 1);
+  assert(componentPreview.previews.some(preview => preview.file === "setup-maps/first-table.svg"),
+    "the no-write proof includes the newly created playable table map");
+  assert.equal(existsSync(join(games, "ember", firstSetup.path)), false,
+    "previewing a first setup must not create its source file");
   assert.equal(spawnSync("git", ["rev-parse", "HEAD"], { cwd: temp, encoding: "utf8" }).stdout.trim(), previewHeadBefore,
     "manufacturing proof does not create a commit");
   assert.equal(spawnSync("git", ["status", "--porcelain"], { cwd: temp, encoding: "utf8" }).stdout, previewStatusBefore,
     "manufacturing proof does not dirty the repository");
-  const componentCommit = await api("/api/games/ember/components/pieces", {
-    method: "PUT", token: owner.token, json: { base_ref: componentWorkspace.ref, pieces: editedPieces, design: editedComponentDesign },
-  });
+  const competingPieces = structuredClone(editedPieces);
+  competingPieces[0].name = "Spark competing marker";
+  const componentCandidates = [editedPieces, competingPieces];
+  const componentRace = await Promise.all(componentCandidates.map(async pieces => {
+    const response = await fetch(`${origin}/api/games/ember/components/pieces`, {
+      method: "PUT", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ base_ref: componentWorkspace.ref, pieces,
+        design: editedComponentDesign, setup: firstSetup }),
+    });
+    return { status: response.status, body: await response.json() };
+  }));
+  const componentWinners = componentRace.map((result, index) => ({ result, index }))
+    .filter(({ result }) => result.status === 200);
+  const componentLosers = componentRace.map((result, index) => ({ result, index }))
+    .filter(({ result }) => result.status === 409);
+  assert.equal(componentWinners.length, 1, "one overlapping Piece Studio commit wins");
+  assert.equal(componentLosers.length, 1, "one overlapping same-base Piece Studio commit loses cleanly");
+  const componentWinner = componentWinners[0], componentLoser = componentLosers[0];
+  const componentCommit = componentWinner.result.body;
+  assert.equal(componentLoser.result.body.saved, false);
+  assert.equal(componentLoser.result.body.written, false);
+  assert.equal(componentLoser.result.body.base_ref, componentWorkspace.ref);
+  assert.equal(componentLoser.result.body.current_ref, componentCommit.commit);
+  assert.match(componentLoser.result.body.error, /did not overwrite/);
+  assert.equal(JSON.parse(readFileSync(join(games, "ember", "components", "tokens.json"), "utf8"))[0].name,
+    componentCandidates[componentWinner.index][0].name,
+    "the losing Piece Studio request cannot overwrite the winning candidate");
+  assert.notEqual(componentCandidates[componentWinner.index][0].name,
+    componentCandidates[componentLoser.index][0].name);
   assert.equal(componentCommit.saved, true);
   assert.deepEqual(componentCommit.changes.changed, ["spark_token"]);
   assert.deepEqual(componentCommit.families_changed, ["ember-token"]);
+  assert.equal(componentCommit.setup_created, true);
+  assert.equal(componentCommit.setup_path, firstSetup.path);
+  assert.match(readFileSync(join(games, "ember", firstSetup.path), "utf8"), /id: first-table[\s\S]*deck_id: burn-rush/);
+  const componentCommitFiles = spawnSync("git", ["show", "--pretty=", "--name-only", componentCommit.commit],
+    { cwd: temp, encoding: "utf8" }).stdout.trim().split("\n");
+  assert(componentCommitFiles.includes(`games/ember/${firstSetup.path}`),
+    "the first setup lands in the same exact commit as its component production state");
   const staleComponentResponse = await fetch(`${origin}/api/games/ember/components/pieces`, { method: "PUT", headers: {
     authorization: `Bearer ${owner.token}`, "content-type": "application/json",
   }, body: JSON.stringify({ base_ref: componentWorkspace.ref, pieces: editedPieces, design: editedComponentDesign }) });
@@ -307,6 +384,9 @@ w.save(p)
   assert.equal(componentManifest.totals.printed_faces, 34);
   assert.equal(componentManifest.pieces.find(piece => piece.id === "spark_token").artwork[0].rights.status, "original");
   assert(componentManifest.source_files.includes(componentArtPath));
+  assert.equal(componentManifest.totals.setup_maps, 1);
+  assert(componentManifest.source_files.includes(firstSetup.path));
+  assert(componentArchive.has("setup-maps/first-table.svg"));
   assert(componentArchive.has("faces/spark_token.svg"));
   assert(componentArchive.has("faces/ash_token-back.svg"));
   assert(componentArchive.has("cut-sheets/01-a4.svg"));
