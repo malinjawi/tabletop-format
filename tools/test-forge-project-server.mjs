@@ -857,6 +857,79 @@ w.save(p)
   assert.equal(spawnSync("git", ["show", "-s", "--format=%an <%ae>", contributorPrintCommit.commit],
     { cwd: temp, encoding: "utf8" }).stdout.trim(), "project-editor <editor@example.invalid>");
 
+  const proposalEditor = await api("/api/auth/register", { method: "POST", json: {
+    handle: "proposal-editor", email: "proposal-editor@example.invalid", password: "password123",
+  } });
+  const cardProposalBase = await api(`/api/games/${starterProject.slug}/access`, { token: proposalEditor.token });
+  const cardProposalCards = JSON.parse(readFileSync(join(games, starterProject.slug, "components", "cards.json"), "utf8"));
+  cardProposalCards[0].text = "A focused proposal keeps its exact source and contributor versions.";
+  const cardProposal = await api(`/api/games/${starterProject.slug}/cards/propose`, {
+    method: "POST", token: proposalEditor.token, json: {
+      cards: cardProposalCards, title: "Keep proposal versions exact", base_ref: cardProposalBase.ref,
+    },
+  });
+  const focusedProposalUrl = `/#/g/${encodeURIComponent(starterProject.namespace)}/${encodeURIComponent(starterProject.repo_slug)}`
+    + `/suggestions/${encodeURIComponent(cardProposal.pr)}`;
+  assert.equal(cardProposal.base_ref, cardProposalBase.ref,
+    "the card proposal returns the exact source version the contributor reviewed");
+  assert.equal(cardProposal.proposed_ref, cardProposal.commit,
+    "the card proposal returns the exact committed contributor version");
+  assert.equal(cardProposal.url, focusedProposalUrl,
+    "the card proposal returns its canonical focused review URL");
+  const proposalDb = new DatabaseSync(dbPath);
+  try {
+    const storedCardProposal = proposalDb.prepare("SELECT base, proposed FROM prs WHERE id = ?").get(cardProposal.pr);
+    assert(storedCardProposal, "the card proposal is persisted for review");
+    assert.equal(JSON.parse(storedCardProposal.base).ref, cardProposal.base_ref,
+      "the persisted card-proposal base matches the API contract");
+    assert.equal(JSON.parse(storedCardProposal.proposed).ref, cardProposal.proposed_ref,
+      "the persisted card-proposal head matches the API contract");
+  } finally { proposalDb.close(); }
+  const cardProposalNotifications = await api("/api/notifications", { token: owner.token });
+  assert(cardProposalNotifications.items.some(notification => notification.kind === "pr_open"
+    && notification.actor_handle === "proposal-editor" && notification.game_slug === starterProject.slug
+    && notification.target === cardProposal.pr),
+  "opening a card proposal notifies the game owner with the focused proposal target");
+  const cardProposalActivity = await api("/api/activity?user=proposal-editor", { token: proposalEditor.token });
+  assert(cardProposalActivity.some(event => event.kind === "pr_open" && event.game_slug === starterProject.slug
+    && event.target === cardProposal.pr),
+  "opening a card proposal records attributed pr_open activity");
+
+  await api(`/api/games/${starterProject.slug}/prs/${cardProposal.pr}/close`, {
+    method: "POST", token: proposalEditor.token, json: {},
+  });
+  const editionProposal = await api(`/api/games/${starterProject.slug}/prs`, {
+    method: "POST", token: proposalEditor.token, json: {
+      from: cardProposal.fork, title: "Propose the exact edition", body: "Review the same exact committed card change.",
+    },
+  });
+  const focusedEditionUrl = `/#/g/${encodeURIComponent(starterProject.namespace)}/${encodeURIComponent(starterProject.repo_slug)}`
+    + `/suggestions/${encodeURIComponent(editionProposal.id)}`;
+  assert.equal(editionProposal.base_ref, cardProposal.base_ref,
+    "an explicit edition proposal preserves the exact version the edition forked from");
+  assert.equal(editionProposal.proposed_ref, cardProposal.proposed_ref,
+    "an explicit edition proposal identifies the exact contributor commit under review");
+  assert.equal(editionProposal.url, focusedEditionUrl,
+    "an explicit edition proposal returns its canonical focused review URL");
+  const editionProposalDb = new DatabaseSync(dbPath);
+  try {
+    const storedEditionProposal = editionProposalDb.prepare("SELECT base, proposed FROM prs WHERE id = ?").get(editionProposal.id);
+    assert(storedEditionProposal, "the explicit edition proposal is persisted for review");
+    assert.equal(JSON.parse(storedEditionProposal.base).ref, editionProposal.base_ref,
+      "the persisted edition-proposal base matches the API contract");
+    assert.equal(JSON.parse(storedEditionProposal.proposed).ref, editionProposal.proposed_ref,
+      "the persisted edition-proposal head matches the API contract");
+  } finally { editionProposalDb.close(); }
+  const editionProposalNotifications = await api("/api/notifications", { token: owner.token });
+  assert(editionProposalNotifications.items.some(notification => notification.kind === "pr_open"
+    && notification.actor_handle === "proposal-editor" && notification.game_slug === starterProject.slug
+    && notification.target === editionProposal.id),
+  "opening an edition proposal notifies the game owner with the focused proposal target");
+  const editionProposalActivity = await api("/api/activity?user=proposal-editor", { token: proposalEditor.token });
+  assert(editionProposalActivity.some(event => event.kind === "pr_open" && event.game_slug === starterProject.slug
+    && event.target === editionProposal.id),
+  "opening an edition proposal records attributed pr_open activity");
+
   console.log(`forge-project-server: HTTP project + first-component wizard + versioned print profile + direct editor CSV + pieces + nanDECK + Squib + SVG + PnPInk + native Tabletop Playground export → dry-run → direct commit or fork/commit/PR${hasYaml ? " → merge" : " (merge skipped: PyYAML unavailable)"} verified`);
 } finally {
   if (server && server.exitCode == null) server.kill("SIGTERM");

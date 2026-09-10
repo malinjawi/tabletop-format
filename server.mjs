@@ -1213,6 +1213,8 @@ gw.route("GET", "/api/games/:slug/ui", async (ctx) => {
 gw.route("GET", "/api/projects/:namespace/:slug", async (ctx) => {
   const game = await q.gameByProject(db, ctx.params.namespace, ctx.params.slug);
   if (!game || !store.has(game.slug)) return ctx.send(404, { error: "no such project" });
+  const user = await authedUser(ctx);
+  if (!await canRead(user, game.slug, ctx)) return ctx.send(404, { error: "no such project" });
   ctx.send(200, { project_id: game.project_id, namespace: game.namespace,
     slug: game.repo_slug, storage_key: game.slug,
     api: `/api/games/${encodeURIComponent(game.slug)}`,
@@ -1222,6 +1224,8 @@ gw.route("GET", "/api/projects/:namespace/:slug", async (ctx) => {
 gw.route("GET", "/api/projects/:namespace/:slug/cards", async (ctx) => {
   const game = await q.gameByProject(db, ctx.params.namespace, ctx.params.slug);
   if (!game || !store.has(game.slug)) return ctx.send(404, { error: "no such project" });
+  const user = await authedUser(ctx);
+  if (!await canRead(user, game.slug, ctx)) return ctx.send(404, { error: "no such project" });
   const cards = JSON.parse((await store.readFile(game.slug, "components/cards.json")).toString());
   const qtext = String(ctx.url.searchParams.get("q") || "").toLowerCase(), type = String(ctx.url.searchParams.get("type") || "").toLowerCase();
   const limit = Math.max(1, Math.min(100, Number(ctx.url.searchParams.get("limit")) || 40));
@@ -1299,17 +1303,31 @@ async function doFork(u, src, requestedRef = "HEAD") {
   return { slug: newSlug, repo_slug: repoSlug, namespace: u.handle, project_id: projectId,
     sha, source_ref: point.sha, source_label: point.label };
 }
-async function ensureUserFork(u, src) {
+async function ensureUserFork(u, src, ref = "HEAD") {
   const sourceGame = await q.gameBySlug(db, src);
   const sourceRepoSlug = sourceGame?.repo_slug || src;
   const repoSlug = `${sourceRepoSlug}-${u.handle}`.slice(0, 60);
   const existing = await q.gameByProject(db, u.handle, repoSlug);
-  if (!existing) return (await doFork(u, src)).slug;
+  if (!existing) return (await doFork(u, src, ref)).slug;
   if (!(await accessFor(u, existing.slug, existing)).is_owner)
     throw Object.assign(new Error(`'${u.handle}/${repoSlug}' exists and is not yours`), { code: 409 });
   if (existing.forked_from !== src)
     throw Object.assign(new Error(`'${u.handle}/${repoSlug}' is not an edition of '${src}'`), { code: 409 });
   return existing.slug;
+}
+function focusedPrUrl(game, id) {
+  const path = game?.namespace && game?.repo_slug
+    ? publicProjectPath({ namespace: game.namespace, slug: game.repo_slug })
+    : `/g/${encodeURIComponent(game?.slug || "community")}`;
+  return `/#${path}/suggestions/${encodeURIComponent(id)}`;
+}
+async function announcePrOpened(u, slug, id) {
+  const owner = await q.gameBySlug(db, slug);
+  await q.recordEvent(db, { id: newId("ev"), kind: "pr_open", actor_id: u.id, game_slug: slug, target: id });
+  if (owner?.owner_id && owner.owner_id !== u.id)
+    await q.notify(db, { id: newId("n"), user_id: owner.owner_id, kind: "pr_open",
+      actor_handle: u.handle, game_slug: slug, target: id });
+  return focusedPrUrl(owner, id);
 }
 gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
@@ -1333,29 +1351,45 @@ gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const bodyIn = await json(ctx);
   const cards = Array.isArray(bodyIn) ? bodyIn : bodyIn.cards;
+  if (!Array.isArray(cards)) return ctx.send(422, { error: "body must contain {cards: [...], base_ref}" });
   const prTitle = (!Array.isArray(bodyIn) && bodyIn.title) || null;
   const baseRef = !Array.isArray(bodyIn) ? String(bodyIn.base_ref || "").trim() : "";
   const currentRef = await store.headSha(slug);
   if (baseRef && baseRef !== currentRef)
     return ctx.send(409, { error: "this game changed after the card editor opened; reload to review the newer version before proposing",
       base_ref: baseRef, current_ref: currentRef, written: false });
-  const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
-  const changes = diffCards(before, cards ?? []);
+  const before = JSON.parse((await store.fileAt(slug, currentRef, "components/cards.json")).toString());
+  const changes = diffCards(before, cards);
   if (!changes.length) return ctx.send(422, { error: "no changes to propose" });
   let forkSlug;
-  try { forkSlug = await ensureUserFork(u, slug); }
+  try { forkSlug = await ensureUserFork(u, slug, currentRef); }
   catch (error) { return ctx.send(error.code ?? 500, { error: error.message }); }
+  const forkRef = await store.headSha(forkSlug);
   const content = JSON.stringify(cards, null, 2) + "\n";
   const v = await validateCandidate(forkSlug, "components/cards.json", content);
   if (!v.ok) return ctx.send(422, { error: "validation failed", report: v.report });
+  const [sourceNow, forkNow] = await Promise.all([store.headSha(slug), store.headSha(forkSlug)]);
+  if (sourceNow !== currentRef)
+    return ctx.send(409, { error: "this game changed while Forge validated the proposal; reload before proposing",
+      base_ref: currentRef, current_ref: sourceNow, written: false });
+  if (forkNow !== forkRef)
+    return ctx.send(409, { error: "your edition changed while Forge validated the proposal; reload before proposing",
+      base_ref: forkRef, current_ref: forkNow, written: false });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(forkSlug, [{ path: "components/cards.json", content }],
     `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);
   const id = newId("pr");
+  // This endpoint is deliberately card-only: retain exact refs without
+  // accidentally pulling unrelated files from a contributor's existing edition
+  // into what the editor presented as a card proposal.
+  const base = { version: 2, ref: currentRef, cards: before, printings: [], files: {} };
+  const proposed = { version: 2, ref: sha, cards, printings: [], files: {} };
   await q.createPr(db, { id, to_slug: slug, from_slug: forkSlug,
     title: prTitle ?? auto.title, body: null, author_id: u.id,
-    base: JSON.stringify(before), proposed: JSON.stringify(cards) });
-  ctx.send(201, { proposed: true, pr: id, fork: forkSlug, commit: sha, message: auto.title, changes });
+    base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
+  const url = await announcePrOpened(u, slug, id);
+  ctx.send(201, { proposed: true, pr: id, fork: forkSlug, commit: sha, message: auto.title, changes,
+    base_ref: currentRef, proposed_ref: sha, url });
 }, "edit without access → auto-fork, commit to your fork, PR opened for review");
 gw.route("GET", "/api/games/:slug/access", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -2585,9 +2619,7 @@ async function openOrRefreshImportedPr({ u, slug, destination, message, body }) 
     const base = await gameSnapshot(slug, baseRef); id = newId("pr");
     await q.createPr(db, { id, to_slug: slug, from_slug: destination, title: message, body, author_id: u.id,
       base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
-    const owner = await q.gameBySlug(db, slug);
-    if (owner?.owner_id && owner.owner_id !== u.id)
-      await q.notify(db, { id: newId("n"), user_id: owner.owner_id, kind: "pr_open", actor_handle: u.handle, game_slug: slug, target: id });
+    await announcePrOpened(u, slug, id);
   }
   return id;
 }
@@ -2614,12 +2646,14 @@ gw.route("POST", "/api/games/:slug/prs", async (ctx) => {
   const id = newId("pr");
   await q.createPr(db, { id, to_slug: to, from_slug: from, title: title.trim(), body,
     author_id: u.id, base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
+  const url = await announcePrOpened(u, to, id);
   const cardSummary = summarize(changes)?.title;
   const printingTotal = printing_changes.changed.length + printing_changes.added.length + printing_changes.removed.length;
   const printingSummary = printingTotal ? `printings: ${printingTotal} row${printingTotal === 1 ? "" : "s"}` : null;
   const fileSummary = file_changes.length
     ? `assets: ${file_changes.length} reusable file${file_changes.length === 1 ? "" : "s"}` : null;
   ctx.send(201, { id, to, from, title: title.trim(), changes, printing_changes, file_changes,
+    base_ref: base.ref, proposed_ref: proposed.ref, url,
     summary: [cardSummary, printingSummary, fileSummary].filter(Boolean).join(" · ") });
 }, "open a PR: propose structured card and reusable-file changes back to the source");
 gw.route("GET", "/api/games/:slug/prs", async (ctx) => {
@@ -2664,6 +2698,7 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
   const viewer = await authedUser(ctx);
   const viewerCanReview = !!viewer && pr.author_id !== viewer.id && await canReview(viewer, slug);
   const viewerCanMerge = !!viewer && await canAdmin(viewer, slug);
+  const viewerCanRelease = !!viewer && await canAdmin(viewer, slug, { releases: true });
   const viewerCanClose = !!viewer && (viewerCanMerge || pr.author_id === viewer.id);
   ctx.send(200, { id: pr.id, to: pr.to_slug, from: pr.from_slug, title: pr.title, body: pr.body,
     author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
@@ -2674,7 +2709,8 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
     conflicts, printing_conflicts: printingMerge.conflicts, file_conflicts: fileMerge.conflicts,
     policy, ...review,
     access: { signed_in: !!viewer, can_comment: !!viewer, can_review: viewerCanReview,
-      can_merge: viewerCanMerge, can_close: viewerCanClose, is_author: !!viewer && pr.author_id === viewer.id },
+      can_merge: viewerCanMerge, can_release: viewerCanRelease, can_close: viewerCanClose,
+      is_author: !!viewer && pr.author_id === viewer.id },
     comments: await q.commentsFor(db, "pr", pr.id) });
 }, "PR detail: semantic card and reusable-file diff + live three-way conflict check + discussion");
 gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
@@ -3017,24 +3053,24 @@ gw.route("POST", "/api/games/:slug/design/import", async (ctx) => {
     const baseRef = await directForkBaseRef(destination, slug, fromRow);
     const proposedSnapshot = await gameSnapshot(destination);
     const existing = (await q.prsFor(db, slug)).find(pr => pr.from_slug === destination && pr.status === "open");
-    let prId, baseSnapshot;
+    let prId, baseSnapshot, prUrl;
     if (existing) {
       const full = await q.prById(db, existing.id);
       baseSnapshot = normalizePrSnapshot(JSON.parse(full.base));
       prId = existing.id;
       await q.refreshPr(db, prId, message, JSON.stringify(baseSnapshot), JSON.stringify(proposedSnapshot));
       if ((await prPolicy(slug)).dismiss_stale_reviews) await q.clearReviews(db, prId);
+      prUrl = focusedPrUrl(await q.gameBySlug(db, slug), prId);
     } else {
       baseSnapshot = await gameSnapshot(slug, baseRef);
       prId = newId("pr");
       await q.createPr(db, { id: prId, to_slug: slug, from_slug: destination, title: message,
         body: "Imported from a Forge design project after dry-run and validation.", author_id: u.id,
         base: JSON.stringify(baseSnapshot), proposed: JSON.stringify(proposedSnapshot) });
-      const owner = await q.gameBySlug(db, slug);
-      if (owner?.owner_id && owner.owner_id !== u.id)
-        await q.notify(db, { id: newId("n"), user_id: owner.owner_id, kind: "pr_open", actor_handle: u.handle, game_slug: slug, target: prId });
+      prUrl = await announcePrOpened(u, slug, prId);
     }
-    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr: prId, fork: destination });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr: prId, fork: destination,
+      base_ref: baseSnapshot.ref, proposed_ref: proposedSnapshot.ref, url: prUrl });
   } finally { materialized.cleanup(); }
 }, "dry-run, commit, or fork+PR a Forge design project with three-way conflict detection");
 
@@ -4268,10 +4304,18 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
   if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release; fork a public sandbox into an owned edition before releasing" });
-  const { tag, title } = await json(ctx);
+  const { tag, title, base_ref: suppliedBaseRef } = await json(ctx);
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must start with v and a number, for example v1.0" });
   if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
+  const baseRef = String(suppliedBaseRef || "").trim();
+  const currentRef = await store.headSha(slug);
+  if (baseRef && baseRef !== currentRef)
+    return ctx.send(409, { error: "this game changed after release readiness was checked; review the newer exact version before publishing",
+      base_ref: baseRef, current_ref: currentRef, written: false });
   const preflight = await releasePreflight(slug, u), sha = preflight.ref, rights = preflight.rights;
+  if (baseRef && sha !== baseRef)
+    return ctx.send(409, { error: "this game changed while Forge refreshed release readiness; no release or tag was created",
+      base_ref: baseRef, current_ref: sha, written: false });
   if (!preflight.validation.ok) return ctx.send(422, { error: "release blocked by game validation",
     report: preflight.validation.report });
   if (!preflight.license.ok) return ctx.send(422, { error: "release blocked by license/provenance checks",

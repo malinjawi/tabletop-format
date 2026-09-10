@@ -4049,7 +4049,7 @@ async function designPnpinkCommit(){
   const r=await fetch(`/api/games/${encodeURIComponent(slug)}/design/import/pnpink?commit=1`,{method:"POST",headers:edToken(),body:file});const data=await r.json().catch(()=>({}));
   if(!r.ok){if(button){button.disabled=false;button.textContent=review.propose?"Commit to fork + open PR":"Commit returned working copy";}prNote(data.error||"PnPInk import failed",true);return;}
   $("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");
-  if(data.proposed)setTimeout(()=>{go(`g/${slug}/suggestions`);setTimeout(()=>prDetail(slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>location.reload(),900);
+  if(data.proposed)setTimeout(()=>openFocusedPr(slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),900);
 }
 function designSquibReviewHtml(data,file,g){
   const cards=data.changes?.cards||{changed:[],added:[],removed:[]},layout=data.changes?.layout||[],conflicts=data.conflicts||[],warnings=data.warnings||[],changedFiles=data.changed_files||[];
@@ -4080,7 +4080,7 @@ async function designSquibCommit(){
   const r=await fetch(`/api/games/${encodeURIComponent(slug)}/design/import/squib?commit=1`,{method:"POST",headers:edToken(),body:file}),data=await r.json().catch(()=>({}));
   if(!r.ok){if(button){button.disabled=false;button.textContent=review.propose?"Commit to fork + open PR":"Commit returned working copy";}prNote(data.error||"Squib import failed",true);return;}
   $("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");
-  if(data.proposed)setTimeout(()=>{go(`g/${slug}/suggestions`);setTimeout(()=>prDetail(slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>location.reload(),900);
+  if(data.proposed)setTimeout(()=>openFocusedPr(slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),900);
 }
 function designNandeckAffectedFamilies(g,data){
   if(!g?.card_design)return [];
@@ -4143,7 +4143,7 @@ async function designNandeckCommit(){
   const data=await r.json().catch(()=>({}));
   if(!r.ok){if(button){button.disabled=false;button.textContent=review.propose?"Commit to fork + open PR":"Commit family design";}prNote(data.error||"nanDECK import failed",true);return;}
   $("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");
-  if(data.proposed)setTimeout(()=>{go(`g/${slug}/suggestions`);setTimeout(()=>prDetail(slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>location.reload(),900);
+  if(data.proposed)setTimeout(()=>openFocusedPr(slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),900);
 }
 function designSvgReviewHtml(data,file,g){
   const changes=data.changes||[],conflicts=data.conflicts||[],warnings=data.warnings||[],unsupported=data.unsupported||[];
@@ -4173,7 +4173,7 @@ async function designSvgCommit(){
   const data=await r.json().catch(()=>({}));
   if(!r.ok){if(button){button.disabled=false;button.textContent=review.propose?"Commit to fork + open PR":"Commit family design";}prNote(data.error||"SVG import failed",true);return;}
   $("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");
-  if(data.proposed)setTimeout(()=>{go(`g/${slug}/suggestions`);setTimeout(()=>prDetail(slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>location.reload(),900);
+  if(data.proposed)setTimeout(()=>openFocusedPr(slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),900);
 }
 function designProjectCounts(data){
   const c=data.changes?.cards||{added:[],changed:[],removed:[]},p=data.changes?.printings||{added:[],changed:[],removed:[]};
@@ -4227,7 +4227,7 @@ async function designProjectCommit(){
   const data=await r.json().catch(()=>({}));
   if(!r.ok){if(button){button.disabled=false;button.textContent=DESIGN_PROJECT_IMPORT.data.propose?"Commit to fork + open PR":"Commit imported changes";}prNote(data.error||"Import failed",true);return;}
   $("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");
-  if(data.proposed)setTimeout(()=>{go(`g/${slug}/suggestions`);setTimeout(()=>prDetail(slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>location.reload(),900);
+  if(data.proposed)setTimeout(()=>openFocusedPr(slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),900);
 }
 function designProofRenderGame(g){
   if(!DES||DES.slug!==g.slug||!DES.family||!DES.layout)return g;
@@ -4325,7 +4325,7 @@ function componentArtUpload(side="front"){if(componentDirty()){prNote("Commit or
 async function componentSvgExport(){if(componentDirty()){prNote("Commit or discard the local Forge draft before taking a version-pinned SVG working copy.",true);return;}const piece=componentCurrent(),family=piece&&componentFamilyFor(COMPONENT_EDIT.design,piece);if(!family)return;prNote(`Preparing ${family.label||family.id} for an external SVG editor…`);const r=await fetch(`/api/games/${encodeURIComponent(COMPONENT_EDIT.slug)}/components/svg/${encodeURIComponent(family.id)}`,{headers:authHdr()}),data=await r.json().catch(()=>({}));if(!r.ok){prNote(data.error||"Could not build family SVG",true);return;}const blob=new Blob([data.svg],{type:"image/svg+xml"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=data.file?.split("/").pop()||`${family.id}.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);prNote(`Downloaded ${a.download} · move named regions or change the flat family colors, then return it here`);}
 function componentSvgImport(){if(componentDirty()){prNote("Commit or discard the local Forge draft before reviewing an external SVG working copy.",true);return;}const input=document.createElement("input");input.type="file";input.accept=".svg,image/svg+xml";input.onchange=()=>{const file=input.files?.[0];if(file)componentSvgDryRun(file);};input.click();}
 async function componentSvgDryRun(file){prNote("Comparing component-family SVG with the current Forge design…");const r=await fetch(`/api/games/${encodeURIComponent(COMPONENT_EDIT.slug)}/components/import/svg`,{method:"POST",headers:edToken(),body:file}),data=await r.json().catch(()=>({}));if(!r.ok){prNote(data.error||"Could not inspect component SVG",true);return;}COMPONENT_SVG_IMPORT={file,data};const changes=data.changes||[],conflicts=data.conflicts||[],warnings=data.warnings||[],piece=COMPONENT_EDIT.pieces.find(item=>componentFamilyFor(COMPONENT_EDIT.design,item)?.id===data.family||(item.back&&componentFamilyFor(COMPONENT_EDIT.design,componentFaceFor(item,"back"))?.id===data.family))||componentCurrent(),before=piece?componentFacePair(piece,COMPONENT_EDIT.design,150):"",after=piece?componentFacePair(piece,data.candidate_design,150):"";$("#mbody").style.maxWidth="980px";$("#mbody").style.display="block";$("#mbody").innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px"><div><div class="badge">SVG DRY RUN · NOTHING WRITTEN</div><h2 style="margin:7px 0 2px">Review ${esc(data.family)} family</h2><div class="mut">${esc(file.name)} · ${changes.length} changed field${changes.length===1?"":"s"}${data.stale?" · exported from an older version":""}</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div>${piece?`<div class="component-review-grid" style="margin-top:18px"><div><div class="mut">CURRENT FORGE</div>${before}</div><div><div class="mut">RETURNED SVG</div>${after}</div></div>`:""}${conflicts.length?`<div class="warn" style="margin-top:14px;color:var(--red)"><b>${conflicts.length} concurrent conflict${conflicts.length===1?"":"s"}</b><br>Reload the family and reapply the overlapping edit; Forge will not overwrite it.</div>`:changes.length?`<div style="margin-top:14px">${changes.map(change=>`<div class="chg"><b>${esc(change.path)}</b><div class="mut">${esc(String(change.before))} → ${esc(String(change.after))}</div></div>`).join("")}</div>`:`<div class="emptystate">This SVG already matches the current family.</div>`}${warnings.length?`<details style="margin-top:12px"><summary>${warnings.length} import note${warnings.length===1?"":"s"}</summary><div class="mut" style="margin-top:7px">${warnings.map(esc).join("<br>")}</div></details>`:""}<div class="warn" style="margin-top:14px"><b>Bounded editor bridge</b><br>Region geometry and flat family colors round-trip. Bindings, typography, symbols, artwork, physical size, and production settings stay canonical in Forge.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">Cancel</button>${changes.length&&!conflicts.length?`<button class="btn primary" id="component-svg-commit" onclick="componentSvgCommit()">Commit returned family</button>`:""}</div>`;$("#modal").classList.add("on");}
-async function componentSvgCommit(){if(!COMPONENT_SVG_IMPORT)return;const button=$("#component-svg-commit");button.disabled=true;button.textContent="Validating…";const r=await fetch(`/api/games/${encodeURIComponent(COMPONENT_EDIT.slug)}/components/import/svg?commit=1`,{method:"POST",headers:edToken(),body:COMPONENT_SVG_IMPORT.file}),data=await r.json().catch(()=>({}));if(!r.ok){button.disabled=false;button.textContent="Commit returned family";prNote(data.error||"Component SVG import failed",true);return;}$("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");if(data.proposed)setTimeout(()=>{go(`g/${COMPONENT_EDIT.slug}/suggestions`);setTimeout(()=>prDetail(COMPONENT_EDIT.slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>componentStudioOpen(COMPONENT_EDIT.slug),700);}
+async function componentSvgCommit(){if(!COMPONENT_SVG_IMPORT)return;const button=$("#component-svg-commit");button.disabled=true;button.textContent="Validating…";const r=await fetch(`/api/games/${encodeURIComponent(COMPONENT_EDIT.slug)}/components/import/svg?commit=1`,{method:"POST",headers:edToken(),body:COMPONENT_SVG_IMPORT.file}),data=await r.json().catch(()=>({}));if(!r.ok){button.disabled=false;button.textContent="Commit returned family";prNote(data.error||"Component SVG import failed",true);return;}$("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} · PR ${data.pr} opened`:data.saved?`Committed ${data.commit}`:"No changes to commit");if(data.proposed)setTimeout(()=>openFocusedPr(COMPONENT_EDIT.slug,data.pr),500);else if(data.saved)setTimeout(()=>componentStudioOpen(COMPONENT_EDIT.slug),700);}
 function componentReview(){if(!componentDirty())return;const current=componentCurrent()||COMPONENT_EDIT.pieces[0],before=COMPONENT_EDIT.originalPieces.find(piece=>piece.id===current?.id),added=COMPONENT_EDIT.pieces.filter(piece=>!COMPONENT_EDIT.originalPieces.some(old=>old.id===piece.id)),removed=COMPONENT_EDIT.originalPieces.filter(piece=>!COMPONENT_EDIT.pieces.some(next=>next.id===piece.id)),changed=COMPONENT_EDIT.pieces.filter(piece=>{const old=COMPONENT_EDIT.originalPieces.find(x=>x.id===piece.id);return old&&JSON.stringify(old)!==JSON.stringify(piece);}),families=COMPONENT_EDIT.design.families.filter(family=>JSON.stringify(family)!==JSON.stringify(COMPONENT_EDIT.originalDesign.families.find(old=>old.id===family.id))),productionChanged=JSON.stringify(COMPONENT_EDIT.design.production)!==JSON.stringify(COMPONENT_EDIT.originalDesign.production),setupChanged=JSON.stringify(COMPONENT_EDIT.setup)!==JSON.stringify(COMPONENT_EDIT.originalSetup),players=COMPONENT_EDIT.design.production?.player_count;
   $("#mbody").style.maxWidth="1120px";$("#mbody").style.display="block";$("#mbody").innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px"><div><div class="badge">REVIEW · NOTHING WRITTEN</div><h2 style="margin:7px 0 2px">Review component production change</h2><div class="mut">${changed.length} changed · ${added.length} added · ${removed.length} removed · ${families.length} reusable families changed${productionChanged?` · kit set to ${players||"unresolved"} player${players===1?"":"s"}`:""}${setupChanged?" · setup map changed":""}</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div>${current?`<div class="component-review-grid" style="margin-top:18px"><div><div class="mut">REPOSITORY</div>${before?componentFacePair(before,COMPONENT_EDIT.originalDesign,145):`<div class="emptystate">New piece</div>`}</div><div><div class="mut">PROPOSED</div>${componentFacePair(current,COMPONENT_EDIT.design,145)}</div></div>`:""}<div id="component-manufacturing-proof" style="margin-top:16px"><div class="emptystate"><b>Building the exact manufacturing proof…</b><br>Forge is validating this local draft and packing its real cut sheets without writing to the repository.</div></div><div class="warn" style="margin-top:15px"><b>One atomic commit</b><br>Piece data, player-count quantity resolution, front/back pairing, shared family styling, and the selected setup map are validated together. The manufacturing proof above is generated from this uncommitted candidate by the same renderer used for release output. VTT component auto-staging remains an explicit future adapter capability.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">Keep editing</button><button class="btn primary" id="component-commit" onclick="componentCommit()" disabled>Building manufacturing proof…</button></div>`;$("#modal").classList.add("on");componentReviewProof(JSON.stringify({base_ref:COMPONENT_EDIT.ref,pieces:COMPONENT_EDIT.pieces,design:COMPONENT_EDIT.design,setup:COMPONENT_EDIT.setup}));}
 async function componentReviewProof(snapshot){const target=$("#component-manufacturing-proof"),button=$("#component-commit");if(!target||!button)return;try{const r=await fetch(`/api/games/${encodeURIComponent(COMPONENT_EDIT.slug)}/components/preview`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:snapshot}),data=await r.json().catch(()=>({}));if(!$("#component-manufacturing-proof")||snapshot!==JSON.stringify({base_ref:COMPONENT_EDIT.ref,pieces:COMPONENT_EDIT.pieces,design:COMPONENT_EDIT.design,setup:COMPONENT_EDIT.setup}))return;if(!r.ok){target.innerHTML=`<div class="warn" style="color:var(--red)"><b>Manufacturing proof failed</b><br>${esc(data.error||"Could not build this candidate")}${data.report?.length?`<details style="margin-top:7px"><summary>Validation report</summary>${data.report.map(line=>`<div>${esc(line)}</div>`).join("")}</details>`:""}</div>`;button.textContent="Resolve proof errors before commit";return;}const manifest=data.manifest||{},totals=manifest.totals||{},production=manifest.production||{},sheet=production.sheet||{},large=(manifest.large_piece_tiles||[]).reduce((sum,item)=>sum+(item.files?.length||0),0),proofs=data.previews||[];target.innerHTML=`<div class="component-production-summary"><b>Exact uncommitted manufacturing proof</b><span>${esc(sheet.page||"sheet")} · ${totals.physical_pieces??0} physical pieces</span><span>${totals.front_pages??0} front + ${totals.back_pages??0} back sheets</span><span>${large} poster tile${large===1?"":"s"}</span><span>${totals.setup_maps??0} setup map${totals.setup_maps===1?"":"s"}</span><span>${manifest.quantity_resolution?.status==="resolved"?"quantities resolved":"player count unresolved"}</span></div>${proofs.length?`<div class="component-proof-grid">${proofs.map((proof,index)=>`<div class="component-proof-card"><img data-component-proof="${index}" alt="${esc(proof.file)} manufacturing proof"><div class="mut">${esc(proof.file)}</div></div>`).join("")}</div>`:`<div class="emptystate">No standard cut sheet was generated. Check the poster-tile and component totals above.</div>`}`;proofs.forEach((proof,index)=>{const image=target.querySelector(`[data-component-proof="${index}"]`),url=URL.createObjectURL(new Blob([proof.svg],{type:"image/svg+xml"}));image.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),0);image.src=url;});button.disabled=false;button.textContent="Commit component change";}catch(error){if(!$("#component-manufacturing-proof"))return;target.innerHTML=`<div class="warn" style="color:var(--red)"><b>Manufacturing proof could not connect</b><br>${esc(error.message||"The preview service is unavailable. Try again before committing.")}</div>`;button.textContent="Retry review to build proof";}}
@@ -4362,7 +4362,7 @@ async function printProfileOpen(slug,deckId=""){
 async function printProfileReview(){
   const button=$("#print-review"),profile=printProfileValue();if(button){button.disabled=true;button.textContent="Validating profile…";}const response=await fetch(`/api/games/${encodeURIComponent(PRINT_PROFILE_EDIT.slug)}/design/print-profile`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({profile})}),data=await response.json().catch(()=>({}));if(!response.ok){if(button){button.disabled=false;button.textContent="Review exact profile";}const report=data.validation?.report||data.report||[];prNote([data.error||"Print profile validation failed",...report].join(" · "),true);return;}PRINT_PROFILE_EDIT={...PRINT_PROFILE_EDIT,review:data};const g=G(PRINT_PROFILE_EDIT.slug),faces=(data.selected_printings||[]).slice(0,6).map(item=>{const card=g.cards.find(card=>card.id===item.card_id),printing=(g.printings||[]).find(printing=>printing.id===item.id);return card?`<div>${layoutCard(g,card,printing||cfPrinting(g,card),{w:95,sourceBacked:false})}<div class="mut" style="font-size:10px;text-align:center">${esc(item.id)} · ${esc(item.quantity)}×</div></div>`:"";}).join("");const target=data.production_target,cmyk=profile.press.target==="custom-cmyk-pdfx1a",saveAction=data.access.can_write?`<button class="btn primary" id="print-commit" onclick="printProfileCommit()">Commit print profile</button>`:data.access.authenticated?`<button class="btn primary" id="print-commit" onclick="printProfileCommit()">Commit to edition & open PR</button>`:`<span class="mut">Sign in to propose this profile from your own edition.</span>`;const reviseDeck=PRINT_PROFILE_EDIT.seedDeckId||"";$("#mbody").innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px"><div><div class="badge">PRINT PROFILE DRY RUN · NOTHING WRITTEN</div><h2 style="margin:7px 0 2px">Review the exact production contract</h2><div class="mut">${data.selected_cards.length} card identities · ${data.printings} unique faces · ${data.physical_cards} physical cards</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div><div class="print-review-faces">${faces}</div><div class="chg" style="margin-top:13px"><b>✓ Complete project validation passed</b><br>${profile.home.fronts_only?"Fronts only":"Long-edge mirrored duplex"} · ${profile.home.gutter_mm} mm gutter · ${esc(profile.home.crop_marks)} marks on ${profile.home.crop_marks==="none"?"no pages":esc(profile.home.crop_mark_sides)} · ${profile.home.sleeve_profile==="none"?"native trim":esc(profile.home.sleeve_profile)} · press marks on ${profile.press.crop_marks==="none"?"no pages":esc(profile.press.crop_mark_sides)} · ${esc(target?.label||"Generic sRGB handoff")}${profile.press.include_back?" + shared back":""}.</div><div class="warn" style="margin-top:12px"><b>${cmyk?"CMYK/PDF-X candidate · profile verified":target?.status==="spec-checked-handoff"?"Named handoff · specification checked":"Honest generic press boundary"}</b><br>${cmyk?`Forge verified ${esc(data.profile_asset?.path||profile.press.icc_profile)} (${esc((data.profile_asset?.sha256||"").slice(0,12))}…) as a rights-tracked CMYK printer profile. Release preflight will convert every pixel, enforce ${esc(profile.press.max_ink_coverage_percent)}% total ink, embed the exact profile, and inspect the PDF object graph. Receiving-printer approval remains required.`:target?.status==="spec-checked-handoff"?`${esc(target.description)} The release preflight verifies every delivered file; Forge does not claim native publishing.`:"Forge reopens generated PDFs, checks page count, embedded fonts and page boxes, and labels generic output sRGB."}</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="printProfileOpen('${esc(PRINT_PROFILE_EDIT.slug)}','${esc(reviseDeck)}')">← Revise</button>${saveAction}</div>`;
 }
-async function printProfileCommit(){const review=PRINT_PROFILE_EDIT?.review;if(!review)return;const button=$("#print-commit");button.disabled=true;button.textContent="Validating and committing…";const response=await fetch(`/api/games/${encodeURIComponent(PRINT_PROFILE_EDIT.slug)}/design/print-profile`,{method:"PUT",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({profile:review.profile,base_ref:review.base_ref})}),data=await response.json().catch(()=>({}));if(!response.ok){button.disabled=false;button.textContent="Review again";prNote(data.error||"Print profile commit failed",true);return;}$("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} to ${data.fork} · PR opened for review`:data.saved?`Committed ${data.commit} · exact print profile is now part of the game`:data.message||"Print profile already matches");if(data.proposed)setTimeout(()=>{go(`g/${PRINT_PROFILE_EDIT.slug}/suggestions`);setTimeout(()=>prDetail(PRINT_PROFILE_EDIT.slug,data.pr),700);},500);else if(data.saved)setTimeout(()=>location.reload(),800);}
+async function printProfileCommit(){const review=PRINT_PROFILE_EDIT?.review;if(!review)return;const button=$("#print-commit");button.disabled=true;button.textContent="Validating and committing…";const response=await fetch(`/api/games/${encodeURIComponent(PRINT_PROFILE_EDIT.slug)}/design/print-profile`,{method:"PUT",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({profile:review.profile,base_ref:review.base_ref})}),data=await response.json().catch(()=>({}));if(!response.ok){button.disabled=false;button.textContent="Review again";prNote(data.error||"Print profile commit failed",true);return;}$("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} to ${data.fork} · PR opened for review`:data.saved?`Committed ${data.commit} · exact print profile is now part of the game`:data.message||"Print profile already matches");if(data.proposed)setTimeout(()=>openFocusedPr(PRINT_PROFILE_EDIT.slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),800);}
 function designWorkspaceMapHtml(g){
   const art=(g.printings||[]).filter(p=>p.art||p.image||p.scan||p.art_url||p.scan_data||p.art_data).length;
   const rules=!!String(g.rules_md||"").trim(),tokens=(g.tokens||[]).length;
@@ -4818,11 +4818,19 @@ function go(hash){ location.hash = hash; }
 window.onhashchange = render;
 function render(){
   const h = location.hash.replace(/^#\/?/,"");
-  const parts=h.split("/").map(decodeURIComponent), scoped=parts[0]==="g"&&parts.length>2?GP(parts[1],parts[2]):null;
+  const parts=h.split("/").map(decodeURIComponent),legacyTabs=new Set(["overview","cards","design","rules","playtests","play","community","assets","history","suggestions","issues","releases","banlist","decks"]);
+  const looksLegacy=parts[0]==="g"&&(parts.length===2||legacyTabs.has(parts[2]));
+  const wantsScoped=parts[0]==="g"&&parts.length>2&&!looksLegacy;
+  const scoped=parts[0]==="g"&&parts.length>2?GP(parts[1],parts[2]):null;
   const legacy=parts[0]==="g"&&!scoped?G(parts[1]):null, game=scoped||legacy;
   const tab=scoped?parts[3]:(legacy?parts[2]:null), mode=scoped?parts[4]:(legacy?parts[3]:null);
   const [__, jamId] = h.match(/^jam\/([^/]+)/) || [];
   const [___, userName] = h.match(/^u\/(.+)/) || [];
+  if(!game&&parts[0]==="g"){
+    projectRouteLoadingPage(looksLegacy?"":parts[1],looksLegacy?parts[1]:parts[2]);
+    if(!CATALOG_LOADING){if(looksLegacy)loadProjectView(parts[1]);else if(wantsScoped)loadProjectRoute(parts[1],parts[2]);}
+    return;
+  }
   if (game?._summary) { projectLoadingPage(game); loadProjectView(game.slug); }
   else if (game) repoPage(game, tab||"overview", mode);
   else if (jamId) jamPage(jamId);
@@ -4837,6 +4845,22 @@ function render(){
   window.scrollTo(0,0);
 }
 const PROJECT_LOADS=new Map();
+const PROJECT_ROUTE_LOADS=new Map();
+function projectRouteLoadingPage(namespace,slug){
+  $("#view").innerHTML=`<div class="repohead"><div class="wrap"><div class="titleline"><div class="repo-identity"><h1>📦 ${namespace?`${esc(namespace)} / `:""}<b>${esc(slug)}</b></h1></div></div></div></div><div class="wrap"><div class="pane"><div class="box"><div class="bb" style="padding:30px"><b>Opening this game…</b><div class="mut" style="margin-top:6px">Resolving its permanent project address and loading the exact current version.</div></div></div></div></div>`;
+}
+async function loadProjectRoute(namespace,repoSlug){
+  const key=`${namespace}/${repoSlug}`;if(PROJECT_ROUTE_LOADS.has(key))return PROJECT_ROUTE_LOADS.get(key);
+  const work=(async()=>{try{
+    const resolvedResponse=await fetch(`/api/projects/${encodeURIComponent(namespace)}/${encodeURIComponent(repoSlug)}`);
+    if(!resolvedResponse.ok)throw new Error(resolvedResponse.status===404?"This game could not be found or you do not have access.":`project address ${resolvedResponse.status}`);
+    const resolved=await resolvedResponse.json(),viewResponse=await fetch(`${resolved.api}/ui`);
+    if(!viewResponse.ok)throw new Error(`project view ${viewResponse.status}`);
+    const full=await viewResponse.json(),index=DATA.games.findIndex(game=>game.slug===resolved.storage_key);
+    if(index>=0)DATA.games[index]=full;else DATA.games.push(full);render();
+  }catch(error){$("#view").innerHTML=`<div class="wrap"><div class="pane"><div class="box"><div class="bb"><b>Could not open this game.</b><div class="mut" style="margin-top:6px">${esc(error.message)}</div><button class="btn" style="margin-top:12px" onclick="location.reload()">Retry</button></div></div></div></div>`;}finally{PROJECT_ROUTE_LOADS.delete(key);}})();
+  PROJECT_ROUTE_LOADS.set(key,work);return work;
+}
 function projectLoadingPage(g){
   $("#view").innerHTML=`<div class="repohead"><div class="wrap"><div class="titleline"><div class="repo-identity"><h1>📦 ${esc(g.namespace||"community")} / <b>${esc(g.repo_slug||g.slug)}</b></h1><div class="repo-meta"><span class="badge lic">${esc(g.license||"")}</span></div></div></div></div></div><div class="wrap"><div class="pane"><div class="box"><div class="bb" style="padding:30px"><b>Loading this game…</b><div class="mut" style="margin-top:6px">Cards, layouts, rules, and history load only when you open the project.</div></div></div></div></div>`;
 }
@@ -4899,20 +4923,23 @@ async function loadFeed(){
   let ev; try{ ev=await (await fetch("/api/activity")).json(); }catch{ return; }
   if(!Array.isArray(ev)||!ev.length) return;
   const feed=$("#feed"); if(!feed) return;
-  const verb={fork:"forked",star:"starred",pr_merge:"merged a PR into",jam_join:"joined a jam with",release:"released"};
-  const line=e=>{const who=e.actor_handle?`<b>${esc(e.actor_handle)}</b>`:"someone";
-    const g=e.game_slug?`<a onclick="go('g/${esc(e.game_slug)}')">${esc(e.game_slug)}</a>`:"";
-    const tgt=e.target?` <span style="color:var(--mut)">(${esc(e.target)})</span>`:"";
+  const verb={fork:"forked",star:"starred",pr_open:"opened a PR for",pr_merge:"merged a PR into",jam_join:"joined a jam with",release:"released"};
+  const line=e=>{const who=e.actor_handle?`<b>${esc(e.actor_handle)}</b>`:"someone",game=G(e.game_slug);
+    const base=game?gameRoute(game):`g/${encodeURIComponent(e.game_slug||"")}`,destination=e.kind==="pr_open"&&e.target?`${base}/suggestions/${encodeURIComponent(e.target)}`:base;
+    const g=e.game_slug?`<a onclick="go('${destination}')">${esc(e.game_slug)}</a>`:"";
+    const tgt=e.target&&e.kind!=="pr_open"?` <span style="color:var(--mut)">(${esc(e.target)})</span>`:"";
     return `<div style="padding:8px 0;border-bottom:1px solid var(--bd);font-size:13.5px">${who} ${verb[e.kind]||e.kind} ${g}${tgt}</div>`;};
   feed.innerHTML=`<div class="box"><div class="bh">⚡ Recent activity</div><div class="bb">${ev.slice(0,12).map(line).join("")}</div></div>`;
 }
 async function showNotifs(){
   if(typeof LIVE==="undefined"||!LIVE||!ME){ toast(ME?"No notifications.":"Sign in to see your notifications."); return; }
   const d=await (await fetch("/api/notifications",{headers:authHdr()})).json();
-  const verb={pr_comment:"commented on your PR",fork:"forked your game",pr_review:"reviewed your PR",pr_merge:"merged your PR"};
+  const verb={pr_open:"opened a pull request",pr_comment:"commented on your PR",fork:"forked your game",pr_review:"reviewed your PR",pr_merge:"merged your PR"};
   const items=d.items||[];
+  const destination=n=>{const game=G(n.game_slug),base=game?gameRoute(game):`g/${encodeURIComponent(n.game_slug||"")}`;
+    return n.target&&String(n.kind||"").startsWith("pr_")?`${base}/suggestions/${encodeURIComponent(n.target)}`:base;};
   $("#view").innerHTML=`<div class="wrap" style="max-width:720px;margin-top:20px"><div class="box"><div class="bh">🔔 Notifications ${d.unread?`<span class="badge" style="background:#e5484d;color:#fff;border:none">${d.unread} new</span>`:""}<button class="btn" style="float:right" onclick="markNotifs()">Mark all read</button></div><div class="bb">
-    ${items.length?items.map(n=>`<div style="padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px;${n.read?"":"font-weight:600"}"><b>${esc(n.actor_handle||"someone")}</b> ${verb[n.kind]||esc(n.kind)}${n.game_slug?` · <a onclick="go('g/${esc(n.game_slug)}')">${esc(n.game_slug)}</a>`:""}</div>`).join(""):"<div class='emptystate'>No notifications yet — you'll hear when someone forks your game or touches your PRs.</div>"}
+    ${items.length?items.map(n=>`<div style="padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px;${n.read?"":"font-weight:600"}"><b>${esc(n.actor_handle||"someone")}</b> ${verb[n.kind]||esc(n.kind)}${n.game_slug?` · <a onclick="go('${destination(n)}')">${esc(n.game_slug)}</a>`:""}</div>`).join(""):"<div class='emptystate'>No notifications yet — you'll hear when someone forks your game or touches your PRs.</div>"}
   </div></div></div>`;
 }
 async function markNotifs(){ if(!ME)return; await fetch("/api/notifications/read",{method:"POST",headers:authHdr()}); showNotifs(); }
@@ -5343,7 +5370,17 @@ function edToken(){return {};}
 /* ---------- CARD EDITOR, embedded in the game page (a mode of the Cards tab) ---------- */
 async function cardsEdit(g){
   if(!g.cards.length){cardsEmpty(g);return;}
-  if(LIVE && !ME){ authOpen(); go(`g/${g.slug}/cards`); return; }
+  if(LIVE && !ME){
+    // A direct or reloaded editor URL can resolve the project before the
+    // startup identity request finishes. Recheck the browser session before
+    // treating that brief hydration race as a signed-out user and destroying
+    // the requested edit route.
+    try{
+      const identity=await fetch("/api/me",{headers:authH()});
+      if(identity.ok){ME=await identity.json();MYSTARS=new Set(ME.starred||[]);renderAuthArea();}
+    }catch{}
+    if(!ME){authOpen();go(`${gameRoute(g)}/cards`);return;}
+  }
   let access=LIVE
     ? {canWrite:false,authed:true,ownerless:false,unavailable:true,ref:null}
     : {canWrite:true,authed:true,ownerless:false,unavailable:false,ref:"offline-preview"};
@@ -5362,7 +5399,7 @@ async function cardsEdit(g){
     <div class="edhrow">
       <div style="flex:1"><h2 style="margin:0;font-size:19px">✎ Editing cards — ${esc(g.title)}</h2>
         <div id="ed-sub" style="color:var(--mut);font-size:13px;margin-top:2px"></div></div>
-      <button class="btn" onclick="go('g/${g.slug}/cards')">← Done editing</button>
+      <button class="btn" onclick="go('${gameRoute(g)}/cards')">← Done editing</button>
     </div>
     <div class="edwrap">
       <div class="edside">
@@ -5399,7 +5436,7 @@ async function openEditor(slug, cid){
   // degrades gracefully offline); only edCommit() is server-gated. Do NOT
   // early-return on !LIVE here -- that used to kill editing in the static
   // showcase build entirely.
-  window._edSel=cid||null; go(`g/${slug}/cards/edit`);
+  const game=G(slug);window._edSel=cid||null;go(`${game?gameRoute(game):`g/${encodeURIComponent(slug)}`}/cards/edit`);
 }
 async function openEditor_UNUSED(slug, cid){
   const g=G(slug);
@@ -5417,7 +5454,7 @@ async function openEditor_UNUSED(slug, cid){
   document.getElementById("drawer").classList.add("on");
   edRenderList(); edSelect(ED.sel);
 }
-function closeEditor(){ const sl=ED&&ED.slug; ED=null; if(sl) go(`g/${sl}/cards`); }
+function closeEditor(){ const sl=ED&&ED.slug,game=sl&&G(sl); ED=null; if(sl) go(`${game?gameRoute(game):`g/${encodeURIComponent(sl)}`}/cards`); }
 function edCard(){return ED.cards.find(c=>c.id===ED.sel);}
 function edArt(){
   if(typeof LIVE==="undefined"||!LIVE){ toast("Art upload needs the platform server (node server.mjs)."); return; }
@@ -6171,7 +6208,11 @@ async function edCommit(){
       if(!title){btn.disabled=false;btn.textContent=was;return;}
       const r=await fetch(`/api/games/${ED.slug}/cards/propose`,{method:"POST",headers:{"content-type":"application/json",...edToken()},body:JSON.stringify({cards:ED.cards,title,base_ref:ED.access.ref})});
       const d=await r.json();
-      if(r.status===201)toast(`<b>⇡ Pull request opened</b><br>${esc(d.message)}<br><span style="opacity:.7">Committed to your fork <b>${esc(d.fork)}</b> as ${esc(d.commit)} — owner can review on the Pull requests tab.</span>`,12000);
+      if(r.status===201){
+        toast(`<b>⇡ Pull request opened</b><br>${esc(d.message)}<br><span style="opacity:.7">Committed to your edition <b>${esc(d.fork)}</b> as ${esc(d.commit)}. Opening the exact review now…</span>`,8000);
+        setTimeout(()=>openFocusedPr(ED.slug,d.pr),350);
+        return;
+      }
       else if(r.status===409){toast(`<b style="color:#ffa198">The source game changed while you were editing.</b><br>Your draft was not proposed. Reload to review the accepted changes first.`,10000);btn.textContent="Reload newer version";btn.disabled=false;btn.onclick=()=>location.reload();return;}
       else toast(`<b style="color:#ffa198">✗ ${esc(d.error||r.status)}</b>`,8000);
     }
@@ -6578,7 +6619,12 @@ const authHdr=()=>({"content-type":"application/json"});
 function chgHtml(ch){return ch.kind==="changed"
   ?`<div class="chg"><b>${esc(ch.name)}</b> · ${esc(String(ch.field).replace("attributes.",""))}: <span class="old">${esc(String(ch.from))}</span> → <span class="new">${esc(String(ch.to))}</span></div>`
   :`<div class="chg"><b>${esc(ch.name)}</b> ${ch.kind}</div>`;}
-async function liveSuggestions(g){
+function focusedPrRoute(slug,id){
+  const game=G(slug),base=game?gameRoute(game):`g/${encodeURIComponent(slug)}`;
+  return `${base}/suggestions/${encodeURIComponent(id)}`;
+}
+function openFocusedPr(slug,id){go(focusedPrRoute(slug,id));}
+async function liveSuggestions(g,focusId=null){
   const pane=$("#pane");
   pane.innerHTML="<div class='emptystate'>Loading pull requests…</div>";
   const [prs,catalog]=await Promise.all([
@@ -6600,6 +6646,11 @@ async function liveSuggestions(g){
         <div style="color:var(--mut);font-size:13px;margin-top:6px"><b>${esc(pr.author_handle)}</b> proposes <code>${esc(pr.from_slug)}</code> → <code>${esc(g.slug)}</code></div></div>
       <div class="prbody" id="prb-${pr.id}"><button class="btn" onclick="prDetail('${g.slug}','${pr.id}')">View game changes</button></div>
     </div>`).join("");
+  if(focusId){
+    const focused=document.getElementById(`pr-${focusId}`);
+    if(focused){await prDetail(g.slug,focusId);focused.scrollIntoView({block:"start"});}
+    else pane.insertAdjacentHTML("afterbegin",`<div class="box" style="margin-bottom:14px"><div class="bb"><b>That proposal is no longer available here.</b><div class="mut" style="margin-top:4px">It may have been removed, or the link may belong to another game.</div></div></div>`);
+  }
 }
 // visual PR diff: layoutCard(before) -> layoutCard(after) per touched card
 // (falls back to cardFrame() for games with no layout.yaml), using the
@@ -6653,6 +6704,7 @@ async function prAssetDiff(pr){
 async function prDetail(slug,id){
   const pr=await (await fetch(`/api/games/${slug}/prs/${id}`,{headers:authHdr()})).json();
   const box=$(`#prb-${id}`);
+  if(!box)return;
   const visualDiff=prVisualDiff(G(slug),pr);
   const assetDiff=await prAssetDiff(pr);
   const allConflicts=[...(pr.conflicts||[]),...(pr.printing_conflicts||[]).map(item=>`printing ${item.id}:${item.path}`),...(pr.file_conflicts||[])];
@@ -6664,11 +6716,17 @@ async function prDetail(slug,id){
   const checksHtml=pr.status==="open"?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin:10px 0">${checks.map(check=>`<span class="badge" style="color:${check.pass?'var(--grn)':'#9a6700'}">${check.pass?'✓':'○'} ${esc(check.detail)}</span>`).join("")}</div>`:"";
   const reviewRow=pr.status==="open"&&access.can_review?`<div style="margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" onclick="reviewPr('${slug}','${id}','approve')">✓ Approve</button><button class="btn" onclick="reviewPr('${slug}','${id}','request_changes')">✎ Request changes</button>${reviewsHtml}</div>`
     :reviewsHtml+(pr.status==="open"&&access.is_author?`<div class="mut" style="font-size:12px;margin:8px 0">This is your proposal. A maintainer must review it; you cannot approve or merge it yourself.</div>`:"");
+  const target=G(slug),targetRoute=target?gameRoute(target):`g/${encodeURIComponent(slug)}`;
   const actions=pr.status==="open"&&(access.can_merge||access.can_close)?`<div class="mergebar">
       ${access.can_merge?`<button class="btn primary" ${pr.mergeable?`onclick="mergePr('${slug}','${id}')"`:'disabled title="Complete the review checks first"'}>${pr.mergeable?`Merge — commits as ${esc(pr.author)}`:"Merge after approval"}</button>`:""}
       ${access.can_close?`<button class="btn" onclick="closePr('${slug}','${id}')">Close</button>`:""}
       <span style="color:var(--mut);font-size:13px">Accepted changes keep ${esc(pr.author)}'s name in the history.</span></div>`
-    :(pr.status==="merged"?`<div class="mergebar"><span style="color:var(--mut)">merged as <code>${esc(pr.merge_sha||"")}</code></span></div>`:"");
+    :(pr.status==="merged"?`<div class="mergebar" style="align-items:center;gap:8px;flex-wrap:wrap;background:#f1fbf5;border-color:#b8d9cb">
+      <div style="flex:1;min-width:240px"><b style="color:var(--grn)">✓ Accepted into ${esc(target?.title||slug)}</b>
+        <div class="mut" style="font-size:12.5px;margin-top:4px">Merged as <code>${esc(pr.merge_sha||"")}</code>. The accepted work is authored as <b>${esc(pr.author)}</b>, so their credit remains attached to this version and its history.</div></div>
+      <button class="btn" onclick="go('${targetRoute}/cards')">View accepted cards</button>
+      ${access.can_release?`<button class="btn primary" onclick="go('${targetRoute}/releases')">Prepare this version for release</button>`:""}
+    </div>`:"");
   const discussion=`<div style="margin-top:14px"><div class="mut" style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Discussion</div>${commentThread(pr.comments)}
     ${ME?`<textarea id="prc-${id}" placeholder="Leave a review comment…" style="width:100%;min-height:56px;margin-top:8px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></textarea>
       <div style="margin-top:6px"><button class="btn" onclick="commentPr('${slug}','${id}')">Comment</button></div>`:``}</div>`;
@@ -6690,13 +6748,13 @@ async function reviewPr(slug,id,verdict){
 async function mergePr(slug,id){
   const r=await fetch(`/api/games/${slug}/prs/${id}/merge`,{method:"POST",headers:authHdr()});
   const d=await r.json();
-  if(r.ok){const n=(d.changes||[]).length+(d.file_changes||[]).length;prNote(`Merged as ${d.commit} — ${n} game change${n===1?"":"s"} landed`);setTimeout(()=>location.reload(),1200);}
+  if(r.ok){const n=(d.changes||[]).length+(d.file_changes||[]).length;prNote(`Merged as ${d.commit} — ${n} game change${n===1?"":"s"} landed`);setTimeout(()=>{location.hash=focusedPrRoute(slug,id);location.reload();},500);}
   else{const conflicts=[...(d.conflicts||[]),...(d.file_conflicts||[])];prNote(d.error+(conflicts.length?": "+conflicts.join(", "):""),true);}
 }
 async function closePr(slug,id){
   const r=await fetch(`/api/games/${slug}/prs/${id}/close`,{method:"POST",headers:authHdr()});
   const d=await r.json();
-  if(r.ok){prNote("PR closed");prDetail(slug,id);liveSuggestions(G(slug));}
+  if(r.ok){prNote("PR closed");openFocusedPr(slug,id);liveSuggestions(G(slug),id);}
   else prNote(d.error,true);
 }
 async function proposePr(from,to){
@@ -6707,11 +6765,11 @@ async function proposePr(from,to){
   const r=await fetch(`/api/games/${to}/prs`,{method:"POST",headers:authHdr(),
     body:JSON.stringify({from,title})});
   const d=await r.json();
-  if(r.ok){const cards=(d.changes||[]).length,files=(d.file_changes||[]).length;prNote(`PR opened: "${title}" (${cards} card · ${files} reusable-file change${files===1?"":"s"})`);}
+  if(r.ok){const cards=(d.changes||[]).length,files=(d.file_changes||[]).length;prNote(`PR opened: "${title}" (${cards} card · ${files} reusable-file change${files===1?"":"s"})`);setTimeout(()=>openFocusedPr(to,d.id||d.pr),350);}
   else prNote(d.error,true);
 }
-async function suggestions(g){
-  if(LIVE) return liveSuggestions(g);
+async function suggestions(g,mode){
+  if(LIVE) return liveSuggestions(g,mode);
   if(!g.prs.length){$("#pane").innerHTML="<div class='emptystate'>No open pull requests.<br><span style='font-size:13px'>Fork this game, make changes, and open a PR — the diff will be cards, not code.</span></div>";return;}
   $("#pane").innerHTML=g.prs.map(pr=>{
     const byCard={};
@@ -6816,7 +6874,7 @@ async function liveReleases(g){
   const blockerPaths=[...new Set((preflight.rights?.blockers||[]).map(releaseBlockerPath).filter(Boolean))];
   const blockerList=(preflight.rights?.blockers||[]).slice(0,12).map(message=>`<li>${esc(message)}</li>`).join("");
   const access=preflight.access||{}, ready=preflight.ready;
-  const action=ready?`<button class="btn primary" onclick="cutRelease('${g.slug}')">🏷 Cut this exact release</button>`
+  const action=ready?`<button class="btn primary" onclick="cutRelease('${g.slug}','${esc(preflight.ref||"")}')">🏷 Cut this exact release</button>`
     :access.can_release&&blockerPaths.length?`<div style="display:flex;gap:7px;flex-wrap:wrap">${blockerPaths.map(path=>`<button class="btn" onclick="declareReleaseRight('${g.slug}','${encodeURIComponent(path)}')">Declare ${esc(path)}</button>`).join("")}</div>`
     :!access.can_release?`<span class="mut" style="font-size:12.5px">Only this game's owner can publish a release. Contributors propose changes; maintainers review them.</span>`
     :`<span class="mut" style="font-size:12.5px">Resolve the failed check before Forge starts any release build.</span>`;
@@ -6850,14 +6908,15 @@ async function declareReleaseRight(slug,encoded){
   if(r.ok){prNote(`Rights committed at ${d.commit}`);liveReleases(G(slug));}
   else prNote(d.error||"could not record rights",true);
 }
-async function cutRelease(slug){
+async function cutRelease(slug,baseRef){
   if(!ME){ toast("Sign in to cut a release"); return; }
   const v=await askForm("Cut a release",[{name:"tag",label:"Tag (e.g. v1.0)",placeholder:"v1.0"},{name:"title",label:"Title (optional)"}],"Release");
   if(!v||!v.tag) return;
   toast("Cutting release + freezing exports…");
-  const r=await fetch(`/api/games/${slug}/releases`,{method:"POST",headers:authHdr(),body:JSON.stringify({tag:v.tag,title:v.title})});
+  const r=await fetch(`/api/games/${slug}/releases`,{method:"POST",headers:authHdr(),body:JSON.stringify({tag:v.tag,title:v.title,base_ref:baseRef})});
   const d=await r.json();
   if(r.status===201){ toast(`Released ${d.tag} — pinned to ${d.sha}`); liveReleases(G(slug)); }
+  else if(r.status===409&&d.written===false){toast(`<b style="color:#ffa198">The game changed before release.</b><br>No tag or download was created. Forge is refreshing readiness for the newer exact version.`,9000);liveReleases(G(slug));}
   else{toast(d.error||"couldn't cut release");liveReleases(G(slug));}
 }
 

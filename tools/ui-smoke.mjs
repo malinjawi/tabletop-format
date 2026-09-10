@@ -822,10 +822,16 @@ w.save(p)
   await page.getByRole("button", { name:"Cut this exact release" }).click();
   await page.getByLabel("Tag (e.g. v1.0)").fill("v0.1");
   await page.getByLabel("Title (optional)").fill("UI manufacturing proof");
+  const displayedReleaseRef=(await page.locator(".box").filter({hasText:"Release readiness"})
+    .first().locator("code").first().textContent()).trim();
   const releaseResponse=page.waitForResponse(response=>response.request().method()==="POST"
     &&new URL(response.url()).pathname==="/api/games/onboarding-smoke-game/releases",{timeout:90_000});
   await page.getByRole("button",{name:"Release",exact:true}).click();
-  assert((await releaseResponse).status()===201,"the browser cuts a rights-cleared exact release before printer handoff");
+  const releaseHttp=await releaseResponse,releaseRequest=releaseHttp.request().postDataJSON();
+  assert(releaseHttp.status()===201,"the browser cuts a rights-cleared exact release before printer handoff");
+  assert(typeof releaseRequest.base_ref==="string"&&releaseRequest.base_ref.startsWith(displayedReleaseRef),
+    "release creation pins the exact version shown by readiness instead of silently following a newer HEAD",
+    JSON.stringify({displayed:displayedReleaseRef,sent:releaseRequest.base_ref||null}));
   await page.getByRole("button",{name:"Record exact handoff"}).waitFor({timeout:90_000});
   await page.getByRole("button",{name:"Record exact handoff"}).click();
   await page.getByLabel("Printer or manufacturer").fill("Example Print House");
@@ -859,8 +865,9 @@ w.save(p)
     &&(await page.locator("body").innerText()).includes("not independently verified by Forge"),
     "the release surfaces a downloadable receipt and keeps the evidence boundary explicit");
 
-  // Build a real Bob proposal through the public contract, then verify the
-  // browser presents only the actions each person is authorized to perform.
+  // Build a real Bob edition, then open its proposal through the product UI.
+  // The contributor must land on the exact review rather than being abandoned
+  // in their editor with only a temporary toast.
   const api=async(method,path,token,body)=>{
     const response=await fetch(origin+path,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),
       ...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined});
@@ -872,36 +879,50 @@ w.save(p)
   const bobFork=await api("POST","/api/games/onboarding-smoke-game/fork",bobToken,{ref:"HEAD"});
   const bobCards=await api("GET",`/api/games/${bobFork.data.slug}/cards`,bobToken);
   bobCards.data.find(card=>card.id==="spark_01").text="Deal 2 damage after review.";
-  const bobEdit=await api("PUT",`/api/games/${bobFork.data.slug}/cards`,bobToken,bobCards.data);
-  const bobProposal=await api("POST","/api/games/onboarding-smoke-game/prs",bobToken,{
-    from:bobFork.data.slug,title:"Tune Spark after playtest"});
-  assert(bobFork.status===201&&bobEdit.status===200&&bobProposal.status===201,
-    "the collaborator's independent edition becomes a semantic proposal");
-
-  const proposalUrl=`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/suggestions`;
-  await page.goto(proposalUrl,{waitUntil:"domcontentloaded"});
-  await page.getByRole("button",{name:"View game changes"}).click();
-  await page.getByRole("button",{name:"✓ Approve"}).waitFor();
-  assert(await page.getByRole("button",{name:"Merge after approval"}).isDisabled()
-    && await page.getByRole("button",{name:"✎ Request changes"}).isVisible(),
-    "the owner sees review controls while merge stays locked behind approval");
+  const bobAccess=await api("GET",`/api/games/${bobFork.data.slug}/access`,bobToken);
+  const bobEdit=await api("PUT",`/api/games/${bobFork.data.slug}/cards`,bobToken,
+    {cards:bobCards.data,base_ref:bobAccess.data.ref});
+  assert(bobFork.status===201&&bobEdit.status===200,
+    "the collaborator has an independently versioned edition ready to propose");
 
   const bobContext=await browser.newContext({viewport:{width:390,height:844}}),bobPage=await bobContext.newPage();
   await bobPage.goto(origin,{waitUntil:"domcontentloaded"});
   const bobLogin=await bobPage.evaluate(async()=>{
     const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},
-      body:JSON.stringify({handle:"bob",password:"password123"})});return response.status;
+      body:JSON.stringify({handle:"bob",password:"password123"})});
+    await response.json();
+    return response.status;
   });
   assert(bobLogin===200,"collaborator can sign into an independent browser session");
+  await bobPage.evaluate(()=>refreshLive());
+  await bobPage.goto(origin+bobFork.data.url,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:/Propose upstream/}).waitFor();
+  await bobPage.getByRole("button",{name:/Propose upstream/}).click();
+  await bobPage.getByLabel("Title for your pull request").fill("Tune Spark after playtest");
+  const bobProposalResponse=bobPage.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname==="/api/games/onboarding-smoke-game/prs");
+  await bobPage.getByRole("button",{name:"Open PR",exact:true}).click();
+  const bobProposalHttp=await bobProposalResponse,bobProposal={status:bobProposalHttp.status(),data:await bobProposalHttp.json()};
+  assert(bobProposal.status===201,"the collaborator opens a semantic proposal from their edition through Forge");
+  await bobPage.waitForURL(url=>decodeURIComponent(url.hash).endsWith(`/suggestions/${bobProposal.data.id}`));
+  const proposalUrl=bobPage.url();
+  assert(decodeURIComponent(new URL(proposalUrl).hash).endsWith(`/suggestions/${bobProposal.data.id}`),
+    "proposal creation navigates directly to its focused review route",proposalUrl);
   const bobPrAccess=await bobPage.evaluate(async({slug,id})=>await (await fetch(`/api/games/${slug}/prs/${id}`)).json(),
     {slug:"onboarding-smoke-game",id:bobProposal.data.id});
   assert(bobPrAccess.access?.is_author===true,"proposal API recognizes its author in the independent browser session",JSON.stringify(bobPrAccess.access));
-  await bobPage.goto(proposalUrl,{waitUntil:"domcontentloaded"});
-  await bobPage.getByRole("button",{name:"View game changes"}).click();
   await bobPage.getByText(/A maintainer must review it/).waitFor();
   assert(await bobPage.getByRole("button",{name:"Close"}).isVisible()
-    && await bobPage.getByRole("button",{name:/Approve|Merge/}).count()===0,
-    "the proposer sees close and discussion, never unauthorized approve or merge controls");
+    && await bobPage.getByRole("button",{name:/Approve|Merge/}).count()===0
+    && await bobPage.getByRole("button",{name:"View game changes"}).count()===0,
+    "the focused proposal opens expanded for its author without unauthorized review controls");
+
+  await page.goto(proposalUrl,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"✓ Approve"}).waitFor();
+  assert(await page.getByRole("button",{name:"Merge after approval"}).isDisabled()
+    && await page.getByRole("button",{name:"✎ Request changes"}).isVisible()
+    && await page.getByRole("button",{name:"View game changes"}).count()===0,
+    "the owner lands on the same focused review while merge stays locked behind approval");
 
   await page.getByRole("button",{name:"✓ Approve"}).click();
   const mergeButton=page.getByRole("button",{name:/Merge — commits as bob/});
@@ -909,6 +930,14 @@ w.save(p)
   const mergeResponse=page.waitForResponse(response=>response.request().method()==="POST"&&new URL(response.url()).pathname.endsWith(`/prs/${bobProposal.data.id}/merge`));
   await mergeButton.click();
   assert((await mergeResponse).ok(),"the owner approves and merges the visual proposal through the browser");
+  await page.getByText(/Accepted into/i).waitFor();
+  const acceptedPanel=page.locator(`#prb-${bobProposal.data.id}`);
+  const acceptedText=await acceptedPanel.innerText();
+  assert(/accepted/i.test(acceptedText)&&/bob/i.test(acceptedText)&&/credit|author/i.test(acceptedText),
+    "the merged proposal visibly confirms acceptance and preserves the contributor's credit",acceptedText);
+  assert(await acceptedPanel.getByRole("button",{name:"View accepted cards",exact:true}).isVisible()
+    &&await acceptedPanel.getByRole("button",{name:"Prepare this version for release",exact:true}).isVisible(),
+    "the accepted view hands the owner directly to the landed cards and exact-version release workflow");
   const mergedCards=await api("GET","/api/games/onboarding-smoke-game/cards",null);
   assert(mergedCards.data.find(card=>card.id==="spark_01").text==="Deal 2 damage after review.",
     "the accepted browser proposal lands exactly and preserves the collaborator's authored content");
