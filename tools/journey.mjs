@@ -28,6 +28,7 @@ const ok = (msg) => console.log(`  ✓ ${String(++step).padStart(2)}  ${msg}`);
 const die = (msg, detail) => { console.error(`  ✗ FAIL @${step + 1}: ${msg}`, detail ?? ""); process.exit(1); };
 const assert = (cond, msg, detail) => cond ? ok(msg) : die(msg, detail);
 const git = (...a) => execFileSync("git", a, { encoding: "utf8" }).trim();
+const fullGitId = value => /^[0-9a-f]{40}$/.test(String(value || ""));
 
 /* ---- the LEDGER: where commits actually live. Local mode reads the scratch
  * repo with git; forge mode (FORGE_URL set) asks the forge's API — the SAME
@@ -36,6 +37,12 @@ const FORGE = process.env.FORGE_URL
   ? { url: process.env.FORGE_URL.replace(/\/$/, ""), token: process.env.FORGE_TOKEN } : null;
 const OWNERS = { "tidepool": "alice", "tidepool-bob": "bob" };
 const fapi = async (p) => fetch(`${FORGE.url}/api/v1${p}`, { headers: { Authorization: `token ${FORGE.token}` } });
+const forgeRepoPrivacy = async (owner, slug) => {
+  const response = await fapi(`/repos/${owner}/${slug}`);
+  return response.ok ? (await response.json()).private : null;
+};
+const anonymousForgeRaw = (owner, slug, path = "game.yaml") =>
+  fetch(`${FORGE.url}/api/v1/repos/${owner}/${slug}/raw/${path}?ref=main`);
 const lastCommit = async (slug) => {
   if (!FORGE) { const [an, ae, ...s] = git("log", "-1", "--format=%an|%ae|%s").split("|");
                 return { an, ae, s: s.join("|") }; }
@@ -94,11 +101,17 @@ assert(aliceReg.status === 201 && aliceReg.data.token, "alice registers");
 const A = aliceReg.data.token;
 
 const created = await api("POST", "/api/games", { token: A, body: { title: "Tidepool", csv: ALICE_CSV } });
-assert(created.status === 201 && created.data.slug === "tidepool" && created.data.cards === 6,
+assert(created.status === 201 && created.data.slug === "tidepool" && created.data.cards === 6
+  && fullGitId(created.data.commit),
   "POST /api/games → 'tidepool' hosted: 6 cards from her CSV", created.data);
 assert(created.data.owner === "alice", "ownership recorded at creation");
 { const c = await lastCommit("tidepool");
   assert(c.an === "alice" && c.ae === "alice@tidepool.games", "creation commit AUTHORED AS ALICE (git ledger)"); }
+if (FORGE) {
+  assert(await forgeRepoPrivacy("alice", "tidepool") === false
+    && (await anonymousForgeRaw("alice", "tidepool")).status === 200,
+  "rights-clean public project is public at both the gateway and Forgejo source layer");
+}
 
 const noAuth = await api("POST", "/api/games", { body: { title: "Sneaky" } });
 assert(noAuth.status === 401, "anonymous cannot host games (401)");
@@ -124,8 +137,13 @@ assert(aliceDataExport.status === 200
 console.log("== ACT 2: Alice works on it ==");
 const art = await api("POST", "/api/games/tidepool/assets?path=assets/art/riptide.png",
   { token: A, raw: PNG });
-assert(art.status === 200 && art.data.mode === "lfs" && art.data.oid,
+assert(art.status === 200 && art.data.mode === "lfs" && art.data.oid && fullGitId(art.data.commit),
   "art uploaded via LFS batch → pointer committed", art.data);
+if (FORGE) {
+  assert(await forgeRepoPrivacy("alice", "tidepool") === true
+    && (await anonymousForgeRaw("alice", "tidepool")).status === 404,
+  "unknown/private-only asset rights immediately reconcile the Forgejo repository private");
+}
 assert((await repoRead("tidepool", "assets/art/riptide.png")).startsWith("version https://git-lfs"),
   "git holds the 3-line pointer, not the binary (Store 1)");
 assert(/alice/.test((await lastCommit("tidepool")).an), "asset commit authored as alice");
@@ -138,6 +156,11 @@ const artAssign = await api("PUT", "/api/games/tidepool/art", { token: A,
     license: "CC-BY-4.0", rights_status: "original", redistribution: "allowed" } });
 assert(artAssign.status === 200 && artAssign.data.art === "assets/art/riptide.png",
   "alice assigns the uploaded art to the riptide printing with credit", artAssign.data);
+if (FORGE) {
+  assert(await forgeRepoPrivacy("alice", "tidepool") === false
+    && (await anonymousForgeRaw("alice", "tidepool")).status === 200,
+  "resolved redistributable rights reconcile the Forgejo repository public again");
+}
 const pj = JSON.parse(await repoRead("tidepool", "components/printings.json"));
 const rp = pj.find(p => p.id === "p_riptide_core");
 assert(rp && rp.art === "assets/art/riptide.png" && rp.provenance && rp.provenance.creator === "Alice",
@@ -146,7 +169,7 @@ assert(rp && rp.art === "assets/art/riptide.png" && rp.provenance && rp.provenan
 const cards = (await api("GET", "/api/games/tidepool/cards")).data;
 cards.find(c => c.id === "riptide").attributes.cost = 4;
 const edit = await api("PUT", "/api/games/tidepool/cards", { token: A, body: cards });
-assert(edit.status === 200 && edit.data.saved && /Riptide/.test(edit.data.message),
+assert(edit.status === 200 && edit.data.saved && /Riptide/.test(edit.data.message) && fullGitId(edit.data.commit),
   `edit committed: "${edit.data.message}"`);
 assert(/alice/.test((await lastCommit("tidepool")).an), "edit commit authored as alice (not 'web editor')");
 
@@ -155,15 +178,20 @@ assert(hist[0].author === "alice" && hist[0].changes.some(c => c.card === "ripti
   "history endpoint: alice's semantic change on record");
 
 const exp = await api("POST", "/api/games/tidepool/export/tts?wait=1", { token: A });
-assert(exp.status === 200 && exp.data.urls[0].includes(exp.data.ref)
+assert(exp.status === 200 && fullGitId(exp.data.ref) && exp.data.urls[0].includes(exp.data.ref)
   && exp.data.job?.status === "succeeded" && exp.data.manifest?.files?.length > 0,
   `isolated export job succeeded and froze sha ${exp.data.ref} with a checked manifest (Store 3)`);
 const cached = await api("GET", exp.data.urls[0]);
-assert(cached.status === 200 && cached.headers.get("cache-control").includes("immutable"),
-  "cache URL serves with immutable headers");
+assert(cached.status === 200 && cached.headers.get("cache-control") === "public, no-cache, must-revalidate",
+  "cache URL revalidates project visibility before serving exact bytes");
 const tts = Buffer.isBuffer(cached.data) ? JSON.parse(cached.data.toString()) : cached.data;
-assert(tts.ObjectStates[0].DeckIDs.length === 6 && tts.SaveName === "Tidepool",
-  "cached TTS save is HER game: 6 cards, correct name");
+const ttsManifestUrl = exp.data.urls.find(url => url.endsWith("/tts-manifest.json"));
+const ttsManifestResponse = ttsManifestUrl ? await api("GET", ttsManifestUrl) : null;
+const ttsManifest = Buffer.isBuffer(ttsManifestResponse?.data)
+  ? JSON.parse(ttsManifestResponse.data.toString()) : ttsManifestResponse?.data;
+assert(tts.ObjectStates[0].DeckIDs.length === 6 && tts.SaveName === "Tidepool"
+  && ttsManifestResponse?.status === 200 && ttsManifest?.source_ref === exp.data.ref,
+  "cached TTS save is HER exact game: 6 cards, correct name, matching adapter receipt");
 
 console.log("== ACT 3: Bob arrives ==");
 const bobReg = await api("POST", "/api/auth/register",
@@ -181,7 +209,8 @@ const star = await api("PUT", "/api/stars/tidepool", { token: B });
 assert(star.status === 200 && star.data.stars === 1, "bob stars it → count 1");
 
 const fork = await api("POST", "/api/games/tidepool/fork", { token: B });
-assert(fork.status === 201 && fork.data.slug === "tidepool-bob" && fork.data.forked_from === "tidepool",
+assert(fork.status === 201 && fork.data.slug === "tidepool-bob" && fork.data.forked_from === "tidepool"
+  && fullGitId(fork.data.commit) && fullGitId(fork.data.source_ref),
   "bob forks → tidepool-bob");
 { const c = await lastCommit("tidepool-bob");
   assert(c.an === "bob" && /fork: tidepool/.test(c.s), "fork commit authored by bob"); }
@@ -233,13 +262,15 @@ const approvedView = (await api("GET", `/api/games/tidepool/prs/${prId}`, { toke
 assert(approvedView.mergeable === true && approvedView.checks.find(check => check.key === "approvals")?.pass === true,
   "the repository policy now reports the exact proposal mergeable");
 const prMerged = await api("POST", `/api/games/tidepool/prs/${prId}/merge`, { token: A });
-assert(prMerged.status === 200 && prMerged.data.merged, "alice merges bob's PR", prMerged.data);
+assert(prMerged.status === 200 && prMerged.data.merged && fullGitId(prMerged.data.commit),
+  "alice merges bob's PR with a full immutable commit identity", prMerged.data);
 const tpCards = (await api("GET", "/api/games/tidepool/cards")).data;
 assert(/copy any current in play/.test(tpCards.find(c => c.id === "moon_jelly").text),
   "tidepool now carries bob's change — the remix loop is CLOSED");
 assert(/bob/.test((await lastCommit("tidepool")).an), "merge commit authored as BOB (credit follows the work)");
 const prAfter = (await api("GET", `/api/games/tidepool/prs/${prId}`)).data;
-assert(prAfter.status === "merged" && prAfter.merge_sha, "PR recorded as merged with the commit sha");
+assert(prAfter.status === "merged" && fullGitId(prAfter.merge_sha),
+  "PR records the full immutable merge commit sha");
 
 console.log("== ACT 6: the community layer — issues & discussion ==");
 const iss = await api("POST", "/api/games/tidepool/issues", { token: B,
@@ -282,9 +313,12 @@ assert(jamAnon.status === 401, "anonymous cannot join a jam (401)");
 const jamJoin = await api("POST", "/api/jams/spark-jam/join", { token: A });
 assert(jamJoin.status === 201 && jamJoin.data.entered && jamJoin.data.slug,
   "alice one-click joins Spark Jam → a licensed draft starter is created in her account", jamJoin.data);
-const jamView = (await api("GET", "/api/jams/spark-jam")).data;
-assert(jamView.status === "open" && jamView.entries.some(e => e.game_slug === jamJoin.data.slug && e.state === "draft" && e.author === "alice"),
-  "the server-derived jam clock is open and her starter remains an attributed draft");
+const publicJamView = (await api("GET", "/api/jams/spark-jam")).data;
+const jamView = (await api("GET", "/api/jams/spark-jam", { token: A })).data;
+assert(!publicJamView.entries.some(e => e.game_slug === jamJoin.data.slug)
+  && jamView.status === "open"
+  && jamView.entries.some(e => e.game_slug === jamJoin.data.slug && e.state === "draft" && e.author === "alice"),
+  "the jam clock is open; Alice sees her private attributed draft while anonymous viewers do not", jamView);
 const offTheme = await api("POST", "/api/jams/spark-jam/submit", { token: B, body: { game: "tidepool-bob" } });
 assert(offTheme.status === 422 && (offTheme.data.reasons || []).some(r => /theme word/.test(r)),
   "an off-theme game is refused — qualification is a machine check, not a mod ruling");
@@ -295,7 +329,8 @@ assert(anonPt.status === 401, "anonymous cannot log a playtest (401)");
 const ptLog = await api("POST", "/api/games/tidepool/playtests", { token: A,
   body: { location: "tts", duration_minutes: 30, players: [{ name: "Alice", result: "WIN" }, { name: "Bob", result: "loss" }],
           card_notes: [{ card_id: "riptide", tag: "Balance", note: "swingy at 3 cost" }] } });
-assert(ptLog.status === 201 && ptLog.data.pinned, "alice logs a playtest → validated commit, pinned to a version", ptLog.data);
+assert(ptLog.status === 201 && fullGitId(ptLog.data.commit) && fullGitId(ptLog.data.pinned),
+  "alice logs a playtest → validated commit, pinned to a full immutable version", ptLog.data);
 const an = (await api("GET", "/api/games/tidepool/analytics")).data;
 assert(an.sessions === 1 && an.table_minutes === 30 && an.results.win === 1 && an.results.loss === 1,
   "live analytics aggregate it: 1 session, 30 min, 1W/1L (result normalized server-side)");
@@ -340,7 +375,8 @@ const releaseReadyAgain = await api("GET", "/api/games/tidepool/releases/preflig
 assert(releaseReadyAgain.status === 200 && releaseReadyAgain.data.ready,
   "release readiness turns green immediately after the rights commit");
 const rel = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1", title: "First cut" } });
-assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").startsWith("- ")
+assert(rel.status === 201 && fullGitId(rel.data.sha) && String(rel.data.notes || "").startsWith("- ")
+  && fullGitId(rel.data.repository_tag?.target) && fullGitId(rel.data.repository_tag?.tagObject)
   && rel.data.repository_tag?.annotated && rel.data.repository_tag?.protected
   && rel.data.artifacts?.some(item => item.name === "forge-rights-receipt.json")
   && rel.data.build?.format === "forge-release-build"
@@ -348,7 +384,8 @@ assert(rel.status === 201 && rel.data.sha && String(rel.data.notes || "").starts
   && rel.data.rights?.publishable && rel.data.rights?.source_sha === rel.data.sha,
   "alice cuts v0.1 → required artifacts, protected tag, and a per-file rights receipt", rel.data);
 const actualTag = await releaseTag("tidepool", "v0.1");
-assert(actualTag.annotated && actualTag.target.startsWith(rel.data.sha),
+assert(actualTag.annotated && fullGitId(actualTag.object) && fullGitId(actualTag.target)
+  && actualTag.target === rel.data.sha,
   "the release exists as a real annotated Git tag pointing at the exact source commit");
 const relList = (await api("GET", "/api/games/tidepool/releases")).data;
 assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha
@@ -360,6 +397,51 @@ const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
 assert(relDet.repository_tag.verified_now, "release detail re-verifies the protected annotated tag against Store 1");
 assert(relDet.rights?.publishable && relDet.rights.files.some(file => file.path === "assets/art/unclassified.png"),
   "release detail preserves the exact rights and hash of every shipped source file");
+const tagRights = await api("GET", "/api/games/tidepool/rights?ref=v0.1");
+const tagDiff = await api("GET", "/api/games/tidepool/diff?from=v0.1&to=v0.1");
+const tagEligibility = await api("GET", "/api/jams/spark-jam/eligibility?game=tidepool&ref=v0.1");
+const tagFile = await api("GET", "/api/games/tidepool/repository/file/game.yaml?ref=v0.1");
+assert(tagRights.status === 200 && tagRights.data.source_sha === rel.data.sha
+  && tagDiff.status === 200 && tagDiff.data.from === rel.data.sha && tagDiff.data.to === rel.data.sha
+  && tagEligibility.status === 200 && tagEligibility.data.ref === rel.data.sha
+  && tagFile.status === 200,
+  "safe v* links materialize the release but all authoritative responses use its full commit ID");
+const bobDelivery = await api("POST", "/api/games/tidepool/releases/v0.1/print-deliveries", { token: B,
+  body: { artifact_name: "print-ready.zip", printer_name: "Tidepool Print", job_reference: "JOB-100" } });
+assert(bobDelivery.status === 403, "a contributor cannot attest to the owner's printer delivery");
+const badDelivery = await api("POST", "/api/games/tidepool/releases/v0.1/print-deliveries", { token: A,
+  body: { artifact_name: "not-in-release.pdf", printer_name: "Tidepool Print", job_reference: "JOB-100" } });
+assert(badDelivery.status === 422, "a printer handoff cannot name bytes absent from the frozen release receipt");
+const delivery = await api("POST", "/api/games/tidepool/releases/v0.1/print-deliveries", { token: A,
+  body: { artifact_name: "print-ready.zip", printer_name: "Tidepool Print", job_reference: "JOB-100",
+    evidence_url: "https://printer.example.invalid/jobs/JOB-100", evidence_sha256: "1".repeat(64),
+    note: "Uploaded through printer portal" } });
+const frozenPrint = relDet.artifacts.find(item => item.name === "print-ready.zip");
+assert(delivery.status === 201 && delivery.data.status === "submitted"
+  && delivery.data.release.sha === rel.data.sha
+  && delivery.data.artifact.sha256 === frozenPrint.sha256
+  && delivery.data.trust.independently_verified === false,
+  "owner records a clearly bounded printer handoff for the exact released ZIP hash", delivery.data);
+const badDecision = await api("POST", `/api/games/tidepool/releases/v0.1/print-deliveries/${delivery.data.id}/decision`, { token: A,
+  body: { decision: "approved", reviewer_name: "Prepress QA", organization: "Tidepool Print",
+    evidence_sha256: "not-a-digest" } });
+assert(badDecision.status === 422, "printer approval cannot be recorded without a valid evidence digest");
+const decision = await api("POST", `/api/games/tidepool/releases/v0.1/print-deliveries/${delivery.data.id}/decision`, { token: A,
+  body: { decision: "approved", reviewer_name: "Prepress QA", organization: "Tidepool Print",
+    evidence_url: "https://printer.example.invalid/jobs/JOB-100/approval",
+    evidence_sha256: "2".repeat(64), note: "Approved as supplied" } });
+assert(decision.status === 201 && decision.data.status === "approved"
+  && decision.data.decision.evidence_sha256 === "2".repeat(64)
+  && decision.data.artifact.sha256 === frozenPrint.sha256,
+  "one immutable approval binds named reviewer and hashed evidence to those exact bytes");
+const changedDecision = await api("POST", `/api/games/tidepool/releases/v0.1/print-deliveries/${delivery.data.id}/decision`, { token: A,
+  body: { decision: "rejected", reviewer_name: "Prepress QA", organization: "Tidepool Print",
+    evidence_sha256: "3".repeat(64) } });
+assert(changedDecision.status === 409, "a recorded printer decision cannot be rewritten");
+const deliveryReceipt = await api("GET", `/api/games/tidepool/releases/v0.1/print-deliveries/${delivery.data.id}`);
+assert(deliveryReceipt.status === 200 && deliveryReceipt.data.status === "approved"
+  && deliveryReceipt.data.format === "forge-printer-delivery-receipt",
+  "the public receipt remains downloadable without exposing account credentials");
 const frozen = await api("GET", relDet.downloads.ttc);
 assert(frozen.status === 200, "the frozen TTC download serves at the pinned sha — a citable, immutable version");
 if(process.env.FORGE_ALLOW_CACHE_LOSS_TEST==="1"){
@@ -367,21 +449,23 @@ if(process.env.FORGE_ALLOW_CACHE_LOSS_TEST==="1"){
   if(!cacheRoot||cacheRoot==="/")die("cache-loss test requires a narrow FORGE_TEST_CACHE_DIR");
   rmSync(join(cacheRoot,"exports","tidepool",rel.data.sha),{recursive:true,force:true});
   const rebuilt=await api("GET",relDet.downloads.ttc);
-  assert(rebuilt.status===200&&rebuilt.headers.get("cache-control")?.includes("immutable"),
+  assert(rebuilt.status===200&&rebuilt.headers.get("cache-control")==="public, no-cache, must-revalidate",
     "losing derived Store 3 triggers an exact released-artifact rebuild from the pinned Git SHA");
 }
 
 const jamRel = await api("POST", `/api/games/${jamJoin.data.slug}/releases`, { token: A,
   body: { tag: "v0.1", title: "Spark Jam submission" } });
-assert(jamRel.status === 201 && jamRel.data.sha, "a jam candidate is packaged as a rights-checked immutable release");
+assert(jamRel.status === 201 && fullGitId(jamRel.data.sha)
+  && fullGitId(jamRel.data.repository_tag?.target) && fullGitId(jamRel.data.repository_tag?.tagObject),
+  "a jam candidate is packaged as a rights-checked immutable full-SHA release");
 const jamSubmit = await api("POST", "/api/jams/spark-jam/submit", { token: A,
   body: { game: jamJoin.data.slug, release: "v0.1", team: ["alice"] } });
 assert(jamSubmit.status === 201 && jamSubmit.data.release.sha === jamRel.data.sha && jamSubmit.data.receipt.sha256,
   "jam submission pins the reviewed release and returns an immutable qualification receipt");
-const jamDraftCards = (await api("GET", `/api/games/${jamJoin.data.slug}/cards`)).data;
+const jamDraftCards = (await api("GET", `/api/games/${jamJoin.data.slug}/cards`, { token: A })).data;
 jamDraftCards[0].text += " Later draft edit.";
 const jamLater = await api("PUT", `/api/games/${jamJoin.data.slug}/cards`, { token: A, body: jamDraftCards });
-const pinnedEntry = (await api("GET", "/api/jams/spark-jam")).data.entries.find(e => e.game_slug === jamJoin.data.slug);
+const pinnedEntry = (await api("GET", "/api/jams/spark-jam", { token: A })).data.entries.find(e => e.game_slug === jamJoin.data.slug);
 assert(jamLater.status === 200 && pinnedEntry.release.sha === jamRel.data.sha && jamLater.data.commit !== jamRel.data.sha,
   "later project edits cannot move the submitted jam release");
 const jamHistory = await api("GET", `/api/jams/spark-jam/entries/${jamJoin.data.slug}/history`, { token: A });

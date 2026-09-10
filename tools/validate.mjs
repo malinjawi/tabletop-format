@@ -18,8 +18,11 @@ import { DESIGN_ENGINES_MANIFEST, loadDesignEngines } from "./lib/design-engines
 import { RULEBOOK_PIPELINE_MANIFEST, loadRulebookPipeline } from "./lib/rulebook-pipeline.mjs";
 import { RULEBOOK_PUBLICATIONS_MANIFEST, loadRulebookPublication } from "./lib/rulebook-publication.mjs";
 import { SOURCE_ASSETS_MANIFEST, loadSourceAssets } from "./lib/source-assets.mjs";
+import { ART_LIBRARY_MANIFEST, parseArtLibrary } from "./lib/art-library.mjs";
 
 const SCHEMA_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "schemas");
+const PRINT_TARGETS = new Map(JSON.parse(readFileSync(join(SCHEMA_DIR, "..", "production", "print-targets.json"), "utf8"))
+  .targets.map(target => [target.id, target]));
 const gameDir = process.argv[2];
 if (!gameDir) { console.error("Usage: node tools/validate.mjs <game-directory>"); process.exit(2); }
 
@@ -92,6 +95,8 @@ setups.forEach((s, i) => checkSchema("setup", s, `setups[${i}] (${s?.id ?? "?"})
 
 const tokens = load("components/tokens.json") ?? [];
 tokens.forEach((t, i) => checkSchema("token", t, `tokens[${i}] (${t?.id ?? "?"})`));
+const componentDesign = load("templates/component-design.json");
+if (componentDesign != null) checkSchema("component-design", componentDesign, "templates/component-design.json");
 
 const playtests = loadDirOrFile("playtests");
 playtests.forEach((s, i) => checkSchema("playtest", s, `playtests[${i}] (${s?.id ?? "?"})`));
@@ -100,6 +105,8 @@ const community = load("community.yaml");
 if (community != null) checkSchema("community", community, "community.yaml");
 const layout = load("templates/layout.yaml");
 if (layout != null) checkSchema("layout", layout, "templates/layout.yaml");
+const printProfile = load("templates/print.yaml");
+if (printProfile != null) checkSchema("print-profile", printProfile, "templates/print.yaml");
 const cardDesignManifest = load(CARD_DESIGN_MANIFEST);
 const designEnginesManifest = load(DESIGN_ENGINES_MANIFEST);
 let cardDesign = null;
@@ -162,6 +169,13 @@ if (sourceAssetsManifest != null) {
   try { sourceAssets = loadSourceAssets(gameDir); }
   catch (cause) { err(`${SOURCE_ASSETS_MANIFEST}: ${cause.message}`); }
 }
+const artLibraryManifest = load(ART_LIBRARY_MANIFEST);
+let artLibrary = null;
+if (artLibraryManifest != null) {
+  checkSchema("art-library", artLibraryManifest, ART_LIBRARY_MANIFEST);
+  try { artLibrary = parseArtLibrary(Buffer.from(JSON.stringify(artLibraryManifest))); }
+  catch (cause) { err(cause.message); }
+}
 
 // ---- Pass 2: referential integrity ----
 const dupes = (arr, label) => {
@@ -172,9 +186,125 @@ const dupes = (arr, label) => {
   }
 };
 dupes(cards, "card"); dupes(printings, "printing"); dupes(sets, "set");
-dupes(formats, "format"); dupes(restrictions, "restriction"); dupes(setups, "setup");
+dupes(formats, "format"); dupes(restrictions, "restriction"); dupes(setups, "setup"); dupes(tokens, "piece");
+
+const validateLayoutTypography = (candidate, label) => {
+  if (!candidate) return;
+  const styles = candidate.text_styles || {}, styleIds = new Set(Object.keys(styles));
+  const fontIds = new Set((candidate.fonts || []).map(font => font.id));
+  for (const [id, style] of Object.entries(styles)) {
+    for (const key of ["font", "secondary_font"])
+      if (style[key] && !fontIds.has(style[key])) err(`${label}: text style '${id}' references missing font '${style[key]}'`);
+  }
+  const regions = [...(candidate.regions || []), ...(candidate.back?.regions || [])];
+  for (const region of regions) {
+    if (region.text_style && !styleIds.has(region.text_style))
+      err(`${label}: region '${region.id}' references missing text style '${region.text_style}'`);
+    if (region.text_style && !["text", "richtext", "body", "badge", "pips"].includes(region.type))
+      err(`${label}: region '${region.id}' cannot apply text style '${region.text_style}' to ${region.type}`);
+    if (region.font && !fontIds.has(region.font)) err(`${label}: region '${region.id}' references missing font '${region.font}'`);
+    if (region.secondary_font && !fontIds.has(region.secondary_font)) err(`${label}: region '${region.id}' references missing font '${region.secondary_font}'`);
+  }
+};
+validateLayoutTypography(layout, "templates/layout.yaml");
+
+for (const piece of tokens.filter(candidate => candidate.kind === "dial")) {
+  const start = Number(piece.attributes?.start_value ?? 0), max = Number(piece.attributes?.max_value ?? 10);
+  const step = Number(piece.attributes?.step ?? 1), intervals = (max - start) / step;
+  const count = Math.round(intervals) + 1;
+  if (![start, max, step].every(Number.isFinite) || step <= 0 || max < start || count < 2)
+    err(`piece '${piece.id}' dial scale needs a finite start, a larger maximum, and a positive step`);
+  else if (Math.abs(intervals - Math.round(intervals)) > 1e-7)
+    err(`piece '${piece.id}' dial maximum must land exactly on its step interval`);
+  else if (count > 36)
+    err(`piece '${piece.id}' dial scale has ${count} positions; Forge supports at most 36 legible positions`);
+}
+
+if (componentDesign) {
+  dupes(componentDesign.families || [], "component design family");
+  const playerCount = componentDesign.production?.player_count;
+  if (playerCount != null && game.players?.min != null && playerCount < game.players.min)
+    err(`component production player_count ${playerCount} is below the game's minimum of ${game.players.min}`);
+  if (playerCount != null && game.players?.max != null && playerCount > game.players.max)
+    err(`component production player_count ${playerCount} is above the game's maximum of ${game.players.max}`);
+  const familyIds = new Set((componentDesign.families || []).map(family => family.id));
+  for (const token of tokens) {
+    if (token.template_id && !familyIds.has(token.template_id))
+      err(`piece '${token.id}' references missing component design family '${token.template_id}'`);
+    if (token.back?.template_id && !familyIds.has(token.back.template_id))
+      err(`piece '${token.id}' back references missing component design family '${token.back.template_id}'`);
+    if (token.back) {
+      const familyFor = templateId => (componentDesign.families || []).find(family => family.id === templateId)
+        || (componentDesign.families || []).find(family => family.match?.template_ids?.includes(templateId))
+        || (componentDesign.families || []).find(family => (family.match?.kinds || []).includes(token.kind))
+        || (componentDesign.families || []).find(family => family.id === "generic-piece") || componentDesign.families?.[0];
+      const front = familyFor(token.template_id), back = familyFor(token.back.template_id || token.template_id);
+      const frontSize = [token.size_mm?.width || front?.size_mm?.width, token.size_mm?.height || front?.size_mm?.height];
+      const backSize = [token.size_mm?.width || back?.size_mm?.width, token.size_mm?.height || back?.size_mm?.height];
+      if (frontSize[0] !== backSize[0] || frontSize[1] !== backSize[1])
+        err(`piece '${token.id}' front/back families must resolve to the same finished size`);
+    }
+    const family = (componentDesign.families || []).find(candidate => candidate.id === token.template_id)
+      || (componentDesign.families || []).find(candidate => candidate.match?.template_ids?.includes(token.template_id))
+      || (componentDesign.families || []).find(candidate => (candidate.match?.kinds || []).includes(token.kind))
+      || (componentDesign.families || []).find(candidate => candidate.id === "generic-piece") || componentDesign.families?.[0];
+    if (family) {
+      const width = Number(token.size_mm?.width || family.size_mm?.width), height = Number(token.size_mm?.height || family.size_mm?.height);
+      const safe = Number(componentDesign.production?.safe_mm || 0);
+      if (safe * 2 >= width || safe * 2 >= height)
+        err(`piece '${token.id}' safe inset ${safe} mm leaves no usable content area inside ${width} × ${height} mm`);
+      const unsafe = (family.regions || []).filter(region => region.type !== "image").filter(region => {
+        const left = width * region.x / 100, top = height * region.y / 100;
+        const right = width - width * (region.x + region.w) / 100, bottom = height - height * (region.y + region.h) / 100;
+        return Math.min(left, top, right, bottom) + 1e-7 < safe;
+      });
+      if (unsafe.length) warn(`piece '${token.id}': ${unsafe.map(region => region.id).join(", ")} region${unsafe.length === 1 ? " is" : "s are"} outside the ${safe} mm safe inset`);
+    }
+  }
+}
 
 const cardIds = new Set(cards.map(c => c.id));
+const printingById = new Map(printings.map(printing => [printing.id, printing]));
+for (const id of printProfile?.selection?.card_ids || [])
+  if (!cardIds.has(id)) err(`templates/print.yaml selects missing card '${id}'`);
+const exactPrintingQuantities = printProfile?.selection?.printing_quantities || {};
+if (Object.keys(exactPrintingQuantities).length) {
+  const representedCards = new Set();
+  for (const id of Object.keys(exactPrintingQuantities)) {
+    const printing = printingById.get(id);
+    if (!printing) err(`templates/print.yaml selects missing printing '${id}'`);
+    else representedCards.add(printing.card_id);
+  }
+  const selectedCards = new Set(printProfile.selection.card_ids || []);
+  const mismatch = [...new Set([...representedCards, ...selectedCards])]
+    .filter(id => representedCards.has(id) !== selectedCards.has(id));
+  if (mismatch.length) err(`templates/print.yaml exact printing quantities do not match card_ids: ${mismatch.join(", ")}`);
+}
+const printTarget = PRINT_TARGETS.get(printProfile?.press?.target || "generic-srgb");
+if (printProfile?.press?.target && !printTarget) err(`templates/print.yaml selects unknown print target '${printProfile.press.target}'`);
+const printDieline = printProfile?.press?.dieline;
+if (printDieline?.enabled) {
+  const declared = cardDesign?.families?.[0]?.layout?.card || layout?.card || production?.card || sourceOverlay?.card || {};
+  const bleed = Number(declared.bleed_mm ?? 3.175);
+  if (Number(printDieline.offset_mm) > bleed)
+    err(`spot dieline offset ${printDieline.offset_mm} mm exceeds the card system's ${bleed} mm bleed`);
+}
+if (printTarget?.requirements?.trim_mm) {
+  const expected = printTarget.requirements.trim_mm, fallback = layout?.card || production?.card || sourceOverlay?.card || null;
+  const selectedCardIds = new Set(printProfile?.selection?.card_ids || []);
+  const selectedPrintingIds = new Set(Object.keys(exactPrintingQuantities));
+  const targetPrintings = selectedPrintingIds.size ? printings.filter(printing => selectedPrintingIds.has(printing.id))
+    : selectedCardIds.size ? printings.filter(printing => selectedCardIds.has(printing.card_id)) : printings;
+  for (const printing of targetPrintings) {
+    const card = cards.find(candidate => candidate.id === printing.card_id);
+    const family = cardDesign?.families?.find(candidate => card && cardMatchesFamily(card, candidate.match || {}));
+    const declared = printing.physical_size_mm || family?.layout?.card || fallback;
+    const actual = [Number(declared?.width || declared?.w_mm), Number(declared?.height || declared?.h_mm)];
+    if (!actual.every(Number.isFinite)) err(`print target '${printTarget.id}' cannot resolve the trim size for '${printing.id}'`);
+    else if (actual.some((value, index) => Math.abs(value - expected[index]) > .01))
+      err(`print target '${printTarget.id}' requires ${expected[0]} × ${expected[1]} mm trim; '${printing.id}' resolves to ${actual[0]} × ${actual[1]} mm`);
+  }
+}
 if (designEngines) {
   const active = designEngines.engines.find(engine => engine.id === designEngines.active);
   if (active?.status !== "active") err(`${DESIGN_ENGINES_MANIFEST}: selected engine '${designEngines.active}' must have status active`);
@@ -218,6 +348,7 @@ if (cardDesign) {
       if (!familyIds.has(familyId)) err(`${CARD_DESIGN_MANIFEST}: component '${component.id}' references unknown family '${familyId}'`);
   const order = new Set(cardDesign.region_order || []);
   for (const family of cardDesign.families) {
+    validateLayoutTypography(family.layout, `compiled family '${family.id}'`);
     const ids = family.layout.regions.map(region => region.id);
     if (ids.length !== new Set(ids).size) err(`compiled family '${family.id}' has duplicate region ids`);
     for (const id of ids) if (!order.has(id)) err(`compiled family '${family.id}' region '${id}' is absent from region_order`);
@@ -325,6 +456,17 @@ for (const d of decks) {
   for (const cid of Object.keys(d.cards ?? {}))
     if (!cardIds.has(cid)) err(`deck '${d.id}': card '${cid}' not found`);
   if (d.format_id && !formatIds.has(d.format_id)) err(`deck '${d.id}': format '${d.format_id}' not found`);
+  if (d.printings) {
+    const represented = new Map();
+    for (const [pid, quantity] of Object.entries(d.printings)) {
+      const printing = printingById.get(pid);
+      if (!printing) { err(`deck '${d.id}': printing '${pid}' not found`); continue; }
+      represented.set(printing.card_id, (represented.get(printing.card_id) ?? 0) + quantity);
+    }
+    for (const cid of new Set([...Object.keys(d.cards ?? {}), ...represented.keys()]))
+      if ((d.cards?.[cid] ?? 0) !== (represented.get(cid) ?? 0))
+        err(`deck '${d.id}': printing counts for '${cid}' do not equal its card count`);
+  }
 }
 
 // Typed attributes vs game.yaml attribute_definitions
@@ -349,14 +491,32 @@ for (const c of cards) {
     if (!declaredSymbols.has(m[1])) warn(`card '${c.id}': text uses undeclared symbol [${m[1]}]`);
 }
 dupes(tokens, "token");
-for (const t of tokens)
+for (const t of tokens) {
   if (t.symbol && !declaredSymbols.has(t.symbol)) err(`token '${t.id}': symbol '${t.symbol}' not declared in game.yaml`);
+  if (t.back?.symbol && !declaredSymbols.has(t.back.symbol)) err(`token '${t.id}' back: symbol '${t.back.symbol}' not declared in game.yaml`);
+  if (t.art && !existsSync(join(gameDir, t.art))) warn(`token '${t.id}': art asset '${t.art}' not found`);
+  if (t.back?.art && !existsSync(join(gameDir, t.back.art))) warn(`token '${t.id}' back: art asset '${t.back.art}' not found`);
+}
 // asset paths must resolve (SPEC §7: no dangling references)
 for (const s of game.symbols ?? [])
   if (s.asset && !existsSync(join(gameDir, s.asset))) warn(`symbol '${s.key}': asset '${s.asset}' not found`);
 for (const p of printings)
   for (const key of ["art", "back", "scan"])
     if (p[key] && !existsSync(join(gameDir, p[key]))) warn(`printing '${p.id}': ${key} asset '${p[key]}' not found`);
+const cardBackArt = new Set([layout?.back?.art,
+  ...(cardDesign?.families || []).map(family => family.layout?.back?.art)].filter(Boolean));
+for (const asset of cardBackArt)
+  if (!existsSync(join(gameDir, asset))) warn(`shared card back: art asset '${asset}' not found`);
+if (artLibrary) {
+  const seen = new Set();
+  for (const record of artLibrary.assets) {
+    if (seen.has(record.path)) err(`${ART_LIBRARY_MANIFEST}: duplicate artwork path '${record.path}'`);
+    seen.add(record.path);
+    if (record.path.includes("..") || record.path.includes("//")) err(`${ART_LIBRARY_MANIFEST}: unsafe artwork path '${record.path}'`);
+    if (!existsSync(join(gameDir, record.path))) err(`${ART_LIBRARY_MANIFEST}: artwork '${record.path}' does not exist`);
+    if (!/\.(?:png|jpe?g|webp|svg)$/i.test(record.path)) err(`${ART_LIBRARY_MANIFEST}: '${record.path}' is not a supported image`);
+  }
+}
 if (sourceOverlay) {
   let pinnedSource = null;
   if (sourceOverlay.baseline_data) {
@@ -498,6 +658,28 @@ for (const s of setups) {
   for (const [key, count] of placedCounts) {
     const [did, cid] = key.split("\0"), available = deckById.get(did)?.cards?.[cid] ?? 0;
     if (count > available) err(`setup '${s.id}': places ${count}x '${cid}' from deck '${did}', but it only contains ${available}`);
+  }
+  const placedPieceCounts = new Map(), pieceById = new Map(tokens.map(piece => [piece.id, piece]));
+  for (const placement of s.pieces ?? []) {
+    if (itemIds.has(placement.id)) err(`setup '${s.id}': duplicate setup item id '${placement.id}'`);
+    itemIds.add(placement.id);
+    const piece = pieceById.get(placement.component_id);
+    if (!piece) err(`setup '${s.id}': piece placement '${placement.id}' references unknown component '${placement.component_id}'`);
+    if (placement.zone_id && !zoneIds.has(placement.zone_id))
+      err(`setup '${s.id}': piece placement '${placement.id}' references unknown zone '${placement.zone_id}'`);
+    if (placement.seat_id && !seatIds.has(placement.seat_id))
+      err(`setup '${s.id}': piece placement '${placement.id}' references unknown seat '${placement.seat_id}'`);
+    if (placement.position.x < 0 || placement.position.x > s.board.width || placement.position.y < 0 || placement.position.y > s.board.height)
+      err(`setup '${s.id}': piece placement '${placement.id}' is outside the board`);
+    if (placement.face === "back" && piece && !piece.back)
+      err(`setup '${s.id}': piece placement '${placement.id}' requests a back face that '${piece.id}' does not declare`);
+    placedPieceCounts.set(placement.component_id, (placedPieceCounts.get(placement.component_id) ?? 0) + (placement.quantity ?? 1));
+  }
+  for (const [id, count] of placedPieceCounts) {
+    const piece = pieceById.get(id); if (!piece) continue;
+    const players = componentDesign?.production?.player_count;
+    const available = (piece.quantity ?? 1) * (piece.per_player && players ? players : 1);
+    if (count > available) err(`setup '${s.id}': places ${count}x component '${id}', but the production kit contains ${available}`);
   }
   for (const counter of s.counters ?? []) {
     if (itemIds.has(counter.id)) err(`setup '${s.id}': duplicate setup item id '${counter.id}'`);

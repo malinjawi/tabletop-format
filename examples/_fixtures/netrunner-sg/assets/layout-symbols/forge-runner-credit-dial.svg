@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <radialGradient id="gold" cx="32%" cy="24%" r="78%">
+      <stop offset="0" stop-color="#fff07a"/>
+      <stop offset=".36" stop-color="#ebd33d"/>
+      <stop offset=".72" stop-color="#b69d24"/>
+      <stop offset="1" stop-color="#6f6017"/>
+    </radialGradient>
+    <radialGradient id="face" cx="46%" cy="38%" r="66%">
+      <stop offset="0" stop-color="#3b4245"/>
+      <stop offset=".55" stop-color="#1b2023"/>
+      <stop offset="1" stop-color="#080a0c"/>
+    </radialGradient>
+    <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M0 1h4" stroke="#eef2f2" stroke-width=".65" opacity=".12"/>
+    </pattern>
+    <clipPath id="face-clip"><circle cx="60" cy="60" r="41"/></clipPath>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="2.2" stdDeviation="2.2" flood-color="#000" flood-opacity=".56"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#soft-shadow)">
+    <circle cx="60" cy="60" r="57" fill="#06080a"/>
+    <circle cx="60" cy="60" r="54.5" fill="url(#gold)" stroke="#17160b" stroke-width="2"/>
+    <path d="M20 44A46 46 0 0 1 88 20" fill="none" stroke="#fff6a1" stroke-width="1.6" opacity=".55"/>
+    <circle cx="60" cy="60" r="44.5" fill="#050709"/>
+    <circle cx="60" cy="60" r="41.5" fill="url(#face)" stroke="#f1f3f1" stroke-width="1.55"/>
+    <circle cx="60" cy="60" r="39.4" fill="none" stroke="#697277" stroke-width="1" opacity=".88"/>
+    <rect x="19" y="19" width="82" height="82" fill="url(#scanlines)" clip-path="url(#face-clip)"/>
+
+    <!-- The legacy/NSG cost dial uses a restrained segmented lower scale,
+         not a continuous smile-shaped bar. -->
+    <path d="M24.5 69.5A39.5 39.5 0 0 0 95.5 69.5"
+          fill="none" stroke="#f4f5f2" stroke-width="2.25"
+          stroke-linecap="butt" stroke-dasharray="7 6.6"/>
+    <circle cx="60" cy="98.4" r="2.35" fill="#f4f5f2"/>
+  </g>
+</svg>

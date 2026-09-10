@@ -14,11 +14,12 @@ export const NANDECK_VERSION = 1;
 const MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
 const MAX_DIRECTIVES = 10_000;
 const SUPPORTED_REGION_FIELDS = [
-  "type", "x", "y", "w", "h", "d", "shape", "src", "text", "font", "size_pt",
-  "min_size_pt", "align", "valign", "color", "bg", "autoshrink", "no_wrap",
+  "type", "x", "y", "w", "h", "d", "shape", "src", "text", "text_style", "font", "size_pt",
+  "min_size_pt", "strong_weight", "align", "valign", "color", "bg", "autoshrink", "no_wrap",
   "fill", "stroke", "stroke_w_mm", "radius_mm", "fit", "opacity", "show_if",
   "glyph", "count", "max", "direction", "gap_mm",
 ];
+const NANDECK_TEXT_FIELDS = new Set(["font", "size_pt", "min_size_pt", "strong_weight", "align", "valign", "color", "bg", "autoshrink", "no_wrap"]);
 const FIELD_TO_SOURCE = {
   id: "card.id",
   name: "card.name",
@@ -119,7 +120,8 @@ function quoteNandeck(value) {
 function nanColor(value, fallback, warnings, id) {
   if (typeof value === "string" && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value)) return value.toUpperCase();
   const paletteField = { palette: "_palette", "palette-dark": "_palette_dark", "palette-deep": "_palette_deep",
-    "palette-light": "_palette_light", "palette-soft": "_palette_soft", "palette-gradient": "_palette_gradient" }[value];
+    "palette-light": "_palette_light", "palette-soft": "_palette_soft", "palette-gradient": "_palette_gradient",
+    "palette-shell-motif": "_palette_gradient", "palette-panel-motif": "_palette_soft" }[value];
   if (paletteField) return `[${paletteField}]`;
   if (value === "none" || value === "transparent") return "EMPTY";
   const linear = typeof value === "string" ? value.match(/^linear-gradient\(([-\d.]+)deg,(.*)\)$/i) : null;
@@ -138,6 +140,11 @@ function nanColor(value, fallback, warnings, id) {
 
 function fontFor(layout, region) {
   return (layout.fonts || []).find(font => font.id === region.font) || { id: region.font || "default", family: "Arial", weight: 400, style: "normal" };
+}
+
+function styledRegion(layout, region) {
+  const style = region?.text_style && layout?.text_styles?.[region.text_style];
+  return style && typeof style === "object" ? { ...region, ...style, id: region.id, type: region.type, text_style: region.text_style } : region;
 }
 
 function fontDirective(layout, region, warnings) {
@@ -230,11 +237,13 @@ export function layoutToNandeck(layout, {
     `CARDSIZE=${n(layout.card?.w_mm || 63)},${n(layout.card?.h_mm || 88)}`,
     "",
   ];
-  for (const region of layout.regions || []) {
-    const origin = origins[region.id] || systemFile;
+  for (const sourceRegion of layout.regions || []) {
+    const region = styledRegion(layout, sourceRegion);
+    const origin = origins[sourceRegion.id] || systemFile;
     const condition = region.show_if;
+    if (sourceRegion.text_style) warnings.push(`${sourceRegion.id}: named text style '${sourceRegion.text_style}' is flattened for preview; detach it in Forge before returning layer-specific typography because this adapter will not silently break the shared relationship`);
     if (["text", "richtext", "body"].includes(region.type)) {
-      lines.push(metaLine(originMeta(region, origin)));
+      lines.push(metaLine(originMeta(sourceRegion, origin)));
       lines.push(fontDirective(layout, region, warnings));
       const vertical = region.type === "richtext" || region.type === "body" || !region.no_wrap
         ? ({ top: "wwtop", middle: "wwcenter", bottom: "wwbottom" }[region.valign] || "wordwrap")
@@ -247,13 +256,13 @@ export function layoutToNandeck(layout, {
       continue;
     }
     if (["image", "background"].includes(region.type)) {
-      lines.push(metaLine(originMeta(region, origin)));
+      lines.push(metaLine(originMeta(sourceRegion, origin)));
       const content = sourceContent(region, warnings), flags = region.fit === "contain" ? "PNA" : "CNA";
       const directive = `IMAGE=,${content},${n(region.x)},${n(region.y)},${n(region.w)},${n(region.h)},0,${flags}`;
       withCondition(lines, condition, directive, warnings, region.id); lines.push(""); continue;
     }
     if (region.type === "rect") {
-      lines.push(metaLine(originMeta(region, origin)));
+      lines.push(metaLine(originMeta(sourceRegion, origin)));
       const stroke = nanColor(region.stroke || region.fill, "#000000", warnings, region.id);
       const fill = nanColor(region.fill, stroke, warnings, region.id);
       const directive = `RECTANGLE=,${n(region.x)},${n(region.y)},${n(region.w)},${n(region.h)},${stroke},${fill},${n(region.stroke_w_mm || 0.1)}`;
@@ -262,16 +271,16 @@ export function layoutToNandeck(layout, {
     if (region.type === "badge") {
       const d = region.d || Math.min(region.w || 0, region.h || 0), stroke = nanColor(region.color, "#000000", warnings, region.id);
       const fill = nanColor(region.bg, "#FFFFFF", warnings, region.id);
-      lines.push(metaLine(originMeta(region, origin, "shape")));
+      lines.push(metaLine(originMeta(sourceRegion, origin, "shape")));
       withCondition(lines, condition, `ELLIPSE=,${n(region.x)},${n(region.y)},${n(d)},${n(d)},${stroke},${fill},0.1`, warnings, region.id);
       if (region.src || region.text !== "") {
-        lines.push(metaLine(originMeta(region, origin, "text")), fontDirective(layout, region, warnings));
+        lines.push(metaLine(originMeta(sourceRegion, origin, "text")), fontDirective(layout, region, warnings));
         withCondition(lines, condition, `TEXT=,${sourceContent(region, warnings)},${n(region.x)},${n(region.y)},${n(d)},${n(d)},center,center`, warnings, region.id);
       }
       lines.push(""); continue;
     }
     if (region.type === "pips") {
-      lines.push(metaLine(originMeta(region, origin)), fontDirective(layout, { ...region, size_pt: region.size_pt || 6, color: region.color || "#000000" }, warnings));
+      lines.push(metaLine(originMeta(sourceRegion, origin)), fontDirective(layout, { ...region, size_pt: region.size_pt || 6, color: region.color || "#000000" }, warnings));
       const vertical = region.direction === "column" ? "wordwrap" : "center";
       withCondition(lines, condition, `TEXT=,"[${pipsField(region.id)}]",${n(region.x)},${n(region.y)},${n(region.w)},${n(region.h)},center,${vertical}`, warnings, region.id);
       lines.push(""); continue;
@@ -651,6 +660,10 @@ export function analyzeNandeckImport(gameDirValue, input) {
       if (key === "type" || key === "show_if") continue;
       const baseline = valueAt(binding.baseline, key), adapterBaseline = valueAt(binding.adapter_baseline || binding.baseline, key), proposed = valueAt(proposedRegion, key);
       if (proposed === undefined || equal(adapterBaseline, proposed)) continue;
+      if (currentRegion.text_style && NANDECK_TEXT_FIELDS.has(key)) {
+        parsed.warnings.push(`${proposedRegion.id}: ignored returned ${key} because '${currentRegion.text_style}' is a shared Forge text style; detach the layer in Forge before making a local nanDECK typography edit`);
+        continue;
+      }
       const current = valueAt(currentRegion, key);
       if (equal(current, proposed)) continue;
       if (!equal(current, baseline)) { conflicts.push({ id: proposedRegion.id, path: key, base: baseline ?? null, proposed: proposed ?? null, current: current ?? null }); continue; }

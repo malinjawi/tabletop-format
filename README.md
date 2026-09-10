@@ -84,12 +84,14 @@ node tools/diff.mjs old-cards.json new-cards.json    # semantic card diff, zero 
 node tools/render_cards.mjs examples/ember           # card faces @300dpi (the exact browser renderer; Chrome required)
 python3 tools/export_pnp.py examples/ember           # print-and-play PDF, 3x3 US Letter, crop marks
 python3 tools/export_pnp.py examples/_fixtures/netrunner-sg --card sure_gamble --no-back  # one-card source-backed proof
-python3 tools/export_tts.py examples/ember           # TTS sheet(s) + save JSON (auto-splits after 70 faces)
+python3 tools/export_tts.py examples/ember           # staged TTS save + card sheets + versioned component textures/receipt
 node tools/fmt.mjs export vtt examples/my-game       # staged VirtualTabletop.io state + self-contained .vtt
 npm run vtt:up                                       # start the pinned local open-source tabletop runtime
 node tools/fmt.mjs import decklist examples/ember list.txt --name "Burn Rush" --format standard   # "3 Kindling" lines -> deck.json
 node tools/fmt.mjs export nandeck examples/_fixtures/netrunner-sg   # one MM-accurate script + CSV per card family
 node tools/fmt.mjs import nandeck-layout examples/_fixtures/netrunner-sg program.txt  # safe dry-run; add --write after review
+node tools/fmt.mjs export pnpink examples/_fixtures/netrunner-sg /tmp/netrunner-pnpink # pinned Inkscape/PnPInk .pnp per family
+node tools/fmt.mjs import pnpink examples/_fixtures/netrunner-sg /tmp/netrunner-pnpink/families/program/netrunner-sg-program.pnp # dry-run; add --write after review
 node tools/fmt.mjs check-deck examples/ember examples/ember/decks/burn-rush.json                  # legality: pool, size, deck limits, BANLIST
 ```
 
@@ -183,6 +185,164 @@ native-editor adapters consume that same contract, so a field cannot be
 "editable in Affinity" but unsupported in Forge. Unmapped changes fail closed
 and name the exact missing path. See
 [`docs/production-templates.md`](docs/production-templates.md).
+
+The Design workspace now starts with the actual production path: edit a shared
+family in Forge, or take a commit-pinned working copy to Dextrous, Component
+Studio, Sheets, PnPInk/Inkscape, Affinity/Illustrator/Inkscape, nanDECK, or a
+version-pinned Squib CSV/YAML/Ruby kit whose returned code Forge never executes. The
+first-component wizard turns an empty idea into stable card rows, typed fields,
+a reusable front, a shared back, and trim/bleed geometry as one reviewed commit.
+The deck-scale table keeps those IDs read-only while supporting multi-row
+selection, typed matrix paste from Sheets, fill-down, and keyboard navigation;
+invalid pasted cells reject the complete matrix before the local draft changes.
+The artwork picker stores searchable project tags in
+`design/art-library.json`, can explicitly target multiple printing IDs, and
+reviews those assignments beside the asset bytes, artist credit, rights, crop,
+card data, and shared layout. Library records merge independently by asset path;
+same-asset concurrent edits stop for review. See
+[`docs/versioned-artwork-library.md`](docs/versioned-artwork-library.md).
+The small table package carries card, printing, and piece data because CSV cannot
+preserve an external application's layout; the full project carries every declared
+portable source. Both return through a three-way dry run before one commit or
+credited pull request. The product contract and acceptance gate are in
+[`docs/CARD-DESIGN-PRODUCTION-MILESTONE.md`](docs/CARD-DESIGN-PRODUCTION-MILESTONE.md).
+
+### Versioned card print profiles
+
+`templates/print.yaml` makes output choices part of the game instead of hidden
+export-time state. The Design workspace can select all cards or permanent card
+IDs, resolve their physical printings and quantities, choose fronts-only or
+mirrored-duplex A4/Letter sheets, set a gutter and crop-mark style, fit Japanese
+opaque-sleeve inserts, and include or omit the shared back in the one-face-per-page
+press candidate. Review validates the entire candidate without writing; commit
+checks the reviewed base ref again. A contributor receives an attributed edition
+commit and a pull request rather than a permission error. New card systems receive
+the balanced duplex profile in their first atomic commit.
+
+### Versioned playable builds
+
+The Decks workspace is now an actual authoring surface rather than a read-only
+legality report. A creator can compose a deck visually, select the exact
+printing or alt-art face for every card, see format legality before writing,
+and commit either a legal build or an explicitly marked work in progress.
+Permanent card IDs and physical printing IDs remain separate, and their counts
+must reconcile. **Plan exact print run** carries that build into the versioned
+print profile so no unselected face or source quantity leaks into the release.
+See [`docs/playable-builds.md`](docs/playable-builds.md).
+
+The first named service target is **The Game Crafter Poker Deck**. Forge checks
+63.5 × 88.9 mm trim, emits individual 825 × 1125 pixel RGB PNG fronts and back,
+and records each file's dimensions, DPI, and hash in the release preflight. It
+is a specification-checked file handoff, not a claimed account integration or
+printer certification. See [`docs/print-targets.md`](docs/print-targets.md).
+
+`tools/export_print_ready.py` consumes that profile and puts it, the exact source
+ref, and `preflight.json` in the frozen ZIP. Preflight reopens each PDF to check
+page counts, embedded PDF-owned text fonts, and press TrimBox/BleedBox; it also
+records 300 DPI sRGB face mode and 100% K vector crop marks/notices. Forge does
+not turn generic RGB into an unlabeled “press ready” claim. A maintainer can
+instead upload the receiving printer's CMYK output ICC as a rights-tracked asset
+and commit its condition identifier, rendering intent, and total-ink limit. Forge
+then converts every face through that exact profile, measures every pixel, embeds
+the profile once as the output intent, and creates a structurally preflighted
+PDF/X-1a:2003 candidate. It still requires receiving-printer or independent
+prepress approval. The same versioned profile can add a printer-named spot-color
+cut path derived from committed trim/radius geometry; Forge verifies that every
+requested page contains a full-tint Separation stroke with stroke overprint.
+Printer-specific templates and approval still remain external evidence.
+
+After a release, the owner can record which frozen PDF or print ZIP was sent to
+which printer/job. Forge copies the artifact SHA-256 and byte count from the
+immutable release receipt, hashes private submission/approval evidence locally
+in the browser, and allows one append-only approved or rejected decision. The
+downloadable receipt always identifies this as creator-recorded evidence—not
+printer identity verification or independent certification.
+
+### Component production studio
+
+`components/tokens.json` is the stable inventory for non-card pieces and
+`templates/component-design.json` contains reusable visual families. Forge
+Piece Studio edits quantities, physical sizes, family bindings, colors,
+typography, symbols, and art against a live piece, then reviews and validates
+the inventory and shared design in one atomic commit. The `components` export
+freezes editable SVG faces, bleed, explicit trim lines, quantity-aware A4 or
+Letter cut sheets, hashes, and production boundaries at the exact source ref.
+Each reusable family also has a millimetre-native SVG working copy for
+Inkscape, Affinity Designer, or Illustrator: moving/resizing named regions and
+changing flat family colors returns through a visual dry run and one commit.
+Bindings, type, symbols, art, typography, physical sizes, and production
+settings remain canonical and cannot be silently replaced by arbitrary SVG.
+The versioned Sheet setup controls expose A4/Letter paper, bleed, safe inset,
+page margin, piece gap, and poster overlap without editing JSON. The selected
+safe inset appears as a green preview guide and preflights text/symbol regions,
+but is deliberately absent from printed faces; the remaining values directly
+drive cut-sheet packing and oversized-piece tiling.
+Review now builds a non-writing manufacturing proof from the complete local
+candidate before enabling its commit. The server runs the normal project
+validator and the same production renderer used by exports, then returns the
+first front sheet, mirrored back sheet, and poster tile with page and quantity
+totals. SVG is displayed as an image rather than injected as page markup. A
+failed proof keeps the commit disabled, and a successful proof does not advance
+Git or dirty the repository. Preview and commit both pin the ref from which the
+studio opened, so a concurrent component change is rejected instead of being
+silently overwritten.
+New pieces begin in a guided picker for tokens, counters, tiles, dial faces,
+boards, standees, and player aids. Each preset selects an appropriate family
+and useful starting dimensions while keeping every field editable; presets are
+authoring conveniences, not manufacturer guarantees or proprietary dielines.
+The inspector names every piece affected by a shared family edit. A creator can
+detach one piece into a new versioned family before changing its appearance;
+explicit family bindings take precedence over kind-based defaults and the new
+family lands with the piece change in the same review and commit.
+Counter starting values and dial start/maximum/step values are edited as
+versioned component data. Forge renders counter faces and up to 36 labelled
+dial positions with a center-hole assembly guide in both the live proof and the
+exact production SVG; the physical pointer, spindle, or rivet remains external.
+Piece Studio also accepts front or reverse artwork directly. Uploading a file
+assigns it to the selected piece and records creator, license, rights status,
+source, and redistribution permission in one commit; exact component kits pin
+the source-asset hash and declaration alongside the rendered face hash.
+The first vertical slice covers tokens, counters, tiles, and dials while keeping
+boards and other large pieces in the same extensible registry. A piece may also
+declare a reverse face, including a distinct same-size family, symbol, and art.
+Forge previews both sides and emits paired SVG faces plus horizontally mirrored
+back sheets for long-edge duplex printing; the manifest tells the printer to
+run a one-page alignment proof because feed variance is outside Forge's control.
+For pieces declared per player, Piece Studio records the kit player count as a
+versioned production setting. Cut sheets multiply those quantities
+deterministically and the manifest keeps both declared and resolved counts;
+legacy projects without a selection remain readable and are flagged unresolved.
+Boards and other pieces larger than the selected paper size are no longer
+dropped from the kit: Forge emits deterministic poster tiles with a versioned
+overlap, row/column labels, assembly crosses, and source-coverage coordinates.
+When a game has a versioned `setups/*.yaml` document, Piece Studio can stage a
+selected component on that table and commit its position, quantity, face, and
+rotation atomically with the inventory and design. The production ZIP freezes
+a top-down SVG setup map and names the setup source in its manifest. This is an
+authoring and release proof: the current VTT adapter does not yet auto-stage
+non-card components.
+These remain SVG working output and require a 100%-scale printer proof; Forge
+does not pretend to correct hardware margins or feed scaling.
+
+The Tabletop Playground adapter emits a self-contained local package from the
+same exact ref: stable object-template GUIDs, capped card atlases, reusable
+component textures, initial counter markers, and a native `.vts` state with the
+committed decks and placements already on the table. The archive includes its
+source ref, rights boundary, package GUID, schema revision, hashes, and install
+instructions. Forge does not claim or perform a mod.io upload; that remains a
+reviewed action in the Tabletop Playground editor. Custom dice fail closed
+until a model and face-orientation map are committed. See
+[`docs/tabletop-playground-adapter.md`](docs/tabletop-playground-adapter.md).
+
+The Tabletop Simulator adapter does stage them. It uses the first versioned
+setup when one exists, creates its deck stacks and explicit card placements,
+maps component placements into TTS coordinates, lays out remaining component
+inventory as supplies, and emits zone/component snap points. Token, tile,
+board, standee, standard-die, and dial behavior is selected from component kind
+rather than hard-coded to a game. Every hosted texture uses the immutable
+release ref; `tts-manifest.json` records its hash, source setup, placement, and
+rights dependencies. Custom-art dice fail closed until a validated atlas and
+rotation map exist. See [`docs/tabletop-simulator-adapter.md`](docs/tabletop-simulator-adapter.md).
 
 ### Designed rulebook publications
 

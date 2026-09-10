@@ -19,12 +19,21 @@ engines:
       - program
       - resource
       - upgrade
-  - id: pnpink-proof
+  - id: pnpink-working-copy
     type: pnpink
-    label: PnPInk interoperability proof
-    description: An editable Inkscape/PnPInk round-trip experiment for two representative families. It cannot become active yet.
+    label: Inkscape + PnPInk working copy
+    description: A version-pinned external production source for every card family. Card data and the SVG template return through Forge review; it is not the active release renderer.
     source: templates/card-design/experiments/pnpink/manifest.yaml
-    status: experimental
+    status: beta
     families:
-      - program
       - agenda
+      - asset
+      - event
+      - hardware
+      - ice
+      - corp-identity
+      - runner-identity
+      - operation
+      - program
+      - resource
+      - upgrade

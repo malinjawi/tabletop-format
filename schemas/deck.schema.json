@@ -20,6 +20,13 @@
       "minProperties": 1,
       "additionalProperties": { "type": "integer", "minimum": 1 }
     },
+    "printings": {
+      "type": "object",
+      "description": "Optional production lock: printing_id -> copy count. When present, counts grouped by card_id must exactly equal cards. This lets one saved deck select an exact edition or alt-art face without changing gameplay identity.",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 10000 }
+    },
     "notes": { "type": "string", "description": "Strategy notes, changelog thinking — diffs like everything else." }
   }
 }

@@ -124,13 +124,24 @@ for t in tools/*.mjs tools/lib/*.mjs; do node --check "$t" 2>/dev/null || bad "s
 ok "all .mjs tools pass node --check"
 check "source-overlay editor field contract" node tools/source-overlay-field-audit.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "versioned adapter contracts" node tools/check-adapters.mjs
+check "ownerless project access fails closed; only explicit public sandboxes open" node tools/test-project-access.mjs
+check "protected project identity and sandbox metadata fail closed" node tools/test-project-ref.mjs
+check "trusted project ownership is restored during repository reindex" node tools/test-project-reindex.mjs
+check "hosted renames and identity conflicts reconcile safely" node tools/test-hosted-project-reindex.mjs
+check "private artifact caches and stale game indexes fail closed" node tools/test-private-cache-and-stale-index.mjs
+check "Forgejo privacy and repository-bound identity reconciliation" node tools/test-store1-forgejo.mjs
+check "editor-neutral SVG family round trip" node tools/test-svg-design.mjs "$REPO/examples/_fixtures/netrunner-sg"
+check "safe Squib card and layout working copy" node tools/test-squib.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint
 check "strict production host preflight" node tools/test-deploy-preflight.mjs
 check "safe production deployment bootstrap" node tools/test-deploy-bootstrap.mjs
 check "five-person pilot decision contract" node tools/test-pilot-report.mjs
 check "production source package contracts" node tools/test-source-assets.mjs
+check "versioned artwork library merge contract" node tools/test-art-library.mjs
 check "source-packaged Secret Hitler validates" node tools/validate.mjs examples/secret-hitler
 check "source-packaged Secret Hitler validates (python)" python3 tools/validate.py examples/secret-hitler
+check "print-ready sleeve extension keeps rounded trim at the cut edge" python3 tools/test_print_ready.py
+check "native Tabletop Playground exact package and staged state" "$PYTHON_BIN" "$REPO/tools/test_ttpg_export.py"
 
 # A declared source-backed field is the editable part of an immutable source
 # face. Its value must be allowed to diverge from the baseline so the editor can
@@ -196,6 +207,19 @@ assert 'TBD' in s.get('Note',''), "non-default art credit surfaced in the Note p
 assert any('(alt-art)' in o['Nickname'] for o in co), "variant reflected in the nickname"
 PY
 python3 -c "import json,sys;d=json.load(open('examples/ember/exports/tts/ember.json'))['ObjectStates'][0]['CustomDeck']['1'];sys.exit(0 if d['NumWidth']<=10 and d['NumHeight']<=7 else 1)" && ok "tts sheet within TTS grid limits (<=10x7)" || bad "tts sheet limits"
+python3 - <<'PY' && ok "tts stages versioned components with an exact-ref manifest" || bad "tts component staging"
+import json
+from pathlib import Path
+root=Path('examples/ember/exports/tts')
+save=json.loads((root/'ember.json').read_text())
+manifest=json.loads((root/'tts-manifest.json').read_text())
+pieces=[o for o in save['ObjectStates'] if 'forge-component' in o.get('Tags',[])]
+assert len(pieces)==28, len(pieces)
+assert manifest['version']==4 and manifest['objects']['components']==28
+assert len(manifest['outputs']['component_assets'])==4
+assert all((root/'components'/asset['file']).is_file() for asset in manifest['outputs']['component_assets'])
+assert all('forge_ref' in o.get('GMNotes','') for o in pieces)
+PY
 check "ttc export" python3 tools/export_ttc.py examples/ember
 TTCPACK=examples/ember/exports/ttc/Ember/cards
 [ -f "$TTCPACK/config.cfg" ] && [ -f "$TTCPACK/stacks.cfg" ] && [ -f "$TTCPACK/_back.png" ] && ok "ttc pack: cards/ + config.cfg + stacks.cfg + _back.png" || bad "ttc pack layout"
@@ -263,6 +287,14 @@ import json
 t=json.load(open('examples/ember/components/tokens.json'))
 t[0]['symbol']='spark'
 json.dump(t,open('examples/ember/components/tokens.json','w'),indent=2)"
+python3 -c "
+import json
+t=json.load(open('examples/ember/components/tokens.json'))
+t[-1]['attributes']['max_value']=100
+json.dump(t,open('examples/ember/components/tokens.json','w'))"
+check_fails "overcrowded dial rejected (node)" node tools/validate.mjs examples/ember
+check_fails "overcrowded dial rejected (python)" python3 tools/validate.py examples/ember
+cp "$REPO/examples/ember/components/tokens.json" examples/ember/components/tokens.json
 check "validate ember (restored)" python3 tools/validate.py examples/ember
 
 say ""
@@ -613,12 +645,12 @@ export CACHE_DIR="$SCRATCH/cache"
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $CPORT3 > "$SCRATCH/s3.log" 2>&1 &
 SPID3=$!
 wait_server "$CPORT3" "$SCRATCH/s3.log" || bad "Store 3 server startup"
-SHA0=$(git rev-parse --short HEAD)
+SHA0=$(git rev-parse HEAD)
 EXP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP" | grep -q "\"ref\": \"$SHA0\"" && ok "export keyed by current sha ($SHA0)" || bad "export sha key" "$EXP"
 TTSURL=$(echo "$EXP" | python3 -c "import json,sys;print(json.load(sys.stdin)['urls'][0])")
 HDR=$(curl -s -D - -o "$SCRATCH/tts_cached.json" "localhost:$CPORT3$TTSURL" | tr -d '\r')
-echo "$HDR" | grep -q "max-age=31536000, immutable" && ok "immutable cache headers on cache URL" || bad "immutable headers"
+echo "$HDR" | grep -q "public, no-cache, must-revalidate" && ok "exact public cache URL revalidates project visibility" || bad "revalidation headers"
 python3 -c "import json; json.load(open('$SCRATCH/tts_cached.json'))" && ok "cached TTS save parses" || bad "cached tts"
 EXP2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP2" | grep -q '"cached": true' && ok "second export = cache hit (idempotent per key)" || bad "cache hit" "$EXP2"
@@ -628,7 +660,7 @@ import json
 p='examples/ember/components/cards.json'; c=json.load(open(p))
 c[0]['attributes']['power']=4; json.dump(c,open(p,'w'),indent=2)"
 git commit -qam "e2e: bump kindling power"
-SHA1=$(git rev-parse --short HEAD)
+SHA1=$(git rev-parse HEAD)
 EXP3=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP3" | grep -q "\"ref\": \"$SHA1\"" && ok "new commit → new cache ref ($SHA1)" || bad "new ref" "$EXP3"
 curl -s -o /dev/null -w '%{http_code}' "localhost:$CPORT3$TTSURL" | grep -q 200 && ok "OLD sha URL still serves (immutability across edits)" || bad "old url"
@@ -655,7 +687,7 @@ curl -s "localhost:$EPORT/edit/ember?raw" > "$SCRATCH/live-editor.html"
 grep -q "saveToServer" "$SCRATCH/live-editor.html" && grep -q '"live_slug": "ember"' "$SCRATCH/live-editor.html" \
   && ok "GET /edit/ember serves live editor with Save wired" || bad "live editor page"
 # simulate exactly what the Save button does
-BEFORE_SHA=$(git rev-parse --short HEAD)
+BEFORE_SHA=$(git rev-parse HEAD)
 node -e "
 const cards = JSON.parse(require('fs').readFileSync('examples/ember/components/cards.json','utf8'));
 cards.find(c=>c.id==='twin_flame').attributes.cost = 3;
@@ -665,7 +697,7 @@ fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
     if(!(d.saved && d.commit && /Twin Flame/.test(d.message))) process.exit(1);
     console.log('commit:', d.commit, '—', d.message);
   }).catch(()=>process.exit(1))" && ok "Save button flow → commit w/ auto message" || bad "save flow"
-AFTER_SHA=$(git rev-parse --short HEAD)
+AFTER_SHA=$(git rev-parse HEAD)
 [ "$BEFORE_SHA" != "$AFTER_SHA" ] && git log -1 --format=%b | grep -q "Twin Flame" \
   && ok "commit landed in history, body names the card" || bad "commit in history"
 # editor page rebuilds with fresh data after the commit (cache invalidation)
@@ -677,7 +709,7 @@ cards[0].attributes.cost = 'NaN-ish';
 fetch('http://localhost:$EPORT/api/games/ember/cards',{method:'PUT',
   headers:{'content-type':'application/json','Authorization':'Bearer $ETOK'}, body:JSON.stringify(cards)})
   .then(r=>process.exit(r.status===422?0:1)).catch(()=>process.exit(1))" \
-  && [ "$(git rev-parse --short HEAD)" = "$AFTER_SHA" ] \
+  && [ "$(git rev-parse HEAD)" = "$AFTER_SHA" ] \
   && ok "invalid save → 422 toast path, history untouched" || bad "invalid save"
 kill $EPID 2>/dev/null
 git reset -q --hard $BEFORE_SHA 2>/dev/null || true
@@ -706,7 +738,8 @@ grep -q "liveIssues" "$SCRATCH/live-hub.html" && grep -q "commentThread" "$SCRAT
 grep -q "EDITABLE_TABS" "$SCRATCH/live-hub.html" && grep -q "rulesEdit" "$SCRATCH/live-hub.html" \
   && grep -q "g/\${g.slug}/cards/edit" "$SCRATCH/live-hub.html" && ok "hub: editing is a routed mode (#/g/:slug/:tab/edit) for cards AND rules" || bad "hub edit routing"
 grep -q "exportMenu" "$SCRATCH/live-hub.html" && grep -q "Tabletop Club" "$SCRATCH/live-hub.html" \
-  && ok "live hub Export offers Tabletop Club / TTS / PnP downloads" || bad "hub export wiring"
+  && grep -q "Tabletop Playground" "$SCRATCH/live-hub.html" \
+  && ok "live hub Export offers Tabletop Playground / Tabletop Club / TTS / PnP downloads" || bad "hub export wiring"
 grep -q "Create my edition" "$SCRATCH/live-hub.html" && grep -q "Nothing is sent upstream" "$SCRATCH/live-hub.html" \
   && grep -q "Your independent edition" "$SCRATCH/live-hub.html" && grep -q "Propose upstream" "$SCRATCH/live-hub.html" \
   && ok "north-star UI: exact-version edition is independent; upstream proposal stays optional" || bad "north-star edition UI"
@@ -755,7 +788,9 @@ node -e "
   const edit=await fetch(base+'/api/games/ember/cards',{method:'PUT',headers:H,body:JSON.stringify(changed)});
   if(edit.status!==200) process.exit(6);
   const f=await (await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H,body:JSON.stringify({ref:pinned})})).json();
-  if(!(f.slug==='ember-forker' && f.forked_from==='ember' && f.commit && f.source_ref===pinned)) process.exit(2);
+  if(!(f.slug==='ember-forker' && f.forked_from==='ember'
+    && /^[0-9a-f]{40}$/.test(f.commit) && /^[0-9a-f]{40}$/.test(f.source_ref)
+    && f.source_ref.startsWith(pinned))) process.exit(2);
   const forkCards=await (await fetch(base+'/api/games/ember-forker/cards')).json();
   if(forkCards[0].text!==oldCards[0].text || forkCards[0].text.includes('LATER SOURCE EDIT')) process.exit(7);
   const again=await fetch(base+'/api/games/ember/fork',{method:'POST',headers:H});

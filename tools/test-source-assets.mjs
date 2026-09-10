@@ -32,4 +32,21 @@ assert.throws(() => inspectAsset("assets/models/bad.gltf", Buffer.from(JSON.stri
 }))), /dependencies must be relative/);
 assert.throws(() => inspectAsset("assets/models/bad.stl", Buffer.from("not a mesh")), /neither binary STL nor ASCII STL/);
 
+const outputProfile = Buffer.alloc(132);
+outputProfile.writeUInt32BE(outputProfile.length, 0);
+outputProfile[8] = 4;
+outputProfile.write("prtr", 12, "ascii");
+outputProfile.write("CMYK", 16, "ascii");
+outputProfile.write("Lab ", 20, "ascii");
+outputProfile.write("acsp", 36, "ascii");
+outputProfile.writeUInt32BE(0, 128);
+assert(ALLOWED_ASSET_EXT.has("icc") && ALLOWED_ASSET_EXT.has("icm"), "printer ICC profiles must be uploadable assets");
+assert.deepEqual(inspectAsset("assets/color-profiles/press.icc", outputProfile), {
+  kind: "icc", device_class: "prtr", color_space: "CMYK", pcs: "Lab", version: 4,
+});
+const displayProfile = Buffer.from(outputProfile); displayProfile.write("mntr", 12, "ascii");
+assert.throws(() => inspectAsset("assets/color-profiles/display.icc", displayProfile), /printer output profile required/);
+const truncatedProfile = Buffer.from(outputProfile); truncatedProfile.writeUInt32BE(999, 0);
+assert.throws(() => inspectAsset("assets/color-profiles/truncated.icc", truncatedProfile), /declares 999 bytes/);
+
 console.log("SOURCE PACKAGES GREEN — manifest, exact inputs, portable project, native formats, and safe 3D admission verified.");

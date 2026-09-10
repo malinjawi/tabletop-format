@@ -17,7 +17,7 @@ for (const dependency of ["ajv", "js-yaml", "yaml", "playwright-core"]) {
 }
 const venvPython = process.platform === "win32" ? join(root, ".venv", "Scripts", "python.exe") : join(root, ".venv", "bin", "python");
 const python = process.env.FORGE_PYTHON || (existsSync(venvPython) ? venvPython : "python3");
-const py = command(python, ["-c", "import sys,yaml,jsonschema,PIL,reportlab; print(sys.version.split()[0], yaml.__version__, jsonschema.__version__ if hasattr(jsonschema,'__version__') else 'ok', PIL.__version__, reportlab.Version)"]);
+const py = command(python, ["-c", "import sys,yaml,jsonschema,openpyxl,PIL,pypdf,reportlab; print(sys.version.split()[0], yaml.__version__, jsonschema.__version__ if hasattr(jsonschema,'__version__') else 'ok', openpyxl.__version__, PIL.__version__, pypdf.__version__, reportlab.Version)"]);
 py.status === 0 ? pass("Python production libs", py.stdout.trim()) : fail("Python production libs", `${python}: ${(py.stderr || py.stdout).trim() || "unavailable"}`);
 const git = command("git", ["--version"]);
 git.status === 0 ? pass("Git", git.stdout.trim()) : fail("Git", "not found");
@@ -28,6 +28,9 @@ const chrome = process.env.CHROME_PATH || chromeCandidates.find(existsSync);
 chrome ? pass("Chromium renderer", chrome) : fail("Chromium renderer", "set CHROME_PATH or install Chrome/Chromium");
 const nandeck = process.env.NANDECK_PATH;
 pass("nanDECK adapter", nandeck ? `external app declared at ${nandeck}` : "script import/export ready; external app optional and not run by Forge");
+const squib = command("ruby", ["-e", "begin; require 'squib'; print Squib::VERSION; rescue LoadError; exit 3; end"]);
+pass("Squib adapter", squib.status === 0 ? `external preview runtime ${squib.stdout.trim()} available`
+  : "safe CSV/YAML import/export ready; optional local preview needs Ruby 3 and the pinned bundle");
 const claspPath = process.platform === "win32" ? join(root, "node_modules", ".bin", "clasp.cmd") : join(root, "node_modules", ".bin", "clasp");
 const clasp = command(claspPath, ["--version"]);
 clasp.status === 0 ? pass("Google Sheets deployer", `clasp ${clasp.stdout.trim()}`)

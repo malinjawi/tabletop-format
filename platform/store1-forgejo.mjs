@@ -20,7 +20,8 @@ import { writeFileSync, readFileSync, readdirSync, statSync, mkdirSync,
 import { join, dirname, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { uploadAsset, downloadAsset, parsePointer } from "../tools/lib/lfs.mjs";
-import { PROJECT_META, parseProjectMeta } from "./project-ref.mjs";
+import { PROJECT_META, PROJECT_KIND_OWNED, parseProjectMeta } from "./project-ref.mjs";
+import { fullStore1ObjectId, store1Ref } from "./store1-ref.mjs";
 
 const TOPIC = "fmt-game";
 const short = (sha) => (sha ?? "").slice(0, 7);
@@ -41,6 +42,10 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
 
   /** registry: stable storage key → Forgejo repository identity. */
   const reg = new Map();
+  // Identity-conflicting repositories stay invisible for this process. Startup
+  // re-evaluates them from authoritative Store 2 on the next run; ordinary
+  // list()/catalog refreshes must not accidentally re-admit one meanwhile.
+  const quarantinedRepoIds = new Set();
 
   /** @param {{body?: unknown, sudo?: string, expect?: number[]}} [options] */
   async function api(method, path, options = {}) {
@@ -100,10 +105,30 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       const r = await api("GET", `/repos/search?q=${TOPIC}&topic=true&limit=50&page=${page}`, { expect: [200] });
       const repos = r.data.data ?? [];
       for (const repo of repos) {
-        const bytes = await rawRepo(repo.owner.login, repo.name, PROJECT_META);
-        const project = parseProjectMeta(bytes, repo.name, repo.owner.login, { storedKey: true });
-        reg.set(project.storage_key, { owner: repo.owner.login, slug: repo.name,
-          repoId: repo.id == null ? null : String(repo.id), project });
+        const repoId = repo.id == null ? null : String(repo.id);
+        if (repoId && quarantinedRepoIds.has(repoId)) continue;
+        const owner = repo.owner.login, slug = repo.name;
+        // repo.id survives a native rename or transfer. Prefer it over mutable
+        // owner/name so the in-process storage key remains stable as well.
+        const existing = [...reg.entries()].find(([, entry]) => repoId && entry.repoId === repoId)
+          ?? [...reg.entries()].find(([, entry]) => entry.owner === owner && entry.slug === slug);
+        // A missing/corrupt identity needs a collision-safe storage key. A
+        // previously indexed repository keeps its current key across refresh.
+        const fallbackKey = existing?.[0] ?? `${owner}~${slug}`;
+        const bytes = await rawRepo(owner, slug, PROJECT_META);
+        let project = parseProjectMeta(bytes, fallbackKey, owner, { storedKey: true,
+          expectedNamespace: owner, expectedSlug: slug });
+        // Once a physical repository is registered, repository content cannot
+        // rename its internal storage key. Server reindex may explicitly bind
+        // this key after matching the stable repo id to Store 2.
+        if (existing) project = { ...project, storage_key: existing[0] };
+        // A repository may not claim another repository's internal key. Keep
+        // discovery available, but normalize the conflicting identity closed.
+        if (seen.has(project.storage_key)) project = parseProjectMeta(null, fallbackKey, owner,
+          { expectedNamespace: owner, expectedSlug: slug });
+        reg.set(project.storage_key, { owner, slug,
+          repoId,
+          private: typeof repo.private === "boolean" ? repo.private : null, project });
         seen.add(project.storage_key);
       }
       if (repos.length < 50) break;
@@ -147,12 +172,19 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     const r = await api("POST", `/repos/${owner}/${slug}/contents`, { sudo: owner,
       body: { branch: "main", message, files: ops, author: a, committer: a }, expect: [200, 201] });
     reg.set(key, { ...repoOf(key), owner, slug }); // head changed
-    return { sha: short(r.data.commit?.sha ?? r.data.files?.[0]?.commit?.sha) };
+    const reported = r.data.commit?.sha ?? r.data.files?.[0]?.commit?.sha;
+    return { sha: reported
+      ? fullStore1ObjectId(reported, `Forgejo commit for ${key}`)
+      : await store.headSha(key) };
   }
 
   async function createRepo(owner, slug) {
     const created = await api("POST", "/user/repos", { sudo: owner,
-      body: { name: slug, auto_init: true, default_branch: "main", private: false }, expect: [201] });
+      // Source repositories are private at the storage layer during the
+      // controlled beta. Gateway discovery/read policy may expose a project,
+      // but a Store-2 mistake must not make private source directly clonable.
+      body: { name: slug, auto_init: true, default_branch: "main", private: true }, expect: [201] });
+    if (created.data?.private === false) throw new Error(`Forgejo created ${owner}/${slug} public despite private request`);
     await api("PUT", `/repos/${owner}/${slug}/topics/${TOPIC}`, { sudo: owner, expect: [204] });
     return created.data;
   }
@@ -163,6 +195,30 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     async list() { return refresh(); },
     has(slug) { return reg.has(slug); },
 
+    repositoryIdentity(key) {
+      const entry = repoOf(key);
+      return { repoId: entry.repoId, namespace: entry.owner, repoSlug: entry.slug };
+    },
+
+    bindProjectKey(currentKey, stableKey) {
+      if (currentKey === stableKey) return stableKey;
+      const entry = repoOf(currentKey), occupied = reg.get(stableKey);
+      if (occupied && occupied.repoId !== entry.repoId)
+        throw Object.assign(new Error(`storage key '${stableKey}' is already bound to another repository`), { code: "FORGE_PROJECT_IDENTITY_CONFLICT" });
+      reg.delete(currentKey);
+      entry.project = { ...entry.project, storage_key: stableKey };
+      reg.set(stableKey, entry);
+      return stableKey;
+    },
+
+    quarantineProject(key) {
+      const entry = reg.get(key);
+      if (!entry) return false;
+      if (entry.repoId) quarantinedRepoIds.add(entry.repoId);
+      reg.delete(key);
+      return true;
+    },
+
     async readFile(key, rel) {
       const { owner, slug } = repoOf(key);
       return rawRepo(owner, slug, rel);
@@ -170,13 +226,50 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     async readMeta(key) {
       const entry = repoOf(key);
       const gy = (await store.readFile(key, "game.yaml"))?.toString() ?? "";
-      const project = parseProjectMeta(await store.readFile(key, PROJECT_META), key, entry.owner, { storedKey: true });
+      const project = parseProjectMeta(await store.readFile(key, PROJECT_META), key, entry.owner,
+        { storedKey: true, expectedNamespace: entry.owner, expectedSlug: entry.slug });
+      entry.project = project;
       let cardCount = null;
       try { cardCount = JSON.parse((await store.readFile(key, "components/cards.json")).toString()).length; } catch {}
       return { title: (gy.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? project.slug,
                license: (gy.match(/^license:\s*(\S+)/m) ?? [])[1] ?? null,
                cardCount, projectId: project.project_id, namespace: project.namespace,
-               repoSlug: project.slug, repoId: entry.repoId };
+               repoSlug: project.slug, repoId: entry.repoId, projectKind: project.project_kind,
+               ownerNamespaceTrusted: true, repositoryPrivate: entry.private };
+    },
+
+    async setVisibility(key, visibility) {
+      const entry = repoOf(key), desiredPrivate = visibility !== "public";
+      if (entry.private === desiredPrivate) return { visibility: desiredPrivate ? "private" : "public", changed: false };
+      const changed = await api("PATCH", `/repos/${entry.owner}/${entry.slug}`, { sudo: entry.owner,
+        body: { private: desiredPrivate }, expect: [200] });
+      if (changed.data?.private !== desiredPrivate)
+        throw new Error(`Forgejo did not apply ${visibility} visibility to ${entry.owner}/${entry.slug}`);
+      entry.private = desiredPrivate;
+      return { visibility, changed: true };
+    },
+
+    // A quarantine or rights downgrade requires stronger evidence than a
+    // cached search result or PATCH response. Read current state, repair it,
+    // and read it again before Forge may hide the repository from discovery.
+    async ensurePrivate(key) {
+      const entry = repoOf(key), path = `/repos/${entry.owner}/${entry.slug}`;
+      const before = await api("GET", path, { expect: [200] });
+      let changed = false;
+      if (before.data?.private !== true) {
+        const patched = await api("PATCH", path, { sudo: entry.owner,
+          body: { private: true }, expect: [200] });
+        if (patched.data?.private !== true)
+          throw Object.assign(new Error(`Forgejo did not make ${entry.owner}/${entry.slug} private`),
+            { code: "FORGE_STORAGE_ISOLATION_FAILED" });
+        changed = true;
+      }
+      const confirmed = await api("GET", path, { expect: [200] });
+      if (confirmed.data?.private !== true)
+        throw Object.assign(new Error(`Forgejo did not confirm ${entry.owner}/${entry.slug} as private`),
+          { code: "FORGE_STORAGE_ISOLATION_FAILED" });
+      entry.private = true;
+      return { visibility: "private", changed, confirmed: true };
     },
 
     projectKey(namespace, repoSlug) {
@@ -199,11 +292,14 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     async createGame(key, srcTree, message, author) {
       const authored = parseAuthor(author);
       const project = parseProjectMeta(readFileSync(join(srcTree, PROJECT_META)), key, authored.name, { storedKey: true });
+      if (!project.metadata_valid || project.project_kind !== PROJECT_KIND_OWNED)
+        throw new Error("hosted projects require valid owned project metadata");
       const owner = project.namespace, email = authored.email;
       if (owner !== authored.name) throw new Error("project namespace must match the creating account");
       await ensureUser(owner, email);
       const created = await createRepo(owner, project.slug);
-      reg.set(key, { owner, slug: project.slug, repoId: created?.id == null ? null : String(created.id), project });
+      reg.set(key, { owner, slug: project.slug, repoId: created?.id == null ? null : String(created.id),
+        private: typeof created?.private === "boolean" ? created.private : null, project });
       return { ...(await commitFiles(key, treeFiles(srcTree), message, author)), key };
     },
 
@@ -226,10 +322,13 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
           else files.push(file);
         }
         const project = parseProjectMeta(identity, dest, forker, { storedKey: true });
+        if (!project.metadata_valid || project.project_kind !== PROJECT_KIND_OWNED || project.namespace !== forker)
+          throw new Error("forks require valid owned project metadata matching the forking account");
         await ensureUser(forker, email);
         const created = await createRepo(forker, project.slug);
         reg.set(dest, { owner: forker, slug: project.slug,
-          repoId: created?.id == null ? null : String(created.id), project });
+          repoId: created?.id == null ? null : String(created.id),
+          private: typeof created?.private === "boolean" ? created.private : null, project });
         const res = await commitFiles(dest, files, message, author);
         // carry LFS objects across: pointers were committed verbatim; move the blobs too
         for (const f of files.filter(f => isPointer(f.content))) {
@@ -245,7 +344,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       const r = await api("GET",
         `/repos/${o}/${repoSlug}/commits?path=${encodeURIComponent(rel)}&limit=${n}&stat=false&verification=false&files=false`);
       if (r.status !== 200) return [];
-      return (r.data ?? []).map(c => ({ full: c.sha, sha: short(c.sha),
+      return (r.data ?? []).map(c => ({ full: fullStore1ObjectId(c.sha, `history revision for ${slug}`), sha: short(c.sha),
         author: c.commit?.author?.name ?? "?", date: (c.commit?.author?.date ?? "").slice(0, 10),
         subject: firstLine(c.commit?.message) }));
     },
@@ -262,7 +361,22 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     async headSha(slug) {
       const { owner: o, slug: repoSlug } = repoOf(slug);
       const r = await api("GET", `/repos/${o}/${repoSlug}/branches/main`, { expect: [200] });
-      return short(r.data.commit?.id);
+      return fullStore1ObjectId(r.data.commit?.id, `Forgejo head for ${slug}`);
+    },
+
+    async resolveRef(slug, ref) {
+      const safeRef = store1Ref(ref);
+      if (safeRef === "HEAD") return store.headSha(slug);
+      if (safeRef.startsWith("v")) {
+        const release = await store.releaseTagInfo(slug, safeRef);
+        if (release?.target) return fullStore1ObjectId(release.target, `Forgejo release ${safeRef}`);
+        throw Object.assign(new Error(`version '${safeRef}' is unavailable for ${slug}`), { status: 422 });
+      }
+      const { owner: o, slug: repoSlug } = repoOf(slug);
+      const resolved = await api("GET", `/repos/${o}/${repoSlug}/git/commits/${encodeURIComponent(safeRef)}`);
+      if (resolved.status !== 200)
+        throw Object.assign(new Error(`version '${safeRef}' is unavailable for ${slug}`), { status: 422 });
+      return fullStore1ObjectId(resolved.data?.sha, `Forgejo revision for ${slug}`);
     },
 
     async createReleaseTag(key, tag, target, message) {
@@ -279,8 +393,10 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       const tagObject = current.data.id ?? created.data.id;
       const annotated = tagObject
         ? await api("GET", `/repos/${owner}/${slug}/git/tags/${tagObject}`, { expect: [200] }) : null;
-      return { tag, target: annotated?.data?.object?.sha ?? current.data.commit?.sha,
-        tagObject, annotated: !!annotated?.data?.message, protected: true };
+      return { tag,
+        target: fullStore1ObjectId(annotated?.data?.object?.sha ?? current.data.commit?.sha, "Forgejo release target"),
+        tagObject: fullStore1ObjectId(tagObject, "Forgejo release tag object"),
+        annotated: !!annotated?.data?.message, protected: true };
     },
 
     async releaseTagInfo(key, tag) {
@@ -291,8 +407,10 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       const tagObject = current.data.id;
       const annotated = tagObject ? await api("GET", `/repos/${owner}/${slug}/git/tags/${tagObject}`) : null;
       const protections = await api("GET", `/repos/${owner}/${slug}/tag_protections`, { expect: [200] });
-      return { tag, target: annotated?.data?.object?.sha ?? current.data.commit?.sha,
-        tagObject, annotated: annotated?.status === 200 && !!annotated.data?.message,
+      return { tag,
+        target: fullStore1ObjectId(annotated?.data?.object?.sha ?? current.data.commit?.sha, "Forgejo release target"),
+        tagObject: fullStore1ObjectId(tagObject, "Forgejo release tag object"),
+        annotated: annotated?.status === 200 && !!annotated.data?.message,
         protected: (protections.data ?? []).some(rule => rule.name_pattern === "v*"),
         message: annotated?.data?.message ?? current.data.message ?? "" };
     },
@@ -315,17 +433,17 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
      *  materialized so renderers see real bytes (skip with resolveLfs:false). */
     async materialize(slug, ref, { resolveLfs = true } = {}) {
       const { owner: o, slug: repoSlug } = repoOf(slug);
-      if (ref === "HEAD") ref = "main";
-      const r = await fetch(`${base}/api/v1/repos/${o}/${repoSlug}/archive/${ref}.tar.gz`,
+      const safeRef = store1Ref(ref), archiveRef = await store.resolveRef(slug, safeRef);
+      const r = await fetch(`${base}/api/v1/repos/${o}/${repoSlug}/archive/${encodeURIComponent(archiveRef)}.tar.gz`,
         { headers: { Authorization: `token ${token}` } });
-      if (!r.ok) throw new Error(`archive ${slug}@${ref} → ${r.status}`);
+      if (!r.ok) throw new Error(`archive ${slug}@${safeRef} → ${r.status}`);
       const tmp = mkdtempSync(join(tmpdir(), "forge-at-"));
       writeFileSync(join(tmp, "a.tgz"), Buffer.from(await r.arrayBuffer()));
       execFileSync("tar", ["-xzf", "a.tgz"], { cwd: tmp });
       const top = readdirSync(tmp).find(d => d !== "a.tgz" && statSync(join(tmp, d)).isDirectory());
       if (!top) {
         rmSync(tmp, { recursive: true, force: true });
-        throw new Error(`archive ${slug}@${ref} did not contain a project tree`);
+        throw new Error(`archive ${slug}@${safeRef} did not contain a project tree`);
       }
       const dir = join(tmp, top);
       if (resolveLfs) {

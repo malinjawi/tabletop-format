@@ -1,45 +1,38 @@
-name: Shared by Agenda, Asset, Event, Hardware, Operation, Resource, Upgrade
-description: 2 ordered regions reused by agenda, asset, event, hardware, operation, resource, upgrade.
+name: Shared by Event, Hardware, Operation, Program, Resource
+description: 3 ordered regions reused by event, hardware, operation, program, resource.
 regions:
-  - id: standard_body
-    type: body
-    src: card.text
-    secondary_src: printing.flavor_text
-    secondary_font: flavor
-    secondary_color: "#3f474e"
-    secondary_scale: 0.86
-    x: 5.8
-    "y": 54.9
-    w: 50.8
-    h: 26.3
-    font: body
-    size_pt: 8.25
-    min_size_pt: 5.8
-    line_height: 1.12
-    secondary_line_height: 1.06
-    color: "#151b21"
+  - id: credit_dial_shadow
+    type: badge
+    text: ""
+    x: 2.65
+    "y": 2.05
+    d: 11.75
+    bg: "#07090b"
+    color: "#ffffff"
+    shadow: 0 .75mm 1.2mm rgba(0,0,0,.56)
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_dial_hardware
+    type: richtext
+    text: "[runner_credit_dial]"
+    x: 1.525
+    "y": 0.925
+    w: 14
+    h: 14
     symbols: true
     symbol_style: plain
-    autoshrink: true
-    show_if: type != identity && type != ice && type != program && !attributes.trash_cost
-  - id: standard_body_trash
-    type: body
-    src: card.text
-    secondary_src: printing.flavor_text
-    secondary_font: flavor
-    secondary_color: "#3f474e"
-    secondary_scale: 0.86
-    x: 5.8
-    "y": 54.9
-    w: 47.1
-    h: 26.3
-    font: body
-    size_pt: 8.25
-    min_size_pt: 5.8
-    line_height: 1.12
-    secondary_line_height: 1.06
-    color: "#151b21"
-    symbols: true
-    symbol_style: plain
-    autoshrink: true
-    show_if: type != identity && type != ice && type != program && attributes.trash_cost
+    icon_only: true
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+  - id: credit_dial_number
+    type: text
+    src: card.attributes.cost
+    x: 4.22
+    "y": 4
+    w: 8.61
+    h: 6.55
+    font: stat
+    size_pt: 14.5
+    align: center
+    valign: middle
+    color: "#ffffff"
+    text_shadow: "0 .18mm .18mm #000,0 0 .35mm #000"
+    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource

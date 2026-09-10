@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/art-library.schema.json",
+  "title": "Forge artwork library",
+  "description": "Portable, versioned discovery metadata for reusable artwork. Stored at design/art-library.json; rights remain authoritative in forge/rights.json and per-use crop remains on the printing/component that uses the file.",
+  "type": "object",
+  "required": ["format", "version", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "forge-art-library" },
+    "version": { "const": 1 },
+    "assets": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["path", "tags"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "pattern": "^assets/[A-Za-z0-9][A-Za-z0-9._/-]{0,239}$" },
+          "tags": {
+            "type": "array",
+            "maxItems": 24,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$" }
+          }
+        }
+      }
+    }
+  }
+}

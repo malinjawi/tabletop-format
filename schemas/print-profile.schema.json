@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/print-profile.schema.json",
+  "title": "Forge card print profile",
+  "description": "Versioned choices that make an exact-ref card print build reproducible. Press standards not listed here are deliberately unsupported rather than implied.",
+  "type": "object",
+  "required": ["schema_version", "preset", "selection", "home", "press"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "preset": { "enum": ["balanced-duplex", "opaque-sleeves", "rgb-print-service", "the-game-crafter-poker", "custom-cmyk-pdfx1a", "custom"] },
+    "selection": {
+      "type": "object",
+      "required": ["card_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "card_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 10000,
+          "description": "Empty means every card. IDs select every printing of that rules identity.",
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" }
+        },
+        "printing_quantities": {
+          "type": "object",
+          "maxProperties": 10000,
+          "description": "Optional exact production selection: printing_id -> physical copies. When non-empty this is authoritative; card_ids must equal the represented rules identities.",
+          "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+          "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 10000 }
+        }
+      }
+    },
+    "home": {
+      "type": "object",
+      "required": ["fronts_only", "gutter_mm", "crop_marks", "sleeve_profile", "sleeve_fit"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "crop_marks": { "const": "grid" } }, "required": ["crop_marks"] },
+          "then": { "properties": { "gutter_mm": { "type": "number", "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "crop_marks": { "const": "corners" } }, "required": ["crop_marks"] },
+          "then": { "properties": { "gutter_mm": { "type": "number", "exclusiveMinimum": 0 } } }
+        },
+        {
+          "if": {
+            "properties": {
+              "fronts_only": { "const": true },
+              "crop_marks": { "not": { "const": "none" } }
+            },
+            "required": ["fronts_only", "crop_marks"]
+          },
+          "then": { "properties": { "crop_mark_sides": { "enum": ["both", "fronts"] } } }
+        }
+      ],
+      "properties": {
+        "fronts_only": { "type": "boolean" },
+        "gutter_mm": { "type": "number", "minimum": 0, "maximum": 10 },
+        "crop_marks": { "enum": ["grid", "corners", "none"] },
+        "crop_mark_sides": { "enum": ["both", "fronts", "backs"], "default": "both", "description": "Which duplex face pages receive marks. This does not remove or reorder any card face." },
+        "sleeve_profile": { "enum": ["none", "japanese-62x89"] },
+        "sleeve_fit": { "enum": ["contain", "cover", "extend"] }
+      }
+    },
+    "press": {
+      "type": "object",
+      "required": ["include_back", "crop_marks", "color_space", "pdf_standard"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "include_back": { "const": false },
+              "crop_marks": { "not": { "const": "none" } }
+            },
+            "required": ["include_back", "crop_marks"]
+          },
+          "then": { "properties": { "crop_mark_sides": { "enum": ["both", "fronts"] } } }
+        },
+        {
+          "if": {
+            "properties": { "target": { "const": "custom-cmyk-pdfx1a" } },
+            "required": ["target"]
+          },
+          "then": {
+            "required": ["icc_profile", "output_condition_identifier", "output_condition", "registry_name", "max_ink_coverage_percent", "rendering_intent"],
+            "properties": {
+              "color_space": { "const": "CMYK" },
+              "pdf_standard": { "const": "PDF/X-1a:2003" },
+              "icc_profile": {},
+              "output_condition_identifier": {},
+              "output_condition": {},
+              "registry_name": {},
+              "max_ink_coverage_percent": {},
+              "rendering_intent": {}
+            }
+          },
+          "else": {
+            "properties": {
+              "color_space": { "const": "sRGB" },
+              "pdf_standard": { "const": "none" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "dieline": {
+                "type": "object",
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              }
+            },
+            "required": ["dieline"]
+          },
+          "then": {
+            "properties": { "target": { "const": "custom-cmyk-pdfx1a" } },
+            "required": ["target"]
+          }
+        }
+      ],
+      "properties": {
+        "target": {
+          "enum": ["generic-srgb", "the-game-crafter-poker", "custom-cmyk-pdfx1a"],
+          "description": "Named, versioned output requirements. A target is a checked file handoff unless its registry entry explicitly declares publishing support."
+        },
+        "include_back": { "type": "boolean" },
+        "crop_marks": { "enum": ["outside-bleed", "none"] },
+        "crop_mark_sides": { "enum": ["both", "fronts", "backs"], "default": "both", "description": "Which one-face-per-page press faces receive crop marks." },
+        "color_space": { "enum": ["sRGB", "CMYK"] },
+        "pdf_standard": { "enum": ["none", "PDF/X-1a:2003"] },
+        "icc_profile": { "type": "string", "pattern": "^assets/(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+\\.(?:icc|icm)$", "maxLength": 240 },
+        "output_condition_identifier": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "output_condition": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "registry_name": { "type": "string", "format": "uri", "pattern": "^https://", "maxLength": 240 },
+        "max_ink_coverage_percent": { "type": "number", "minimum": 100, "maximum": 400 },
+        "rendering_intent": { "enum": ["perceptual", "relative-colorimetric"] },
+        "dieline": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": { "type": "object", "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+              "then": {
+                "required": ["shape", "spot_name", "alternate_cmyk", "stroke_width_pt", "offset_mm", "overprint", "sides"],
+                "properties": {
+                  "shape": {},
+                  "spot_name": {},
+                  "alternate_cmyk": {},
+                  "stroke_width_pt": {},
+                  "offset_mm": {},
+                  "overprint": { "const": true },
+                  "sides": {}
+                }
+              }
+            }
+          ],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "shape": { "const": "component-trim" },
+            "spot_name": { "type": "string", "pattern": "^(?!(?:All|None)$)[A-Za-z][A-Za-z0-9_.-]{0,63}$" },
+            "alternate_cmyk": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "contains": { "type": "number", "exclusiveMinimum": 0 },
+              "items": { "type": "number", "minimum": 0, "maximum": 100 }
+            },
+            "stroke_width_pt": { "type": "number", "minimum": 0.1, "maximum": 2 },
+            "offset_mm": { "type": "number", "minimum": -5, "maximum": 5 },
+            "overprint": { "type": "boolean" },
+            "sides": { "enum": ["both", "fronts", "backs"] }
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,7 +5,7 @@ tools a team already uses. It is not a second game format and it is not a pile
 of generated print files. The package carries the exact editable inputs needed
 to propose a source change back to Forge.
 
-Hosted artifact filenames carry a package revision (currently `-v5`) so adding
+Hosted artifact filenames carry a package revision (currently `-v7`) so adding
 new adapter contents never overwrites an older immutable download URL.
 
 The browser also offers a much smaller `<game>-nandeck-v1.zip` when layout work
@@ -29,6 +29,9 @@ same importer as the copy embedded in the full project.
   immutable three-way merge baseline.
 - `adapters/nandeck/**`: one adjacent CSV + `UNIT=MM` script per compiled card
   family, an explicit fidelity report, and Forge region/source metadata.
+- `adapters/pnpink/**`, when configured: the same pinned PnPInk family suite
+  available from the Design page, including portable `.pnp`, CSV, SVG source,
+  embedded baseline, and upstream tool version.
 
 Large per-card artwork is omitted by default. Use `--with-art` for an offline
 package that also includes artwork referenced by printings.
@@ -60,9 +63,34 @@ creates one atomic Git commit.
 ## Adapter boundary
 
 An editor-specific bridge consumes this universal package and returns changes
-to it. PnPInk is the first proof: its `.pnp` is derived from the same project
-source hash. Affinity, nanDECK, Dextrous, Component Studio, or a custom script
-can each have a thin adapter without becoming Forge's canonical data model.
+to it. The PnPInk bridge derives every family `.pnp` from the same project source
+hash and can return card fields plus its versioned SVG source. Affinity, nanDECK,
+Dextrous, Component Studio, or a custom script can each have a thin adapter
+without becoming Forge's canonical data model.
+
+The shared card back is a versioned project-level layout asset too. Forge
+Studio edits its declarative layers directly and lets a designer choose or
+upload the shared artwork through the same rights-aware library used by card
+fronts. Artwork bytes, provenance, layout binding, and the all-family visual
+impact enter one candidate. The SVG family kit preserves and three-way merges
+that back metadata. The current family SVG does not expose shared back layers
+as editor objects; this boundary is declared in its manifest instead of
+claiming a lossless native-editor round trip.
+
+## PnPInk / Inkscape family round-trip
+
+Download the PnPInk suite from **Card design → Inkscape + PnPInk** and open one
+family `.pnp` using the pinned PnPInk version in its manifest. The package keeps
+the generated CSV, SVG, stable card IDs, field map, and exact export baseline
+together. Return that one `.pnp`; returning the complete suite is rejected to
+avoid changing unrelated families accidentally.
+
+Forge dry-runs card fields with a field-level three-way merge and the SVG source
+with a byte-level three-way merge. It renders changed card data in the active
+Forge engine, calls out an external-template change separately, sanitizes SVG,
+validates the full candidate game, and creates either a direct commit or a fork
+and pull request. The external SVG remains a source asset until a maintainer
+explicitly promotes an adapter to the active release renderer.
 
 The manifest contract is documented by
 `schemas/forge-project.schema.json`. The ZIP is deterministic: identical game

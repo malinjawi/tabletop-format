@@ -62,6 +62,10 @@ palette:
   by: "attributes.faction"      # dot path read off the card
   map: { "Gaian": "#2e7d32", "Dark Legion": "#1a1a1a" }
   default: "#4a4a4a"
+  motifs:                       # optional reusable surface language
+    Gaian:
+      shell: "repeating-linear-gradient(45deg,transparent 0 5mm,rgba(255,255,255,.2) 5.1mm 5.4mm,transparent 5.5mm 10mm)"
+      panel: "radial-gradient(circle at 0 70%,transparent 0 4mm,color-mix(in srgb,{palette} 30%,transparent) 4.1mm 4.4mm,transparent 4.5mm)"
 
 regions:
   - { id: title, type: text, src: "card.name", x: 3, y: 1.6, w: 47, h: 8.2,
@@ -137,9 +141,19 @@ footer mark, or a multiply-blended print emblem without modifying the SVG.
 ## Color: literal or data-driven
 
 Any color field (`color`, `bg`, `fill`, `stroke`, and `card.bg`) accepts
-either a literal hex string, or the literal value `"palette"`, which
-resolves through the top-level `palette` block for that card — e.g. a
-faction-colored frame without writing one region per faction.
+either a literal CSS color/background or a palette token. `"palette"`
+resolves through the top-level `palette` block for that card; derived tokens
+include `palette-dark`, `palette-light`, `palette-paper`,
+`palette-metallic`, and `palette-gradient`.
+
+Color alone is not enough for many production designs. An optional
+`palette.motifs` map gives each selected value reusable `shell` and `panel`
+CSS background slots. A motif can use `{palette}` as a placeholder for its
+resolved color. Regions consume those slots with `palette-shell-motif` and
+`palette-panel-motif`, so one shared card family can render different faction
+textures without duplicating regions or hardcoding game-specific faction names
+inside the renderer. Missing motif entries fall back to
+`palette.default_motif`, then transparent.
 
 ## Art that isn't there yet
 
@@ -150,21 +164,91 @@ palette color, or `bg`) *underneath* the `<img>`, with the `credit` text
 instead of a blank box. A layout never assumes an art URL is good — it
 degrades honestly.
 
-## Autoshrink
+## Production text fitting
 
-`richtext` regions with `autoshrink: true` estimate how many lines their
-text will wrap to at a given point size (average character width for that
-font size vs. the box's mm width) and step `size_pt` down — never below
-`min_size_pt` (default `size_pt - 4`, floor 5) — until the estimate fits
-the box height. This is a deterministic heuristic, not a real text
-measurement: the renderer is a plain string-building function (like every
-other renderer in this file), called identically in the browser and in a
-headless Node smoke test, so it can't depend on `getBoundingClientRect()`
-or a canvas. In practice this comfortably fits real card text (see the
-Arcmage layout, tuned against its longest rules text) without ever
-needing to.
+`text`, `richtext`, and `body` regions can choose `autoshrink: true`. Forge
+first makes a deterministic line-count estimate for a stable first paint, then
+measures the loaded font in the browser and canonical Chromium exporter. It
+restarts at `size_pt` on every render and shrinks in 0.25pt steps — never below
+`min_size_pt` (default `size_pt - 4`, floor 5). `line_height`, paragraph gaps,
+one-line text, rich symbols, and a body's separately scaled flavor text all
+participate in that measurement.
+
+The same `layMeasureAndFit()` routine runs in Studio previews, normal card
+views, and exact PNG/PDF production rendering. If content still clips at the
+minimum size, the face preflight reports it, family review disables Commit,
+and strict production rendering fails. Designers can instead choose a fixed
+size; fixed text is never silently shrunk and overflow remains an error.
 
 ## Writing a layout for another game
+
+### Groups, borders, and shadows
+
+Every region may carry a `group` id. Forge Studio treats regions with the same
+id as one persistent selection for moving and keyboard nudging, while leaving
+their array positions untouched so grouping can never silently change paint
+order. Alt-click isolates one member. The group id is stored in the family
+YAML, included in SVG working-copy metadata, three-way merged, and shown in the
+review like any other layout field.
+
+`rect` regions retain their native `stroke`, `stroke_w_mm`, and `radius_mm`
+properties. Any positioned region can additionally use a structured border:
+
+```yaml
+border: { color: "#18242D", width_mm: 0.35, style: solid }
+```
+
+Forge Studio also authors a portable millimetre-based shadow instead of asking
+a beginner to write browser CSS:
+
+```yaml
+shadow_spec: { x_mm: 0, y_mm: 0.75, blur_mm: 1.5, spread_mm: 0, color: "#000000", opacity: 0.3, inset: false }
+```
+
+Both structures feed the same card renderer used by the browser proof and the
+exact-version raster/print pipeline. The older raw `shadow` CSS property stays
+supported for existing expert-authored layouts, but the structured form takes
+precedence. Generic SVG editors preserve these fields in Forge metadata; Forge
+does not claim that another application's proprietary effect stack can be
+translated losslessly.
+
+### Reusable named text styles
+
+Project-wide typography belongs in the design system rather than being copied
+across dozens of regions:
+
+```yaml
+text_styles:
+  card_title:
+    font: title
+    size_pt: 11.5
+    color: "#18242D"
+    uppercase: true
+
+regions:
+  - id: title
+    type: text
+    text_style: card_title
+    src: card.name
+    x: 8
+    y: 4
+    w: 46
+    h: 7
+```
+
+While attached, keys declared by the named style are authoritative; the
+region still owns its binding, geometry, visibility, grouping, and effects.
+Forge Studio shows how many layers, families, and cards use the style before a
+change is reviewed. Detaching materializes the currently resolved typography
+onto the region so its appearance does not jump.
+
+The SVG family bridge carries both the complete style map on the document root
+and each region's style ID, then three-way merges both back to canonical YAML.
+nanDECK cannot represent a shared style relationship, so its working copy
+receives the resolved appearance and an explicit flattening warning; returning
+that file never silently deletes the Forge relationship. Typography edits on
+an attached layer are ignored with a clear import warning; detach the style in
+Forge first when the intended change is deliberately local.
 
 1. Look at what the game already has: `game.yaml`'s `type_colors` /
    `faction_colors` (great source for a `palette.map`), and
@@ -195,8 +279,23 @@ for older scripts; it dispatches to the Node renderer and does not contain a
 second drawing implementation. Exporters always regenerate faces before
 packaging, so stale PNGs cannot silently disagree with the browser preview.
 
-Card faces are unified. The generic back is still generated by the rasterizer
-itself because `layout.yaml` does not yet have a declarative back-side spec.
+Fronts and the shared card back are unified. `back.regions` accepts the same
+declarative region objects as `regions`; Studio's **Front / Back** switch edits
+that project-wide surface, and `layoutBackCard()` is used by the browser,
+headless face rasterizer, home-print sheets, VTT packages, and frozen releases.
+Older projects with only `back: {text, bg, color, ...}` keep their legacy
+centered-title rendering until a designer chooses **Make back editable**. That
+promotion is an ordinary reviewed design-system change, not an implicit
+migration. Once promoted, **Choose back artwork** reuses a versioned library
+asset or **Upload back art** stages new bytes plus creator, license, rights
+status, source, and redistribution metadata. The artwork binding and rights
+receipt are reviewed in the same candidate as the back geometry.
+
+The SVG family bridge preserves and three-way merges the whole back contract as
+project metadata. Its family SVG exposes front regions as editable SVG objects;
+back layers remain visually editable in Forge Studio and are not falsely
+advertised as arbitrary external-editor objects. Native files can still be
+stored byte-for-byte in a full Forge project package.
 
 ## Importing an official template (case study: Arcmage)
 

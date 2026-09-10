@@ -2,15 +2,16 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
-  cpSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync,
+  cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { loadCardDesign } from "./lib/card-design.mjs";
+import { deterministicZip, readZip } from "./lib/deterministic-zip.mjs";
 import { loadDesignEngines } from "./lib/design-engines.mjs";
 import { exportPnpinkProof } from "./export-pnpink.mjs";
-import { analyzePnpinkCsv } from "./import-pnpink.mjs";
+import { analyzePnpinkImport } from "./lib/pnpink.mjs";
 
 const gameDir = resolve(process.argv[2] || "examples/_fixtures/netrunner-sg");
 const scratch = mkdtempSync(join(tmpdir(), "forge-design-engines-"));
@@ -25,7 +26,9 @@ try {
   assert.equal(registry.active, "forge-native");
   assert.equal(registry.inferred, false);
   assert.equal(registry.engines.filter(engine => engine.status === "active").length, 1);
-  assert.equal(registry.engines.find(engine => engine.type === "pnpink")?.status, "experimental");
+  const pnpinkEngine = registry.engines.find(engine => engine.type === "pnpink");
+  assert.equal(pnpinkEngine?.status, "beta");
+  assert.equal(pnpinkEngine?.families.length, native.families.length);
   assert.deepEqual(registry.card_design, native, "adapter seam changed the active Forge catalog");
 
   const legacyDir = join(scratch, "legacy");
@@ -37,7 +40,7 @@ try {
   assert.equal(inferred.active, "forge-native");
   assert.deepEqual(inferred.card_design, native, "legacy inference changed the Forge catalog");
   const unsafeRegistry = readFileSync(join(gameDir, "templates/card-design/engines.yaml"), "utf8")
-    .replace("active: forge-native", "active: pnpink-proof");
+    .replace("active: forge-native", "active: pnpink-working-copy");
   writeFileSync(join(legacyDir, "templates/card-design/engines.yaml"), unsafeRegistry);
   assert.throws(() => loadDesignEngines(legacyDir), /only forge-native can be active today/);
 
@@ -45,31 +48,43 @@ try {
   const first = exportPnpinkProof(gameDir, outA);
   const second = exportPnpinkProof(gameDir, outB);
   assert.equal(first.source_hash, second.source_hash);
-  const namesA = readdirSync(outA).sort(), namesB = readdirSync(outB).sort();
-  assert.deepEqual(namesA, namesB);
-  for (const name of namesA) assert.equal(hash(join(outA, name)), hash(join(outB, name)), `${name} is not deterministic`);
-  assert.equal(readFileSync(join(outA, "netrunner-proof.pnp")).subarray(0, 2).toString(), "PK");
+  assert.equal(hash(first.archive), hash(second.archive), "PnPInk suite ZIP is not deterministic");
+  const suite = readZip(readFileSync(first.archive));
+  const suiteManifest = JSON.parse(suite.get("manifest.json"));
+  assert.equal(suiteManifest.upstream.tested_tag, "v0.57");
+  assert.equal(suiteManifest.families.length, native.families.length);
+  const programPath = suiteManifest.families.find(family => family.family === "program").project;
+  const program = readZip(suite.get(programPath)), programManifest = JSON.parse(program.get("manifest.json"));
+  assert.equal(programManifest.format, "pnp");
 
-  const clean = analyzePnpinkCsv(gameDir, join(outA, "netrunner-proof.csv"));
+  const clean = analyzePnpinkImport(gameDir, suite.get(programPath));
   assert.deepEqual(clean.changes, [], "exported CSV should round-trip without content changes");
-  const changedCsv = join(scratch, "changed.csv");
-  writeFileSync(changedCsv, readFileSync(join(outA, "netrunner-proof.csv"), "utf8").replace("Buzzsaw", "Buzzsaw Mk II"));
-  const changed = analyzePnpinkCsv(gameDir, changedCsv);
+  const withoutAuxiliaryProvenance = new Map(program);
+  withoutAuxiliaryProvenance.delete("forge-source.json");
+  assert.deepEqual(analyzePnpinkImport(gameDir, deterministicZip(withoutAuxiliaryProvenance)).changes, [],
+    "embedded CSV baseline should survive a PnPInk repack that drops auxiliary files");
+  const csvName = programManifest.csv, changedCsv = Buffer.from(program.get(csvName).toString("utf8").replace("Buzzsaw", "Buzzsaw Mk II"));
+  const changed = analyzePnpinkImport(gameDir, changedCsv);
   assert.deepEqual(changed.changes, [{
     card_id: "buzzsaw",
     family: "program",
     fields: [{ path: "name", before: "Buzzsaw", after: "Buzzsaw Mk II" }],
   }]);
-  const clearedCsv = join(scratch, "cleared.csv");
-  writeFileSync(clearedCsv, "{{t=bbox_program}},program_forge_id,program_strength\n,buzzsaw,\n");
-  const cleared = analyzePnpinkCsv(gameDir, clearedCsv);
+  const clearedCsv = Buffer.from(program.get(csvName).toString("utf8").replace(",4,1,3,1,anarch", ",4,1,,1,anarch"));
+  const cleared = analyzePnpinkImport(gameDir, clearedCsv);
   assert.deepEqual(cleared.changes, [{
     card_id: "buzzsaw",
     family: "program",
     fields: [{ path: "attributes.strength", before: 3, after: null, remove: true }],
   }]);
 
-  console.log("design-engines: active output preserved; legacy fallback, deterministic PnPInk package, and CSV semantic diff verified");
+  const editedPackage = new Map(program);
+  editedPackage.set(programManifest.svg, Buffer.from(program.get(programManifest.svg).toString("utf8").replace("Program name", "Program title")));
+  const template = analyzePnpinkImport(gameDir, deterministicZip(editedPackage));
+  assert.equal(template.template_change.path, "templates/card-design/experiments/pnpink/netrunner-proof.svg");
+  assert(template.files.some(file => file.path.endsWith("netrunner-proof.svg")), "returned SVG template should be a versioned change");
+
+  console.log("design-engines: active output preserved; full-family deterministic PnPInk suite, data diff, and SVG source return verified");
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

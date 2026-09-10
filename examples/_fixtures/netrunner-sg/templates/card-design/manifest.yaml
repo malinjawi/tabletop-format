@@ -6,63 +6,66 @@ legacy_source: templates/layout.yaml
 components:
   - id: foundation
     label: Shared foundation
-    description: 10 ordered regions reused by every card family.
+    description: 16 ordered regions reused by every card family.
     source: templates/card-design/components/foundation.yaml
     applies_to: "*"
   - id: shared-1
-    label: Shared by Hardware, Program, Resource
-    description: 1 ordered region reused by hardware, program, resource.
+    label: Shared by Agenda, Asset, Corp Identity, Event, Hardware, Operation, Program, Resource, Runner Identity, Upgrade
+    description: 2 ordered regions reused by agenda, asset, corp-identity, event, hardware, operation, program, resource, runner-identity, upgrade.
     source: templates/card-design/components/shared-1.yaml
     applies_to:
+      - agenda
+      - asset
+      - corp-identity
+      - event
       - hardware
+      - operation
       - program
       - resource
+      - runner-identity
+      - upgrade
   - id: shared-2
-    label: Shared by Asset, Operation, Upgrade
-    description: 1 ordered region reused by asset, operation, upgrade.
+    label: Shared by Hardware, Program, Resource
+    description: 1 ordered region reused by hardware, program, resource.
     source: templates/card-design/components/shared-2.yaml
     applies_to:
-      - asset
-      - operation
-      - upgrade
+      - hardware
+      - program
+      - resource
   - id: shared-3
-    label: Shared by Agenda, Asset, Event, Hardware, Operation, Program, Resource, Upgrade
-    description: 12 ordered regions reused by agenda, asset, event, hardware, operation, program, resource, upgrade.
+    label: Shared by Asset, Operation, Upgrade
+    description: 1 ordered region reused by asset, operation, upgrade.
     source: templates/card-design/components/shared-3.yaml
     applies_to:
-      - agenda
       - asset
-      - event
-      - hardware
       - operation
-      - program
-      - resource
       - upgrade
   - id: shared-4
-    label: Shared by Event, Hardware, Operation, Program, Resource
-    description: 12 ordered regions reused by event, hardware, operation, program, resource.
+    label: Shared by Agenda, Asset, Event, Hardware, Operation, Program, Resource, Upgrade
+    description: 12 ordered regions reused by agenda, asset, event, hardware, operation, program, resource, upgrade.
     source: templates/card-design/components/shared-4.yaml
-    applies_to:
-      - event
-      - hardware
-      - operation
-      - program
-      - resource
-  - id: shared-5
-    label: Shared by Agenda, Asset, Event, Hardware, Operation, Resource, Upgrade
-    description: 2 ordered regions reused by agenda, asset, event, hardware, operation, resource, upgrade.
-    source: templates/card-design/components/shared-5.yaml
     applies_to:
       - agenda
       - asset
       - event
       - hardware
       - operation
+      - program
       - resource
       - upgrade
+  - id: shared-5
+    label: Shared by Event, Hardware, Operation, Program, Resource
+    description: 3 ordered regions reused by event, hardware, operation, program, resource.
+    source: templates/card-design/components/shared-5.yaml
+    applies_to:
+      - event
+      - hardware
+      - operation
+      - program
+      - resource
   - id: shared-6
     label: Shared by Event, Hardware, Program, Resource
-    description: 2 ordered regions reused by event, hardware, program, resource.
+    description: 3 ordered regions reused by event, hardware, program, resource.
     source: templates/card-design/components/shared-6.yaml
     applies_to:
       - event
@@ -71,7 +74,7 @@ components:
       - resource
   - id: shared-7
     label: Shared by Agenda, Asset, Operation, Upgrade
-    description: 2 ordered regions reused by agenda, asset, operation, upgrade.
+    description: 3 ordered regions reused by agenda, asset, operation, upgrade.
     source: templates/card-design/components/shared-7.yaml
     applies_to:
       - agenda
@@ -79,9 +82,21 @@ components:
       - operation
       - upgrade
   - id: shared-8
-    label: Shared by Corp Identity, Runner Identity
-    description: 11 ordered regions reused by corp-identity, runner-identity.
+    label: Shared by Agenda, Asset, Event, Hardware, Operation, Resource, Upgrade
+    description: 3 ordered regions reused by agenda, asset, event, hardware, operation, resource, upgrade.
     source: templates/card-design/components/shared-8.yaml
+    applies_to:
+      - agenda
+      - asset
+      - event
+      - hardware
+      - operation
+      - resource
+      - upgrade
+  - id: shared-9
+    label: Shared by Corp Identity, Runner Identity
+    description: 10 ordered regions reused by corp-identity, runner-identity.
+    source: templates/card-design/components/shared-9.yaml
     applies_to:
       - corp-identity
       - runner-identity
@@ -200,11 +215,19 @@ families:
       - anoetic_void
 region_order:
   - shell
+  - shell_faction_motif
   - shell_mesh
   - shell_scanlines
+  - shell_outer_keyline
+  - shell_inner_keyline
   - top_signal
+  - top_signal_faction_motif
   - left_signal
+  - left_signal_faction_motif
   - right_signal
+  - right_signal_faction_motif
+  - ice_info_rail
+  - ice_info_rail_faction_motif
   - event_header_shadow
   - event_header
   - event_unique
@@ -251,17 +274,8 @@ region_order:
   - art_agenda
   - art_frame
   - credit_dial_shadow
-  - credit_dial_rim
-  - credit_dial_face
-  - credit_dial_inner
+  - credit_dial_hardware
   - credit_dial_number
-  - credit_tick_l1
-  - credit_tick_l2
-  - credit_tick_dot_l
-  - credit_tick_dot_c
-  - credit_tick_dot_r
-  - credit_tick_r2
-  - credit_tick_r1
   - asset_rez_cost_glyph
   - asset_cost_shadow
   - asset_cost_edge
@@ -274,9 +288,13 @@ region_order:
   - upgrade_cost_number
   - standard_panel_shadow
   - standard_panel
+  - standard_panel_faction_motif
   - standard_panel_trace
   - standard_panel_watermark
   - standard_type
+  - standard_type_solo
+  - corp_standard_type
+  - corp_standard_type_solo
   - event_subtypes
   - resource_subtypes
   - program_subtypes
@@ -293,9 +311,7 @@ region_order:
   - agenda_adv_face
   - agenda_adv_icon
   - agenda_advancement
-  - agenda_points_hex_left
-  - agenda_points_hex_right
-  - agenda_points_hex_top
+  - agenda_points_underlay
   - agenda_points
   - program_memory_shadow
   - program_memory_edge
@@ -307,18 +323,21 @@ region_order:
   - program_memory
   - standard_trash_icon
   - standard_trash
-  - runner_track
+  - runner_influence_rail
   - runner_influence
-  - corp_track
+  - corp_influence_rail
   - corp_influence
   - footer
+  - footer_faction_motif
   - footer_signal
   - footer_artist
+  - program_footer_artist
   - footer_side
   - footer_set_icon
   - footer_collector
   - program_strength_shadow
   - program_strength_face
+  - program_strength_inner
   - program_strength_bar_1
   - program_strength_bar_2
   - program_strength_bar_3
@@ -335,17 +354,27 @@ region_order:
   - identity_subtitle_runner
   - identity_title_corp
   - identity_subtitle_corp
-  - runner_link_ring
-  - runner_link
+  - runner_link_shadow
+  - runner_link_edge
+  - runner_link_face
+  - runner_link_number
   - runner_link_icon
+  - runner_memory_shadow
+  - runner_memory_edge
+  - runner_memory_face
+  - runner_memory_pin_1
+  - runner_memory_pin_2
+  - runner_memory_pin_3
+  - runner_memory_pin_4
+  - runner_memory
   - identity_faction_glyph_runner
   - identity_faction_glyph_corp
   - identity_art_runner
   - identity_art_corp
-  - identity_art_edge_runner
   - identity_art_edge_corp
   - identity_panel_shadow
   - identity_panel
+  - identity_panel_faction_motif
   - identity_watermark
   - identity_type
   - identity_subtypes
@@ -355,18 +384,29 @@ region_order:
   - runner_identity_stats_edge
   - runner_identity_deck_face
   - runner_identity_deck
-  - runner_identity_stats_divider
+  - runner_identity_influence_shadow
+  - runner_identity_influence_edge
   - runner_identity_influence_face
   - runner_identity_influence
   - corp_identity_stats_shadow
   - corp_identity_stats_edge
+  - corp_identity_deck_accent_ne
+  - corp_identity_deck_accent_sw
+  - corp_identity_deck_bezel
   - corp_identity_deck_face
   - corp_identity_deck
-  - corp_identity_stats_divider
+  - corp_identity_influence_shadow
+  - corp_identity_influence_edge
+  - corp_identity_influence_accent_nw
+  - corp_identity_influence_accent_se
+  - corp_identity_influence_bezel
   - corp_identity_influence_face
   - corp_identity_influence
   - identity_set_icon
   - identity_collector
+  - corp_identity_artist
+  - corp_identity_set_icon
+  - corp_identity_collector
   - ice_header_shadow
   - ice_header
   - ice_rez_cost_glyph
@@ -380,6 +420,7 @@ region_order:
   - ice_type
   - ice_panel_shadow
   - ice_panel
+  - ice_panel_faction_motif
   - ice_watermark
   - ice_body
   - ice_art

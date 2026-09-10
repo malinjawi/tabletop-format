@@ -14,6 +14,27 @@
     "limits": { "max_bytes": 5000000, "timeout_ms": 15000 }, "provenance": "receipt", "entrypoint": "integrations/google-sheets"
   },
   {
+    "id": "xlsx-workbook", "name": "Excel and LibreOffice working copy", "version": 1, "stage": "working-copy", "status": "stable",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "printings", "tokens", "dials"], "tested_upstream": "OOXML .xlsx via openpyxl 3.1.5",
+    "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["Canonical table values round-trip; workbook formatting, comments, charts, and unrelated worksheets remain external.", "Macros, formulas, spreadsheet errors, and external workbook links are rejected rather than evaluated.", "Layout and art remain in their declared production adapters."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 10485760, "timeout_ms": 30000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/data + POST /api/games/:slug/design/import/workbook"
+  },
+  {
+    "id": "dextrous-csv", "name": "Dextrous table working copy", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "printings", "tokens", "dials"], "tested_upstream": "Dextrous CSV and published Google Sheets component-table workflow",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Card, printing, and non-card piece data round-trip through the Forge data working copy; Dextrous layouts and per-component styles remain external.", "The stable id column must be preserved."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/data + POST /api/games/:slug/design/import/table (direct CSV) or /design/import (traced ZIP)"
+  },
+  {
+    "id": "component-studio-csv", "name": "Component Studio table working copy", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "printings", "tokens", "dials"], "tested_upstream": "Component Studio CSV dataset import/export workflow",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Card, printing, and non-card piece data round-trip through the Forge data working copy; Component Studio layers, styles, and game backups remain external.", "The stable id column must be preserved."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/data + POST /api/games/:slug/design/import/table (direct CSV) or /design/import (traced ZIP)"
+  },
+  {
     "id": "forge-design-project", "name": "Forge design project ZIP", "version": 1, "stage": "source-adapter", "status": "stable",
     "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "printings", "templates", "rules", "referenced-assets"], "tested_upstream": "forge-design-project v1",
     "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["Only manifest-declared safe project paths round-trip.", "Deletion requires explicit confirmation."] },
@@ -28,6 +49,20 @@
     "limits": { "max_bytes": 2097152, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/design/import/nandeck"
   },
   {
+    "id": "squib-working-copy", "name": "Squib card and layout working copy", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "card-layout-families"], "tested_upstream": "Squib 0.19.0 CSV, YAML layout, Ruby DSL, PNG, and PDF contracts",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Card data and literal region geometry, flat colors, stroke width, and corner radius round-trip through bounded CSV/YAML parsing.", "Forge never executes returned Ruby; deck.rb is a generated local preview script and changes to it are ignored.", "Art rights, image fitting, opacity, dynamic palettes, gradients, motifs, conditions, shared typography, rich text, symbols, and effects remain canonical in Forge and are preserved unchanged.", "The generated Squib renderer is a working preview, not Forge's release renderer."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 33554432, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/squib + POST /api/games/:slug/design/import/squib"
+  },
+  {
+    "id": "svg-family", "name": "SVG visual family working copy", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["card-layout-families", "region-geometry", "simple-visual-properties"], "tested_upstream": "SVG 1.1/2 editor interchange; Inkscape and Affinity Designer compatible",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Round-trip currently covers axis-aligned region geometry, badge diameter, flat shape colors, stroke width, corner radius, and opacity.", "Bindings, conditions, palettes, gradients, typography, rich text, symbols, and effects remain canonical in Forge and are preserved unchanged.", "Arbitrary third-party SVGs enter as mapping candidates rather than silently replacing a production family."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 5242880, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/design/import/svg"
+  },
+  {
     "id": "affinity-bridge", "name": "Affinity production bridge", "version": 1, "stage": "source-adapter", "status": "beta",
     "capabilities": ["inspect", "export"], "components": ["card-layout-families", "fonts", "graphics"], "tested_upstream": "Affinity Publisher/Designer template bindings",
     "deterministic": false, "fidelity": { "level": "declared-subset", "limitations": ["Native Affinity files remain versioned source assets; Forge does not claim lossless .afpub parsing.", "A local desktop worker performs native rendering."] },
@@ -35,11 +70,11 @@
     "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "GET /api/games/:slug/affinity"
   },
   {
-    "id": "pnpink", "name": "PnPInk bridge", "version": 1, "stage": "source-adapter", "status": "experimental",
-    "capabilities": ["inspect", "export"], "components": ["cards", "card-layout-families"], "tested_upstream": null,
-    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Format and tested upstream version are not yet pinned; do not use as the only production source."] },
+    "id": "pnpink", "name": "Inkscape + PnPInk working copy", "version": 1, "stage": "source-adapter", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["cards", "card-layout-families", "native-2d-sources"], "tested_upstream": "PnPInk v0.57 package contract",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Card fields use a field-level three-way merge; the returned SVG template uses a byte-level three-way merge.", "The PnPInk template remains an external versioned production source and does not silently replace Forge's active release renderer.", "PnPInk/Inkscape runtime rendering is not bundled with Forge."] },
     "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
-    "limits": { "max_bytes": 134217728, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "tools/export-pnpink.mjs"
+    "limits": { "max_bytes": 33554432, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/design/import/pnpink"
   },
   {
     "id": "versioned-source-packages", "name": "Versioned production source packages", "version": 1, "stage": "source-adapter", "status": "beta",
@@ -47,6 +82,13 @@
     "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["Forge preserves proprietary native files byte-for-byte but does not claim to parse or merge their internal object graphs.", "External references remain links and must declare their own distribution boundary; Hero Forge models, for example, cannot be redistributed through a public Forge release."] },
     "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
     "limits": { "max_bytes": 26214400, "timeout_ms": 120000 }, "provenance": "manifest", "entrypoint": "assets/manifest.json"
+  },
+  {
+    "id": "forge-component-svg", "name": "Forge component production kit", "version": 4, "stage": "artifact-export", "status": "beta",
+    "capabilities": ["inspect", "import", "export", "round-trip"], "components": ["tokens", "counters", "tiles", "dials", "boards", "component-layout-families", "component-cut-sheets"], "tested_upstream": "SVG 1.1/2 editors and A4/Letter print workflows",
+    "deterministic": true, "fidelity": { "level": "declared-subset", "limitations": ["Forge-generated family SVGs round-trip region geometry and flat family colors; bindings, typography, symbols, artwork, physical sizes, and production settings remain canonical and are preserved.", "Arbitrary SVG objects, active content, external links, rotation, skew, and silent region deletion are rejected.", "Two-sided pieces emit paired faces and long-edge-mirrored SVG back sheets; printer feed variance still requires a one-page alignment proof.", "This milestone exports individual SVG faces, player-count-resolved cut sheets, and overlap-labelled poster tiles for pieces larger than one page; it does not yet emit press PDF/X.", "Player count is a versioned production setting rather than an untracked export-time override; older projects without a selection preserve declared per-player quantities and are flagged unresolved.", "Poster-tiled boards require printing at 100% and manual assembly; Forge records coverage offsets but cannot compensate for printer scaling or non-printable margins."] },
+    "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
+    "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "manifest", "entrypoint": "GET /api/games/:slug/components/svg/:family + POST /api/games/:slug/components/import/svg + POST /api/games/:slug/export/components"
   },
   {
     "id": "pnp-pdf", "name": "Print-and-play PDF", "version": 2, "stage": "artifact-export", "status": "stable",
@@ -63,9 +105,9 @@
     "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "manifest", "entrypoint": "POST /api/games/:slug/export/print"
   },
   {
-    "id": "tabletop-simulator", "name": "Tabletop Simulator save", "version": 2, "stage": "artifact-export", "status": "stable",
-    "capabilities": ["import", "export"], "components": ["cards", "backs", "deck-save"], "tested_upstream": "Tabletop Simulator CustomDeck JSON",
-    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Private-project hosted textures require an authenticated Forge session; publish a release before sharing a mod."] },
+    "id": "tabletop-simulator", "name": "Tabletop Simulator staged save", "version": 4, "stage": "artifact-export", "status": "beta",
+    "capabilities": ["import", "export"], "components": ["cards", "backs", "decks", "setup", "tokens", "counters", "tiles", "dials", "boards", "standees", "standard-dice", "snap-points"], "tested_upstream": "Tabletop Simulator CustomDeck, CustomObject, and SaveState JSON contracts",
+    "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Private-project hosted textures require an authenticated Forge session; publish a release before sharing a mod.", "Setup counter initial values become native TTS counters; declared minimum and maximum remain provenance metadata rather than scripted enforcement.", "Custom-art dice fail closed until a validated atlas and face rotation map are supplied.", "The v4 staged-object expansion has automated contract coverage but still requires a human import smoke in the proprietary TTS client before promotion to stable."] },
     "credentials": { "required": false, "kind": null, "storage": "none" }, "network": ["immutable Forge artifact URLs for shared saves"],
     "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "embedded", "entrypoint": "POST /api/games/:slug/export/tts"
   },

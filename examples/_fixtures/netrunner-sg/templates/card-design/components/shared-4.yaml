@@ -1,113 +1,142 @@
-name: Shared by Event, Hardware, Operation, Program, Resource
-description: 12 ordered regions reused by event, hardware, operation, program, resource.
+name: Shared by Agenda, Asset, Event, Hardware, Operation, Program, Resource, Upgrade
+description: 12 ordered regions reused by agenda, asset, event, hardware, operation, program, resource, upgrade.
 regions:
-  - id: credit_dial_shadow
-    type: badge
-    text: ""
-    x: 2.65
-    "y": 2.05
-    d: 11.75
-    bg: "#07090b"
-    color: "#ffffff"
-    shadow: 0 .75mm 1.2mm rgba(0,0,0,.56)
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_dial_rim
-    type: badge
-    text: ""
-    x: 2.85
-    "y": 2.25
-    d: 11.35
-    bg: linear-gradient(145deg,#f7df58 0%,#d4bb36 43%,#8c7a20 78%,#62571b 100%)
-    color: "#ffffff"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_dial_face
-    type: badge
-    text: ""
-    x: 3.9
-    "y": 3.2
-    d: 9.25
-    bg: repeating-linear-gradient(0deg,rgba(255,255,255,.055) 0 .12mm,transparent .12mm .48mm),radial-gradient(circle at 50% 43%,#343b3e 0%,#161b1e 55%,#07090b 100%)
-    color: "#ffffff"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_dial_inner
-    type: badge
-    text: ""
-    x: 4.15
-    "y": 3.45
-    d: 8.75
-    bg: radial-gradient(circle,transparent 0 68%,rgba(248,249,246,.96) 69% 71%,rgba(102,111,117,.78) 72%,transparent 74%)
-    color: "#ffffff"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_dial_number
+  - id: art_frame
+    type: rect
+    x: 1.15
+    "y": 9.4
+    w: 60.7
+    h: 39.1
+    fill: none
+    stroke: palette-light
+    stroke_w_mm: 0.55
+    shadow: inset 0 0 2mm rgba(0,0,0,.38)
+    show_if: type != identity && type != ice
+  - id: standard_panel_shadow
+    type: rect
+    x: 3
+    "y": 48.4
+    w: 58.4
+    h: 34.2
+    fill: "#05080b"
+    radius_mm: 1
+    shadow: 0 -1mm 1.5mm rgba(0,0,0,.38)
+    show_if: type != identity && type != ice
+  - id: standard_panel
+    type: rect
+    x: 3.7
+    "y": 47.7
+    w: 58.2
+    h: 34.3
+    fill: palette-paper
+    stroke: palette-dark
+    stroke_w_mm: 0.45
+    radius_mm: 0.9
+    show_if: type != identity && type != ice
+  - id: standard_panel_faction_motif
+    type: rect
+    x: 3.95
+    "y": 47.95
+    w: 57.7
+    h: 33.8
+    fill: palette-panel-motif
+    opacity: 0.72
+    radius_mm: 0.66
+    show_if: type != identity && type != ice
+  - id: standard_panel_trace
+    type: rect
+    x: 5.5
+    "y": 53.7
+    w: 50.4
+    h: 0.62
+    fill: palette
+    clip_path: polygon(0 0,47% 0,49% 100%,100% 100%,100% 100%,0 100%)
+    show_if: type != identity && type != ice
+  - id: standard_faction_glyph
+    type: richtext
+    src: card.attributes.faction
+    map:
+      anarch: "[faction_anarch]"
+      criminal: "[faction_criminal]"
+      shaper: "[faction_shaper]"
+      haas-bioroid: "[faction_hb]"
+      jinteki: "[faction_jinteki]"
+      nbn: "[faction_nbn]"
+      weyland-consortium: "[faction_weyland]"
+    x: 54.3
+    "y": 47.7
+    w: 7.4
+    h: 7.4
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    show_if: type != identity && type != ice && attributes.faction != neutral-corp && attributes.faction != neutral-runner
+  - id: footer
+    type: rect
+    x: 0
+    "y": 81.8
+    w: 63
+    h: 8.6
+    fill: palette-gradient
+    radius_mm: 0
+    show_if: type != identity && type != ice
+  - id: footer_faction_motif
+    type: rect
+    x: 0
+    "y": 81.8
+    w: 63
+    h: 8.6
+    fill: palette-shell-motif
+    opacity: 0.68
+    radius_mm: 0
+    show_if: type != identity && type != ice
+  - id: footer_signal
+    type: rect
+    x: 0
+    "y": 81.8
+    w: 63
+    h: 0.62
+    fill: palette-metallic
+    opacity: 0.82
+    show_if: type != identity && type != ice
+  - id: footer_side
     type: text
-    src: card.attributes.cost
-    x: 4.15
-    "y": 4
-    w: 8.75
-    h: 6.8
-    font: stat
-    size_pt: 14.7
-    align: center
+    src: card.attributes.side
+    transform: uppercase
+    prefix: "// "
+    x: 39.5
+    "y": 82.8
+    w: 8.5
+    h: 2.7
+    font: subtype
+    size_pt: 3.2
+    align: right
     valign: middle
-    color: "#ffffff"
-    text_shadow: "0 .18mm .18mm #000,0 0 .35mm #000"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_l1
-    type: rect
-    x: 4.75
-    "y": 10.75
-    w: 0.92
-    h: 0.18
-    fill: "#eef1ef"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_l2
-    type: rect
-    x: 5.95
-    "y": 11.35
-    w: 0.74
-    h: 0.18
-    fill: "#eef1ef"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_dot_l
-    type: badge
-    text: ""
-    x: 7.3
-    "y": 11.62
-    d: 0.38
-    bg: "#eef1ef"
-    color: "#ffffff"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_dot_c
-    type: badge
-    text: ""
-    x: 8.15
-    "y": 11.64
-    d: 0.52
-    bg: "#eef1ef"
-    color: "#ffffff"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_dot_r
-    type: badge
-    text: ""
-    x: 9.14
-    "y": 11.62
-    d: 0.38
-    bg: "#eef1ef"
-    color: "#ffffff"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_r2
-    type: rect
-    x: 10.16
-    "y": 11.35
-    w: 0.74
-    h: 0.18
-    fill: "#eef1ef"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
-  - id: credit_tick_r1
-    type: rect
-    x: 11.18
-    "y": 10.75
-    w: 0.92
-    h: 0.18
-    fill: "#eef1ef"
-    show_if: attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource
+    color: palette-light
+    show_if: type != identity && type != ice
+  - id: footer_set_icon
+    type: richtext
+    text: "[set_system_gateway]"
+    x: 50
+    "y": 82.45
+    w: 3.35
+    h: 3.35
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: invert(1)
+    opacity: 0.92
+    show_if: type != identity && type != ice
+  - id: footer_collector
+    type: text
+    src: printing.collector_number
+    x: 53.85
+    "y": 82.75
+    w: 6.35
+    h: 2.8
+    font: label
+    size_pt: 4.1
+    align: right
+    valign: middle
+    color: "#f5f6f2"
+    show_if: type != identity && type != ice

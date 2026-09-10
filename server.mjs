@@ -17,7 +17,7 @@
  * GET /api lists every route; GET /healthz for probes.
  */
 import { execFile, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync, lstatSync, mkdirSync, mkdtempSync, rmSync, readdirSync, renameSync, realpathSync } from "node:fs";
 import { join, dirname, resolve, relative, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { lookup } from "node:dns/promises";
@@ -26,6 +26,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import yaml from "js-yaml";
+import YAML from "yaml";
 import { createGateway, readBody } from "./platform/gateway.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { jamQualify } from "./tools/lib/jamcheck.mjs";
@@ -34,17 +35,31 @@ import { prepareCsvImport, publicCsvPreview } from "./tools/lib/csv-mapping.mjs"
 import { fingerprintCsv, sheetCardsFromBase, sheetPrintingsFromBase, sheetPrintingsFromTable, mergeSheetState } from "./tools/lib/sheetsync.mjs";
 import { assertAssetAllowed, MAX_ASSET_BYTES } from "./tools/lib/limits.mjs";
 import { inspectAsset, inspectSvg } from "./platform/media-security.mjs";
-import { analyzeForgeProject, diffRows, mergeRows } from "./tools/lib/forge-project.mjs";
-import { analyzeNandeckImport, parseNandeckScript } from "./tools/lib/nandeck-layout.mjs";
+import { analyzeForgeProject, buildForgeDataWorkingCopy, diffRows, mergeRows } from "./tools/lib/forge-project.mjs";
+import { deterministicZip } from "./tools/lib/deterministic-zip.mjs";
+import { inspectForgeWorkbook, inspectWorkbookCandidate, MAX_WORKBOOK_BYTES } from "./tools/lib/workbook.mjs";
+import { csvToTable, tableToCsv } from "./tools/lib/interchange-table.mjs";
+import { analyzeNandeckImport, currentNandeckSources, parseNandeckScript } from "./tools/lib/nandeck-layout.mjs";
+import { analyzePnpinkImport, MAX_PNPINK_BYTES } from "./tools/lib/pnpink.mjs";
+import { analyzeSquibImport, inspectSquibArchive, MAX_SQUIB_BYTES } from "./tools/lib/squib.mjs";
+import { analyzeSvgDesignImport, buildSvgDesignProject, inspectSvgCandidate, MAX_SVG_DESIGN_BYTES } from "./tools/lib/svg-design.mjs";
 import { loadRulebookPipeline, rulebookPipelineMetadata } from "./tools/lib/rulebook-pipeline.mjs";
 import { loadRulebookPublication, rulebookPublicationMetadata } from "./tools/lib/rulebook-publication.mjs";
 import { SOURCE_ASSETS_MANIFEST, loadSourceAssets, sourceAssetMetadata } from "./tools/lib/source-assets.mjs";
+import { ART_LIBRARY_MANIFEST, artLibraryBytes, diffArtLibrary, mergeArtLibrary, parseArtLibrary } from "./tools/lib/art-library.mjs";
+import { COMPONENT_DESIGN_PATH, buildComponentProduction, defaultComponentDesign, loadComponentDesign } from "./tools/lib/component-design.mjs";
+import { analyzeComponentSvgImport, buildComponentSvgProject, MAX_COMPONENT_SVG_BYTES } from "./tools/lib/component-svg.mjs";
+import { buildCardStarter, defaultCardPrintProfile } from "./tools/lib/card-starter.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, tokenDigest, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
 import * as cache from "./platform/cache.mjs";
 import { createLocalStore } from "./platform/store1-local.mjs";
-import { PROJECT_META, projectMetaBytes, publicProjectPath } from "./platform/project-ref.mjs";
+import { PROJECT_META, PROJECT_KIND_OWNED, PROJECT_KIND_SANDBOX,
+  projectMetaBytes, publicProjectPath } from "./platform/project-ref.mjs";
+import { hostedProjectReindexPlan, hostedRepositoryIdentityMatches,
+  quarantineHostedProject } from "./platform/project-reindex.mjs";
 import { collaborationFiles, collaborationPolicy, roleCapabilities, validCollaboratorRole } from "./platform/collaboration.mjs";
+import { projectAccess } from "./platform/project-access.mjs";
 import { RIGHTS_MANIFEST, auditRights, forkRightsManifest, parseRights, rightsManifestBytes,
   rightsReceiptBytes, setFileRight } from "./platform/rights.mjs";
 import { loadRegistrationPolicySet, POLICY_ACCEPTANCE_NOTICE,
@@ -58,6 +73,9 @@ const opt = (f, d) => { const i = args.indexOf(f); return i > -1 ? args[i + 1] :
 const PORT = parseInt(opt("--port", "8420"), 10);
 const PUBLIC_ORIGIN = process.env.FORGE_PUBLIC_ORIGIN ?? `http://localhost:${PORT}`;
 const PRODUCTION = process.env.NODE_ENV === "production";
+const INCLUDE_TEST_FIXTURES = process.env.FORGE_INCLUDE_TEST_FIXTURES === "1";
+if (PRODUCTION && INCLUDE_TEST_FIXTURES)
+  throw new Error("production cannot include internal test fixtures");
 const HTTPS = process.env.FORGE_HTTPS === "1" || PUBLIC_ORIGIN.startsWith("https://");
 const LISTEN_HOST = process.env.FORGE_LISTEN_HOST || (PRODUCTION ? "0.0.0.0" : "127.0.0.1");
 const ALLOWED_ORIGINS = [...new Set([PUBLIC_ORIGIN,
@@ -97,17 +115,20 @@ const LOCAL_STORE_ROOT = resolve(process.env.LOCAL_STORE_ROOT ?? ROOT);
 const GAMES_DIR = resolve(opt("--games", join(LOCAL_STORE_ROOT, "examples")));
 const HUB_PATH = resolve(process.env.FORGE_HUB_PATH ?? join(ROOT, "hub.html"));
 const READONLY = args.includes("--readonly");
-const RATE = { windowMs: 60_000, max: 120 };
+const configuredRateMax = Number.parseInt(process.env.FORGE_RATE_MAX || "120", 10);
+const RATE = { windowMs: 60_000, max: Number.isInteger(configuredRateMax) && configuredRateMax > 0 ? configuredRateMax : 120 };
 const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
                svg: "image/svg+xml", ogg: "audio/ogg", mp3: "audio/mpeg", ttf: "font/ttf",
                otf: "font/otf", woff: "font/woff", woff2: "font/woff2",
+               icc: "application/vnd.iccprofile", icm: "application/vnd.iccprofile",
                stl: "model/stl", obj: "model/obj", mtl: "text/plain", gltf: "model/gltf+json", glb: "model/gltf-binary",
                pdf: "application/pdf", json: "application/json", yaml: "text/yaml", yml: "text/yaml",
                md: "text/markdown", txt: "text/plain", css: "text/css", csv: "text/csv", html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8",
-               zip: "application/zip", vtt: "application/zip" };
+               zip: "application/zip", vtt: "application/zip", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
 const MAX_PROJECT_BYTES = 128 * 1024 * 1024;
 const MAX_NANDECK_BYTES = 2 * 1024 * 1024;
 const ADAPTER_CATALOG = JSON.parse(readFileSync(join(ROOT, "integrations", "adapters", "catalog.json"), "utf8"));
+const PRINT_TARGET_REGISTRY = JSON.parse(readFileSync(join(ROOT, "production", "print-targets.json"), "utf8"));
 
 /* ---------- stores ---------- */
 // Store 2 — driver behind the same q surface: node:sqlite (dev) or Postgres (prod)
@@ -137,12 +158,52 @@ const store = STORE1 === "forgejo"
   ? (await import("./platform/store1-forgejo.mjs")).createForgejoStore({
       root: ROOT, forgeUrl: process.env.FORGE_URL, token: process.env.FORGE_TOKEN,
       basicAuth: process.env.FORGE_BASIC ?? null, farmDir: process.env.FARM_DIR })
-  : createLocalStore({ root: LOCAL_STORE_ROOT, gamesDir: GAMES_DIR, lfsUrl: process.env.LFS_URL ?? null });
+  : createLocalStore({ root: LOCAL_STORE_ROOT, gamesDir: GAMES_DIR,
+      lfsUrl: process.env.LFS_URL ?? null, includeFixtures: INCLUDE_TEST_FIXTURES });
 const mat = (slug) => (ref) => store.materialize(slug, ref); // Store-3 feed
+let repositoryIsolationFailure = null;
 
 async function reindexGames() { // DA-3: derived, rebuildable
-  for (const slug of await store.list()) {
-    const m = await store.readMeta(slug);
+  const discoveredSlugs = await store.list();
+  const live = new Set();
+  const quarantine = async (slug, reason) => {
+    try { await quarantineHostedProject(store, slug, reason); }
+    catch (error) {
+      repositoryIsolationFailure = error;
+      console.error(`Forge repository isolation failed for ${slug}: ${error.message}`);
+      // Startup reindex already aborts before listen. A live failure must also
+      // restart into that pre-listen boundary instead of leaving a healthy
+      // gateway beside a potentially public Git remote.
+      if (PRODUCTION) setImmediate(() => process.exit(70));
+      throw error;
+    }
+    console.warn(`Forge identity quarantine: ${slug}: ${reason}`);
+  };
+  for (const discoveredSlug of discoveredSlugs) {
+    let slug = discoveredSlug;
+    let m = await store.readMeta(slug);
+    if (STORE1 === "forgejo") {
+      const [byRepoId, byProjectId, byStorageKey] = await Promise.all([
+        m.repoId ? q.gameByRepoId(db, m.repoId) : null,
+        q.gameByProjectId(db, m.projectId),
+        q.gameBySlug(db, discoveredSlug),
+      ]);
+      const plan = hostedProjectReindexPlan(discoveredSlug, m,
+        { byRepoId, byProjectId, byStorageKey });
+      if (plan.action === "quarantine") {
+        await quarantine(discoveredSlug, plan.reason);
+        continue;
+      }
+      try { slug = store.bindProjectKey(discoveredSlug, plan.storageKey); }
+      catch (error) {
+        await quarantine(discoveredSlug, error.message);
+        continue;
+      }
+      // A physical repo id wins over mutable metadata. This preserves the
+      // durable project id and storage key through native rename/transfer and
+      // prevents an edited project.json from changing an existing identity.
+      m = { ...m, projectId: plan.projectId, projectKind: plan.projectKind };
+    }
     let game = {};
     try { game = yaml.load((await store.readFile(slug, "game.yaml")).toString()) || {}; } catch {}
     const discovery = game.discovery || {};
@@ -161,13 +222,41 @@ async function reindexGames() { // DA-3: derived, rebuildable
       && !["", "unknown", "proprietary", "imported-see-source"].includes(String(license).toLowerCase())
       && rights?.project?.release_permission !== "unverified"
       && !rightsRules.some(rule => rule.status === "unknown" || rule.redistribution === "private-only");
-    await q.upsertGame(db, { slug, project_id: m.projectId, namespace: m.namespace,
-      repo_slug: m.repoSlug, repo_id: m.repoId, title: m.title,
-      license, card_count: m.cardCount, description: game.description || "",
-      topics_json: JSON.stringify(topics), players_min: game.players?.min ?? null,
-      players_max: game.players?.max ?? null,
-      visibility: publicRights ? "public" : "private" });
+    const projectKind = m.projectKind === PROJECT_KIND_SANDBOX
+      ? PROJECT_KIND_SANDBOX : PROJECT_KIND_OWNED;
+    // Store 2 is rebuildable, including its owner_id. Recover ownership only
+    // from an owned repository whose backend has bound the namespace to a
+    // protected identity (local) or the actual Forgejo repository owner.
+    const indexedOwner = projectKind === PROJECT_KIND_OWNED && m.ownerNamespaceTrusted
+      ? await q.userByHandle(db, m.namespace) : null;
+    const visibility = publicRights ? "public" : "private";
+    // Reconcile native repository privacy first. In particular, a failed
+    // public-to-private transition must not leave Store 2 claiming that exposed
+    // Forgejo source is protected.
+    await store.setVisibility(slug, visibility);
+    try {
+      const indexedGame = { slug, project_id: m.projectId, namespace: m.namespace,
+        repo_slug: m.repoSlug, repo_id: m.repoId, title: m.title,
+        license, card_count: m.cardCount, description: game.description || "",
+        topics_json: JSON.stringify(topics), players_min: game.players?.min ?? null,
+        players_max: game.players?.max ?? null,
+        visibility, owner_id: indexedOwner?.id ?? null, project_kind: projectKind };
+      if (STORE1 === "forgejo") await q.reindexHostedGame(db, indexedGame);
+      else await q.upsertGame(db, indexedGame);
+    } catch (error) {
+      if (STORE1 !== "forgejo" || !/unique|duplicate|project_id|repo_id|namespace_slug/i.test(String(error.message))) throw error;
+      await quarantine(slug, `database identity conflict: ${error.message}`);
+      continue;
+    }
+    live.add(slug);
   }
+  // Store 2 is only a rebuildable search/social index. A repository can be
+  // removed from Store 1 (or a local regression fixture can be disabled)
+  // while rows that reference it remain for conversation/audit history. Keep
+  // those foreign-key anchors, but tombstone their catalog fields. Route
+  // authorization independently requires Store-1 presence below.
+  for (const indexed of await q.listGames(db))
+    if (!live.has(indexed.slug)) await q.tombstoneGameIndex(db, indexed.slug);
 }
 await reindexGames();
 
@@ -242,6 +331,12 @@ const gw = createGateway({ name: "forge-platform", version: "0.3", allowedOrigin
   production: PRODUCTION, https: HTTPS, host: LISTEN_HOST,
   health: { registration: REGISTRATION_MODE, password_min: PRODUCTION ? 12 : 8,
     policy_set: REGISTRATION_POLICY_SET.id } });
+gw.use((ctx) => {
+  if (repositoryIsolationFailure) ctx.send(503, {
+    error: "repository isolation failed; operator action and a clean restart are required",
+    request_id: ctx.requestId,
+  });
+});
 const hits = new Map();
 gw.use((ctx) => { if (ctx.req.method === "OPTIONS") ctx.send(204, ""); });
 gw.use((ctx) => { // rate limit
@@ -249,10 +344,12 @@ gw.use((ctx) => { // rate limit
   const forwarded = String(ctx.req.headers["cf-connecting-ip"] || ctx.req.headers["x-forwarded-for"] || "").split(",")[0].trim();
   const ip = trusted && forwarded ? forwarded : (ctx.req.socket.remoteAddress ?? "?");
   const path = ctx.url.pathname;
+  const mutating = !["GET", "HEAD", "OPTIONS"].includes(ctx.req.method);
   const bucket = path.startsWith("/api/auth/") ? "auth"
-    : path.includes("/export/") ? "export"
-    : path.includes("/assets") || path.includes("/design/import") ? "upload" : "general";
-  const max = bucket === "auth" ? 12 : bucket === "export" ? 20 : bucket === "upload" ? 30 : RATE.max;
+    : mutating && path.includes("/export/") ? "export"
+    : mutating && (path.includes("/assets") || path.includes("/design/import")) ? "upload"
+    : !mutating && (path.includes("/assets/") || path.startsWith("/cache/")) ? "media" : "general";
+  const max = bucket === "auth" ? 12 : bucket === "export" ? 20 : bucket === "upload" ? 30 : bucket === "media" ? 1000 : RATE.max;
   const now = Date.now();
   const key = `${ip}:${bucket}`;
   const h = hits.get(key) ?? { t: now, n: 0 };
@@ -273,6 +370,15 @@ const sessionTokenOf = ctx => {
   const m = (ctx.req.headers.authorization ?? "").match(/^Bearer (\w{64})$/);
   return m?.[1] || cookiesOf(ctx.req)[SESSION_COOKIE] || null;
 };
+const PRIVATE_PROJECT_CACHE = "private, no-store";
+// Exact refs make bytes reproducible, but project visibility can still change.
+// Until Forge has an explicit irrevocable-publication policy, shared caches
+// must ask the gateway to re-authorize every public artifact request.
+const PUBLIC_REVALIDATE_CACHE = "public, no-cache, must-revalidate";
+async function projectCacheControl(slug, publicPolicy = PUBLIC_REVALIDATE_CACHE) {
+  const game = store.has(slug) ? await q.gameBySlug(db, slug) : null;
+  return game?.visibility === "public" ? publicPolicy : PRIVATE_PROJECT_CACHE;
+}
 const authedUser = async (ctx) => {
   const token = sessionTokenOf(ctx);
   return token && /^\w{64}$/.test(token) ? q.sessionUser(db, tokenDigest(token)) : null;
@@ -280,62 +386,68 @@ const authedUser = async (ctx) => {
 const requireAuth = async (ctx) => { const u = await authedUser(ctx); if (!u) ctx.send(401, { error: "auth required" }); return u; };
 // per-user data lineage: authed requests commit AS the user; anonymous falls back
 const authorOf = async (ctx) => { const u = await authedUser(ctx); return u ? `${u.handle} <${u.email}>` : "web editor <editor@platform>"; };
-/** COMMIT ACCESS (the rule the anonymous-edit hole violated):
- *  anonymous → never. Owned game → owner or invited collaborator only.
- *  Unowned demo game → any signed-in user (explicit transitional rule).
- *  Everyone else still has a path: fork + PR (see /cards/propose). */
-async function canWrite(u, slug) {
-  if (!u) return false;
-  const g = await q.gameBySlug(db, slug);
-  if (!g || !g.owner_id) return true;
-  if (g.owner_id === u.id) return true;
-  return roleCapabilities(await q.collaboratorRole(db, slug, u.id)).can_write;
+async function currentGameForAccess(slug, game = undefined) {
+  // Store 2 can legitimately retain historical rows after a repository is
+  // removed. Never turn that stale index row into live project authority.
+  if (!store.has(slug)) return null;
+  const g = game === undefined ? await q.gameBySlug(db, slug) : game;
+  if (STORE1 === "forgejo") {
+    let physical = null;
+    try { physical = store.repositoryIdentity(slug); } catch {}
+    if (!hostedRepositoryIdentityMatches(g, physical)) return null;
+  }
+  return g;
 }
+async function accessFor(u, slug, game = undefined) {
+  const g = await currentGameForAccess(slug, game);
+  if (!g) return projectAccess(null, u, null);
+  const role = u && g && g.owner_id !== u.id ? await q.collaboratorRole(db, slug, u.id) : null;
+  return projectAccess(g, u, role);
+}
+/** COMMIT ACCESS:
+ *  anonymous → never. Owned game → owner or invited contributor/maintainer.
+ *  Ownerless projects → read-only unless an explicit sandbox grant exists.
+ *  Private fixtures → fail closed unless explicitly collaborated.
+ *  Everyone else still has a path: fork + PR (see /cards/propose). */
+async function canWrite(u, slug) { return (await accessFor(u, slug)).can_write; }
 const isLoopbackRequest = (ctx) => {
   const authority = String(ctx?.req?.headers?.host || "").trim().toLowerCase();
   const host = authority.startsWith("[")
     ? authority.slice(1, authority.indexOf("]"))
     : authority.split(":")[0];
-  return ["localhost", "127.0.0.1", "::1"].includes(host);
+  const remote = String(ctx?.req?.socket?.remoteAddress || "").toLowerCase();
+  return ["localhost", "127.0.0.1", "::1"].includes(host)
+    && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote);
 };
 async function canRead(u, slug, ctx = null) {
-  const g = await q.gameBySlug(db, slug);
-  if (!g || g.visibility === "public") return true;
+  const g = await currentGameForAccess(slug);
+  if (!g) return false;
+  if (g.visibility === "public") return true;
   // A developer may explicitly expose rights-restricted fixtures in the
   // loopback UI for local production testing. The Host check is deliberate:
   // the same process can sit behind a temporary Sheets tunnel, where private
   // projects must remain undiscoverable and inaccessible.
-  if (!PRODUCTION && process.env.FORGE_LOCAL_PRIVATE_PREVIEW === "1" && isLoopbackRequest(ctx)) return true;
-  if (!u) return false;
-  if (!g.owner_id || g.owner_id === u.id) return true;
-  return !!await q.collaboratorRole(db, slug, u.id);
+  if (!PRODUCTION && process.env.FORGE_LOCAL_PRIVATE_PREVIEW === "1"
+    && store.isFixture?.(slug) && isLoopbackRequest(ctx)) return true;
+  return (await accessFor(u, slug, g)).can_read;
 }
-async function canReview(u, slug) {
-  if (!u) return false;
-  const g = await q.gameBySlug(db, slug);
-  if (!g || !g.owner_id || g.owner_id === u.id) return true;
-  return roleCapabilities(await q.collaboratorRole(db, slug, u.id)).can_review;
-}
-/** ADMIN ACCESS (merge a PR, close a PR/issue, cut a release): same ownerless
- *  -> open-sandbox carve-out as canWrite() above, since none of the 12 shipped
- *  demo games have an owner and the whole point of the sandbox policy is that
- *  the collaboration loop (fork -> PR -> merge) has to actually be completable
- *  on them. BUT a release is a stronger, citable, harder-to-undo action than a
- *  merge, so it stays intentionally narrower: an invited collaborator (write
- *  access short of ownership) may merge/close but may NOT cut a release on
- *  someone else's game -- only the owner, or anyone on an ownerless/demo game,
- *  can do that. Pass { releases: true } to get that stricter rule. */
+async function canReview(u, slug) { return (await accessFor(u, slug)).can_review; }
+/** ADMIN ACCESS (merge a PR, close a PR/issue, cut a release): ownerlessness
+ *  never grants authority. A maintainer may merge/close but may not cut a
+ *  citable release on somebody else's behalf. Pass { releases: true } for
+ *  that stricter rule. */
 async function canAdmin(u, slug, { releases = false } = {}) {
-  if (!u) return false;
-  const g = await q.gameBySlug(db, slug);
-  if (!g || !g.owner_id) return true;              // ownerless/demo game: open sandbox
-  if (g.owner_id === u.id) return true;             // owner
-  if (releases) return false;                       // releases: owner-or-ownerless only
-  return roleCapabilities(await q.collaboratorRole(db, slug, u.id)).can_merge;
+  const access = await accessFor(u, slug);
+  return releases ? access.can_release : access.can_merge;
 }
+// Authenticated responses can contain a viewer's private projects even on
+// aggregate routes such as /api/me, activity, notifications, and jams. They
+// are never eligible for a browser or intermediary cache. Exact public
+// artifact routes below deliberately override this with public revalidation.
+gw.use((ctx) => { if (sessionTokenOf(ctx)) ctx.setHeader("cache-control", PRIVATE_PROJECT_CACHE); });
 // A private/unverified research fixture may be addressed directly only by its
 // owner or collaborators. This applies before every game, asset, editor and
-// immutable-cache route so obscurity is never treated as authorization.
+// exact-artifact route so obscurity is never treated as authorization.
 gw.use(async (ctx) => {
   const p = ctx.url.pathname.split("/").filter(Boolean);
   let slug = null;
@@ -345,8 +457,12 @@ gw.use(async (ctx) => {
   else if (p[0] === "api" && p[1] === "projects" && p.length >= 4) {
     const row = await q.gameByProject(db, decodeURIComponent(p[2]), decodeURIComponent(p[3])); slug = row?.slug || null;
   }
-  if (slug && !await canRead(await authedUser(ctx), slug, ctx))
-    ctx.send(404, { error: "project not found" });
+  if (slug) {
+    if (!await canRead(await authedUser(ctx), slug, ctx))
+      return ctx.send(404, { error: "project not found" });
+    if ((await q.gameBySlug(db, slug))?.visibility !== "public")
+      ctx.setHeader("cache-control", PRIVATE_PROJECT_CACHE);
+  }
 });
 const denyWrite = (ctx, u) => u
   ? ctx.send(403, { error: "no commit access to this game", propose: true,
@@ -357,8 +473,8 @@ const requireGame = (ctx) => {
   if (!store.has(ctx.params.slug)) { ctx.send(404, { error: `no game '${ctx.params.slug}'` }); return null; }
   return ctx.params.slug;
 };
-const json = async (ctx) => {
-  try { return JSON.parse((await readBody(ctx.req)).toString()); }
+const json = async (ctx, maxBytes) => {
+  try { return JSON.parse((await readBody(ctx.req, maxBytes)).toString()); }
   catch (error) { if (!error.status) error.status = 400; throw error; }
 };
 const optionalJson = async (ctx) => {
@@ -390,6 +506,10 @@ async function validateCandidate(slug, relPath, content, extra = {}) {
 const REUSABLE_ROOTS = ["assets/", "templates/", "setups/", "rules/"];
 const REVIEWED_EXACT = new Set(["game.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST,
   SOURCE_ASSETS_MANIFEST]);
+// These files define project identity, legal publication authority, or access
+// control. Contributors may propose them through a fork/PR, but direct generic
+// file writes would bypass the dedicated owner-only governance routes.
+const OWNER_ONLY_REPO_PATHS = new Set(["game.yaml", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST]);
 const REVIEWED_PREFIXES = [
   "components/", "decks/", "formats/", "sets/", "design/",
   "forge/imports/", "forge/jams/",
@@ -401,6 +521,7 @@ const REPO_FONT_EXTS = new Set(["ttf", "otf", "woff", "woff2"]);
 const REPO_AUDIO_EXTS = new Set(["ogg", "mp3", "wav", "m4a"]);
 const REPO_MODEL_EXTS = new Set(["stl", "obj", "mtl", "gltf", "glb", "blend"]);
 const REPO_NATIVE_EXTS = new Set(["afdesign", "afpub", "idml", "sla", "kra", "ora", "xcf"]);
+const REPO_COLOR_PROFILE_EXTS = new Set(["icc", "icm"]);
 const repoExt = (path) => path.toLowerCase().split(".").pop();
 const isReusablePath = (path) => typeof path === "string"
   && !path.startsWith("/") && !path.includes("..") && REUSABLE_ROOTS.some(root => path.startsWith(root));
@@ -425,6 +546,7 @@ function repoCategory(path) {
   if (path === "rules/pipeline.yaml") return "Rulebook pipeline";
   if (path.startsWith("rules/native/")) return "Native rulebook source";
   if (REPO_MODEL_EXTS.has(ext)) return "3D models & miniatures";
+  if (REPO_COLOR_PROFILE_EXTS.has(ext)) return "Printer color profiles";
   if (REPO_NATIVE_EXTS.has(ext)) return "Native editor source";
   if (path.startsWith("templates/card-design/families/")) return "Card family templates";
   if (path.startsWith("templates/card-design/components/")) return "Card design components";
@@ -445,6 +567,7 @@ function repoKind(path) {
   if (REPO_FONT_EXTS.has(ext)) return "font";
   if (REPO_AUDIO_EXTS.has(ext)) return "audio";
   if (REPO_MODEL_EXTS.has(ext)) return "model";
+  if (REPO_COLOR_PROFILE_EXTS.has(ext)) return "color-profile";
   if (REPO_NATIVE_EXTS.has(ext)) return "native-source";
   if (isRepoText(path)) return path.startsWith("templates/") ? "template" : "text";
   return "binary";
@@ -511,7 +634,7 @@ function mergeRepoFiles(base = {}, proposed = {}, current = {}) {
 }
 const snapshotCache = new Map();
 async function gameSnapshot(slug, ref = null) {
-  const pinned = ref || await store.headSha(slug);
+  const pinned = ref ? await store.resolveRef(slug, ref) : await store.headSha(slug);
   const cacheKey = `${slug}@${pinned}`;
   if (snapshotCache.has(cacheKey)) return snapshotCache.get(cacheKey);
   const { dir, cleanup } = await store.materialize(slug, pinned);
@@ -571,57 +694,142 @@ gw.route("GET", "/edit/:slug", async (ctx) => {
   ctx.send(200, readFileSync(out, "utf8"), "text/html; charset=utf-8");
 }, "LIVE editor: edit cards in browser, Save = real git commit");
 
-/* ---------- routes: Store 3 — immutable cache (DA-5) ---------- */
+/* ---------- routes: Store 3 — exact, re-authorized derived cache (DA-5) ---------- */
 gw.route("GET", "/cache/renders/:slug/:ref/*", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const { ref } = ctx.params;
-  if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || ctx.params["*"].includes("..")) return ctx.send(404, { error: "bad ref" });
-  const { keyDir } = await cache.ensureRenders(mat(slug), slug, ref);
-  const fp = join(keyDir, ctx.params["*"]);
+  const requestedRef = ctx.params.ref;
+  const file = ctx.params["*"];
+  if (!safeArtifactPath(file)) return ctx.send(404, { error: "bad artifact path" });
+  let ref;
+  try { ref = await store.resolveRef(slug, requestedRef); }
+  catch (error) { return ctx.send(error.status || 422, { error: "that render version is unavailable", detail: error.message }); }
+  const { keyDir, manifest } = await cache.ensureRenders(mat(slug), slug, ref);
+  if (!manifest.files.some(item => item.name === file)) return ctx.send(404, { error: "not producible" });
+  const fp = join(keyDir, file);
   if (!existsSync(fp)) return ctx.send(404, { error: "not producible" });
   ctx.sendRaw(200, readFileSync(fp), { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
-    "cache-control": "public, max-age=31536000, immutable" });
+    "cache-control": await projectCacheControl(slug) });
 }, "card render at exact commit — URL never changes meaning");
 const publishedArtifactKind=(slug,file)=>file==="pnp.pdf"?"pnp"
-  : file==="tts.json"||file==="back.png"||/^sheet(?:-\d+)?\.png$/.test(file)?"tts"
+  : file==="tts.json"||file==="tts-manifest.json"||file.startsWith("tts-components/")||file==="back.png"||/^sheet(?:-\d+)?\.png$/.test(file)?"tts"
   : file===`${slug}-ttc.zip`?"ttc"
-  : ["print-ready.zip","print-a4.pdf","print-letter.pdf","print-press-rgb.pdf"].includes(file)?"print"
+  : file===cache.ttpgArtifactName(slug)||file==="ttpg-manifest.json"?"ttpg"
+  : ["print-ready.zip","print-a4.pdf","print-letter.pdf","print-press-rgb.pdf","print-press-cmyk.pdf"].includes(file)?"print"
   : file===cache.projectArtifactName(slug)?"project"
   : file.startsWith("vtt-faces/")||[cache.vttArtifactName("vtt"),cache.vttArtifactName("json")].includes(file)?"vtt":null;
-const artifactMatchesReceipt=(path,expected)=>{
-  if(!existsSync(path))return false;
-  const bytes=readFileSync(path);
-  return bytes.length===expected.bytes&&createHash("sha256").update(bytes).digest("hex")===expected.sha256;
+// TTS saves and raw VirtualTabletop state contain absolute texture URLs. A
+// private Forge session cannot be carried into either desktop application, so
+// those files are not honest private downloads. The bundled .vtt archive is
+// self-contained and remains usable; TTC and TTPG packages are also local.
+const privateDigitalArtifactBlocked=(slug,file)=>{
+  const kind=publishedArtifactKind(slug,file);
+  return kind==="tts"||(kind==="vtt"&&file!==cache.vttArtifactName("vtt"));
 };
+const verifiedArtifactBytes=(path,expected)=>{
+  if(!existsSync(path)||!lstatSync(path).isFile())return null;
+  const bytes=readFileSync(path);
+  return bytes.length===expected.bytes&&createHash("sha256").update(bytes).digest("hex")===expected.sha256?bytes:null;
+};
+const artifactMatchesReceipt=(path,expected)=>!!verifiedArtifactBytes(path,expected);
+const INTERNAL_EXPORT_FILES=new Set(["forge-export-manifest.json"]);
+function safeArtifactPath(file){
+  return typeof file==="string"&&file.length>0&&file.length<=512&&!file.startsWith("/")&&!file.includes("\\")
+    &&!INTERNAL_EXPORT_FILES.has(file)&&file.split("/").every(segment=>segment&&segment!=="."&&segment!==".."
+      &&!segment.startsWith(".")&&/^[A-Za-z0-9_-][A-Za-z0-9._-]*$/.test(segment));
+}
+const validArtifactReceipt=(item,file)=>item?.status==="ready"&&item.name===file
+  &&Number.isSafeInteger(item.bytes)&&item.bytes>=0&&/^[0-9a-f]{64}$/i.test(item.sha256||"");
+const exportInputHash=(slug,ref,kind,version)=>createHash("sha256")
+  .update(`${slug}\0${ref}\0${kind}\0${version}`).digest("hex");
+function parseExportJobEvidence(job,slug,ref,file){
+  if(job?.status!=="succeeded"||job.game_slug!==slug||job.ref!==ref)return null;
+  const version=Number(job.exporter_version), current=cache.exporterVersion(job.kind);
+  if(version!==current||job.input_hash!==exportInputHash(slug,ref,job.kind,version))return null;
+  let output; try{output=JSON.parse(job.output_json);}catch{return null;}
+  const manifest=output?.manifest;
+  if(output?.ok!==true||output.ref!==ref||manifest?.format!=="forge-export-attempt"||manifest.version!==1
+    ||manifest.slug!==slug||manifest.ref!==ref||manifest.kind!==job.kind
+    ||Number(manifest.exporter_version)!==version||manifest.input_hash!==job.input_hash
+    ||!Array.isArray(manifest.files))return null;
+  const names=new Set();
+  for(const item of manifest.files){
+    if(!safeArtifactPath(item?.name)||names.has(item.name)||!Number.isSafeInteger(item.bytes)||item.bytes<0
+      ||!/^[0-9a-f]{64}$/i.test(item.sha256||""))return null;
+    names.add(item.name);
+  }
+  const expected=manifest.files.find(item=>item.name===file);
+  return expected?{job,manifest,expected}:null;
+}
+async function releaseArtifactEvidence(slug,ref,file){
+  const releases=(await q.releasesFor(db,slug)).filter(item=>item.sha===ref);
+  const matches=[];
+  for(const release of releases){
+    let artifacts; try{artifacts=release.artifacts_json?JSON.parse(release.artifacts_json):[];}
+    catch{return {error:"frozen release artifact receipt is unreadable"};}
+    if(!Array.isArray(artifacts))return {error:"frozen release artifact receipt is invalid"};
+    for(const expected of artifacts.filter(item=>item?.name===file&&item?.status==="ready")){
+      if(!validArtifactReceipt(expected,file))return {error:"frozen release artifact receipt is invalid"};
+      matches.push({release,artifacts,expected});
+    }
+  }
+  if(!matches.length)return null;
+  if(matches.some(match=>match.expected.bytes!==matches[0].expected.bytes
+    ||match.expected.sha256!==matches[0].expected.sha256))
+    return {error:"frozen releases disagree about the bytes at this exact artifact URL"};
+  return matches[0];
+}
+async function exportJobArtifactEvidence(slug,ref,file){
+  const matches=(await q.succeededExportJobsForRef(db,slug,ref))
+    .map(job=>parseExportJobEvidence(job,slug,ref,file)).filter(Boolean);
+  if(!matches.length)return null;
+  if(matches.some(match=>match.expected.bytes!==matches[0].expected.bytes
+    ||match.expected.sha256!==matches[0].expected.sha256))
+    return {error:"successful export jobs disagree about the bytes at this exact artifact URL"};
+  return matches[0];
+}
 const discardRegeneratedKind=(slug,ref,kind,artifacts)=>{
   for(const item of artifacts.filter(candidate=>candidate.status==="ready"
-    &&publishedArtifactKind(slug,candidate.name)===kind))
+    &&safeArtifactPath(candidate.name)&&publishedArtifactKind(slug,candidate.name)===kind))
     rmSync(cache.pathOf(cache.exportKey(slug,ref,item.name)),{force:true});
   rmSync(join(cache.CACHE_DIR,"exports",slug,ref,`.complete-${kind}-v${cache.exporterVersion(kind)}.json`),{force:true});
+};
+const discardJobEvidence=(slug,ref,evidence)=>{
+  for(const item of evidence.manifest.files)
+    rmSync(cache.pathOf(cache.exportKey(slug,ref,item.name)),{force:true});
+  const dir=join(cache.CACHE_DIR,"exports",slug,ref);
+  rmSync(join(dir,`.complete-${evidence.job.kind}-v${evidence.job.exporter_version}.json`),{force:true});
+  rmSync(join(dir,"forge-export-manifest.json"),{force:true});
 };
 
 gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const { ref } = ctx.params;
   const file = ctx.params["*"];
-  if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || file.includes("..")) return ctx.send(404, { error: "bad ref" });
+  if (!/^[0-9a-fv][0-9a-f.\-]*$/i.test(ref) || !safeArtifactPath(file)) return ctx.send(404, { error: "bad ref" });
+  const project=await q.gameBySlug(db,slug);
+  if(project?.visibility!=="public"&&privateDigitalArtifactBlocked(slug,file))
+    return ctx.send(404,{error:"private hosted tabletop artifact is unavailable; use a self-contained package"});
   const fp = cache.pathOf(cache.exportKey(slug, ref, file));
-  if (!existsSync(fp)) {
-    // Store 3 is derived. Rebuild only artifacts that Store 2 records as part
-    // of a published release, pinned to its immutable Store-1 SHA. This makes
-    // cache loss recoverable without turning a public GET into an arbitrary
-    // unauthenticated export service.
-    const release=(await q.releasesFor(db,slug)).find(item=>item.sha===ref);
-    const artifacts=release?.artifacts_json?JSON.parse(release.artifacts_json):[];
-    const expected=artifacts.find(item=>item.name===file&&item.status==="ready");
-    if(!release||!expected)return ctx.send(404,{error:"artifact is not published"});
+  const releaseEvidence=await releaseArtifactEvidence(slug,ref,file);
+  if(releaseEvidence?.error)return ctx.send(503,{error:releaseEvidence.error});
+  let expected=releaseEvidence?.expected||null;
+  if(releaseEvidence&&!artifactMatchesReceipt(fp,expected)) {
+    // Store 3 is derived. Rebuild a missing or corrupt published artifact only
+    // from its frozen release receipt and exact Store-1 source SHA.
+    const {release,artifacts}=releaseEvidence;
     try {
       if(file==="forge-rights-receipt.json"&&release.rights_json){
         mkdirSync(dirname(fp),{recursive:true});
-        writeFileSync(fp,rightsReceiptBytes(JSON.parse(release.rights_json)));
+        const tmp=`${fp}.${process.pid}.tmp`;
+        writeFileSync(tmp,rightsReceiptBytes(JSON.parse(release.rights_json)));renameSync(tmp,fp);
       } else {
         const kind=publishedArtifactKind(slug,file);
-        if(!kind)return ctx.send(404,{error:"published artifact cannot be regenerated by this build"});
+        if(!kind){rmSync(fp,{recursive:true,force:true});
+          return ctx.send(503,{error:"published artifact cannot be regenerated by this build"});}
+        // A cache marker only proves the original family completed. If one
+        // sibling was lost, invalidate the whole derived family before the
+        // queued rebuild so immutable release recovery succeeds in one GET.
+        if(cache.exportReady(slug,ref,kind))discardRegeneratedKind(slug,ref,kind,artifacts);
         const build=release.build_json?JSON.parse(release.build_json):null;
         await (await queueExportJob({slug,sha:ref,kind,
           publicOrigin:build?.public_origin||PUBLIC_ORIGIN})).promise;
@@ -650,8 +858,28 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
         expected:{bytes:expected.bytes,sha256:expected.sha256},actual:{bytes:reproduced.length,sha256:digest}});
     }
   }
-  ctx.sendRaw(200, readFileSync(fp), { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
-    "cache-control": "public, max-age=31536000, immutable" });
+  if(!releaseEvidence){
+    let jobEvidence=await exportJobArtifactEvidence(slug,ref,file);
+    if(jobEvidence?.error)return ctx.send(503,{error:jobEvidence.error});
+    if(!jobEvidence)return ctx.send(404,{error:"artifact is not declared by a frozen release or successful export job"});
+    if(!artifactMatchesReceipt(fp,jobEvidence.expected)){
+      // Store-2 evidence authorizes recovery, but the regenerated bytes must
+      // themselves be declared by the newly successful job before serving.
+      discardJobEvidence(slug,ref,jobEvidence);
+      try{await(await queueExportJob({slug,sha:ref,kind:jobEvidence.job.kind})).promise;}
+      catch(error){return ctx.send(503,{error:"export artifact regeneration failed",
+        detail:String(error.message||error).slice(0,500)});}
+      jobEvidence=await exportJobArtifactEvidence(slug,ref,file);
+      if(jobEvidence?.error)return ctx.send(503,{error:jobEvidence.error});
+      if(!jobEvidence||!artifactMatchesReceipt(fp,jobEvidence.expected))
+        return ctx.send(503,{error:"export artifact could not be reproduced from its successful job receipt"});
+    }
+    expected=jobEvidence.expected;
+  }
+  const bytes=verifiedArtifactBytes(fp,expected);
+  if(!bytes)return ctx.send(503,{error:"artifact integrity verification failed"});
+  ctx.sendRaw(200, bytes, { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
+    "cache-control": await projectCacheControl(slug) });
 }, "frozen export artifact (sha or release tag)");
 
 /* ---------- routes: Store 2 — identity & social ---------- */
@@ -767,9 +995,10 @@ gw.route("DELETE", "/api/auth/sessions", async (ctx) => {
 }, "revoke every active session");
 gw.route("GET", "/api/me", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
+  const starred = (await q.starredBy(db, u.id)).map(row => row.game_slug).filter(slug => store.has(slug));
+  const games = (await q.gamesOwnedBy(db, u.id)).filter(slug => store.has(slug));
   ctx.send(200, { id: u.id, handle: u.handle, email: u.email,
-    claims: await q.claimsOf(db, u.id), starred: (await q.starredBy(db, u.id)).map(r => r.game_slug),
-    games: await q.gamesOwnedBy(db, u.id),
+    claims: await q.claimsOf(db, u.id), starred, games,
     policy_acceptances: await q.policyAcceptancesByUser(db, u.id) });
 }, "who am I + claims + stars + owned games + policy receipts");
 gw.route("GET", "/api/me/export", async (ctx) => {
@@ -816,7 +1045,7 @@ async function hostGame(u, title, csv, authorStr, options = {}) {
     if (imp.status !== 0) return { error: { code: 422, body: { error: "import failed", detail: imp.stderr } } };
     mkdirSync(join(tmp, "game", dirname(PROJECT_META)), { recursive: true });
     writeFileSync(join(tmp, "game", PROJECT_META), projectMetaBytes({ storageKey, projectId,
-      namespace: u.handle, slug: repoSlug }));
+      namespace: u.handle, slug: repoSlug, projectKind: PROJECT_KIND_OWNED }));
     writeFileSync(join(tmp, "game", ".gitattributes"), "assets/** filter=lfs diff=lfs merge=lfs -text\n");
     for (const file of collaborationFiles(u.handle)) {
       mkdirSync(dirname(join(tmp, "game", file.path)), { recursive: true });
@@ -857,6 +1086,13 @@ gw.route("POST", "/api/imports/csv/preview", async (ctx) => {
   if (typeof csv !== "string" || !csv.trim()) return ctx.send(422, { error: "paste or upload CSV to review" });
   ctx.send(200, publicCsvPreview(prepareCsvImport(csv, mapping)));
 }, "map and validate a CSV without creating a project");
+gw.route("POST", "/api/imports/xlsx/preview", async (ctx) => {
+  const u=await requireAuth(ctx);if(!u)return;
+  const source=await readBody(ctx.req,MAX_WORKBOOK_BYTES+1);
+  if(source.length>MAX_WORKBOOK_BYTES)return ctx.send(413,{error:"workbook is larger than 10 MB"});
+  try{ctx.send(200,inspectWorkbookCandidate(source));}
+  catch(error){ctx.send(422,{error:error.message||"invalid workbook"});}
+}, "inspect safe visible XLSX tabs so one can enter the existing new-game column mapper");
 gw.route("POST", "/api/games", async (ctx) => {
   // THE HOSTING VERB: start from intent or bring structured components; both
   // leave as a hosted, owned, validated, versioned game.
@@ -889,14 +1125,16 @@ gw.route("POST", "/api/claims", async (ctx) => {
 }, "claim a git/playtest author string (DA-7)");
 gw.route("PUT", "/api/stars/:slug", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
-  if (!requireGame(ctx)) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  if (!await canRead(u, slug, ctx)) return ctx.send(404, { error: "project not found" });
   await q.star(db, u.id, ctx.params.slug);
   await q.recordEvent(db, { id: newId("ev"), kind: "star", actor_id: u.id, game_slug: ctx.params.slug });
   ctx.send(200, { starred: true, stars: await q.starCount(db, ctx.params.slug) });
 }, "star");
 gw.route("DELETE", "/api/stars/:slug", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
-  if (!requireGame(ctx)) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  if (!await canRead(u, slug, ctx)) return ctx.send(404, { error: "project not found" });
   await q.unstar(db, u.id, ctx.params.slug);
   ctx.send(200, { starred: false, stars: await q.starCount(db, ctx.params.slug) });
 }, "unstar");
@@ -1004,12 +1242,17 @@ async function resolveForkPoint(src, requestedRef) {
     return { sha, label: "latest working version", sourceYaml: sourceYaml.toString() };
   }
   const release = await q.releaseByTag(db, src, requested);
-  const sha = release?.sha ?? requested;
+  const candidate = release?.sha ?? requested;
   // Fork refs are deliberately narrower than general git refs: a release tag
   // is resolved server-side and an explicit version must be a commit id. This
   // keeps the local archive boundary safe and makes every fork reproducible.
-  if (!/^[0-9a-f]{7,40}$/i.test(sha)) {
+  if (!/^[0-9a-f]{7,40}$/i.test(candidate)) {
     throw Object.assign(new Error("fork from 'latest' or a published release/commit"), { code: 422 });
+  }
+  let sha;
+  try { sha = await store.resolveRef(src, candidate); }
+  catch (error) {
+    throw Object.assign(new Error(`source version '${requested}' is unavailable`), { code: error.status || 422 });
   }
   const sourceYaml = await store.fileAt(src, sha, "game.yaml");
   if (!sourceYaml) throw Object.assign(new Error(`source version '${requested}' is unavailable`), { code: 422 });
@@ -1046,7 +1289,8 @@ async function doFork(u, src, requestedRef = "HEAD") {
   const { sha } = await store.fork(src, newSlug, transform,
     `fork: ${src}@${point.sha} → ${newSlug} by ${u.handle}\n\nsource-version: ${point.sha}\nsource-label: ${point.label}\nattribution committed per SPEC §9`,
     `${u.handle} <${u.email}>`, point.sha,
-    projectMetaBytes({ storageKey: newSlug, projectId, namespace: u.handle, slug: repoSlug }),
+    projectMetaBytes({ storageKey: newSlug, projectId, namespace: u.handle, slug: repoSlug,
+      projectKind: PROJECT_KIND_OWNED }),
     [...collaborationFiles(u.handle),
       { path: ".gitattributes", content: "assets/** filter=lfs diff=lfs merge=lfs -text\n" },
       { path: RIGHTS_MANIFEST, content: rightsReceiptBytes(forkRights) }]);
@@ -1061,7 +1305,7 @@ async function ensureUserFork(u, src) {
   const repoSlug = `${sourceRepoSlug}-${u.handle}`.slice(0, 60);
   const existing = await q.gameByProject(db, u.handle, repoSlug);
   if (!existing) return (await doFork(u, src)).slug;
-  if (existing.owner_id !== u.id)
+  if (!(await accessFor(u, existing.slug, existing)).is_owner)
     throw Object.assign(new Error(`'${u.handle}/${repoSlug}' exists and is not yours`), { code: 409 });
   if (existing.forked_from !== src)
     throw Object.assign(new Error(`'${u.handle}/${repoSlug}' is not an edition of '${src}'`), { code: 409 });
@@ -1112,17 +1356,17 @@ gw.route("GET", "/api/games/:slug/access", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   const g = await q.gameBySlug(db, slug);
-  const owner = g?.owner_id ?? null;
-  ctx.send(200, { authed: !!u,
-    canWrite: await canWrite(u, slug),
-    canReview: await canReview(u, slug),
-    canMerge: await canAdmin(u, slug),
-    canRelease: await canAdmin(u, slug, { releases: true }),
-    role: u ? (owner === u.id ? "owner" : await q.collaboratorRole(db, slug, u.id)) : null,
-    isOwner: !!(u && owner && owner === u.id),
-    ownerless: !owner,
-    sandbox: !owner });   // explicit, UI-facing name for the same fact: no owner = open sandbox
-}, "can the current user commit here directly? (editor picks commit vs propose) -- sandbox:true means any signed-in user can write/merge/close here directly");
+  const access = await accessFor(u, slug, g);
+  ctx.send(200, { authed: access.signed_in,
+    canWrite: access.can_write,
+    canReview: access.can_review,
+    canMerge: access.can_merge,
+    canRelease: access.can_release,
+    role: access.is_owner ? "owner" : access.role,
+    isOwner: access.is_owner,
+    ownerless: access.ownerless,
+    sandbox: access.sandbox });
+}, "can the current user act here? sandbox:true means this is an explicitly marked ownerless PUBLIC demo where signed-in users can write and merge, but must fork before releasing");
 gw.route("GET", "/api/games/:slug/collaborators", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   ctx.send(200, await q.collaboratorsOf(db, slug));
@@ -1131,7 +1375,8 @@ gw.route("PUT", "/api/games/:slug/collaborators/:handle", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
   const g = await q.gameBySlug(db, slug);
-  if (g?.owner_id !== u.id) return ctx.send(403, { error: "only the owner manages access" });
+  if (!(await accessFor(u, slug, g)).is_owner)
+    return ctx.send(403, { error: "only the owner manages access" });
   const target = await q.userByHandle(db, ctx.params.handle);
   if (!target) return ctx.send(404, { error: `no user '${ctx.params.handle}'` });
   if (target.id === u.id) return ctx.send(422, { error: "you already own this game" });
@@ -1150,7 +1395,8 @@ gw.route("DELETE", "/api/games/:slug/collaborators/:handle", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
   const g = await q.gameBySlug(db, slug);
-  if (g?.owner_id !== u.id) return ctx.send(403, { error: "only the owner manages access" });
+  if (!(await accessFor(u, slug, g)).is_owner)
+    return ctx.send(403, { error: "only the owner manages access" });
   const target = await q.userByHandle(db, ctx.params.handle);
   if (!target) return ctx.send(404, { error: `no user '${ctx.params.handle}'` });
   const remaining = (await q.collaboratorsOf(db, slug)).filter(c => c.handle !== target.handle && c.role === "maintainer").map(c => c.handle);
@@ -1173,6 +1419,331 @@ gw.route("GET", "/api/games/:slug/printings", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   ctx.send(200, JSON.parse((await store.readFile(slug, "components/printings.json")).toString()));
 }, "printing/edition data");
+const DECK_ID = /^[a-z0-9][a-z0-9_-]{1,63}$/;
+function deckInput(body, expectedId = null) {
+  const deck = body?.deck;
+  if (!deck || typeof deck !== "object" || Array.isArray(deck))
+    throw Object.assign(new Error("body must contain {deck: {...}, base_ref}"), { status: 422 });
+  if (!DECK_ID.test(String(deck.id || "")) || (expectedId && deck.id !== expectedId))
+    throw Object.assign(new Error(expectedId ? "deck.id must match the stable deck ID in the URL" : "deck.id must be a stable lowercase ID"), { status: 422 });
+  if (typeof deck.name !== "string" || !deck.name.trim() || deck.name.length > 160)
+    throw Object.assign(new Error("deck.name must be 1–160 characters"), { status: 422 });
+  if (deck.author != null && (typeof deck.author !== "string" || deck.author.length > 160))
+    throw Object.assign(new Error("deck.author must be at most 160 characters"), { status: 422 });
+  if (deck.notes != null && (typeof deck.notes !== "string" || deck.notes.length > 10000))
+    throw Object.assign(new Error("deck.notes must be at most 10,000 characters"), { status: 422 });
+  for (const [label, values] of [["cards", deck.cards], ["printings", deck.printings]]) {
+    if (label === "printings" && values == null) continue;
+    if (!values || typeof values !== "object" || Array.isArray(values) || !Object.keys(values).length || Object.keys(values).length > 10000)
+      throw Object.assign(new Error(`deck.${label} must be a non-empty quantity map`), { status: 422 });
+    for (const [id, quantity] of Object.entries(values))
+      if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(id) || !Number.isInteger(quantity) || quantity < 1 || quantity > 10000)
+        throw Object.assign(new Error(`deck.${label}.${id || "?"} must be an integer from 1 to 10,000`), { status: 422 });
+  }
+  return deck;
+}
+function deckDocuments(dir) {
+  const root = join(dir, "decks");
+  if (!existsSync(root)) return [];
+  return readdirSync(root).filter(name => name.endsWith(".json")).sort().map(name => {
+    const path = join(root, name), deck = JSON.parse(readFileSync(path, "utf8"));
+    const check = py("check_deck.py", [dir, path]);
+    return { ...deck, _legal: check.status === 0,
+      _report: String(check.stdout || check.stderr || "").trim().split("\n").filter(Boolean),
+      _violations: String(check.stdout || "").split("\n").map(line => line.trim()).filter(line => line.startsWith("ILLEGAL")) };
+  });
+}
+async function deckCandidate(slug, deck, ref) {
+  const materialized = await store.materialize(slug, ref);
+  try {
+    const rel = `decks/${deck.id}.json`, path = join(materialized.dir, rel);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify(deck, null, 2) + "\n");
+    const validation = py("validate.py", [materialized.dir]);
+    const legality = py("check_deck.py", [materialized.dir, path]);
+    return { rel, validation: { ok: validation.status === 0,
+      report: `${validation.stdout || ""}\n${validation.stderr || ""}`.trim().split("\n").filter(Boolean) },
+      legality: { legal: legality.status === 0,
+        report: `${legality.stdout || ""}\n${legality.stderr || ""}`.trim().split("\n").filter(Boolean) } };
+  } finally { materialized.cleanup(); }
+}
+gw.route("GET", "/api/games/:slug/decks", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx), ref = await store.headSha(slug), materialized = await store.materialize(slug, ref);
+  try {
+    const cards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
+    const printings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
+    const formats = [];
+    for (const name of existsSync(join(materialized.dir, "formats")) ? readdirSync(join(materialized.dir, "formats")).sort() : []) {
+      if (!/\.(?:json|ya?ml)$/i.test(name)) continue;
+      const raw = readFileSync(join(materialized.dir, "formats", name), "utf8");
+      const doc = name.endsWith(".json") ? JSON.parse(raw) : yaml.load(raw);
+      formats.push(...(Array.isArray(doc) ? doc : [doc]));
+    }
+    ctx.send(200, { ref, decks: deckDocuments(materialized.dir), cards, printings,
+      formats: formats.map(format => ({ id: format.id, name: format.name, deck_rules: format.deck_rules || null })),
+      access: { signed_in: !!user, can_write: await canWrite(user, slug) } });
+  } finally { materialized.cleanup(); }
+}, "saved deck combinations, exact printing choices, legality, and edit access");
+gw.route("POST", "/api/games/:slug/decks/preview", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx); if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  let body, deck;
+  try { body = await json(ctx, 256 * 1024); deck = deckInput(body); }
+  catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
+  const ref = await store.headSha(slug);
+  if (body.base_ref && body.base_ref !== ref)
+    return ctx.send(409, { error: "the game changed after this deck draft opened; reload before reviewing", base_ref: body.base_ref, current_ref: ref });
+  const candidate = await deckCandidate(slug, deck, ref);
+  if (!candidate.validation.ok)
+    return ctx.send(422, { ok: false, written: false, ref, ...candidate, error: "deck candidate failed complete game validation" });
+  ctx.setHeader("cache-control", "private, no-store");
+  ctx.send(200, { ok: true, written: false, ref, ...candidate,
+    totals: { cards: Object.values(deck.cards).reduce((sum, quantity) => sum + quantity, 0), unique_cards: Object.keys(deck.cards).length,
+      exact_printings: Object.keys(deck.printings || {}).length } });
+}, "validate a saved-deck draft and run format legality without writing");
+gw.route("PUT", "/api/games/:slug/decks/:deck", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx); if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  let body, deck;
+  try { body = await json(ctx, 256 * 1024); deck = deckInput(body, ctx.params.deck); }
+  catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
+  const currentRef = await store.headSha(slug);
+  if (body.base_ref !== currentRef)
+    return ctx.send(409, { error: "the game changed after this deck draft opened; reload before committing", base_ref: body.base_ref, current_ref: currentRef });
+  const content = JSON.stringify(deck, null, 2) + "\n", rel = `decks/${deck.id}.json`;
+  const before = (await store.readFile(slug, rel))?.toString() || "";
+  if (body.create_only && before)
+    return ctx.send(409, { error: "a saved build already uses this stable ID; choose another ID or edit the existing build" });
+  if (before === content) return ctx.send(200, { saved: false, message: "deck already matches", ref: currentRef });
+  const candidate = await deckCandidate(slug, deck, currentRef);
+  if (!candidate.validation.ok)
+    return ctx.send(422, { saved: false, ...candidate, error: "deck candidate failed complete game validation" });
+  if (await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { error: "the game changed during deck validation; reload before committing" });
+  const total = Object.values(deck.cards).reduce((sum, quantity) => sum + quantity, 0);
+  const message = `decks: ${before ? "update" : "add"} ${deck.name}\n\n${total} cards · ${Object.keys(deck.cards).length} identities · ${candidate.legality.legal ? "legal" : "work in progress"} · exact printing choices ${deck.printings ? "locked" : "not locked"}`;
+  const { sha } = await store.writeFiles(slug, [{ path: rel, content }], message, `${user.handle} <${user.email}>`);
+  ctx.send(200, { saved: true, commit: sha, path: rel, legality: candidate.legality,
+    totals: { cards: total, unique_cards: Object.keys(deck.cards).length, exact_printings: Object.keys(deck.printings || {}).length } });
+}, "commit one legality-checked saved deck with exact production printing choices");
+function componentSetupDocuments(dir) {
+  const root = join(dir, "setups");
+  if (!existsSync(root)) return [];
+  return readdirSync(root).filter(name => /\.(?:json|ya?ml)$/i.test(name)).sort().map(name => {
+    const path = `setups/${name}`, raw = readFileSync(join(root, name), "utf8");
+    return { path, document: name.endsWith(".json") ? JSON.parse(raw) : yaml.load(raw) };
+  });
+}
+function componentSetupBytes(path, document, before = "") {
+  if (path.toLowerCase().endsWith(".json")) return `${JSON.stringify(document, null, 2)}\n`;
+  const source = YAML.parseDocument(before, { keepSourceTokens: true });
+  if (source.errors.length) throw new Error(`existing setup YAML is invalid: ${source.errors[0].message}`);
+  source.set("pieces", document.pieces || []);
+  return String(source);
+}
+gw.route("GET", "/api/games/:slug/components/pieces", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx), raw = await store.readFile(slug, "components/tokens.json");
+  const ref = await store.headSha(slug);
+  const materialized = await store.materialize(slug, ref);
+  try {
+    let design;
+    try { design = loadComponentDesign(materialized.dir); } catch (error) {
+      return ctx.send(422, { error: `component design is invalid: ${error.message}` });
+    }
+    ctx.send(200, { ref, pieces: raw ? JSON.parse(raw.toString()) : [], design,
+      setups: componentSetupDocuments(materialized.dir), design_source: COMPONENT_DESIGN_PATH,
+      inferred_design: !(await store.readFile(slug, COMPONENT_DESIGN_PATH)),
+      access: { signed_in: !!user, can_write: await canWrite(user, slug) } });
+  } finally { materialized.cleanup(); }
+}, "versioned pieces plus reusable visual families");
+gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx); if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  const body = await json(ctx), pieces = body?.pieces, design = body?.design || defaultComponentDesign(), setup = body?.setup || null;
+  if (!Array.isArray(pieces) || !design || typeof design !== "object" || Array.isArray(design))
+    return ctx.send(422, { error: "body must contain {pieces: [], design: {}, setup?: {path, document}}}" });
+  if (setup && (!/^setups\/[A-Za-z0-9_.-]+\.(?:json|ya?ml)$/.test(setup.path || "")
+    || !setup.document || typeof setup.document !== "object" || Array.isArray(setup.document)))
+    return ctx.send(422, { error: "setup must contain a safe setups/*.yaml or .json path and document object" });
+  const ref = await store.headSha(slug);
+  if (body.base_ref && body.base_ref !== ref)
+    return ctx.send(409, { error: "Component source changed since this draft opened. Reload Piece Studio before reviewing it.",
+      base_ref: body.base_ref, current_ref: ref, written: false });
+  const materialized = await store.materialize(slug, ref);
+  try {
+    const pieceContent = `${JSON.stringify(pieces, null, 2)}\n`, designContent = `${JSON.stringify(design, null, 2)}\n`;
+    const piecePath = join(materialized.dir, "components/tokens.json"), designPath = join(materialized.dir, COMPONENT_DESIGN_PATH);
+    mkdirSync(dirname(piecePath), { recursive: true }); mkdirSync(dirname(designPath), { recursive: true });
+    writeFileSync(piecePath, pieceContent); writeFileSync(designPath, designContent);
+    if (setup) {
+      const path = join(materialized.dir, setup.path);
+      if (!existsSync(path)) return ctx.send(422, { error: `setup '${setup.path}' does not exist; create setup documents through the setup workflow` });
+      try { writeFileSync(path, componentSetupBytes(setup.path, setup.document, readFileSync(path, "utf8"))); }
+      catch (error) { return ctx.send(422, { error: error.message }); }
+    }
+    const validation = py("validate.py", [materialized.dir]);
+    if (validation.status !== 0) return ctx.send(422, { error: "component design failed validation",
+      report: `${validation.stdout || ""}\n${validation.stderr || ""}`.trim().split("\n") });
+    const candidateHash = createHash("sha256").update(pieceContent).update(designContent)
+      .update(JSON.stringify(setup || null)).digest("hex");
+    let built;
+    try { built = buildComponentProduction(materialized.dir, { sourceRef: `draft:${candidateHash.slice(0, 16)}@${ref.slice(0, 12)}` }); }
+    catch (error) { return ctx.send(422, { error: `component production proof failed: ${error.message}` }); }
+    const previewFiles = [built.manifest.cut_sheets[0], built.manifest.back_cut_sheets[0],
+      built.manifest.large_piece_tiles[0]?.files?.[0]?.file].filter(Boolean);
+    ctx.setHeader("cache-control", "private, no-store");
+    ctx.send(200, { ok: true, written: false, ref, manifest: built.manifest,
+      previews: previewFiles.map(file => ({ file, svg: built.entries.get(file).toString("utf8") })) });
+  } finally { materialized.cleanup(); }
+}, "validate an uncommitted component candidate and render its exact manufacturing proof without writing");
+gw.route("PUT", "/api/games/:slug/components/pieces", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx); if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  const body = await json(ctx), pieces = body?.pieces, design = body?.design || defaultComponentDesign(), setup = body?.setup || null;
+  if (!Array.isArray(pieces) || !design || typeof design !== "object" || Array.isArray(design))
+    return ctx.send(422, { error: "body must contain {pieces: [], design: {}, setup?: {path, document}}}" });
+  if (setup && (!/^setups\/[A-Za-z0-9_.-]+\.(?:json|ya?ml)$/.test(setup.path || "")
+    || !setup.document || typeof setup.document !== "object" || Array.isArray(setup.document)))
+    return ctx.send(422, { error: "setup must contain a safe setups/*.yaml or .json path and document object" });
+  const currentRef = await store.headSha(slug);
+  if (body.base_ref && body.base_ref !== currentRef)
+    return ctx.send(409, { saved: false, error: "Component source changed since this draft opened. Reload Piece Studio; Forge did not overwrite it.",
+      base_ref: body.base_ref, current_ref: currentRef });
+  const pieceContent = JSON.stringify(pieces, null, 2) + "\n", designContent = JSON.stringify(design, null, 2) + "\n";
+  const beforePieces = (await store.readFile(slug, "components/tokens.json"))?.toString() || "[]\n";
+  const beforeDesign = (await store.readFile(slug, COMPONENT_DESIGN_PATH))?.toString() || "";
+  const beforeSetupBuffer = setup ? await store.readFile(slug, setup.path) : null;
+  if (setup && !beforeSetupBuffer) return ctx.send(422, { error: `setup '${setup.path}' does not exist; create setup documents through the setup workflow` });
+  let setupContent = null, setupChanged = false;
+  try {
+    if (setup) {
+      const beforeSetupText = beforeSetupBuffer.toString(), beforeSetupDocument = setup.path.toLowerCase().endsWith(".json")
+        ? JSON.parse(beforeSetupText) : yaml.load(beforeSetupText);
+      setupChanged = JSON.stringify(beforeSetupDocument?.pieces || []) !== JSON.stringify(setup.document.pieces || []);
+      if (setupChanged) setupContent = componentSetupBytes(setup.path, setup.document, beforeSetupText);
+    }
+  }
+  catch (error) { return ctx.send(422, { error: error.message }); }
+  if (beforePieces === pieceContent && beforeDesign === designContent && !setupChanged)
+    return ctx.send(200, { saved: false, message: "no component changes" });
+  const validation = await validateCandidate(slug, "components/tokens.json", pieceContent,
+    { [COMPONENT_DESIGN_PATH]: designContent, ...(setupChanged ? { [setup.path]: setupContent } : {}) });
+  if (!validation.ok) return ctx.send(422, { saved: false, error: "component design failed validation", report: validation.report });
+  const beforeRows = JSON.parse(beforePieces), changes = diffRows(beforeRows, pieces);
+  const baselineDesign = beforeDesign ? JSON.parse(beforeDesign) : defaultComponentDesign();
+  const familiesChanged = design.families.filter(family => JSON.stringify(family)
+    !== JSON.stringify(baselineDesign.families.find(candidate => candidate.id === family.id))).map(family => family.id);
+  const summary = `pieces: ${changes.changed.length} changed, ${changes.added.length} added, ${changes.removed.length} removed${setupChanged ? "; setup placement changed" : ""}`;
+  const files = [
+    { path: "components/tokens.json", content: pieceContent },
+    { path: COMPONENT_DESIGN_PATH, content: designContent },
+    ...(setupChanged ? [{ path: setup.path, content: setupContent }] : []),
+  ];
+  const { sha } = await store.writeFiles(slug, files,
+  `components: update production pieces\n\n${summary}\nFamilies changed: ${familiesChanged.join(", ") || "none"}`,
+  `${user.handle} <${user.email}>`);
+  ctx.send(200, { saved: true, commit: sha, changes, families_changed: familiesChanged, setup_changed: setupChanged, summary });
+}, "commit component data, reusable visual families, and an optional setup placement atomically");
+gw.route("POST", "/api/games/:slug/components/pieces/:piece/art", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx); if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  const side = ctx.url.searchParams.get("side") || "front";
+  if (!new Set(["front", "back"]).has(side)) return ctx.send(422, { error: "side must be front or back" });
+  const rel = ctx.url.searchParams.get("path") || "";
+  if (!/^assets\/components\/[A-Za-z0-9._-]+$/.test(rel) || rel.includes(".."))
+    return ctx.send(422, { error: "component art path must be a safe file under assets/components/" });
+  const bytes = await readBody(ctx.req, MAX_ASSET_BYTES + 1);
+  try { assertAssetAllowed(rel, bytes.length); inspectAsset(rel, bytes); }
+  catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
+  const pieces = JSON.parse((await store.readFile(slug, "components/tokens.json"))?.toString() || "[]");
+  const piece = pieces.find(candidate => candidate.id === ctx.params.piece);
+  if (!piece) return ctx.send(404, { error: `no component '${ctx.params.piece}'` });
+  if (side === "back" && !piece.back) return ctx.send(422, { error: `component '${piece.id}' has no back face` });
+  if (side === "back") piece.back.art = rel; else piece.art = rel;
+  const status = ctx.url.searchParams.get("rights_status") || "original";
+  if (!["original", "commissioned", "licensed", "public-domain", "permission-only", "generated"].includes(status))
+    return ctx.send(422, { error: "rights_status is invalid" });
+  const source = ctx.url.searchParams.get("source") || undefined;
+  if (["licensed", "permission-only"].includes(status) && !source)
+    return ctx.send(422, { error: "licensed component art requires a source or permission record" });
+  const redistribution = ctx.url.searchParams.get("redistribution") || (status === "permission-only" ? "private-only" : "allowed");
+  if (!["allowed", "restricted", "private-only"].includes(redistribution))
+    return ctx.send(422, { error: "redistribution status is invalid" });
+  const game = await q.gameBySlug(db, slug), creator = ctx.url.searchParams.get("creator") || user.handle;
+  const license = ctx.url.searchParams.get("license") || game?.license || "unknown";
+  const rights = setFileRight(await store.readFile(slug, RIGHTS_MANIFEST), rel,
+    { license, status, copyright: [creator], redistribution, source },
+    { license: game?.license || "unknown", owner: game?.owner_handle || user.handle, status: "unknown" });
+  const pieceContent = JSON.stringify(pieces, null, 2) + "\n", rightsContent = rightsReceiptBytes(rights);
+  const validation = await validateCandidate(slug, rel, bytes,
+    { "components/tokens.json": pieceContent, [RIGHTS_MANIFEST]: rightsContent });
+  if (!validation.ok) return ctx.send(422, { error: "component art candidate failed validation", report: validation.report });
+  const { mode, oid, sha } = await store.putAsset(slug, rel, bytes, `${user.handle} <${user.email}>`, [
+    { path: "components/tokens.json", content: pieceContent }, { path: RIGHTS_MANIFEST, content: rightsContent },
+  ]);
+  await reindexGames();
+  ctx.send(200, { saved: true, commit: sha, piece: piece.id, side, art: rel, mode, oid, rights: { creator, license, status, redistribution, source } });
+}, "upload and assign component art with its rights declaration in one commit");
+gw.route("GET", "/api/games/:slug/components/svg/:family", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const sha = await store.headSha(slug), materialized = await store.materialize(slug, sha);
+  try {
+    const design = loadComponentDesign(materialized.dir);
+    const piecesPath = join(materialized.dir, "components/tokens.json");
+    const pieces = existsSync(piecesPath) ? JSON.parse(readFileSync(piecesPath, "utf8")) : [];
+    const built = buildComponentSvgProject(design, pieces, { sourceRef: sha });
+    const family = built.manifest.families.find(item => item.id === ctx.params.family);
+    if (!family) return ctx.send(404, { error: `no component family '${ctx.params.family}'` });
+    // This is committed source, but the URL follows HEAD rather than naming
+    // the ref. Public callers revalidate; private source is never stored.
+    ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
+    ctx.send(200, { ok: true, ref: sha, family: family.id, source_hash: built.manifest.source_hash,
+      file: family.file, round_trip: built.manifest.round_trip, svg: built.entries.get(family.file).toString("utf8") });
+  } finally { materialized.cleanup(); }
+}, "fetch one exact-ref component-family SVG working copy");
+gw.route("POST", "/api/games/:slug/components/import/svg", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await requireAuth(ctx); if (!user) return;
+  const direct = await canWrite(user, slug), commit = ctx.url.searchParams.get("commit") === "1";
+  const source = await readBody(ctx.req, MAX_COMPONENT_SVG_BYTES + 1);
+  if (source.length > MAX_COMPONENT_SVG_BYTES) return ctx.send(413, { error: "component SVG is larger than 5 MB" });
+  let destination = slug, propose = false;
+  if (commit && !direct) {
+    try { destination = await ensureImportedFork(user, slug); propose = true; }
+    catch (error) { return ctx.send(error.code || 500, { error: error.message }); }
+  }
+  const materialized = await store.materialize(destination, "HEAD");
+  try {
+    const sourcePath = join(materialized.dir, COMPONENT_DESIGN_PATH), sourceExists = existsSync(sourcePath);
+    let result;
+    try { result = analyzeComponentSvgImport(loadComponentDesign(materialized.dir), source, { sourceExists }); }
+    catch (error) { return ctx.send(422, { error: error.message || "invalid component-family SVG" }); }
+    const response = { ok: result.conflicts.length === 0, mode: commit ? "commit" : "dry-run", family: result.family,
+      destination: commit ? destination : (direct ? slug : `${slug}-${user.handle}`.slice(0, 60)),
+      propose: commit ? propose : !direct, source_hash: result.source_hash, current_source_hash: result.current_source_hash,
+      stale: result.stale, changes: result.changes, conflicts: result.conflicts, warnings: result.warnings,
+      objects: result.objects, changed_files: result.files.map(file => file.path), candidate_design: result.candidate };
+    if (!commit) return ctx.send(200, response);
+    if (result.conflicts.length) return ctx.send(409, { ...response, error: "component SVG conflicts with newer Forge family changes" });
+    if (!result.files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
+    const current = await store.readFile(destination, COMPONENT_DESIGN_PATH);
+    if ((current == null) !== !sourceExists || (current != null && sourceExists && !Buffer.from(current).equals(readFileSync(sourcePath))))
+      return ctx.send(409, { ...response, error: "Component design changed outside this review. Reload before committing; Forge did not overwrite it.",
+        dirty_files: [COMPONENT_DESIGN_PATH] });
+    writeFileSync(sourcePath, result.files[0].content);
+    const validation = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), materialized.dir], { encoding: "utf8" });
+    if (validation.status !== 0) return ctx.send(422, { ...response, error: "candidate component SVG failed game validation",
+      report: `${validation.stdout || ""}\n${validation.stderr || ""}`.trim().split("\n") });
+    const message = `components: import SVG family ${result.family} (${result.changes.length} field${result.changes.length === 1 ? "" : "s"})`;
+    const { sha } = await store.writeFiles(destination, result.files, message, `${user.handle} <${user.email}>`);
+    if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
+    const pr = await openOrRefreshImportedPr({ u: user, slug, destination, message,
+      body: "Imported from a Forge-generated component-family SVG after a bounded field-level dry run and full game validation." });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
+  } finally { materialized.cleanup(); }
+}, "dry-run, commit, or fork+PR a bounded component-family SVG working copy");
 gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
@@ -1258,18 +1829,185 @@ gw.route("PUT", "/api/games/:slug/prototype", async (ctx) => {
   ctx.send(200, { saved: true, commit: sha, iteration: prototype.iteration || 1,
     materials: (prototype.materials || []).length, brief_status: briefStatus });
 }, "commit a validated runnable prototype and advance the design brief atomically");
+gw.route("POST", "/api/games/:slug/design/card-starter", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await requireAuth(ctx); if (!u) return;
+  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
+  const body = await json(ctx, 64 * 1024), commit = ctx.url.searchParams.get("commit") === "1";
+  const currentHead = await store.headSha(slug), requestedBase = String(body?.base_ref || "");
+  if (commit && requestedBase !== currentHead)
+    return ctx.send(409, { error: "the game changed after this starter was reviewed; reopen the wizard" });
+  const materialized = await store.materialize(slug, currentHead);
+  try {
+    const currentCards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
+    if (currentCards.length) return ctx.send(409, { error: "the first-card wizard only applies to an empty project" });
+    if (existsSync(join(materialized.dir, "templates", "layout.yaml")))
+      return ctx.send(409, { error: "this project already has a card layout; add cards through Studio or CSV" });
+    const game = yaml.load(readFileSync(join(materialized.dir, "game.yaml"), "utf8")) || {};
+    let built;
+    try { built = buildCardStarter(game, body?.starter || body); }
+    catch (error) { return ctx.send(422, { error: error.message || "invalid card starter" }); }
+    for (const file of built.files) {
+      const full = join(materialized.dir, file.path);mkdirSync(dirname(full), { recursive: true });writeFileSync(full, file.content);
+    }
+    const checked = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), materialized.dir], { encoding: "utf8" });
+    const validation = { ok: checked.status === 0,
+      report: `${checked.stdout || ""}\n${checked.stderr || ""}`.trim().split("\n").filter(Boolean) };
+    const response = { ok: validation.ok, mode: commit ? "commit" : "dry-run", base_ref: currentHead,
+      changed_files: built.files.map(file => file.path), starter: built.starter,
+      cards: built.cards, printings: built.printings, layout: built.layout, validation };
+    if (!validation.ok) return ctx.send(422, { ...response, error: "starter candidate failed game validation" });
+    if (!commit) return ctx.send(200, response);
+    if (await store.headSha(slug) !== currentHead)
+      return ctx.send(409, { ...response, error: "the game changed during starter validation; reopen the wizard" });
+    const message = `design: create first ${built.cards.length}-card component system`;
+    const { sha } = await store.writeFiles(slug, built.files,
+      `${message}\n\n${built.starter.template} ${built.starter.size} template; ${built.starter.fields.join(", ") || "no custom fields"}; shared card back; A4 and US Letter home-print target`,
+      `${u.handle} <${u.email}>`);
+    ctx.send(200, { ...response, saved: true, commit: sha, message });
+  } finally { materialized.cleanup(); }
+}, "review and atomically create an empty project's first cards, fields, front layout, shared back, and print geometry");
+const PRINT_PROFILE_PATH = "templates/print.yaml";
+async function inspectPrintProfileAsset(slug, profile) {
+  if (profile?.press?.target !== "custom-cmyk-pdfx1a") return null;
+  const path = String(profile.press.icc_profile || "");
+  if (!/^assets\/[A-Za-z0-9._/-]+\.(?:icc|icm)$/i.test(path) || path.split("/").includes(".."))
+    throw Object.assign(new Error("custom CMYK output requires a safe .icc or .icm repository asset"), { status: 422 });
+  let bytes;
+  try { bytes = await store.getAsset(slug, path); }
+  catch { bytes = null; }
+  if (!bytes) throw Object.assign(new Error(`printer ICC profile is missing at this version: ${path}`), { status: 422 });
+  let inspected;
+  try { inspected = inspectAsset(path, bytes); }
+  catch (error) { throw Object.assign(new Error(error.message), { status: error.status || 422 }); }
+  const materialized = await store.materialize(slug, "HEAD");
+  let right = null;
+  try { right = auditRights(materialized.dir).files.find(file => file.path === path) || null; }
+  finally { materialized.cleanup(); }
+  if (!right || ["", "unknown"].includes(String(right.license || "").toLowerCase()) || right.status === "unknown")
+    throw Object.assign(new Error(`printer ICC profile rights are not documented: ${path}`), { status: 422 });
+  if (["licensed", "permission-only"].includes(right.status) && !right.source)
+    throw Object.assign(new Error(`printer ICC profile license or permission source is missing: ${path}`), { status: 422 });
+  if (right.redistribution !== "allowed")
+    throw Object.assign(new Error(`printer ICC profile cannot be embedded because redistribution is '${right.redistribution || "restricted"}'`), { status: 422 });
+  return { path, sha256: hashBuffer(bytes), ...inspected, rights: right };
+}
+gw.route("GET", "/api/games/:slug/design/print-profile", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx), raw = await store.readFile(slug, PRINT_PROFILE_PATH);
+  let profile = defaultCardPrintProfile();
+  if (raw) {
+    try { profile = yaml.load(raw.toString()) || profile; }
+    catch (error) { return ctx.send(422, { error: `print profile is invalid YAML: ${error.message}` }); }
+  }
+  const cards = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
+  const printings = JSON.parse((await store.readFile(slug, "components/printings.json")).toString());
+  const colorProfiles = walkRepo(await store.dir(slug)).filter(item => REPO_COLOR_PROFILE_EXTS.has(repoExt(item.path)))
+    .map(item => ({ path: item.path, bytes: item.size }));
+  ctx.send(200, { profile, source: raw ? PRINT_PROFILE_PATH : "built-in default", base_ref: await store.headSha(slug),
+    cards: cards.map(card => ({ id: card.id, name: card.name })),
+    printings: printings.map(printing => ({ id: printing.id, card_id: printing.card_id,
+      set_id: printing.set_id, collector_number: printing.collector_number, variant: printing.variant || null })),
+    access: { authenticated: !!user, can_write: await canWrite(user, slug) },
+    capabilities: { exact_selection: true, exact_printing_quantities: true, a4_and_letter: true, duplex_mirroring: true,
+      sleeve_profile: ["japanese-62x89"], embedded_pdf_font: true, vector_black: "100% K",
+      crop_mark_sides: ["both", "fronts", "backs"],
+      press_rgb: true, cmyk: "project-supplied output ICC", pdf_x: "PDF/X-1a:2003 structurally preflighted candidate",
+      spot_dielines: "versioned named Separation color, component-trim geometry, stroke overprint",
+      color_profiles: colorProfiles,
+      production_targets: PRINT_TARGET_REGISTRY.targets } });
+}, "versioned card-selection, home-print, sleeve, RGB, profile-driven CMYK/PDF-X, and spot-dieline contract");
+gw.route("POST", "/api/games/:slug/design/print-profile", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await authedUser(ctx), body = await json(ctx, 128 * 1024);
+  if (!body?.profile || typeof body.profile !== "object" || Array.isArray(body.profile))
+    return ctx.send(422, { error: "body must contain a print profile object" });
+  const content = yaml.dump(body.profile, { noRefs: true, lineWidth: -1, sortKeys: false });
+  const validation = await validateCandidate(slug, PRINT_PROFILE_PATH, content);
+  let profileAsset = null;
+  if (validation.ok) {
+    try { profileAsset = await inspectPrintProfileAsset(slug, body.profile); }
+    catch (error) { return ctx.send(error.status || 422, { error: error.message, validation }); }
+  }
+  const cards = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
+  const selectedIds = body.profile.selection?.card_ids || [], exactQuantities = body.profile.selection?.printing_quantities || {};
+  const allPrintings = JSON.parse((await store.readFile(slug, "components/printings.json")).toString());
+  const exactIds = new Set(Object.keys(exactQuantities));
+  const printings = exactIds.size
+    ? allPrintings.filter(printing => exactIds.has(printing.id)).map(printing => ({ ...printing, quantity: exactQuantities[printing.id] }))
+    : allPrintings.filter(printing => !selectedIds.length || selectedIds.includes(printing.card_id));
+  const represented = new Set(printings.map(printing => printing.card_id));
+  const selected = cards.filter(card => represented.has(card.id));
+  const productionTarget = PRINT_TARGET_REGISTRY.targets.find(target => target.id === (body.profile.press?.target || "generic-srgb"));
+  const response = { ok: validation.ok, mode: "dry-run", profile: body.profile,
+    base_ref: await store.headSha(slug), validation, selected_cards: selected.map(card => ({ id: card.id, name: card.name })),
+    selected_printings: printings.map(printing => ({ id: printing.id, card_id: printing.card_id,
+      set_id: printing.set_id, collector_number: printing.collector_number, variant: printing.variant || null,
+      quantity: Math.max(1, Number(printing.quantity) || 1) })),
+    printings: printings.length, physical_cards: printings.reduce((sum, printing) => sum + Math.max(1, Number(printing.quantity) || 1), 0),
+    exact_printing_quantities: exactIds.size ? exactQuantities : null,
+    production_target: productionTarget || null, profile_asset: profileAsset,
+    access: { authenticated: !!user, can_write: await canWrite(user, slug) } };
+  if (!validation.ok) return ctx.send(422, { ...response, error: "print profile failed project validation" });
+  ctx.send(200, response);
+}, "dry-run and summarize an exact card-print profile without writing");
+gw.route("PUT", "/api/games/:slug/design/print-profile", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await requireAuth(ctx); if (!user) return;
+  const direct = await canWrite(user, slug);
+  const body = await json(ctx, 128 * 1024), baseRef = String(body?.base_ref || ""), currentHead = await store.headSha(slug);
+  if (baseRef !== currentHead) return ctx.send(409, { error: "the game changed after this print profile was opened; reload before committing" });
+  if (!body?.profile || typeof body.profile !== "object" || Array.isArray(body.profile))
+    return ctx.send(422, { error: "body must contain a print profile object" });
+  const content = yaml.dump(body.profile, { noRefs: true, lineWidth: -1, sortKeys: false });
+  const validation = await validateCandidate(slug, PRINT_PROFILE_PATH, content);
+  if (!validation.ok) return ctx.send(422, { error: "print profile failed project validation", report: validation.report });
+  try { await inspectPrintProfileAsset(slug, body.profile); }
+  catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
+  const before = (await store.readFile(slug, PRINT_PROFILE_PATH))?.toString() || "";
+  if (before === content) return ctx.send(200, { saved: false, message: "print profile already matches" });
+  if (await store.headSha(slug) !== currentHead)
+    return ctx.send(409, { error: "the game changed during print-profile validation; reload before committing" });
+  const selected = body.profile.selection?.card_ids?.length || 0;
+  const title = `print: configure ${body.profile.preset || "custom"} profile`;
+  const markSides = body.profile.home?.crop_marks === "none" ? "no home crop marks" : `${body.profile.home?.crop_mark_sides || "both"}-page home crop marks`;
+  const finishing = body.profile.press?.dieline?.enabled ? `; /${body.profile.press.dieline.spot_name} overprinting trim dieline` : "";
+  const message = `${title}\n\n${selected ? `${selected} selected card identities` : "all cards"}; ${body.profile.home?.fronts_only ? "fronts only" : "duplex"}; ${markSides}; ${body.profile.press?.color_space || "sRGB"} press candidate${finishing}`;
+  if (!direct) {
+    let destination;
+    try { destination = await ensureImportedFork(user, slug); }
+    catch (error) { return ctx.send(error.code || 500, { error: error.message }); }
+    const sourceProfile = before || yaml.dump(defaultCardPrintProfile(), { noRefs: true, lineWidth: -1, sortKeys: false });
+    const forkProfile = (await store.readFile(destination, PRINT_PROFILE_PATH))?.toString()
+      || yaml.dump(defaultCardPrintProfile(), { noRefs: true, lineWidth: -1, sortKeys: false });
+    if (forkProfile !== sourceProfile)
+      return ctx.send(409, { error: "your edition already has a different print profile; open that edition and review it before proposing", fork: destination });
+    const forkValidation = await validateCandidate(destination, PRINT_PROFILE_PATH, content);
+    if (!forkValidation.ok) return ctx.send(422, { error: "edition print profile failed project validation", report: forkValidation.report });
+    const { sha } = await store.writeFiles(destination, [{ path: PRINT_PROFILE_PATH, content }], message,
+      `${user.handle} <${user.email}>`);
+    const pr = await openOrRefreshImportedPr({ u: user, slug, destination, message: title,
+      body: "Versioned card selection and print-production settings, reviewed against exact rendered faces and physical quantities." });
+    return ctx.send(200, { saved: true, proposed: true, commit: sha, pr, fork: destination,
+      profile: body.profile, path: PRINT_PROFILE_PATH });
+  }
+  const { sha } = await store.writeFiles(slug, [{ path: PRINT_PROFILE_PATH, content }], message,
+    `${user.handle} <${user.email}>`);
+  ctx.send(200, { saved: true, commit: sha, profile: body.profile, path: PRINT_PROFILE_PATH });
+}, "validate and commit the exact card-print production profile");
 // VISUAL CARD DESIGN EDITOR (tools/hub_template.html's "Card design" tab): drag-and-drop
 // boxes onto a live card, bound to data fields by name -- writes the SAME templates/
 // layout.yaml the rest of the engine already reads (schemas/layout.schema.json,
-// layoutCard() in tools/hub_template.html). There is no YAML library in this Node
-// runtime, so layoutToYaml() below is a small deterministic serializer scoped to
+// layoutCard() in tools/hub_template.html). layoutToYaml() below is a small
+// deterministic serializer scoped to
 // exactly this schema's shape (block top-level keys, flow-map list items) -- the
 // same style examples/arcmage/templates/layout.yaml is hand-authored in, and
 // ordinary valid YAML (PyYAML/tools/build_hub.py + tools/validate.py need no
 // changes to read it). The browser has a matching desYamlStringify() (used by the
 // editor's raw-YAML power-user view) -- intentionally duplicated rather than
 // shared, but both MUST stay format-compatible; a round-trip smoke test covers this.
-const LAYOUT_FONT_KEYS = ["id", "family", "weight", "style"];
+const LAYOUT_FONT_KEYS = ["id", "family", "weight", "style", "asset", "local_asset"];
+const LAYOUT_BACK_KEYS = ["text", "bg", "color", "border_color", "border_mm"];
 const LAYOUT_ROW_CELL_KEYS = ["key", "label", "font", "size_pt", "color", "show_if"];
 const LAYOUT_REGION_KEYS = ["id", "type", "x", "y", "w", "h", "d", "shape", "src", "fallback_srcs", "text", "map", "glyph", "max", "credit", "fit",
   "font", "size_pt", "min_size_pt", "align", "valign", "color", "bg", "uppercase", "symbols",
@@ -1307,6 +2045,10 @@ function layoutToYaml(layout) {
   for (const k of ["w_mm", "h_mm", "bleed_mm", "radius_mm", "bg"])
     if (card[k] !== undefined && card[k] !== null) out.push(`  ${k}: ${layoutYamlVal(card[k])}`);
   out.push("");
+  if (L.back) {
+    out.push(`back: ${layoutYamlFlowMap(L.back, LAYOUT_BACK_KEYS)}`);
+    out.push("");
+  }
   if (Array.isArray(L.fonts) && L.fonts.length) {
     out.push("fonts:");
     for (const f of L.fonts) out.push(`  - ${layoutYamlFlowMap(f, LAYOUT_FONT_KEYS)}`);
@@ -1438,6 +2180,11 @@ gw.route("GET", "/api/games/:slug/repository/assets", async (ctx) => {
   let sourcePackages = null;
   try { sourcePackages = loadSourceAssets(dir); }
   catch (error) { return ctx.send(422, { error: `${SOURCE_ASSETS_MANIFEST}: ${error.message}` }); }
+  let artLibrary;
+  try { artLibrary = parseArtLibrary(await store.readFile(slug, ART_LIBRARY_MANIFEST)); }
+  catch (error) { return ctx.send(422, { error: error.message }); }
+  const artByPath = new Map(artLibrary.assets.map(record => [record.path, record]));
+  const commit = await store.headSha(slug);
   const packageByPath = new Map();
   for (const pack of sourcePackages?.packages || [])
     for (const file of [...pack.source_files, ...pack.previews]) {
@@ -1452,12 +2199,14 @@ gw.route("GET", "/api/games/:slug/repository/assets", async (ctx) => {
       extension: repoExt(item.path), category: repoCategory(item.path), kind: repoKind(item.path),
       previewable: REPO_IMAGE_EXTS.has(repoExt(item.path)) || REPO_AUDIO_EXTS.has(repoExt(item.path)),
       editable: isRepoText(item.path), used_by, packages: packageByPath.get(item.path) || [],
-      url: `/api/games/${encodeURIComponent(slug)}/repository/file/${item.path.split("/").map(encodeURIComponent).join("/")}` };
+      tags: artByPath.get(item.path)?.tags || [],
+      url: `/api/games/${encodeURIComponent(slug)}/repository/file/${item.path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(commit)}` };
   }).sort((a, b) => a.category.localeCompare(b.category) || a.path.localeCompare(b.path));
   const categories = Object.entries(items.reduce((out, item) => {
     out[item.category] = (out[item.category] || 0) + 1; return out;
   }, {})).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
-  ctx.send(200, { slug, commit: await store.headSha(slug), count: items.length, categories, items,
+  ctx.send(200, { slug, commit, count: items.length, categories, items,
+    art_library: artLibrary, art_library_path: ART_LIBRARY_MANIFEST,
     source_packages: sourceAssetMetadata(sourcePackages),
     access: { signed_in: !!u, can_write: await canWrite(u, slug), requires_fork: !!u && !await canWrite(u, slug) } });
 }, "inventory every reusable repository asset with category, usage, and editability");
@@ -1487,7 +2236,7 @@ gw.route("GET", "/api/games/:slug/repository/file/*", async (ctx) => {
     if (!buf) return ctx.send(404, { error: "no such file at this version" });
     const ext = repoExt(path);
     ctx.sendRaw(200, buf, { "content-type": MIME[ext] ?? "application/octet-stream",
-      "cache-control": ref ? "public, max-age=31536000, immutable" : "no-cache",
+      "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE),
       "content-disposition": `inline; filename="${path.split("/").pop().replace(/[\"\\]/g, "")}"` });
   } finally { if (cleanup) cleanup(); }
 }, "serve a reusable file from current HEAD or an exact historical ref");
@@ -1499,6 +2248,11 @@ gw.route("PUT", "/api/games/:slug/repository/file/*", async (ctx) => {
   const path = ctx.params["*"];
   if (!isReviewablePath(path) || !isRepoText(path))
     return ctx.send(422, { error: "only reviewable text, SVG, JSON, YAML, Markdown, and CSS game-source files can be edited here" });
+  if (OWNER_ONLY_REPO_PATHS.has(path)) {
+    const game = await q.gameBySlug(db, slug);
+    if (!(await accessFor(u, slug, game)).is_owner)
+      return ctx.send(403, { error: "this governance file can only be changed directly by the project owner; propose it through a fork and pull request" });
+  }
   if (path === "components/cards.json")
     return ctx.send(422, { error: "edit cards through the semantic card endpoint so Forge can generate a card diff" });
   const { content, message } = await json(ctx);
@@ -1546,9 +2300,11 @@ gw.route("POST", "/api/games/:slug/assets", async (ctx) => {
 
 gw.route("GET", "/api/games/:slug/rights", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const ref = ctx.url.searchParams.get("ref") || "HEAD";
-  const materialized = await store.materialize(slug, ref);
-  try { ctx.send(200, auditRights(materialized.dir, { sourceSha: await store.headSha(slug) })); }
+  const requestedRef = ctx.url.searchParams.get("ref") || "HEAD";
+  let ref, materialized;
+  try { ref = await store.resolveRef(slug, requestedRef); materialized = await store.materialize(slug, ref); }
+  catch (error) { return ctx.send(error.status || 422, { error: "that repository version is unavailable", detail: error.message }); }
+  try { ctx.send(200, auditRights(materialized.dir, { sourceSha: ref })); }
   finally { materialized.cleanup(); }
 }, "audit every source file against the repository rights manifest");
 
@@ -1556,7 +2312,7 @@ gw.route("PUT", "/api/games/:slug/rights", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
   const game = await q.gameBySlug(db, slug);
-  if (game?.owner_id && game.owner_id !== u.id)
+  if (!(await accessFor(u, slug, game)).is_owner)
     return ctx.send(403, { error: "only the project owner can make a rights declaration" });
   const body = await json(ctx), path = String(body.path || "");
   if (!isReviewablePath(path) || path === RIGHTS_MANIFEST || path === "forge/project.json")
@@ -1594,7 +2350,9 @@ gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
   catch (e) { return ctx.send(502, { error: e.message }); }
   if (!buf) return ctx.send(404, { error: "no such asset" });
   ctx.sendRaw(200, buf, { "content-type": MIME[rel.toLowerCase().split(".").pop()] ?? "application/octet-stream",
-    "cache-control": "public, max-age=31536000, immutable" });
+    // This endpoint follows repository HEAD and can change without its URL
+    // changing. Public callers must revalidate; private callers must not store.
+    "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE) });
 }, "serve asset, materializing LFS pointers");
 
 /* ---------- Affinity — committed data -> native production document ----------
@@ -1616,8 +2374,67 @@ function affinityBridgeOf(gameDir) {
   return allowed ? { configured: true, bridgeDir } : { configured: true, bridgeDir: null, error: "unsafe Affinity bridge_dir" };
 }
 
+const AFFINITY_SHA256_RE=/^[0-9a-f]{64}$/i;
+const AFFINITY_PREVIEW_RE=/^[a-z0-9][a-z0-9_.-]*\.png$/i;
+const pathWithin=(root,path)=>{
+  const rel=relative(root,path);
+  return rel===""||(rel!==".."&&!rel.startsWith(`..${sep}`));
+};
+function readAffinityJson(path){
+  if(!existsSync(path)||!lstatSync(path).isFile()||lstatSync(path).isSymbolicLink())return null;
+  if(statSync(path).size>2*1024*1024)return null;
+  try{return JSON.parse(readFileSync(path,"utf8"));}catch{return null;}
+}
+/** @param {string} bridgeDir
+ * @param {{slug?:string,sha?:string,file?:string,inputHash?:string,rendererHash?:string,outputHash?:string}} [options] */
+function affinityPreviewReceipt(bridgeDir,options={}){
+  const {slug,sha,file,inputHash,rendererHash,outputHash}=options;
+  try{
+    if(!existsSync(bridgeDir)||!lstatSync(bridgeDir).isDirectory()||lstatSync(bridgeDir).isSymbolicLink())
+      return {current:false,reason:"bridge unavailable"};
+    const bridgeReal=realpathSync(bridgeDir);
+    const inputPath=join(bridgeDir,"input.json"),statusPath=join(bridgeDir,"status.json");
+    const scriptPath=join(bridgeDir,"forge-affinity-sync.js");
+    const input=readAffinityJson(inputPath),status=readAffinityJson(statusPath);
+    if(!input||!status)return {current:false,reason:"missing input or render receipt"};
+    for(const path of [inputPath,statusPath,scriptPath]){
+      if(!existsSync(path)||!lstatSync(path).isFile()||lstatSync(path).isSymbolicLink()
+        ||!pathWithin(bridgeReal,realpathSync(path)))return {current:false,reason:"unsafe bridge receipt path"};
+    }
+    const actualSlug=slug||input.game,actualSha=sha||input.commit_sha,actualFile=file||input.render?.file;
+    if(input.kind!=="forge-affinity-input"||input.game!==actualSlug||input.commit_sha!==actualSha
+      ||!AFFINITY_SHA256_RE.test(input.input_hash||"")||!input.card?.id||!input.printing_id
+      ||!AFFINITY_PREVIEW_RE.test(actualFile||"")||input.render?.file!==actualFile)
+      return {current:false,reason:"input identity mismatch"};
+    const canonical=resolve(bridgeDir,"renders",actualSha,actualFile);
+    if(resolve(String(input.render?.absolute_path||""))!==canonical)
+      return {current:false,reason:"noncanonical preview path"};
+    if(status.state!=="ready"||status.game!==actualSlug||status.card_id!==input.card.id
+      ||status.printing_id!==input.printing_id||status.commit_sha!==actualSha
+      ||status.input_hash!==input.input_hash||status.preview_file!==actualFile
+      ||!AFFINITY_SHA256_RE.test(status.renderer_sha256||"")
+      ||!AFFINITY_SHA256_RE.test(status.preview_sha256||"")
+      ||!Number.isSafeInteger(status.preview_bytes)||status.preview_bytes<=0)
+      return {current:false,reason:"render receipt identity mismatch"};
+    if(inputHash!==undefined&&inputHash!==input.input_hash)return {current:false,reason:"requested input mismatch"};
+    if(rendererHash!==undefined&&rendererHash!==status.renderer_sha256)return {current:false,reason:"requested renderer mismatch"};
+    if(outputHash!==undefined&&outputHash!==status.preview_sha256)return {current:false,reason:"requested output mismatch"};
+    const renderer=readFileSync(scriptPath);
+    if(renderer.length>16*1024*1024||createHash("sha256").update(renderer).digest("hex")!==status.renderer_sha256)
+      return {current:false,reason:"renderer changed since receipt"};
+    if(!existsSync(canonical)||!lstatSync(canonical).isFile()||lstatSync(canonical).isSymbolicLink()
+      ||!pathWithin(bridgeReal,realpathSync(canonical)))return {current:false,reason:"preview unavailable"};
+    if(statSync(canonical).size>128*1024*1024)return {current:false,integrity:true,reason:"preview exceeds limit"};
+    const bytes=readFileSync(canonical),digest=createHash("sha256").update(bytes).digest("hex");
+    if(bytes.length!==status.preview_bytes||digest!==status.preview_sha256)
+      return {current:false,integrity:true,reason:"preview bytes do not match receipt"};
+    return {current:true,input,status,bytes};
+  }catch{return {current:false,reason:"invalid Affinity preview state"};}
+}
+
 gw.route("GET", "/api/games/:slug/affinity", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
+  ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
   if (STORE1 !== "local") return ctx.send(200, { enabled: false, reason: "local Affinity worker only" });
   const gameDir = await store.dir(slug);
   const bridge = affinityBridgeOf(gameDir);
@@ -1631,16 +2448,13 @@ gw.route("GET", "/api/games/:slug/affinity", async (ctx) => {
   try { input = JSON.parse(readFileSync(inputPath, "utf8")); }
   catch { return ctx.send(200, { enabled: true, state: "bad_input" }); }
   try { if (existsSync(statusPath)) status = JSON.parse(readFileSync(statusPath, "utf8")); } catch { /* visible below */ }
-  const current = !!(status && status.state === "ready" && status.commit_sha === input.commit_sha
-    && status.input_hash === input.input_hash && status.card_id === input.card?.id);
   const file = status?.preview_file;
-  const safeFile = typeof file === "string" && /^[a-z0-9_.-]+\.png$/i.test(file) ? file : null;
-  const previewPath = current && safeFile ? join(bridgeDir, "renders", input.commit_sha, safeFile) : null;
-  const previewReady = !!(previewPath && existsSync(previewPath));
+  const safeFile = typeof file === "string" && AFFINITY_PREVIEW_RE.test(file) ? file : null;
+  const receipt=safeFile?affinityPreviewReceipt(bridgeDir,{slug,sha:input.commit_sha,file:safeFile}):{current:false};
   ctx.send(200, {
     enabled: true,
     state: status?.state ?? "waiting_for_affinity",
-    current: current && previewReady,
+    current: receipt.current,
     game: input.game,
     card_id: input.card?.id,
     printing_id: input.printing_id,
@@ -1651,8 +2465,8 @@ gw.route("GET", "/api/games/:slug/affinity", async (ctx) => {
     layout_source: input.provenance?.layout_source ?? "unknown",
     error: status?.state === "error" ? status.error : null,
     updated_at: status?.updated_at ?? null,
-    preview_url: current && previewReady
-      ? `/api/games/${encodeURIComponent(slug)}/affinity/previews/${input.commit_sha}/${encodeURIComponent(safeFile)}?input=${encodeURIComponent(input.input_hash)}`
+    preview_url: receipt.current
+      ? `/api/games/${encodeURIComponent(slug)}/affinity/previews/${input.commit_sha}/${encodeURIComponent(safeFile)}?input=${encodeURIComponent(input.input_hash)}&renderer=${encodeURIComponent(status.renderer_sha256)}&output=${encodeURIComponent(status.preview_sha256)}`
       : null,
   });
 }, "Affinity production render status, pinned to exact Forge commit");
@@ -1661,15 +2475,19 @@ gw.route("GET", "/api/games/:slug/affinity/previews/:sha/:file", async (ctx) => 
   const slug = requireGame(ctx); if (!slug) return;
   if (STORE1 !== "local") return ctx.send(404, { error: "local Affinity worker only" });
   const { sha, file } = ctx.params;
-  if (!/^[0-9a-f]{40}$/i.test(sha) || !/^[a-z0-9_.-]+\.png$/i.test(file)) return ctx.send(404, { error: "bad Affinity preview identity" });
+  const inputHash=ctx.url.searchParams.get("input"),rendererHash=ctx.url.searchParams.get("renderer"),outputHash=ctx.url.searchParams.get("output");
+  if (!/^[0-9a-f]{40}$/i.test(sha) || !AFFINITY_PREVIEW_RE.test(file)
+    ||!AFFINITY_SHA256_RE.test(inputHash||"")||!AFFINITY_SHA256_RE.test(rendererHash||"")
+    ||!AFFINITY_SHA256_RE.test(outputHash||"")) return ctx.send(404, { error: "bad Affinity preview identity" });
   const gameDir = await store.dir(slug);
   const bridge = affinityBridgeOf(gameDir);
   if (!bridge.bridgeDir || bridge.error) return ctx.send(404, { error: "Affinity bridge is not configured safely" });
-  const path = join(bridge.bridgeDir, "renders", sha, file);
-  if (!existsSync(path)) return ctx.send(404, { error: "Affinity has not rendered this commit" });
-  ctx.sendRaw(200, readFileSync(path), {
+  const receipt=affinityPreviewReceipt(bridge.bridgeDir,{slug,sha,file,inputHash,rendererHash,outputHash});
+  if(!receipt.current)return ctx.send(receipt.integrity?503:404,{error:receipt.integrity
+    ?"Affinity preview failed integrity verification":"Affinity has not receipted this exact production input"});
+  ctx.sendRaw(200, receipt.bytes, {
     "content-type": "image/png",
-    "cache-control": "public, max-age=31536000, immutable",
+    "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE),
   });
 }, "Affinity PNG at exact Forge commit and production input");
 
@@ -1762,7 +2580,8 @@ gw.route("POST", "/api/games/:slug/prs", async (ctx) => {
   if (!from || !store.has(from)) return ctx.send(422, { error: "unknown source game 'from'" });
   if (from === to) return ctx.send(422, { error: "cannot PR a game into itself" });
   const fromRow = await q.gameBySlug(db, from);
-  if (fromRow?.owner_id !== u.id) return ctx.send(403, { error: "you can only propose from a game you own" });
+  if (!(await accessFor(u, from, fromRow)).is_owner)
+    return ctx.send(403, { error: "you can only propose from a game you own" });
   if (!title?.trim()) return ctx.send(422, { error: "title required" });
   // A pull request is a three-way merge from the exact version the edition
   // forked, not from whatever happens to be current when the PR is opened.
@@ -1872,7 +2691,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/merge", async (ctx) => {
   const pr = await q.prById(db, ctx.params.id);
   if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
   if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
-  if (!await canAdmin(u, slug)) return ctx.send(403, { error: "only the game's owner (or, on an open sandbox/ownerless game, any signed-in user) can merge" });
+  if (!await canAdmin(u, slug)) return ctx.send(403, { error: "only the game's owner or maintainers can merge (any signed-in user may merge only on a public open sandbox)" });
   const base = normalizePrSnapshot(JSON.parse(pr.base));
   const proposed = normalizePrSnapshot(JSON.parse(pr.proposed));
   const current = await gameSnapshot(slug);
@@ -1949,7 +2768,7 @@ gw.route("POST", "/api/games/:slug/prs/:id/close", async (ctx) => {
   if (!pr || pr.to_slug !== slug) return ctx.send(404, { error: "no such PR" });
   if (pr.status !== "open") return ctx.send(409, { error: `PR is ${pr.status}` });
   if (!await canAdmin(u, slug) && pr.author_id !== u.id)
-    return ctx.send(403, { error: "only the owner (or, on an open sandbox/ownerless game, any signed-in user) or the PR's author can close" });
+    return ctx.send(403, { error: "only the owner, a maintainer, or the PR's author can close (any signed-in user may close only on a public open sandbox)" });
   await q.setPrStatus(db, pr.id, "closed");
   ctx.send(200, { closed: true });
 }, "close a PR without merging");
@@ -1993,32 +2812,54 @@ gw.route("POST", "/api/games/:slug/issues/:n/close", async (ctx) => {
   const iss = await q.issueByNumber(db, slug, parseInt(ctx.params.n, 10));
   if (!iss) return ctx.send(404, { error: "no such issue" });
   if (!await canAdmin(u, slug) && iss.author_id !== u.id)
-    return ctx.send(403, { error: "only the owner (or, on an open sandbox/ownerless game, any signed-in user) or the issue's author can close" });
+    return ctx.send(403, { error: "only the owner, a maintainer, or the issue's author can close (any signed-in user may close only on a public open sandbox)" });
   await q.setIssueStatus(db, iss.id, iss.status === "open" ? "closed" : "open");
   ctx.send(200, { status: iss.status === "open" ? "closed" : "open" });
 }, "close (or reopen) an issue — owner or author");
 
-const EXPORT_KINDS = new Set(["print", "pnp", "tts", "ttc", "vtt", "project", "nandeck", "rulebook", "publication"]);
+const EXPORT_KINDS = new Set(["print", "pnp", "tts", "ttc", "ttpg", "vtt", "project", "data", "nandeck", "svg", "pnpink", "squib", "components", "rulebook", "publication"]);
 const activeExportJobs = new Map();
 function exportPayload(slug, sha, fmt, artifact) {
   const dir = artifact.dir, base = `/cache/exports/${slug}/${sha}`;
-  const urls = fmt === "print" ? [`${base}/print-ready.zip`, `${base}/print-a4.pdf`,
-      `${base}/print-letter.pdf`, `${base}/print-press-rgb.pdf`]
+  const printFiles = ["print-ready.zip", "print-a4.pdf", "print-letter.pdf", "print-press-rgb.pdf",
+    ...(artifact.manifest.files?.some(item => item.name === "print-press-cmyk.pdf") ? ["print-press-cmyk.pdf"] : [])];
+  const urls = fmt === "print" ? printFiles.map(file => `${base}/${file}`)
     : fmt === "pnp" ? [`${base}/pnp.pdf`]
     : fmt === "ttc" ? [`${base}/${slug}-ttc.zip`]
+    : fmt === "ttpg" ? [`${base}/${cache.ttpgArtifactName(slug)}`, `${base}/ttpg-manifest.json`]
     : fmt === "project" ? [`${base}/${cache.projectArtifactName(slug)}`]
+    : fmt === "data" ? [`${base}/${cache.dataArtifactName(slug)}`, `${base}/${cache.dataWorkbookArtifactName(slug)}`,
+        ...["cards.csv","printings.csv","tokens.csv"].filter(file=>artifact.manifest.files?.some(item=>item.name===file)).map(file=>`${base}/${file}`)]
     : fmt === "nandeck" ? [`${base}/${cache.nandeckArtifactName(slug)}`]
+    : fmt === "svg" ? [`${base}/${cache.svgDesignArtifactName(slug)}`]
+    : fmt === "pnpink" ? [`${base}/${cache.pnpinkArtifactName(slug)}`]
+    : fmt === "squib" ? [`${base}/${cache.squibArtifactName(slug)}`]
+    : fmt === "components" ? [`${base}/${cache.componentArtifactName(slug)}`,
+        ...readdirSync(join(dir, "cut-sheets")).filter(file => file.endsWith(".svg")).sort().map(file => `${base}/cut-sheets/${file}`)]
     : fmt === "rulebook" ? JSON.parse(readFileSync(join(dir, "rulebook-build.json"), "utf8")).outputs.map(output => `${base}/${output.file}`)
     : fmt === "publication" ? JSON.parse(readFileSync(join(dir, "publication-build.json"), "utf8")).outputs.map(output => `${base}/${output.file}`)
     : fmt === "vtt" ? [`${base}/${cache.vttArtifactName("vtt")}`, `${base}/${cache.vttArtifactName("json")}`]
-    : [`${base}/tts.json`, ...readdirSync(dir).filter(file => /^sheet(?:-\d+)?\.png$/.test(file)).sort().map(file => `${base}/${file}`), `${base}/back.png`];
+    : [`${base}/tts.json`, `${base}/tts-manifest.json`,
+        ...artifact.manifest.files.filter(file => /^sheet(?:-\d+)?\.png$/.test(file.name) || file.name.startsWith("tts-components/"))
+          .map(file => `${base}/${file.name}`).sort(), `${base}/back.png`];
   const build = fmt === "rulebook" ? JSON.parse(readFileSync(join(dir, "rulebook-build.json"), "utf8"))
     : fmt === "publication" ? JSON.parse(readFileSync(join(dir, "publication-build.json"), "utf8")) : undefined;
   return { ok: true, ref: sha, cached: artifact.hit, urls, manifest: artifact.manifest, ...(build ? { build } : {}) };
 }
-const exportJobView = job => ({ id: job.id, game: job.game_slug, ref: job.ref, kind: job.kind,
+const privateExportOutput=(job,output,isPrivate)=>{
+  if(!isPrivate||!output)return output;
+  if(job.kind==="tts")return null;
+  if(job.kind==="vtt")return {...output,
+    urls:(output.urls||[]).filter(url=>url.endsWith(`/${cache.vttArtifactName("vtt")}`)),
+    delivery:"self-contained-private-package"};
+  if(["ttc","ttpg"].includes(job.kind))return {...output,delivery:"self-contained-private-package"};
+  return output;
+};
+const exportJobView = (job,{privateProject=false}={}) => ({ id: job.id, game: job.game_slug, ref: job.ref, kind: job.kind,
   exporter_version: job.exporter_version, status: job.status, progress: job.progress, attempt: job.attempt,
-  error: job.error || null, output: job.output_json ? JSON.parse(job.output_json) : null,
+  error: job.error || null, output: privateExportOutput(job,job.output_json ? JSON.parse(job.output_json) : null,privateProject),
+  ...(privateProject&&job.kind==="tts"?{restriction:{code:"private_tts_hosting_unsupported",
+    detail:"Tabletop Simulator cannot authenticate Forge's private texture URLs."}}:{}),
   created_at: job.created_at, started_at: job.started_at, finished_at: job.finished_at,
   status_url: `/api/export-jobs/${job.id}` });
 async function queueExportJob({ slug, sha, kind, user = null, allowNetwork = false, buildPdf = true,
@@ -2061,23 +2902,38 @@ gw.route("GET", "/api/export-jobs/:id", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const job = await q.exportJobById(db, ctx.params.id);
   if (!job) return ctx.send(404, { error: "no such export job" });
-  if (job.created_by && job.created_by !== u.id && !await canWrite(u, job.game_slug))
+  if (!await canRead(u, job.game_slug, ctx)) return ctx.send(404, { error: "no such export job" });
+  if ((job.created_by && job.created_by !== u.id && !await canWrite(u, job.game_slug))
+    || (!job.created_by && !await canWrite(u, job.game_slug)))
     return ctx.send(403, { error: "this export job belongs to another project member" });
-  ctx.send(200, exportJobView(job));
+  const project=await q.gameBySlug(db,job.game_slug);
+  ctx.send(200, exportJobView(job,{privateProject:project?.visibility!=="public"}));
 }, "observable export status, progress, attempt, output manifest, and failure receipt");
 
 gw.route("POST", "/api/games/:slug/export/:fmt", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await requireAuth(ctx); if (!u) return;
   const { fmt } = ctx.params;
-  if (!EXPORT_KINDS.has(fmt)) return ctx.send(400, { error: "print, pnp, tts, ttc, vtt, project, nandeck, rulebook, or publication" });
+  if (!EXPORT_KINDS.has(fmt)) return ctx.send(400, { error: "print, pnp, tts, ttc, ttpg, vtt, project, data, nandeck, svg, pnpink, squib, components, rulebook, or publication" });
+  const project=await q.gameBySlug(db,slug),privateProject=project?.visibility!=="public";
+  if(privateProject&&fmt==="tts")return ctx.send(422,{
+    code:"private_tts_hosting_unsupported",
+    error:"Private Tabletop Simulator export is not available yet",
+    detail:"TTS cannot authenticate Forge's private texture URLs. Use the self-contained VirtualTabletop, Tabletop Club, or Tabletop Playground package instead.",
+    alternatives:["vtt","ttc","ttpg"],
+  });
   const sha = await store.headSha(slug);
   const queued = await queueExportJob({ slug, sha, kind: fmt, user: u, allowNetwork: fmt === "rulebook" });
   if (ctx.url.searchParams.get("wait") === "1") {
-    try { return ctx.send(200, { ...(await queued.promise), job: exportJobView(await q.exportJobById(db, queued.job.id)) }); }
-    catch (error) { return ctx.send(422, { error: error.message, job: exportJobView(await q.exportJobById(db, queued.job.id)) }); }
+    try {
+      const completed=await queued.promise;
+      const job=await q.exportJobById(db,queued.job.id),output=privateExportOutput(job,completed,privateProject);
+      return ctx.send(200,{...output,job:exportJobView(job,{privateProject})});
+    }
+    catch (error) { return ctx.send(422, { error: error.message,
+      job: exportJobView(await q.exportJobById(db, queued.job.id),{privateProject}) }); }
   }
-  ctx.send(202, exportJobView(await q.exportJobById(db, queued.job.id)));
+  ctx.send(202, exportJobView(await q.exportJobById(db, queued.job.id),{privateProject}));
 }, "queue an isolated immutable export; poll the returned observable job");
 
 gw.route("POST", "/api/games/:slug/design/import", async (ctx) => {
@@ -2106,17 +2962,20 @@ gw.route("POST", "/api/games/:slug/design/import", async (ctx) => {
     } catch (error) { return ctx.send(error.status || 422, { error: `unsafe imported media: ${error.message}` }); }
     const response = {
       ok: result.conflicts.length === 0,
+      profile: result.profile,
       game: result.game,
       source_hash: result.source_hash,
       destination: commit ? destination : (direct ? slug : `${slug}-${u.handle}`.slice(0, 60)),
       propose: commit ? propose : !direct,
       changes: result.changes,
+      affected_families: result.affected_families,
+      preview: result.preview,
       changed_files: result.files.map(file => ({ path: file.path, operation: file.content === null ? "delete" : "write", kind: file.kind })),
       conflicts: result.conflicts,
     };
     if (!commit) return ctx.send(200, { ...response, mode: "dry-run" });
     if (result.conflicts.length) return ctx.send(409, { ...response, error: "project conflicts with newer Forge changes" });
-    const removesRows = result.changes.cards.removed.length || result.changes.printings.removed.length;
+    const removesRows = result.changes.cards.removed.length || result.changes.printings.removed.length || result.changes.tokens?.removed.length;
     const removesFiles = result.files.some(file => file.content === null);
     if ((removesRows || removesFiles) && ctx.url.searchParams.get("allow_delete") !== "1")
       return ctx.send(422, { ...response, error: "project contains deletions; review them and explicitly allow deletion" });
@@ -2160,6 +3019,89 @@ gw.route("POST", "/api/games/:slug/design/import", async (ctx) => {
     ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr: prId, fork: destination });
   } finally { materialized.cleanup(); }
 }, "dry-run, commit, or fork+PR a Forge design project with three-way conflict detection");
+
+gw.route("POST", "/api/games/:slug/design/import/workbook", async (ctx) => {
+  const slug=requireGame(ctx);if(!slug)return;
+  const u=await requireAuth(ctx);if(!u)return;
+  const source=await readBody(ctx.req,MAX_WORKBOOK_BYTES+1);
+  if(source.length>MAX_WORKBOOK_BYTES)return ctx.send(413,{error:"workbook is larger than 10 MB"});
+  let workbook;
+  try{workbook=inspectForgeWorkbook(source);}
+  catch(error){return ctx.send(422,{error:error.message||"invalid Forge workbook"});}
+  const ref=String(workbook.source?.ref||"");
+  if(!/^[0-9a-f]{7,40}$/i.test(ref))return ctx.send(422,{error:"workbook has no valid exact Git source reference"});
+  let baseline;
+  try{baseline=await store.materialize(slug,ref);}
+  catch(error){return ctx.send(422,{error:"the workbook baseline is not available for this game; download a fresh workbook",detail:String(error.message||error).slice(0,300)});}
+  try{
+    const built=buildForgeDataWorkingCopy(baseline.dir,{sourceRef:ref});
+    if(workbook.game?.id&&built.manifest.game.id&&workbook.game.id!==built.manifest.game.id)
+      return ctx.send(422,{error:`workbook belongs to '${workbook.game.id}', not '${built.manifest.game.id}'`});
+    const entries=new Map(built.entries);
+    for(const kind of ["cards","printings","tokens"]){
+      const returned=workbook.tables?.[kind],table=built.manifest.tables?.[kind];
+      if(!returned||!table)return ctx.send(422,{error:`workbook is missing the required ${kind} table`});
+      entries.set(table.editable_path,Buffer.from(returned.csv,"utf8"));
+    }
+    const archive=deterministicZip(entries),name=`${slug}-returned-workbook.forge-project.zip`;
+    return ctx.sendRaw(200,archive,{"content-type":"application/zip","content-length":String(archive.length),
+      "content-disposition":`attachment; filename=\"${name}\"`,"x-forge-source-ref":ref});
+  }finally{baseline.cleanup();}
+}, "validate a safe XLSX and convert it to an atomic, Git-baselined Forge data return");
+
+gw.route("POST", "/api/games/:slug/design/import/table", async (ctx) => {
+  const slug=requireGame(ctx);if(!slug)return;
+  const u=await requireAuth(ctx);if(!u)return;
+  const kind=ctx.url.searchParams.get("kind")||"cards",spec={cards:"components/cards.json",printings:"components/printings.json",tokens:"components/tokens.json"}[kind];
+  if(!spec)return ctx.send(422,{error:"table kind must be cards, printings, or tokens"});
+  const baseRef=String(ctx.url.searchParams.get("base_ref")||"").trim();
+  if(!/^[0-9a-f]{7,40}$/i.test(baseRef))return ctx.send(422,{error:"return this CSV from the browser that downloaded it, or return the complete .forge-project.zip so Forge can recover its baseline"});
+  const source=await readBody(ctx.req,5*1024*1024+1);
+  if(source.length>5*1024*1024)return ctx.send(413,{error:"table is larger than 5 MB"});
+  const direct=await canWrite(u,slug),commit=ctx.url.searchParams.get("commit")==="1";
+  let destination=slug,propose=false;
+  if(commit&&!direct){
+    try{destination=await ensureImportedFork(u,slug);propose=true;}
+    catch(error){return ctx.send(error.code||500,{error:error.message});}
+  }
+  let baseline,current;
+  try{baseline=await store.materialize(slug,baseRef);current=await store.materialize(destination,"HEAD");}
+  catch(error){baseline?.cleanup?.();current?.cleanup?.();return ctx.send(422,{error:"the CSV baseline is not available for this game; download a fresh table",detail:String(error.message||error).slice(0,300)});}
+  try{
+    const basePath=join(baseline.dir,spec),currentPath=join(current.dir,spec);
+    if(!existsSync(basePath)&&kind!=="tokens")return ctx.send(422,{error:`${kind} did not exist in the exported version`});
+    const baseRows=existsSync(basePath)?JSON.parse(readFileSync(basePath,"utf8")):[],currentRows=existsSync(currentPath)?JSON.parse(readFileSync(currentPath,"utf8")):[];
+    const csvSchema=tableToCsv(baseRows,kind);
+    let proposedRows;
+    try{proposedRows=csvToTable(source.toString("utf8"),{columns:csvSchema.columns},kind,baseRows);}
+    catch(error){return ctx.send(422,{error:error.message||`invalid ${kind} CSV`});}
+    const merged=mergeRows(baseRows,proposedRows,currentRows,kind),rowChanges=diffRows(currentRows,merged.merged,kind);
+    const changed=rowChanges.changed.length+rowChanges.added.length+rowChanges.removed.length;
+    const empty=()=>({kind:"rows",changed:[],added:[],removed:[]});
+    const changes={cards:empty(),card_fields:[],printings:empty(),tokens:empty(),files:[]};
+    changes[kind]=rowChanges;
+    if(kind==="cards")changes.card_fields=diffCards(currentRows,merged.merged);
+    const response={ok:merged.conflicts.length===0,mode:commit?"commit":"dry-run",profile:"forge-tabular-working-copy",table_kind:kind,base_ref:baseRef,
+      destination:commit?destination:(direct?slug:`${slug}-${u.handle}`.slice(0,60)),propose:commit?propose:!direct,changes,
+      preview:{cards:kind==="cards"?merged.merged.filter(row=>[...rowChanges.changed,...rowChanges.added].includes(row.id)):[],
+        printings:kind==="printings"?merged.merged.filter(row=>[...rowChanges.changed,...rowChanges.added].includes(row.id)):[],
+        tokens:kind==="tokens"?merged.merged.filter(row=>[...rowChanges.changed,...rowChanges.added].includes(row.id)):[]},
+      changed_files:changed?[{path:spec,operation:"write",kind}]:[],conflicts:merged.conflicts};
+    if(!commit)return ctx.send(200,response);
+    if(merged.conflicts.length)return ctx.send(409,{...response,error:"the returned table conflicts with newer Forge changes"});
+    if(rowChanges.removed.length&&ctx.url.searchParams.get("allow_delete")!=="1")return ctx.send(422,{...response,error:"table removes rows; review them and explicitly allow deletion"});
+    if(!changed)return ctx.send(200,{...response,saved:false,message:"no changes"});
+    const content=JSON.stringify(merged.merged,null,2)+"\n",validation=await validateCandidate(destination,spec,content);
+    if(!validation.ok)return ctx.send(422,{...response,error:"candidate table failed game validation",report:validation.report});
+    const summary=kind==="cards"?(summarize(changes.card_fields)?.title||`cards: ${rowChanges.changed.length} changed, ${rowChanges.added.length} added, ${rowChanges.removed.length} removed`)
+      :`${kind==="tokens"?"pieces":"printings"}: ${rowChanges.changed.length} changed, ${rowChanges.added.length} added, ${rowChanges.removed.length} removed`;
+    const {sha}=await store.writeFiles(destination,[{path:spec,content}],summary,`${u.handle} <${u.email}>`);
+    if(!propose)return ctx.send(200,{...response,saved:true,commit:sha,message:summary});
+    const pr=await openOrRefreshImportedPr({u,slug,destination,message:summary,
+      body:`Imported ${kind} from a commit-pinned external editor table after three-way dry run and complete game validation.`});
+    return ctx.send(200,{...response,saved:true,proposed:true,commit:sha,message:summary,pr,fork:destination});
+  }finally{baseline.cleanup();current.cleanup();}
+}, "return one Dextrous, Component Studio, or spreadsheet CSV as a dry-run, commit, or credited fork+PR");
 
 gw.route("POST", "/api/games/:slug/design/import/nandeck", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -2207,6 +3149,16 @@ gw.route("POST", "/api/games/:slug/design/import/nandeck", async (ctx) => {
     if (!commit) return ctx.send(200, response);
     if (result.conflicts.length) return ctx.send(409, { ...response, error: "nanDECK layout conflicts with newer Forge design changes" });
     if (!result.files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
+    const changedOutsideReview = [];
+    for (const file of result.files) {
+      const basePath = join(materialized.dir, file.path), baseExists = existsSync(basePath);
+      const current = await store.readFile(destination, file.path);
+      if ((current == null) !== !baseExists || (current != null && baseExists && !Buffer.from(current).equals(readFileSync(basePath))))
+        changedOutsideReview.push(file.path);
+    }
+    if (changedOutsideReview.length) return ctx.send(409, { ...response,
+      error: "Design source changed outside this review. Reload before committing; Forge did not overwrite it.",
+      dirty_files: changedOutsideReview });
     for (const file of result.files) {
       const full = join(materialized.dir, file.path); mkdirSync(dirname(full), { recursive: true }); writeFileSync(full, file.content);
     }
@@ -2222,9 +3174,460 @@ gw.route("POST", "/api/games/:slug/design/import/nandeck", async (ctx) => {
   } finally { materialized.cleanup(); }
 }, "dry-run, commit, or fork+PR a traceable nanDECK family layout with field-level three-way merge");
 
+gw.route("POST", "/api/games/:slug/design/import/pnpink", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await requireAuth(ctx); if (!u) return;
+  const direct = await canWrite(u, slug), commit = ctx.url.searchParams.get("commit") === "1";
+  const source = await readBody(ctx.req, MAX_PNPINK_BYTES + 1);
+  if (source.length > MAX_PNPINK_BYTES) return ctx.send(413, { error: "PnPInk working copy is larger than 32 MB" });
+  let destination = slug, propose = false;
+  if (commit && !direct) {
+    try { destination = await ensureImportedFork(u, slug); propose = true; }
+    catch (error) { return ctx.send(error.code || 500, { error: error.message }); }
+  }
+  const materialized = await store.materialize(destination, "HEAD");
+  try {
+    let result;
+    try { result = analyzePnpinkImport(materialized.dir, source); }
+    catch (error) { return ctx.send(422, { error: error.message || "invalid PnPInk working copy" }); }
+    try {
+      for (const file of result.files) if (file.path.toLowerCase().endsWith(".svg")) inspectSvg(file.content);
+    } catch (error) { return ctx.send(error.status || 422, { error: `unsafe returned PnPInk template: ${error.message}` }); }
+    const fieldCount = result.changes.reduce((sum, change) => sum + change.fields.length, 0);
+    const response = {
+      ok: result.conflicts.length === 0,
+      mode: commit ? "commit" : "dry-run",
+      family: result.family,
+      destination: commit ? destination : (direct ? slug : `${slug}-${u.handle}`.slice(0, 60)),
+      propose: commit ? propose : !direct,
+      source_hash: result.source_hash,
+      current_source_hash: result.current_source_hash,
+      stale: result.stale,
+      upstream: result.upstream,
+      package: result.package,
+      changes: result.changes,
+      field_count: fieldCount,
+      template_change: result.template_change,
+      changed_files: result.files.map(file => file.path),
+      conflicts: result.conflicts,
+      warnings: result.warnings,
+    };
+    if (!commit) return ctx.send(200, response);
+    if (result.conflicts.length) return ctx.send(409, { ...response, error: "PnPInk working copy conflicts with newer Forge changes" });
+    if (!result.files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
+    const changedOutsideReview = [];
+    for (const file of result.files) {
+      const basePath = join(materialized.dir, file.path), baseExists = existsSync(basePath);
+      const current = await store.readFile(destination, file.path);
+      if ((current == null) !== !baseExists || (current != null && baseExists && !Buffer.from(current).equals(readFileSync(basePath))))
+        changedOutsideReview.push(file.path);
+    }
+    if (changedOutsideReview.length) return ctx.send(409, { ...response,
+      error: "PnPInk source changed outside this review. Reload before committing; Forge did not overwrite it.",
+      dirty_files: changedOutsideReview });
+    for (const file of result.files) {
+      const full = join(materialized.dir, file.path); mkdirSync(dirname(full), { recursive: true }); writeFileSync(full, file.content);
+    }
+    const validation = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), materialized.dir], { encoding: "utf8" });
+    if (validation.status !== 0) return ctx.send(422, { ...response, error: "candidate PnPInk change failed game validation",
+      report: `${validation.stdout || ""}\n${validation.stderr || ""}`.trim().split("\n") });
+    const scope = [fieldCount ? `${fieldCount} card field${fieldCount === 1 ? "" : "s"}` : null,
+      result.template_change ? "template" : null].filter(Boolean).join(" + ");
+    const message = `design: import PnPInk ${result.family} (${scope || "working copy"})`;
+    const { sha } = await store.writeFiles(destination, result.files, message, `${u.handle} <${u.email}>`);
+    if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
+    const pr = await openOrRefreshImportedPr({ u, slug, destination, message,
+      body: "Imported from a version-pinned PnPInk/Inkscape family working copy after field-level dry-run, template conflict detection, and game validation." });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
+  } finally { materialized.cleanup(); }
+}, "dry-run, commit, or fork+PR a version-pinned PnPInk family working copy");
+
+gw.route("POST", "/api/games/:slug/design/import/squib", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await requireAuth(ctx); if (!u) return;
+  const direct = await canWrite(u, slug), commit = ctx.url.searchParams.get("commit") === "1";
+  const source = await readBody(ctx.req, MAX_SQUIB_BYTES + 1);
+  if (source.length > MAX_SQUIB_BYTES) return ctx.send(413, { error: "Squib working copy is larger than 32 MB" });
+  let squibHeader;
+  try { squibHeader = inspectSquibArchive(source); }
+  catch (error) { return ctx.send(422, { error: error.message || "invalid Squib working copy" }); }
+  const baseRef = squibHeader.manifest.source.ref;
+  let destination = slug, propose = false;
+  if (commit && !direct) {
+    try { destination = await ensureImportedFork(u, slug); propose = true; }
+    catch (error) { return ctx.send(error.code || 500, { error: error.message }); }
+  }
+  let baseline, materialized;
+  try { baseline = await store.materialize(slug, baseRef); materialized = await store.materialize(destination, "HEAD"); }
+  catch (error) { baseline?.cleanup?.(); materialized?.cleanup?.(); return ctx.send(422, { error: "the Squib Git baseline is not available for this game; download a fresh working copy", detail: String(error.message || error).slice(0, 300) }); }
+  try {
+    let result;
+    try { result = analyzeSquibImport(materialized.dir, source, { allowGameIdMismatch: propose, baselineGameDir: baseline.dir }); }
+    catch (error) { return ctx.send(422, { error: error.message || "invalid Squib working copy" }); }
+    const cardCount = (result.changes.cards.changed?.length || 0) + (result.changes.cards.added?.length || 0) + (result.changes.cards.removed?.length || 0);
+    const response = {
+      ok: result.conflicts.length === 0,
+      mode: commit ? "commit" : "dry-run",
+      destination: commit ? destination : (direct ? slug : `${slug}-${u.handle}`.slice(0, 60)),
+      propose: commit ? propose : !direct,
+      source_hash: result.source_hash,
+      current_source_hash: result.current_source_hash,
+      stale: result.stale,
+      upstream: result.upstream,
+      base_ref: result.source_ref,
+      changes: result.changes,
+      preview: result.preview,
+      changed_files: result.files.map(file => file.path),
+      conflicts: result.conflicts,
+      warnings: result.warnings,
+      ignored: result.ignored,
+    };
+    if (!commit) return ctx.send(200, response);
+    if (result.conflicts.length) return ctx.send(409, { ...response, error: "Squib working copy conflicts with newer Forge changes" });
+    if (result.changes.cards.removed?.length && ctx.url.searchParams.get("allow_delete") !== "1")
+      return ctx.send(422, { ...response, error: "Squib working copy removes cards; review them and explicitly allow deletion" });
+    if (!result.files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
+    const changedOutsideReview = [];
+    for (const file of result.files) {
+      const basePath = join(materialized.dir, file.path), baseExists = existsSync(basePath);
+      const current = await store.readFile(destination, file.path);
+      if ((current == null) !== !baseExists || (current != null && baseExists && !Buffer.from(current).equals(readFileSync(basePath))))
+        changedOutsideReview.push(file.path);
+    }
+    if (changedOutsideReview.length) return ctx.send(409, { ...response,
+      error: "Squib source changed outside this review. Reload before committing; Forge did not overwrite it.",
+      dirty_files: changedOutsideReview });
+    for (const file of result.files) {
+      const full = join(materialized.dir, file.path); mkdirSync(dirname(full), { recursive: true }); writeFileSync(full, file.content);
+    }
+    const validation = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), materialized.dir], { encoding: "utf8" });
+    if (validation.status !== 0) return ctx.send(422, { ...response, error: "candidate Squib change failed game validation",
+      report: `${validation.stdout || ""}\n${validation.stderr || ""}`.trim().split("\n") });
+    const layoutCount = result.changes.layout.length;
+    const scope = [cardCount ? `${cardCount} card${cardCount === 1 ? "" : "s"}` : null,
+      layoutCount ? `${layoutCount} layout field${layoutCount === 1 ? "" : "s"}` : null].filter(Boolean).join(" + ");
+    const message = `design: import Squib (${scope || "working copy"})`;
+    const { sha } = await store.writeFiles(destination, result.files, message, `${u.handle} <${u.email}>`);
+    if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
+    const pr = await openOrRefreshImportedPr({ u, slug, destination, message,
+      body: "Imported from a version-pinned Squib working copy after bounded CSV/YAML parsing, field-level three-way merge, rendered dry-run, and complete game validation. Returned Ruby was never executed." });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
+  } finally { baseline.cleanup(); materialized.cleanup(); }
+}, "dry-run, commit, or fork+PR a safe Squib card-data and family-layout working copy");
+
+gw.route("POST", "/api/games/:slug/design/import/svg", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await requireAuth(ctx); if (!u) return;
+  const direct = await canWrite(u, slug), commit = ctx.url.searchParams.get("commit") === "1";
+  const source = await readBody(ctx.req, MAX_SVG_DESIGN_BYTES + 1);
+  if (source.length > MAX_SVG_DESIGN_BYTES) return ctx.send(413, { error: "SVG design is larger than 5 MB" });
+  let destination = slug, propose = false;
+  if (commit && !direct) {
+    try { destination = await ensureImportedFork(u, slug); propose = true; }
+    catch (error) { return ctx.send(error.code || 500, { error: error.message }); }
+  }
+  const materialized = await store.materialize(destination, "HEAD");
+  try {
+    let result;
+    try { result = analyzeSvgDesignImport(materialized.dir, source); }
+    catch (error) {
+      if (!commit) {
+        try {
+          const candidate = inspectSvgCandidate(source);
+          return ctx.send(200, { ok: true, mode: "candidate", candidate_only: true,
+            reason: error.message, recovered: candidate, conflicts: [], changes: [], changed_files: [],
+            warnings: ["This SVG is preserved as an import candidate until its objects are mapped to a versioned Forge family."],
+            unsupported: [], propose: false });
+        } catch {}
+      }
+      return ctx.send(422, { error: error.message || "invalid SVG family design" });
+    }
+    const response = {
+      ok: result.conflicts.length === 0,
+      mode: commit ? "commit" : "dry-run",
+      family: result.family,
+      destination: commit ? destination : (direct ? slug : `${slug}-${u.handle}`.slice(0, 60)),
+      propose: commit ? propose : !direct,
+      source_hash: result.source_hash,
+      current_source_hash: result.current_source_hash,
+      stale: result.stale,
+      changes: result.changes,
+      affected_families: result.affected_families,
+      changed_files: result.files.map(file => file.path),
+      conflicts: result.conflicts,
+      warnings: result.warnings,
+      unsupported: result.unsupported,
+      objects: result.objects,
+    };
+    if (!commit) return ctx.send(200, response);
+    if (result.conflicts.length) return ctx.send(409, { ...response, error: "SVG layout conflicts with newer Forge design changes" });
+    if (!result.files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
+    const changedOutsideReview = [];
+    for (const file of result.files) {
+      const basePath = join(materialized.dir, file.path), baseExists = existsSync(basePath);
+      const current = await store.readFile(destination, file.path);
+      if ((current == null) !== !baseExists || (current != null && baseExists && !Buffer.from(current).equals(readFileSync(basePath))))
+        changedOutsideReview.push(file.path);
+    }
+    if (changedOutsideReview.length) return ctx.send(409, { ...response,
+      error: "Design source changed outside this review. Reload before committing; Forge did not overwrite it.",
+      dirty_files: changedOutsideReview });
+    for (const file of result.files) {
+      const full = join(materialized.dir, file.path); mkdirSync(dirname(full), { recursive: true }); writeFileSync(full, file.content);
+    }
+    const validation = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), materialized.dir], { encoding: "utf8" });
+    if (validation.status !== 0) return ctx.send(422, { ...response, error: "candidate SVG design failed game validation",
+      report: `${validation.stdout || ""}\n${validation.stderr || ""}`.trim().split("\n") });
+    const message = `design: import SVG ${result.family} (${result.changes.length} field${result.changes.length === 1 ? "" : "s"})`;
+    const { sha } = await store.writeFiles(destination, result.files, message, `${u.handle} <${u.email}>`);
+    if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
+    const pr = await openOrRefreshImportedPr({ u, slug, destination, message,
+      body: "Imported from a Forge-generated SVG family working copy after visual dry-run, field-level three-way merge, and game validation." });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
+  } finally { materialized.cleanup(); }
+}, "dry-run, commit, or fork+PR an editor-neutral SVG family layout with field-level three-way merge");
+
+gw.route("GET", "/api/games/:slug/design/svg/:family", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const sha = await store.headSha(slug), materialized = await store.materialize(slug, sha);
+  try {
+    let built;
+    try { built = buildSvgDesignProject(materialized.dir); }
+    catch (error) { return ctx.send(422, { error: error.message || "this game has no SVG family adapter" }); }
+    const family = built.manifest.families.find(item => item.family === ctx.params.family);
+    if (!family) return ctx.send(404, { error: `no design family '${ctx.params.family}'` });
+    // The general UI payload can reflect a dirty local-development working tree,
+    // while an import must always merge against an immutable Git revision. Return
+    // the exact compiled family that produced this SVG so the visual editor never
+    // mixes those two states. Forgejo-backed production stores are immutable too,
+    // but keeping this contract explicit makes local development equally safe.
+    const sourceFamily = currentNandeckSources(materialized.dir).families.find(item => item.id === family.family);
+    if (!sourceFamily) return ctx.send(404, { error: `no compiled design family '${ctx.params.family}'` });
+    let artLibrary;
+    try { artLibrary = parseArtLibrary(existsSync(join(materialized.dir, ART_LIBRARY_MANIFEST))
+      ? readFileSync(join(materialized.dir, ART_LIBRARY_MANIFEST)) : null); }
+    catch (error) { return ctx.send(422, { error: error.message }); }
+    ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
+    ctx.send(200, { ok: true, ref: sha, family: family.family, source_hash: built.manifest.source_hash,
+      file: family.file, layout: sourceFamily.layout, origins: sourceFamily.origins,
+      art_library: artLibrary,
+      svg: built.entries.get(family.file).toString("utf8") });
+  } finally { materialized.cleanup(); }
+}, "fetch one current SVG family working copy for the in-Forge visual editor");
+
+/* Forge Studio deliberately edits the two halves of a component together:
+ * card rows and their shared visual family.  The browser sends the complete
+ * card table plus the bounded SVG working copy it opened at `base_ref`; this
+ * route performs the same three-way/conflict checks as the external adapters,
+ * validates the combined candidate, and writes one commit (or one fork + PR).
+ * A dry run never creates a fork or touches Git. */
+gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const u = await requireAuth(ctx); if (!u) return;
+  const body = await json(ctx, MAX_SVG_DESIGN_BYTES + 40 * 1024 * 1024), commit = ctx.url.searchParams.get("commit") === "1";
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return ctx.send(422, { error: "body must be a Forge Studio candidate" });
+  if (!Array.isArray(body.cards)) return ctx.send(422, { error: "cards must be an array" });
+  if (body.printings != null && !Array.isArray(body.printings))
+    return ctx.send(422, { error: "printings must be an array when provided" });
+  if (Buffer.byteLength(JSON.stringify(body.cards)) > 5 * 1024 * 1024)
+    return ctx.send(413, { error: "Forge Studio card data is larger than 5 MB" });
+  if (body.printings != null && Buffer.byteLength(JSON.stringify(body.printings)) > 5 * 1024 * 1024)
+    return ctx.send(413, { error: "Forge Studio printing data is larger than 5 MB" });
+  if (body.assets != null && !Array.isArray(body.assets))
+    return ctx.send(422, { error: "assets must be an array when provided" });
+  let proposedArtLibrary = null;
+  if (body.art_library != null) {
+    if (Buffer.byteLength(JSON.stringify(body.art_library)) > 512 * 1024)
+      return ctx.send(413, { error: "art_library is larger than 512 KB" });
+    try { proposedArtLibrary = parseArtLibrary(Buffer.from(JSON.stringify(body.art_library))); }
+    catch (error) { return ctx.send(422, { error: error.message }); }
+  }
+  const incomingAssets = [], incomingPaths = new Set();
+  let incomingAssetBytes = 0;
+  for (const candidate of body.assets || []) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
+      return ctx.send(422, { error: "each Studio asset must be an object" });
+    const path = String(candidate.path || "");
+    if (!/^assets\/card-art\/[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(path) || path.includes("..") || path.includes("//"))
+      return ctx.send(422, { error: "Studio artwork must use a safe path under assets/card-art/" });
+    if (incomingPaths.has(path)) return ctx.send(422, { error: `duplicate Studio artwork path '${path}'` });
+    incomingPaths.add(path);
+    const encoded = String(candidate.content_base64 || "");
+    if (!encoded || encoded.length > 14_000_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))
+      return ctx.send(422, { error: `${path}: artwork must contain bounded base64 bytes` });
+    const bytes = Buffer.from(encoded, "base64");
+    if (!bytes.length || bytes.length > 10 * 1024 * 1024)
+      return ctx.send(413, { error: `${path}: Studio artwork is larger than 10 MB` });
+    incomingAssetBytes += bytes.length;
+    if (incomingAssetBytes > 20 * 1024 * 1024)
+      return ctx.send(413, { error: "Forge Studio artwork is larger than 20 MB in one reviewed change" });
+    try { assertAssetAllowed(path, bytes.length); inspectAsset(path, bytes); }
+    catch (error) { return ctx.send(error.status || 422, { error: `${path}: ${error.message}` }); }
+    const status = String(candidate.status || "original"), redistribution = String(candidate.redistribution || (status === "permission-only" ? "private-only" : "allowed"));
+    if (!["original", "commissioned", "licensed", "public-domain", "permission-only", "generated"].includes(status))
+      return ctx.send(422, { error: `${path}: invalid rights status` });
+    if (!["allowed", "restricted", "private-only"].includes(redistribution))
+      return ctx.send(422, { error: `${path}: invalid redistribution status` });
+    if (["licensed", "permission-only"].includes(status) && !String(candidate.source || "").trim())
+      return ctx.send(422, { error: `${path}: licensed artwork requires a source or permission record` });
+    incomingAssets.push({ path, bytes, rights: { status, redistribution,
+      creator: String(candidate.creator || u.handle).trim() || u.handle,
+      license: String(candidate.license || "").trim(), source: candidate.source ? String(candidate.source).trim() : undefined } });
+  }
+  const baseRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(baseRef))
+    return ctx.send(422, { error: "base_ref must be the exact Git revision opened by Forge Studio" });
+  const svg = body.svg == null ? null : String(body.svg);
+  if (svg != null && Buffer.byteLength(svg) > MAX_SVG_DESIGN_BYTES)
+    return ctx.send(413, { error: "SVG design is larger than 5 MB" });
+
+  const direct = await canWrite(u, slug);
+  let destination = slug, propose = false;
+  if (commit && !direct) {
+    try { destination = await ensureImportedFork(u, slug); propose = true; }
+    catch (error) { return ctx.send(error.code || 500, { error: error.message }); }
+  }
+
+  let baseCards, basePrintings, baseArtLibrary;
+  try {
+    baseCards = JSON.parse((await store.fileAt(slug, baseRef, "components/cards.json")).toString());
+    basePrintings = JSON.parse((await store.fileAt(slug, baseRef, "components/printings.json")).toString());
+    baseArtLibrary = parseArtLibrary(await store.fileAt(slug, baseRef, ART_LIBRARY_MANIFEST));
+  }
+  catch (error) { return ctx.send(409, { error: `the Studio baseline is no longer available; reopen the family (${error.message})` }); }
+  const materialized = await store.materialize(destination, "HEAD");
+  try {
+    const currentHead = await store.headSha(destination);
+    const currentCards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
+    const currentPrintings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
+    let currentArtLibrary;
+    try { currentArtLibrary = parseArtLibrary(existsSync(join(materialized.dir, ART_LIBRARY_MANIFEST))
+      ? readFileSync(join(materialized.dir, ART_LIBRARY_MANIFEST)) : null); }
+    catch (error) { return ctx.send(422, { error: error.message }); }
+    const cardMerge = mergeCards(baseCards, body.cards, currentCards);
+    const cardChanges = diffCards(currentCards, cardMerge.merged);
+    const printingMerge = body.printings == null
+      ? { merged: currentPrintings, conflicts: [] }
+      : mergeRows(basePrintings, body.printings, currentPrintings, "printings");
+    const printingChanges = diffRows(currentPrintings, printingMerge.merged, "printings");
+    const artLibraryMerge = proposedArtLibrary == null
+      ? { merged: currentArtLibrary, conflicts: [] }
+      : mergeArtLibrary(baseArtLibrary, proposedArtLibrary, currentArtLibrary);
+    const artLibraryChanges = diffArtLibrary(currentArtLibrary, artLibraryMerge.merged);
+    let layoutResult = { files: [], changes: [], conflicts: [], warnings: [], unsupported: [], family: null };
+    if (svg != null) {
+      try { layoutResult = analyzeSvgDesignImport(materialized.dir, Buffer.from(svg)); }
+      catch (error) { return ctx.send(422, { error: error.message || "invalid Forge Studio family design" }); }
+    }
+    const conflicts = [
+      ...cardMerge.conflicts.map(card => ({ scope: "card", card })),
+      ...printingMerge.conflicts.map(conflict => ({ scope: "printing", ...conflict })),
+      ...artLibraryMerge.conflicts.map(conflict => ({ scope: "art-library", ...conflict })),
+      ...layoutResult.conflicts.map(conflict => ({ scope: "layout", ...conflict })),
+    ];
+    for (const asset of incomingAssets) if (existsSync(join(materialized.dir, asset.path)))
+      return ctx.send(409, { error: `artwork path '${asset.path}' already exists; reopen Studio and choose a new filename` });
+    const game = await q.gameBySlug(db, slug);
+    let rightsBytes = existsSync(join(materialized.dir, RIGHTS_MANIFEST)) ? readFileSync(join(materialized.dir, RIGHTS_MANIFEST), "utf8") : null;
+    for (const asset of incomingAssets) {
+      const right = setFileRight(rightsBytes, asset.path, {
+        license: asset.rights.license || game?.license || "unknown", status: asset.rights.status,
+        copyright: [asset.rights.creator], redistribution: asset.rights.redistribution, source: asset.rights.source,
+      }, { license: game?.license || "unknown", owner: game?.owner_handle || u.handle, status: "unknown" });
+      rightsBytes = rightsReceiptBytes(right);
+      asset.rights.license = asset.rights.license || game?.license || "unknown";
+    }
+    const files = [...layoutResult.files, ...incomingAssets.map(asset => ({ path: asset.path, content: asset.bytes }))];
+    if (incomingAssets.length) files.push({ path: RIGHTS_MANIFEST, content: rightsBytes });
+    if (artLibraryChanges.length) files.unshift({ path: ART_LIBRARY_MANIFEST,
+      content: artLibraryBytes(artLibraryMerge.merged) });
+    if (printingChanges.changed.length || printingChanges.added.length || printingChanges.removed.length)
+      files.unshift({ path: "components/printings.json",
+        content: JSON.stringify(printingMerge.merged, null, 2) + "\n" });
+    if (cardChanges.length) files.unshift({ path: "components/cards.json",
+      content: JSON.stringify(cardMerge.merged, null, 2) + "\n" });
+    const affected = new Set(cardChanges.map(change => change.card));
+    const beforeById = new Map(currentCards.map(card => [card.id, card]));
+    const afterById = new Map(cardMerge.merged.map(card => [card.id, card]));
+    const beforePrintingById = new Map(currentPrintings.map(printing => [printing.id, printing]));
+    const afterPrintingById = new Map(printingMerge.merged.map(printing => [printing.id, printing]));
+    for (const id of [...printingChanges.added, ...printingChanges.changed, ...printingChanges.removed]) {
+      const printing = afterPrintingById.get(id) || beforePrintingById.get(id);
+      if (printing?.card_id) affected.add(printing.card_id);
+    }
+    const candidateCards = [...affected].map(id => ({ id,
+      before: beforeById.get(id) || null, candidate: afterById.get(id) || null,
+      before_printings: currentPrintings.filter(printing => printing.card_id === id),
+      candidate_printings: printingMerge.merged.filter(printing => printing.card_id === id) }));
+
+    let validation = { ok: conflicts.length === 0, report: conflicts.length ? ["Resolve Studio conflicts before validation."] : [] };
+    if (!conflicts.length && files.length) {
+      for (const file of files) {
+        const full = join(materialized.dir, file.path);
+        mkdirSync(dirname(full), { recursive: true });
+        if (file.content == null) rmSync(full, { force: true });
+        else writeFileSync(full, file.content);
+      }
+      const checked = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), materialized.dir], { encoding: "utf8" });
+      validation = { ok: checked.status === 0,
+        report: `${checked.stdout || ""}\n${checked.stderr || ""}`.trim().split("\n").filter(Boolean) };
+    }
+    const response = { ok: !conflicts.length && validation.ok, mode: commit ? "commit" : "dry-run",
+      destination: commit ? destination : slug, propose: commit ? propose : !direct,
+      base_ref: baseRef, current_ref: currentHead, family: layoutResult.family,
+      card_changes: cardChanges, printing_changes: printingChanges, layout_changes: layoutResult.changes,
+      art_library_changes: artLibraryChanges,
+      asset_changes: incomingAssets.map(asset => ({ path: asset.path, size: asset.bytes.length, rights: asset.rights })),
+      changed_files: files.map(file => file.path), conflicts, validation,
+      warnings: layoutResult.warnings || [], unsupported: layoutResult.unsupported || [],
+      candidate_cards: candidateCards };
+    if (!commit) return ctx.send(200, response);
+    if (conflicts.length) return ctx.send(409, { ...response, error: "Forge Studio conflicts with newer game changes; reopen before committing" });
+    if (!validation.ok) return ctx.send(422, { ...response, error: "Forge Studio candidate failed game validation" });
+    if (!files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
+    if (await store.headSha(destination) !== currentHead)
+      return ctx.send(409, { ...response, error: "the game changed during review; reopen Forge Studio before committing" });
+
+    const printingCount = printingChanges.changed.length + printingChanges.added.length + printingChanges.removed.length;
+    const scopes = [cardChanges.length ? `${new Set(cardChanges.map(change => change.card)).size} card${new Set(cardChanges.map(change => change.card)).size === 1 ? "" : "s"}` : null,
+      printingCount ? `${printingCount} printing${printingCount === 1 ? "" : "s"}` : null,
+      incomingAssets.length ? `${incomingAssets.length} artwork file${incomingAssets.length === 1 ? "" : "s"}` : null,
+      artLibraryChanges.length ? `${artLibraryChanges.length} artwork tag record${artLibraryChanges.length === 1 ? "" : "s"}` : null,
+      layoutResult.changes.length ? `${layoutResult.changes.length} layout field${layoutResult.changes.length === 1 ? "" : "s"}` : null].filter(Boolean);
+    const message = `design: update ${scopes.join(" + ")}`;
+    const cardSummary = cardChanges.length ? summarize(cardChanges) : null;
+    const detail = [cardSummary?.body,
+      printingCount ? `Printings\n${[...printingChanges.added.map(id => `- added ${id}`), ...printingChanges.changed.map(id => `- changed ${id}`), ...printingChanges.removed.map(id => `- removed ${id}`)].join("\n")}` : null,
+      incomingAssets.length ? `Artwork\n${incomingAssets.map(asset => `- ${asset.path}: ${asset.bytes.length} bytes; ${asset.rights.status}; ${asset.rights.license}; ${asset.rights.creator}`).join("\n")}` : null,
+      artLibraryChanges.length ? `Artwork library\n${artLibraryChanges.map(change => `- ${change.kind} ${change.path}: ${(change.after?.tags || []).join(", ") || "no tags"}`).join("\n")}` : null,
+      layoutResult.changes.length ? `Visual family: ${layoutResult.family}\n${layoutResult.changes.map(change => `- ${change.path}: ${JSON.stringify(change.before)} -> ${JSON.stringify(change.after)}`).join("\n")}` : null,
+      `Forge Studio base: ${baseRef}`].filter(Boolean).join("\n\n");
+    const { sha } = await store.writeFiles(destination, files, `${message}\n\n${detail}`, `${u.handle} <${u.email}>`);
+    if (incomingAssets.length) await reindexGames();
+    if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
+    const pr = await openOrRefreshImportedPr({ u, slug, destination, message,
+      body: "Edited card content and its shared visual family together in Forge Studio, then validated as one candidate." });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
+  } finally { materialized.cleanup(); }
+}, "Forge Studio layout + card data dry-run, atomic commit, or credited fork + PR");
+
 gw.route("POST", "/api/games/:slug/play", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await requireAuth(ctx); if (!u) return;
+  const project=await q.gameBySlug(db,slug);
+  if(project?.visibility!=="public"){
+    const sha=await store.headSha(slug);
+    try{await(await queueExportJob({slug,sha,kind:"vtt",user:u})).promise;}
+    catch(error){return ctx.send(422,{error:error?.message||"this game does not have a playable setup"});}
+    return ctx.send(422,{
+      code:"private_vtt_live_staging_unsupported",
+      error:"Private games open from a self-contained VirtualTabletop package",
+      detail:"A VirtualTabletop server cannot receive your Forge login, so Forge will not send private raw state or texture URLs to it.",
+      ref:sha,
+      download:`/cache/exports/${slug}/${sha}/${cache.vttArtifactName("vtt")}`,
+    });
+  }
   if (!VTT_WRITE_ALLOWED) return ctx.send(503, {
     error: "Refusing to write game state to a remote tabletop without explicit server opt-in",
     detail: "Set ALLOW_REMOTE_VTT_WRITE=1 only for a VTT instance you control and protect.",
@@ -2284,13 +3687,16 @@ gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
   if (!s || !Array.isArray(s.players) || !s.players.some(p => p && p.name))
     return ctx.send(422, { error: "a session needs at least one named player" });
   const sha0 = await store.headSha(slug);
+  let versionRef;
+  try { versionRef = await store.resolveRef(slug, s.version_ref || sha0); }
+  catch (error) { return ctx.send(error.status || 422, { error: "playtest version is unavailable", detail: error.message }); }
   const date = (typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date)) ? s.date : new Date().toISOString().slice(0, 10);
   let id = String(s.id || `${date}-${s.location || "session"}`).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
   if (!/^[a-z0-9]/.test(id)) id = `${date}-session`;
   const RES = new Set(["win", "loss", "draw"]);
   const TAGS = new Set(["balance", "confusing", "fun", "bug", "art", "timing"]);
   const session = {
-    id, date, version_ref: s.version_ref || sha0,
+    id, date, version_ref: versionRef,
     ...(s.format_id ? { format_id: s.format_id } : {}),
     ...(s.location ? { location: s.location } : {}),
     ...(s.duration_minutes ? { duration_minutes: parseInt(s.duration_minutes, 10) } : {}),
@@ -2314,17 +3720,18 @@ gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
 }, "log a playtest session (owner/collaborator) → validated, version-pinned commit");
 gw.route("GET", "/api/games/:slug/diff", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const to = ctx.url.searchParams.get("to") || await store.headSha(slug);
-  let from = ctx.url.searchParams.get("from");
-  if (!from) {
+  const requestedTo = ctx.url.searchParams.get("to") || "HEAD";
+  let requestedFrom = ctx.url.searchParams.get("from");
+  if (!requestedFrom) {
     const rels = await q.releasesFor(db, slug);
-    from = rels[0]?.sha;
-    if (!from) { const h = await store.history(slug, "components/cards.json", 2); from = (h[1] || h[0] || {}).sha; }
+    requestedFrom = rels[0]?.sha;
+    if (!requestedFrom) { const h = await store.history(slug, "components/cards.json", 2); requestedFrom = (h[1] || h[0] || {}).sha; }
   }
-  if (!from) return ctx.send(422, { error: "nothing to compare against yet" });
+  if (!requestedFrom) return ctx.send(422, { error: "nothing to compare against yet" });
   const at = async (ref) => { const { dir, cleanup } = await store.materialize(slug, ref);
     try { return JSON.parse(readFileSync(join(dir, "components/cards.json"), "utf8")); } finally { cleanup(); } };
   try {
+    const [from, to] = await Promise.all([store.resolveRef(slug, requestedFrom), store.resolveRef(slug, requestedTo)]);
     const [a, b] = [await at(from), await at(to)];
     const changes = diffCards(a, b);
     ctx.send(200, { from, to, changes, summary: summarize(changes)?.title || null });
@@ -2661,31 +4068,69 @@ async function releasePreflight(slug, user) {
     validation: { ok: validation.status === 0, report: validationReport },
     license: { ok: licenses.status === 0, report: licenseReport }, rights };
 }
-function artifactReceipt(dir) {
-  const files = [];
-  const walk = (path) => {
-    for (const name of readdirSync(path)) {
-      const file = join(path, name), stat = statSync(file);
-      if (stat.isDirectory()) walk(file);
-      else if (name.startsWith(".complete-") || name === "forge-export-manifest.json") continue;
-      else files.push({ status: "ready", name: relative(dir, file).replaceAll("\\", "/"), bytes: stat.size,
-        sha256: createHash("sha256").update(readFileSync(file)).digest("hex") });
-    }
+const PRINT_DELIVERY_SHA_RE = /^[a-f0-9]{64}$/i;
+const printableReleaseArtifact = name => name === "print-ready.zip" || /(?:^|\/)[^/]+\.pdf$/i.test(name);
+function exactText(value, label, max = 160) {
+  const text = String(value || "").trim();
+  if (!text || text.length > max)
+    throw Object.assign(new Error(`${label} must be between 1 and ${max} characters`), { status: 422 });
+  return text;
+}
+function optionalText(value, label, max = 1000) {
+  if (value == null || value === "") return null;
+  return exactText(value, label, max);
+}
+function evidenceUrl(value, label) {
+  if (value == null || value === "") return null;
+  const raw = exactText(value, label, 500);
+  let parsed;
+  try { parsed = new URL(raw); } catch { parsed = null; }
+  if (!parsed || parsed.protocol !== "https:" || parsed.username || parsed.password)
+    throw Object.assign(new Error(`${label} must be an HTTPS URL without embedded credentials`), { status: 422 });
+  return parsed.toString();
+}
+function evidenceHash(value, label, { required = false } = {}) {
+  const hash = String(value || "").trim().toLowerCase();
+  if (!hash && !required) return null;
+  if (!PRINT_DELIVERY_SHA_RE.test(hash))
+    throw Object.assign(new Error(`${label} must be a 64-character SHA-256 digest`), { status: 422 });
+  return hash;
+}
+function printDeliveryReceipt(row) {
+  if (!row) return null;
+  return {
+    format: "forge-printer-delivery-receipt", version: 1, id: row.id,
+    release: { game_slug: row.game_slug, tag: row.release_tag, sha: row.release_sha },
+    artifact: { name: row.artifact_name, sha256: row.artifact_sha256, bytes: Number(row.artifact_bytes) },
+    delivery: { printer_name: row.printer_name, job_reference: row.job_reference,
+      submitted_at: Number(row.created_at), recorded_by: row.created_by_handle || null,
+      evidence_url: row.submission_evidence_url || null,
+      evidence_sha256: row.submission_evidence_sha256 || null, note: row.note || null },
+    status: row.decision || "submitted",
+    decision: row.decision ? { result: row.decision, reviewer_name: row.reviewer_name,
+      organization: row.organization, decided_at: Number(row.decided_at),
+      recorded_by: row.recorded_by_handle || null, evidence_url: row.evidence_url || null,
+      evidence_sha256: row.evidence_sha256, note: row.decision_note || null } : null,
+    trust: { independently_verified: false, source: "creator-recorded",
+      boundary: "Forge binds the creator's printer record to immutable release bytes; the named printer or an independent prepress service must verify the evidence." },
   };
-  walk(dir);
-  return files.sort((a, b) => a.name.localeCompare(b.name));
 }
 gw.route("GET", "/api/games/:slug/releases", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  ctx.send(200, (await q.releasesFor(db, slug)).map(r => {
+  const releases = await q.releasesFor(db, slug);
+  const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
+  ctx.send(200, await Promise.all(releases.map(async r => {
     const rights = r.rights_json ? JSON.parse(r.rights_json) : null;
     const build = r.build_json ? JSON.parse(r.build_json) : null;
+    const artifacts=(r.artifacts_json ? JSON.parse(r.artifacts_json) : [])
+      .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
     return { ...r, rights_json: undefined, build_json: undefined, build,
       tag_annotated: !!r.tag_annotated, tag_protected: !!r.tag_protected,
-      artifacts: r.artifacts_json ? JSON.parse(r.artifacts_json) : [],
+      artifacts,
+      print_deliveries: (await q.printDeliveriesForRelease(db, slug, r.tag)).map(printDeliveryReceipt),
       rights: rights ? { publishable: rights.publishable, manifest_sha256: rights.manifest_sha256,
         file_count: rights.files?.length || 0, blockers: rights.blockers || [] } : null };
-  }));
+  })));
 }, "list a game's releases (citable versions)");
 gw.route("GET", "/api/games/:slug/releases/preflight", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -2702,25 +4147,109 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   if (!r) return ctx.send(404, { error: "no such release" });
   const base = `/cache/exports/${slug}/${r.sha}`;
   const liveTag = await store.releaseTagInfo(slug, r.tag);
-  const artifacts = r.artifacts_json ? JSON.parse(r.artifacts_json) : [];
+  const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
+  const artifacts = (r.artifacts_json ? JSON.parse(r.artifacts_json) : [])
+    .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
   const ready = new Set(artifacts.filter(a => a.status === "ready").map(a => a.name));
   const downloads = {};
   if (ready.has("print-ready.zip")) downloads.print = `${base}/print-ready.zip`;
   if (ready.has("pnp.pdf")) downloads.pnp = `${base}/pnp.pdf`;
-  if (ready.has("tts.json")) downloads.tts = `${base}/tts.json`;
+  if (!privateProject&&ready.has("tts.json")) downloads.tts = `${base}/tts.json`;
   if (ready.has(`${slug}-ttc.zip`)) downloads.ttc = `${base}/${slug}-ttc.zip`;
+  if (ready.has(cache.ttpgArtifactName(slug))) downloads.ttpg = `${base}/${cache.ttpgArtifactName(slug)}`;
   if (ready.has(cache.vttArtifactName("vtt"))) downloads.vtt = `${base}/${cache.vttArtifactName("vtt")}`;
   ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes, author: r.author_handle, created_at: r.created_at,
     repository_tag: { object_sha: r.tag_object_sha, annotated: !!r.tag_annotated,
       protected: !!r.tag_protected, verified_now: !!liveTag && liveTag.annotated && liveTag.protected
-        && String(liveTag.target).startsWith(r.sha) },
+        && liveTag.target === r.sha },
     artifacts, rights: r.rights_json ? JSON.parse(r.rights_json) : null,
-    build: r.build_json ? JSON.parse(r.build_json) : null, downloads });
+    build: r.build_json ? JSON.parse(r.build_json) : null, downloads,
+    print_deliveries: (await q.printDeliveriesForRelease(db, slug, r.tag)).map(printDeliveryReceipt) });
 }, "release detail + frozen (immutable) export URLs pinned to the exact sha");
+gw.route("GET", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  if (!await q.releaseByTag(db, slug, ctx.params.tag)) return ctx.send(404, { error: "no such release" });
+  ctx.send(200, (await q.printDeliveriesForRelease(db, slug, ctx.params.tag)).map(printDeliveryReceipt));
+}, "list creator-recorded printer handoffs bound to exact immutable release artifacts");
+gw.route("GET", "/api/games/:slug/releases/:tag/print-deliveries/:id", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const delivery = await q.printDeliveryById(db, ctx.params.id);
+  if (!delivery || delivery.game_slug !== slug || delivery.release_tag !== ctx.params.tag)
+    return ctx.send(404, { error: "no such printer delivery" });
+  ctx.send(200, printDeliveryReceipt(delivery));
+}, "downloadable printer-delivery receipt pinned to release tag, source sha, artifact hash, and decision evidence");
+gw.route("POST", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  if (!await canAdmin(u, slug, { releases: true }))
+    return ctx.send(403, { error: "only the game's owner can record a printer delivery for a release" });
+  const release = await q.releaseByTag(db, slug, ctx.params.tag);
+  if (!release) return ctx.send(404, { error: "no such release" });
+  const body = await json(ctx, 32 * 1024);
+  let artifactName, printerName, jobReference, submissionUrl, submissionHash, note;
+  try {
+    artifactName = exactText(body?.artifact_name, "artifact name", 240);
+    printerName = exactText(body?.printer_name, "printer name", 160);
+    jobReference = exactText(body?.job_reference, "printer job/reference", 160);
+    submissionUrl = evidenceUrl(body?.evidence_url, "submission evidence URL");
+    submissionHash = evidenceHash(body?.evidence_sha256, "submission evidence SHA-256");
+    note = optionalText(body?.note, "delivery note");
+  } catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
+  if (submissionUrl && !submissionHash)
+    return ctx.send(422, { error: "a submission evidence URL also requires its SHA-256 digest" });
+  const artifacts = release.artifacts_json ? JSON.parse(release.artifacts_json) : [];
+  const artifact = artifacts.find(item => item.status === "ready" && item.name === artifactName);
+  if (!artifact) return ctx.send(422, { error: "artifact is not part of this frozen release receipt" });
+  if (!printableReleaseArtifact(artifact.name))
+    return ctx.send(422, { error: "printer delivery must use a frozen PDF or print-ready.zip" });
+  const id = newId("pd");
+  await q.createPrintDelivery(db, { id, game_slug: slug, release_tag: release.tag,
+    release_sha: release.sha, artifact_name: artifact.name, artifact_sha256: artifact.sha256,
+    artifact_bytes: artifact.bytes, printer_name: printerName, job_reference: jobReference,
+    submission_evidence_url: submissionUrl, submission_evidence_sha256: submissionHash,
+    note, created_by: u.id });
+  await q.recordEvent(db, { id: newId("ev"), kind: "print_delivery", actor_id: u.id,
+    game_slug: slug, target: `${release.tag}:${id}` });
+  ctx.send(201, printDeliveryReceipt(await q.printDeliveryById(db, id)));
+}, "record an append-only creator attestation that exact released print bytes were delivered to a named printer");
+gw.route("POST", "/api/games/:slug/releases/:tag/print-deliveries/:id/decision", async (ctx) => {
+  const u = await requireAuth(ctx); if (!u) return;
+  const slug = requireGame(ctx); if (!slug) return;
+  if (!await canAdmin(u, slug, { releases: true }))
+    return ctx.send(403, { error: "only the game's owner can record the printer's decision" });
+  const delivery = await q.printDeliveryById(db, ctx.params.id);
+  if (!delivery || delivery.game_slug !== slug || delivery.release_tag !== ctx.params.tag)
+    return ctx.send(404, { error: "no such printer delivery" });
+  if (delivery.decision) return ctx.send(409, { error: "this printer delivery already has an immutable decision" });
+  const body = await json(ctx, 32 * 1024);
+  const decision = String(body?.decision || "");
+  if (!["approved", "rejected"].includes(decision))
+    return ctx.send(422, { error: "decision must be approved or rejected" });
+  let reviewerName, organization, approvalUrl, approvalHash, note;
+  try {
+    reviewerName = exactText(body?.reviewer_name, "reviewer name", 160);
+    organization = exactText(body?.organization, "reviewer organization", 160);
+    approvalUrl = evidenceUrl(body?.evidence_url, "decision evidence URL");
+    approvalHash = evidenceHash(body?.evidence_sha256, "decision evidence SHA-256", { required: true });
+    note = optionalText(body?.note, "decision note");
+  } catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
+  try {
+    await q.decidePrintDelivery(db, { id: newId("pdd"), delivery_id: delivery.id, decision,
+      reviewer_name: reviewerName, organization, evidence_url: approvalUrl,
+      evidence_sha256: approvalHash, note, recorded_by: u.id });
+  } catch (error) {
+    if (/unique|duplicate/i.test(String(error.message)))
+      return ctx.send(409, { error: "this printer delivery already has an immutable decision" });
+    throw error;
+  }
+  await q.recordEvent(db, { id: newId("ev"), kind: `print_${decision}`, actor_id: u.id,
+    game_slug: slug, target: `${ctx.params.tag}:${delivery.id}` });
+  ctx.send(201, printDeliveryReceipt(await q.printDeliveryById(db, delivery.id)));
+}, "append one immutable creator-recorded printer approval or rejection with hashed evidence");
 gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
-  if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release (an open sandbox/ownerless game may be cut by any signed-in user, but a collaborator alone may not)" });
+  if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release; fork a public sandbox into an owned edition before releasing" });
   const { tag, title } = await json(ctx);
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must start with v and a number, for example v1.0" });
   if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
@@ -2735,28 +4264,41 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   let commits = hist;
   if (prev) { const i = hist.findIndex(h => h.sha === prev.sha || h.full === prev.sha); if (i >= 0) commits = hist.slice(0, i); }
   const notes = commits.map(h => `- ${h.subject} (${h.author})`).join("\n") || "- (initial release)";
+  const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
   let exportDir;
+  const releaseOutputs=[];
   try {
-    for (const kind of ["pnp", "tts", "ttc", "project"])
-      await (await queueExportJob({ slug, sha, kind, user: u })).promise;
+    for (const kind of privateProject?["pnp","ttc","project"]:["pnp","tts","ttc","project"])
+      releaseOutputs.push(await (await queueExportJob({ slug, sha, kind, user: u })).promise);
     exportDir = dirname(cache.pathOf(cache.exportKey(slug, sha, "receipt-placeholder")));
   } catch (error) {
     return ctx.send(500, { error: "a required playable release export failed; no tag or release was created", detail: error.message });
   }
   const optionalFailures = [];
-  for (const kind of ["print", "vtt"]) {
-    try { await (await queueExportJob({ slug, sha, kind, user: u })).promise; }
+  for (const kind of ["print", "vtt", "ttpg"]) {
+    try { releaseOutputs.push(await (await queueExportJob({ slug, sha, kind, user: u })).promise); }
     catch (error) { optionalFailures.push({ status: "failed_optional", kind, error: String(error.message).split("\n")[0] }); }
   }
-  writeFileSync(join(exportDir, "forge-rights-receipt.json"), rightsReceiptBytes(rights));
-  const artifacts = [...artifactReceipt(exportDir), ...optionalFailures];
+  let artifacts;
+  try {
+    const ready=cache.releaseArtifactReceipts(exportDir,releaseOutputs,slug,sha);
+    const rightsBytes=rightsReceiptBytes(rights),rightsPath=join(exportDir,"forge-rights-receipt.json");
+    const rightsTmp=`${rightsPath}.${process.pid}.tmp`;
+    writeFileSync(rightsTmp,rightsBytes);renameSync(rightsTmp,rightsPath);
+    ready.push({status:"ready",name:"forge-rights-receipt.json",bytes:rightsBytes.length,
+      sha256:createHash("sha256").update(rightsBytes).digest("hex")});
+    artifacts=[...ready.sort((a,b)=>a.name.localeCompare(b.name)),...optionalFailures];
+  } catch(error) {
+    return ctx.send(500,{error:"release artifacts did not match their exact export receipts; no tag or release was created",
+      detail:String(error.message||error).slice(0,500)});
+  }
   const build = { format: "forge-release-build", version: 1, public_origin: PUBLIC_ORIGIN,
     build_id: process.env.FORGE_BUILD_ID || null, exporters: { ...cache.EXPORTER_VERSIONS } };
   const tagMessage = `${title?.trim() || tag}\n\n${notes}\n\nForge project: ${slug}\nExact source: ${sha}`;
   let repositoryTag;
   try { repositoryTag = await store.createReleaseTag(slug, tag, sha, tagMessage, `${u.handle} <${u.email}>`); }
   catch (error) { return ctx.send(409, { error: "repository tag could not be created; release was not published", detail: error.message }); }
-  if (!repositoryTag.annotated || !repositoryTag.protected || !String(repositoryTag.target).startsWith(sha))
+  if (!repositoryTag.annotated || !repositoryTag.protected || repositoryTag.target !== sha)
     return ctx.send(500, { error: "repository tag verification failed; release record was not published" });
   await q.createRelease(db, { game_slug: slug, tag, sha, title: title?.trim() || null, notes, author_id: u.id,
     tag_object_sha: repositoryTag.tagObject, tag_annotated: true, tag_protected: true,
@@ -2767,12 +4309,14 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
 
 /* ---------- routes: discovery + activity feed ---------- */
 gw.route("GET", "/api/discover", async (ctx) => {
+  const viewer = await authedUser(ctx);
   const qs = (ctx.url.searchParams.get("q") || "").toLowerCase();
   const genre = (ctx.url.searchParams.get("genre") || "").toLowerCase();
   const tag = (ctx.url.searchParams.get("tag") || "").toLowerCase();
   const clean = (s) => s.replace(/^["']|["']$/g, "").trim();
   const out = [];
   for (const slug of await store.list()) {
+    if (!await canRead(viewer, slug, ctx)) continue;
     let y = ""; try { y = (await store.readFile(slug, "game.yaml")).toString(); } catch { continue; }
     const title = clean((y.match(/^title:\s*(.+)$/m) || [])[1] || slug);
     const g = clean((y.match(/^genre:\s*(.+)$/m) || [])[1] || "").toLowerCase();
@@ -2790,12 +4334,19 @@ gw.route("GET", "/api/discover", async (ctx) => {
   ctx.send(200, out);
 }, "discover / search games by text, genre, or tag");
 gw.route("GET", "/api/activity", async (ctx) => {
+  const viewer = await authedUser(ctx);
   const handle = ctx.url.searchParams.get("user");
+  let events;
   if (handle) {
     const u = await q.userByHandle(db, handle);
-    return ctx.send(200, u ? await q.eventsByActor(db, u.id, 30) : []);
+    events = u ? await q.eventsByActor(db, u.id, 30) : [];
+  } else {
+    events = await q.recentEvents(db, 30);
   }
-  ctx.send(200, await q.recentEvents(db, 30));
+  const visible = [];
+  for (const event of events)
+    if (!event.game_slug || await canRead(viewer, event.game_slug, ctx)) visible.push(event);
+  ctx.send(200, visible);
 }, "recent activity feed (global, or ?user=<handle> for one person)");
 gw.route("GET", "/api/notifications", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
@@ -2810,15 +4361,26 @@ gw.route("POST", "/api/notifications/read", async (ctx) => {
 /* ---------- routes: jams (Store-2-backed entries; the co-creation front door) ---------- */
 gw.route("GET", "/api/jams", async (ctx) => {
   const out = [];
-  for (const j of JAMS) out.push({ id: j.id, title: j.title, theme: j.theme, tagline: j.tagline ?? "",
-    status: jamStatus(j), starts_at: j.starts_at || j.starts, submissions_close_at: j.submissions_close_at || j.ends,
-    entries: (await q.jamEntriesFor(db, j.id)).filter(entry => entry.state !== "draft").length });
+  for (const j of JAMS) {
+    let entries = 0;
+    for (const entry of await q.jamEntriesFor(db, j.id))
+      if (entry.state !== "draft" && await canRead(null, entry.game_slug, ctx)) entries++;
+    out.push({ id: j.id, title: j.title, theme: j.theme, tagline: j.tagline ?? "",
+      status: jamStatus(j), starts_at: j.starts_at || j.starts, submissions_close_at: j.submissions_close_at || j.ends,
+      entries });
+  }
   ctx.send(200, out);
 }, "list jams (definitions + live entry counts)");
 gw.route("GET", "/api/jams/:id", async (ctx) => {
   const j = jamById(ctx.params.id);
   if (!j) return ctx.send(404, { error: "no such jam" });
-  const entries = (await q.jamEntriesFor(db, j.id)).map(e => ({ game_slug: e.game_slug,
+  const viewer = await authedUser(ctx), visibleEntries = [];
+  for (const entry of await q.jamEntriesFor(db, j.id)) {
+    if (entry.state === "draft" && entry.user_id !== viewer?.id) continue;
+    if (!await canRead(viewer, entry.game_slug, ctx)) continue;
+    visibleEntries.push(entry);
+  }
+  const entries = visibleEntries.map(e => ({ game_slug: e.game_slug,
     title: e.title ?? e.game_slug, author: e.author_handle ?? null, forked_from: e.forked_from ?? null,
     state: e.state || "draft", qualified: !!e.qualified, award: e.award ?? null, submitted_at: e.submitted_at,
     release: e.release_sha ? { tag: e.release_tag, sha: e.release_sha } : null,
@@ -2842,7 +4404,8 @@ gw.route("POST", "/api/jams/:id/join", async (ctx) => {
     url: `/#${publicProjectPath({ namespace: r.namespace, slug: r.repo_slug })}` });
 }, "one-click join: create a correctly licensed draft starter in your account");
 async function qualifyJamGame(jam, game, ref = "HEAD") {
-  const materialized = await store.materialize(game, ref);
+  const exactRef = await store.resolveRef(game, ref);
+  const materialized = await store.materialize(game, exactRef);
   try {
     const cards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
     const printings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
@@ -2853,10 +4416,14 @@ async function qualifyJamGame(jam, game, ref = "HEAD") {
 }
 gw.route("GET", "/api/jams/:id/eligibility", async (ctx) => {
   const j = jamById(ctx.params.id); if (!j) return ctx.send(404, { error: "no such jam" });
-  const game = ctx.url.searchParams.get("game"), ref = ctx.url.searchParams.get("ref") || "HEAD";
+  const game = ctx.url.searchParams.get("game"), requestedRef = ctx.url.searchParams.get("ref") || "HEAD";
   if (!game || !store.has(game)) return ctx.send(422, { error: "choose a Forge game" });
-  try { ctx.send(200, { game, ref, status: jamStatus(j), ...(await qualifyJamGame(j, game, ref)) }); }
-  catch (error) { ctx.send(422, { error: `could not check ${game}@${ref}: ${error.message}` }); }
+  if (!await canRead(await authedUser(ctx), game, ctx)) return ctx.send(404, { error: "project not found" });
+  try {
+    const ref = await store.resolveRef(game, requestedRef);
+    ctx.send(200, { game, ref, status: jamStatus(j), ...(await qualifyJamGame(j, game, ref)) });
+  }
+  catch (error) { ctx.send(422, { error: `could not check ${game}@${requestedRef}: ${error.message}` }); }
 }, "continuously check a project or release against machine-readable jam constraints");
 gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
@@ -2867,7 +4434,8 @@ gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
   const { game, release: releaseTag, team = [] } = await json(ctx);
   if (!game || !store.has(game)) return ctx.send(422, { error: "unknown game" });
   const g = await q.gameBySlug(db, game);
-  if (g?.owner_id !== u.id) return ctx.send(403, { error: "you can only submit a game you own" });
+  if (!(await accessFor(u, game, g)).is_owner)
+    return ctx.send(403, { error: "you can only submit a game you own" });
   // Give design feedback before demanding packaging, so an off-theme draft
   // gets the useful constraint failure rather than only “cut a release”.
   const head = await qualifyJamGame(j, game, "HEAD");
@@ -2903,15 +4471,19 @@ gw.route("GET", "/api/jams/:id/entries/:slug/history", async (ctx) => {
   const j = jamById(ctx.params.id); if (!j) return ctx.send(404, { error: "no such jam" });
   const entry = await q.jamEntryOf(db, j.id, ctx.params.slug); if (!entry) return ctx.send(404, { error: "no such entry" });
   const u = await authedUser(ctx);
+  if (!await canRead(u, entry.game_slug, ctx)) return ctx.send(404, { error: "no such entry" });
   if (jamStatus(j) === "open" && entry.user_id !== u?.id) return ctx.send(404, { error: "entry history is private until submissions close" });
   ctx.send(200, (await q.jamSubmissionHistory(db, j.id, ctx.params.slug)).map(item => ({ ...item,
     receipt: JSON.parse(item.receipt_json), receipt_json: undefined })));
 }, "immutable submission and replacement history");
 gw.route("GET", "/api/jams/:id/archive", async (ctx) => {
   const j = jamById(ctx.params.id); if (!j) return ctx.send(404, { error: "no such jam" });
-  const entries = (await q.jamEntriesFor(db, j.id)).filter(entry => entry.release_sha && entry.state === "submitted")
-    .map(entry => ({ game: entry.game_slug, release: { tag: entry.release_tag, sha: entry.release_sha },
-      receipt: JSON.parse(entry.receipt_json), award: entry.award || null }));
+  const entries = [];
+  for (const entry of await q.jamEntriesFor(db, j.id)) {
+    if (!entry.release_sha || entry.state !== "submitted" || !await canRead(null, entry.game_slug, ctx)) continue;
+    entries.push({ game: entry.game_slug, release: { tag: entry.release_tag, sha: entry.release_sha },
+      receipt: JSON.parse(entry.receipt_json), award: entry.award || null });
+  }
   const archive = { format: "forge-jam-archive", version: 1, jam: j, status: jamStatus(j), entries };
   archive.sha256 = createHash("sha256").update(JSON.stringify(archive)).digest("hex");
   ctx.send(200, archive);

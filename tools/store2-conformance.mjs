@@ -235,17 +235,111 @@ await q.setAccountSuspended(db, { id: newId("aae"), user_id: ana.id, suspended: 
 // games index (DA-3) + ownership
 const slug = h("game");
 const projectId = newId("p");
-const project = { slug, project_id: projectId, namespace: ana.handle, repo_slug: slug };
-await q.upsertGame(db, { ...project, title: "Game", license: "CC-BY-4.0", card_count: 6 });
-await q.upsertGame(db, { ...project, title: "Game v2", license: "CC-BY-4.0", card_count: 7 });
-await q.setForkMeta(db, slug, null, ana.id);
+const repoId = h("repo");
+const project = { slug, project_id: projectId, namespace: ana.handle, repo_slug: slug, repo_id: repoId };
+await q.upsertGame(db, { ...project, title: "Game", license: "CC-BY-4.0", card_count: 6,
+  owner_id: ana.id, project_kind: "owned" });
+await q.upsertGame(db, { ...project, title: "Game v2", license: "CC-BY-4.0", card_count: 7,
+  owner_id: null, project_kind: "owned" });
 let g = (await q.listGames(db)).find(x => x.slug === slug);
 assert(g.title === "Game v2" && g.card_count === 7, "upsert takes the update path");
 assert(g.project_id === projectId && g.namespace === ana.handle && g.repo_slug === slug,
   "upsert preserves immutable project identity and owner/slug namespace");
-assert(g.owner_handle === ana.handle, "listGames joins owner_handle");
+assert(g.owner_handle === ana.handle && g.project_kind === "owned",
+  "reindex fills an owned project's owner and a later null cannot erase it");
 assert(typeof g.stars === "number" && g.stars === 0, "stars is a NUMBER zero (pg ::int cast)", typeof g.stars);
 assert((await q.gamesOwnedBy(db, ana.id)).includes(slug), "gamesOwnedBy");
+assert((await q.gameByProjectId(db, projectId)).slug === slug
+  && (await q.gameByRepoId(db, repoId)).slug === slug,
+"stable project and physical repository identities resolve the same index row");
+
+await q.upsertGame(db, { ...project, title: "Game v2", license: "CC-BY-4.0", card_count: 7,
+  visibility: "public", owner_id: null, project_kind: "public-sandbox" });
+g = await q.gameBySlug(db, slug);
+assert(g.owner_id === ana.id && g.project_kind === "owned",
+  "a sandbox marker cannot erase an existing owner or reclassify that owned project");
+await q.upsertGame(db, { ...project, title: "Game v2", license: "CC-BY-4.0", card_count: 7,
+  owner_id: ana.id, project_kind: "owned" });
+
+const transferOwner = { id: newId("u"), handle: h("bob"), email: `${h("bob")}@x.io`, pass_hash: "hash" };
+await q.createUser(db, transferOwner);
+await q.addCollaborator(db, slug, invited.id, ana.id);
+let hosted = await q.reindexHostedGame(db, { ...project, namespace: transferOwner.handle,
+  repo_slug: h("renamed-game"), title: "Transferred game", license: "CC-BY-4.0", card_count: 8,
+  owner_id: transferOwner.id, project_kind: "owned" });
+g = await q.gameBySlug(db, slug);
+assert(hosted.changedOwner && g.owner_id === transferOwner.id && g.namespace === transferOwner.handle
+  && (await q.collaboratorsOf(db, slug)).length === 0,
+"hosted transfer atomically replaces ownership and clears prior collaborator grants");
+
+await q.addCollaborator(db, slug, invited.id, transferOwner.id);
+hosted = await q.reindexHostedGame(db, { ...project, namespace: transferOwner.handle,
+  repo_slug: h("renamed-again"), title: "Same owner", license: "CC-BY-4.0", card_count: 9,
+  owner_id: transferOwner.id, project_kind: "owned" });
+assert(!hosted.changedOwner && (await q.collaboratorsOf(db, slug)).length === 1,
+"metadata-only hosted reindex preserves grants inside the same ownership boundary");
+
+hosted = await q.reindexHostedGame(db, { ...project, namespace: h("unknown-owner"),
+  repo_slug: h("unknown-game"), title: "Unknown owner", license: "CC-BY-4.0", card_count: 9,
+  owner_id: null, project_kind: "owned" });
+g = await q.gameBySlug(db, slug);
+assert(hosted.changedOwner && g.owner_id == null && g.project_kind === "owned"
+  && (await q.collaboratorsOf(db, slug)).length === 0,
+"unresolved Forgejo owner fails closed and clears every stale collaborator grant");
+
+await q.reindexHostedGame(db, { ...project, title: "Restored", license: "CC-BY-4.0", card_count: 9,
+  owner_id: ana.id, project_kind: "owned" });
+
+const conflictSlug = h("identity-conflict"), conflictProjectId = newId("p"), conflictRepoId = h("repo-conflict");
+await q.reindexHostedGame(db, { slug: conflictSlug, project_id: conflictProjectId,
+  namespace: ana.handle, repo_slug: conflictSlug, repo_id: conflictRepoId,
+  title: "Conflict anchor", license: "CC0-1.0", owner_id: ana.id, project_kind: "owned" });
+await q.addCollaborator(db, conflictSlug, invited.id, ana.id);
+let identityConflictRejected = false;
+try {
+  await q.reindexHostedGame(db, { slug: conflictSlug, project_id: projectId,
+    namespace: transferOwner.handle, repo_slug: conflictSlug, repo_id: conflictRepoId,
+    title: "Collision", license: "CC0-1.0", owner_id: transferOwner.id, project_kind: "owned" });
+} catch { identityConflictRejected = true; }
+const conflictAfter = await q.gameBySlug(db, conflictSlug);
+assert(identityConflictRejected && conflictAfter.owner_id === ana.id
+  && conflictAfter.project_id === conflictProjectId
+  && (await q.collaboratorsOf(db, conflictSlug)).length === 1,
+"duplicate project id rolls back metadata, ownership, and grant changes as one transaction");
+
+let duplicateRepoRejected = false;
+try {
+  await q.reindexHostedGame(db, { slug: h("repo-copy"), project_id: newId("p"),
+    namespace: transferOwner.handle, repo_slug: h("repo-copy"), repo_id: repoId,
+    title: "Physical duplicate", license: "CC0-1.0", owner_id: transferOwner.id, project_kind: "owned" });
+} catch { duplicateRepoRejected = true; }
+assert(duplicateRepoRejected, "a physical Forgejo repo id can anchor only one Store-2 project");
+
+const sandboxSlug = h("sandbox");
+await q.upsertGame(db, { slug: sandboxSlug, project_id: newId("p"), namespace: "community",
+  repo_slug: sandboxSlug, title: "Disposable demo", license: "CC0-1.0", visibility: "public",
+  owner_id: null, project_kind: "public-sandbox" });
+const sandbox = await q.gameBySlug(db, sandboxSlug);
+assert(sandbox.owner_id == null && sandbox.project_kind === "public-sandbox",
+  "an explicitly indexed sandbox remains ownerless and durably classified");
+let invalidProjectKindRejected = false;
+try {
+  if (PG) await db.query("UPDATE games SET project_kind = 'implicit-open' WHERE slug = $1", [sandboxSlug]);
+  else db.prepare("UPDATE games SET project_kind = 'implicit-open' WHERE slug = ?").run(sandboxSlug);
+} catch { invalidProjectKindRejected = true; }
+assert(invalidProjectKindRejected, "the database rejects unknown project kinds");
+
+const staleSlug = h("stale");
+await q.upsertGame(db, { slug: staleSlug, project_id: newId("p"), namespace: ana.handle,
+  repo_slug: staleSlug, title: "Removed repository", license: "CC0-1.0", card_count: 12,
+  description: "searchable before removal", topics_json: '["secret"]', players_min: 2,
+  players_max: 4, visibility: "public", owner_id: ana.id, project_kind: "owned" });
+await q.tombstoneGameIndex(db, staleSlug);
+const tombstone = await q.gameBySlug(db, staleSlug);
+assert(tombstone.visibility === "private" && tombstone.card_count === 0
+  && tombstone.description === "" && tombstone.topics_json === "[]"
+  && tombstone.players_min == null && tombstone.players_max == null,
+  "a removed Store-1 repository retains its relational anchor but loses readable catalog metadata");
 
 // stars
 await q.star(db, ana.id, slug);
@@ -322,9 +416,38 @@ assert(rels[0].build_json === releaseBuild, "releasesFor preserves the frozen re
 const releaseByTag = await q.releaseByTag(db, slug, "v1.0");
 assert(releaseByTag.sha === "abc1234" && releaseByTag.build_json === releaseBuild,
   "releaseByTag resolves the pinned sha and build identity");
+const exportJobId = newId("job"), exportInput = digest(`${slug}\0abc1234\0data\0${3}`);
+await q.createExportJob(db, { id: exportJobId, game_slug: slug, ref: "abc1234", kind: "data",
+  exporter_version: 3, input_hash: exportInput, created_by: ana.id, budget_json: "{}" });
+await q.finishExportJob(db, exportJobId, "succeeded", JSON.stringify({ ok: true }), null);
+const successfulExports = await q.succeededExportJobsForRef(db, slug, "abc1234");
+assert(successfulExports.length === 1 && successfulExports[0].id === exportJobId,
+  "succeededExportJobsForRef exposes only successful Store-2 artifact evidence");
 let dupRel = false;
 try { await q.createRelease(db, { game_slug: slug, tag: "v1.0", sha: "z", author_id: ana.id }); } catch { dupRel = true; }
 assert(dupRel, "duplicate tag rejected (one release per tag per game)");
+const deliveryId = newId("pd"), artifactHash = "a".repeat(64), evidenceHash = "b".repeat(64);
+await q.createPrintDelivery(db, { id: deliveryId, game_slug: slug, release_tag: "v1.0",
+  release_sha: "abc1234", artifact_name: "print-ready.zip", artifact_sha256: artifactHash,
+  artifact_bytes: 1234, printer_name: "Example Press", job_reference: "JOB-42",
+  submission_evidence_url: "https://press.example.invalid/jobs/JOB-42", submission_evidence_sha256: evidenceHash,
+  note: "submitted proof", created_by: ana.id });
+let deliveries = await q.printDeliveriesForRelease(db, slug, "v1.0");
+assert(deliveries.length === 1 && deliveries[0].release_sha === "abc1234"
+  && deliveries[0].artifact_sha256 === artifactHash && !deliveries[0].decision,
+"print delivery freezes release sha, artifact hash, printer, and submission evidence");
+await q.decidePrintDelivery(db, { id: newId("pdd"), delivery_id: deliveryId, decision: "approved",
+  reviewer_name: "Printer QA", organization: "Example Press", evidence_url: null,
+  evidence_sha256: "c".repeat(64), note: "approved for manufacture", recorded_by: ana.id });
+deliveries = await q.printDeliveriesForRelease(db, slug, "v1.0");
+assert(deliveries[0].decision === "approved" && deliveries[0].reviewer_name === "Printer QA"
+  && (await q.printDeliveryById(db, deliveryId)).evidence_sha256 === "c".repeat(64),
+"one printer decision joins its named reviewer and hashed evidence to the exact delivery");
+let duplicateDecision = false;
+try { await q.decidePrintDelivery(db, { id: newId("pdd"), delivery_id: deliveryId, decision: "rejected",
+  reviewer_name: "Other", organization: "Example Press", evidence_sha256: "d".repeat(64), recorded_by: ana.id }); }
+catch { duplicateDecision = true; }
+assert(duplicateDecision, "printer decision is immutable (one terminal decision per exact delivery)");
 
 // events (007) — the activity feed backing
 await q.recordEvent(db, { id: newId("ev"), kind: "fork", actor_id: ana.id, game_slug: fork, target: slug });
@@ -367,6 +490,8 @@ assert(personalExport.account.email === ana.email && personalExport.author_claim
   && personalExport.authored_issues.some(issue => issue.id === iid)
   && personalExport.authored_comments.length === 2
   && personalExport.authored_releases.some(release => release.tag === "v1.0")
+  && personalExport.print_deliveries.some(delivery => delivery.id === deliveryId)
+  && personalExport.print_delivery_decisions.some(decision => decision.delivery_id === deliveryId)
   && personalExport.activity.length >= 2 && personalExport.connected_sources.length === 1,
   "allowlisted export covers the participant's account, authorship, activity, and connector record");
 await q.disconnectSource(db, slug, "sheet");

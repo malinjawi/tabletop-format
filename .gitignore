@@ -12,6 +12,7 @@ examples/**/exports/
 /data/
 /output/
 /tmp/
+/hub.html
 deploy/.env
 deploy/.secrets/
 __pycache__/

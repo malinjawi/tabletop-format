@@ -7,6 +7,8 @@
   "properties": {
     "format": { "const": "forge-design-project" },
     "version": { "const": 1 },
+    "profile": { "type": "string", "minLength": 1 },
+    "profile_version": { "type": "integer", "minimum": 1 },
     "game": {
       "type": "object",
       "required": ["id", "title"],
@@ -53,7 +55,8 @@
       "required": ["cards", "printings"],
       "properties": {
         "cards": { "$ref": "#/$defs/table" },
-        "printings": { "$ref": "#/$defs/table" }
+        "printings": { "$ref": "#/$defs/table" },
+        "tokens": { "$ref": "#/$defs/table" }
       },
       "additionalProperties": false
     },

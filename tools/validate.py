@@ -15,7 +15,9 @@ from design_engines import MANIFEST as DESIGN_ENGINES_MANIFEST, load_design_engi
 SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
 BASE = "https://spec.example.dev/schemas/"
 SOURCE_ASSETS_MANIFEST = "assets/manifest.json"
+ART_LIBRARY_MANIFEST = "design/art-library.json"
 SOURCE_ASSET_ROOTS = {"assets", "templates", "rules", "setups", "boards", "components", "design"}
+PRINT_TARGETS = {target["id"]: target for target in json.loads((SCHEMA_DIR.parent / "production" / "print-targets.json").read_text())["targets"]}
 
 game_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
 if not game_dir:
@@ -78,17 +80,23 @@ setups = load_dir("setups")
 for i, s in enumerate(setups): check("setup", s, f"setups[{i}] ({s.get('id','?')})")
 tokens = load("components/tokens.json") or []
 for i, t in enumerate(tokens): check("token", t, f"tokens[{i}] ({t.get('id','?')})")
+component_design = load("templates/component-design.json")
+if component_design is not None: check("component-design", component_design, "templates/component-design.json")
 playtests = load_dir("playtests")
 for i, s in enumerate(playtests): check("playtest", s, f"playtests[{i}] ({s.get('id','?')})")
 community = load("community.yaml")
 if community is not None: check("community", community, "community.yaml")
 rights_manifest = load("forge/rights.json")
 if rights_manifest is not None: check("rights", rights_manifest, "forge/rights.json")
+art_library = load(ART_LIBRARY_MANIFEST)
+if art_library is not None: check("art-library", art_library, ART_LIBRARY_MANIFEST)
 source_assets_manifest = load(SOURCE_ASSETS_MANIFEST)
 if source_assets_manifest is not None:
     check("source-assets", source_assets_manifest, SOURCE_ASSETS_MANIFEST)
 layout = load("templates/layout.yaml")
 if layout is not None: check("layout", layout, "templates/layout.yaml")
+print_profile = load("templates/print.yaml")
+if print_profile is not None: check("print-profile", print_profile, "templates/print.yaml")
 card_design_manifest = load(CARD_DESIGN_MANIFEST)
 design_engines_manifest = load(DESIGN_ENGINES_MANIFEST)
 card_design = None
@@ -163,8 +171,153 @@ def dupes(arr, label):
     for x in arr:
         if x["id"] in seen: err(f"duplicate {label} id '{x['id']}'")
         seen.add(x["id"])
-for arr, label in [(cards,"card"),(printings,"printing"),(sets_,"set"),(formats,"format"),(restrictions,"restriction"),(setups,"setup")]:
+for arr, label in [(cards,"card"),(printings,"printing"),(sets_,"set"),(formats,"format"),(restrictions,"restriction"),(setups,"setup"),(tokens,"piece")]:
     dupes(arr, label)
+
+def validate_layout_typography(candidate, label):
+    if not candidate:
+        return
+    styles = candidate.get("text_styles") or {}
+    font_ids = {font["id"] for font in candidate.get("fonts") or []}
+    for style_id, style in styles.items():
+        for key in ("font", "secondary_font"):
+            if style.get(key) and style[key] not in font_ids:
+                err(f"{label}: text style '{style_id}' references missing font '{style[key]}'")
+    regions = list(candidate.get("regions") or []) + list((candidate.get("back") or {}).get("regions") or [])
+    for region in regions:
+        style_id = region.get("text_style")
+        if style_id and style_id not in styles:
+            err(f"{label}: region '{region['id']}' references missing text style '{style_id}'")
+        if style_id and region.get("type") not in ("text", "richtext", "body", "badge", "pips"):
+            err(f"{label}: region '{region['id']}' cannot apply text style '{style_id}' to {region.get('type')}")
+        for key in ("font", "secondary_font"):
+            if region.get(key) and region[key] not in font_ids:
+                err(f"{label}: region '{region['id']}' references missing font '{region[key]}'")
+
+validate_layout_typography(layout, "templates/layout.yaml")
+
+card_ids = {card["id"] for card in cards}
+printing_by_id = {printing["id"]: printing for printing in printings}
+for card_id in (print_profile or {}).get("selection", {}).get("card_ids", []):
+    if card_id not in card_ids:
+        err(f"templates/print.yaml selects missing card '{card_id}'")
+exact_printing_quantities = (print_profile or {}).get("selection", {}).get("printing_quantities", {})
+if exact_printing_quantities:
+    represented_cards = set()
+    for printing_id in exact_printing_quantities:
+        printing = printing_by_id.get(printing_id)
+        if not printing:
+            err(f"templates/print.yaml selects missing printing '{printing_id}'")
+        else:
+            represented_cards.add(printing["card_id"])
+    selected_cards = set((print_profile or {}).get("selection", {}).get("card_ids", []))
+    mismatch = sorted(represented_cards ^ selected_cards)
+    if mismatch:
+        err(f"templates/print.yaml exact printing quantities do not match card_ids: {', '.join(mismatch)}")
+
+print_target_id = ((print_profile or {}).get("press") or {}).get("target", "generic-srgb")
+print_target = PRINT_TARGETS.get(print_target_id)
+if ((print_profile or {}).get("press") or {}).get("target") and print_target is None:
+    err(f"templates/print.yaml selects unknown print target '{print_target_id}'")
+print_dieline = ((print_profile or {}).get("press") or {}).get("dieline") or {}
+if print_dieline.get("enabled"):
+    first_family = ((card_design or {}).get("families") or [{}])[0]
+    declared = first_family.get("layout", {}).get("card") or (layout or {}).get("card") or (production or {}).get("card") or (source_overlay or {}).get("card") or {}
+    bleed = float(declared.get("bleed_mm", 3.175))
+    offset = float(print_dieline.get("offset_mm"))
+    if offset > bleed:
+        err(f"spot dieline offset {offset:g} mm exceeds the card system's {bleed:g} mm bleed")
+if (print_target or {}).get("requirements", {}).get("trim_mm"):
+    expected = print_target["requirements"]["trim_mm"]
+    fallback = (layout or {}).get("card") or (production or {}).get("card") or (source_overlay or {}).get("card")
+    selected_card_ids = set((print_profile or {}).get("selection", {}).get("card_ids", []))
+    selected_printing_ids = set(exact_printing_quantities)
+    target_printings = ([printing for printing in printings if printing["id"] in selected_printing_ids]
+                        if selected_printing_ids else
+                        [printing for printing in printings if printing["card_id"] in selected_card_ids]
+                        if selected_card_ids else printings)
+    for printing in target_printings:
+        card = next((candidate for candidate in cards if candidate["id"] == printing["card_id"]), None)
+        family = next((candidate for candidate in (card_design or {}).get("families", [])
+                       if card is not None and card_matches_family(card, candidate.get("match") or {})), None)
+        declared = printing.get("physical_size_mm") or (family or {}).get("layout", {}).get("card") or fallback or {}
+        try:
+            actual = [float(declared.get("width", declared.get("w_mm"))),
+                      float(declared.get("height", declared.get("h_mm")))]
+        except (TypeError, ValueError):
+            err(f"print target '{print_target_id}' cannot resolve the trim size for '{printing['id']}'")
+            continue
+        if any(abs(value - expected[index]) > .01 for index, value in enumerate(actual)):
+            err(f"print target '{print_target_id}' requires {expected[0]} × {expected[1]} mm trim; "
+                f"'{printing['id']}' resolves to {actual[0]:g} × {actual[1]:g} mm")
+
+for piece in (candidate for candidate in tokens if candidate.get("kind") == "dial"):
+    try:
+        attrs = piece.get("attributes") or {}
+        start, maximum, step = float(attrs.get("start_value", 0)), float(attrs.get("max_value", 10)), float(attrs.get("step", 1))
+        intervals = (maximum - start) / step
+        count = round(intervals) + 1
+        if step <= 0 or maximum < start or count < 2:
+            raise ValueError()
+        if abs(intervals - round(intervals)) > 1e-7:
+            err(f"piece '{piece['id']}' dial maximum must land exactly on its step interval")
+        elif count > 36:
+            err(f"piece '{piece['id']}' dial scale has {count} positions; Forge supports at most 36 legible positions")
+    except (TypeError, ValueError, ZeroDivisionError, OverflowError):
+        err(f"piece '{piece['id']}' dial scale needs a finite start, a larger maximum, and a positive step")
+
+if component_design is not None:
+    families = component_design.get("families") or []
+    dupes(families, "component design family")
+    player_count = (component_design.get("production") or {}).get("player_count")
+    game_players = game.get("players") or {}
+    if player_count is not None and game_players.get("min") is not None and player_count < game_players["min"]:
+        err(f"component production player_count {player_count} is below the game's minimum of {game_players['min']}")
+    if player_count is not None and game_players.get("max") is not None and player_count > game_players["max"]:
+        err(f"component production player_count {player_count} is above the game's maximum of {game_players['max']}")
+    family_ids = {family["id"] for family in families}
+    for token in tokens:
+        if token.get("template_id") and token["template_id"] not in family_ids:
+            err(f"piece '{token['id']}' references missing component design family '{token['template_id']}'")
+        if (token.get("back") or {}).get("template_id") and token["back"]["template_id"] not in family_ids:
+            err(f"piece '{token['id']}' back references missing component design family '{token['back']['template_id']}'")
+        if token.get("back"):
+            def family_for(template_id):
+                return next((f for f in families if f.get("id") == template_id), None) \
+                    or next((f for f in families if template_id in ((f.get("match") or {}).get("template_ids") or [])), None) \
+                    or next((f for f in families if token.get("kind") in ((f.get("match") or {}).get("kinds") or [])), None) \
+                    or next((f for f in families if f.get("id") == "generic-piece"), None) \
+                    or (families[0] if families else None)
+            front_family = family_for(token.get("template_id"))
+            back_family = family_for(token["back"].get("template_id") or token.get("template_id"))
+            size = token.get("size_mm") or {}
+            front_size = (size.get("width") or (front_family or {}).get("size_mm", {}).get("width"),
+                          size.get("height") or (front_family or {}).get("size_mm", {}).get("height"))
+            back_size = (size.get("width") or (back_family or {}).get("size_mm", {}).get("width"),
+                         size.get("height") or (back_family or {}).get("size_mm", {}).get("height"))
+            if front_size != back_size:
+                err(f"piece '{token['id']}' front/back families must resolve to the same finished size")
+        family = next((f for f in families if f.get("id") == token.get("template_id")), None) \
+            or next((f for f in families if token.get("template_id") in ((f.get("match") or {}).get("template_ids") or [])), None) \
+            or next((f for f in families if token.get("kind") in ((f.get("match") or {}).get("kinds") or [])), None) \
+            or next((f for f in families if f.get("id") == "generic-piece"), None) \
+            or (families[0] if families else None)
+        if family:
+            size = token.get("size_mm") or {}
+            width = float(size.get("width") or family.get("size_mm", {}).get("width"))
+            height = float(size.get("height") or family.get("size_mm", {}).get("height"))
+            safe = float((component_design.get("production") or {}).get("safe_mm") or 0)
+            if safe * 2 >= width or safe * 2 >= height:
+                err(f"piece '{token['id']}' safe inset {safe:g} mm leaves no usable content area inside {width:g} × {height:g} mm")
+            unsafe = []
+            for region in (family.get("regions") or []):
+                if region.get("type") == "image": continue
+                left, top = width * region["x"] / 100, height * region["y"] / 100
+                right = width - width * (region["x"] + region["w"]) / 100
+                bottom = height - height * (region["y"] + region["h"]) / 100
+                if min(left, top, right, bottom) + 1e-7 < safe: unsafe.append(region["id"])
+            if unsafe:
+                warn(f"piece '{token['id']}': {', '.join(unsafe)} region{' is' if len(unsafe) == 1 else 's are'} outside the {safe:g} mm safe inset")
 
 card_ids = {c["id"] for c in cards}
 
@@ -237,6 +390,7 @@ if card_design:
                     err(f"{CARD_DESIGN_MANIFEST}: component '{component['id']}' references unknown family '{family_id}'")
     order = set(card_design.get("region_order") or [])
     for family in card_design["families"]:
+        validate_layout_typography(family["layout"], f"compiled family '{family['id']}'")
         ids = [region["id"] for region in family["layout"]["regions"]]
         if len(ids) != len(set(ids)): err(f"compiled family '{family['id']}' has duplicate region ids")
         for region_id in ids:
@@ -347,6 +501,17 @@ for d in decks:
         if cid not in card_ids: err(f"deck '{d['id']}': card '{cid}' not found")
     if d.get("format_id") and d["format_id"] not in format_ids:
         err(f"deck '{d['id']}': format '{d['format_id']}' not found")
+    if d.get("printings"):
+        represented = {}
+        for printing_id, quantity in d["printings"].items():
+            printing = printing_by_id.get(printing_id)
+            if not printing:
+                err(f"deck '{d['id']}': printing '{printing_id}' not found"); continue
+            card_id = printing["card_id"]
+            represented[card_id] = represented.get(card_id, 0) + quantity
+        for card_id in set(d.get("cards", {})) | set(represented):
+            if d.get("cards", {}).get(card_id, 0) != represented.get(card_id, 0):
+                err(f"deck '{d['id']}': printing counts for '{card_id}' do not equal its card count")
 
 defs = {d["key"]: d for d in game.get("attribute_definitions") or []}
 TYPES = {"integer": int, "number": (int, float), "string": str, "boolean": bool}
@@ -376,6 +541,16 @@ for p in printings:
     for key in ("art", "back", "scan"):
         if p.get(key) and not (game_dir / p[key]).exists():
             warn(f"printing '{p['id']}': {key} asset '{p[key]}' not found")
+if isinstance(art_library, dict):
+    seen_art = set()
+    for record in art_library.get("assets") or []:
+        path = record.get("path") if isinstance(record, dict) else None
+        if path in seen_art: err(f"{ART_LIBRARY_MANIFEST}: duplicate artwork path '{path}'")
+        seen_art.add(path)
+        if not isinstance(path, str): continue
+        if ".." in path or "//" in path: err(f"{ART_LIBRARY_MANIFEST}: unsafe artwork path '{path}'")
+        if not (game_dir / path).exists(): err(f"{ART_LIBRARY_MANIFEST}: artwork '{path}' does not exist")
+        if not re.search(r"\.(?:png|jpe?g|webp|svg)$", path, re.I): err(f"{ART_LIBRARY_MANIFEST}: '{path}' is not a supported image")
 if source_overlay:
     pinned_source = None
     if source_overlay.get("baseline_data"):
@@ -470,6 +645,19 @@ dupes(tokens, "token")
 for t in tokens:
     if t.get("symbol") and t["symbol"] not in declared_symbols:
         err(f"token '{t['id']}': symbol '{t['symbol']}' not declared in game.yaml")
+    if (t.get("back") or {}).get("symbol") and t["back"]["symbol"] not in declared_symbols:
+        err(f"token '{t['id']}' back: symbol '{t['back']['symbol']}' not declared in game.yaml")
+    if t.get("art") and not (game_dir / t["art"]).exists():
+        warn(f"token '{t['id']}': art asset '{t['art']}' not found")
+    if (t.get("back") or {}).get("art") and not (game_dir / t["back"]["art"]).exists():
+        warn(f"token '{t['id']}' back: art asset '{t['back']['art']}' not found")
+card_back_art = {asset for asset in [
+    (layout.get("back") or {}).get("art") if layout else None,
+    *[((family.get("layout") or {}).get("back") or {}).get("art") for family in ((card_design or {}).get("families") or [])],
+] if asset}
+for asset in card_back_art:
+    if not (game_dir / asset).exists():
+        warn(f"shared card back: art asset '{asset}' not found")
 deck_ids = {d["id"] for d in decks}
 deck_by_id = {d["id"]: d for d in decks}
 for s in setups:
@@ -507,6 +695,31 @@ for s in setups:
     for (did, cid), count in placed_counts.items():
         available = ((deck_by_id.get(did) or {}).get("cards") or {}).get(cid, 0)
         if count > available: err(f"setup '{s['id']}': places {count}x '{cid}' from deck '{did}', but it only contains {available}")
+    placed_piece_counts = {}
+    piece_by_id = {piece["id"]: piece for piece in tokens}
+    for placement in s.get("pieces") or []:
+        if placement["id"] in item_ids: err(f"setup '{s['id']}': duplicate setup item id '{placement['id']}'")
+        item_ids.add(placement["id"])
+        piece = piece_by_id.get(placement["component_id"])
+        if not piece: err(f"setup '{s['id']}': piece placement '{placement['id']}' references unknown component '{placement['component_id']}'")
+        if placement.get("zone_id") and placement["zone_id"] not in zone_ids:
+            err(f"setup '{s['id']}': piece placement '{placement['id']}' references unknown zone '{placement['zone_id']}'")
+        if placement.get("seat_id") and placement["seat_id"] not in seat_ids:
+            err(f"setup '{s['id']}': piece placement '{placement['id']}' references unknown seat '{placement['seat_id']}'")
+        position = placement["position"]
+        if position["x"] < 0 or position["x"] > s["board"]["width"] or position["y"] < 0 or position["y"] > s["board"]["height"]:
+            err(f"setup '{s['id']}': piece placement '{placement['id']}' is outside the board")
+        if placement.get("face") == "back" and piece and not piece.get("back"):
+            err(f"setup '{s['id']}': piece placement '{placement['id']}' requests a back face that '{piece['id']}' does not declare")
+        component_id = placement["component_id"]
+        placed_piece_counts[component_id] = placed_piece_counts.get(component_id, 0) + placement.get("quantity", 1)
+    for component_id, count in placed_piece_counts.items():
+        piece = piece_by_id.get(component_id)
+        if not piece: continue
+        players = ((component_design or {}).get("production") or {}).get("player_count")
+        available = piece.get("quantity", 1) * (players if piece.get("per_player") and players else 1)
+        if count > available:
+            err(f"setup '{s['id']}': places {count}x component '{component_id}', but the production kit contains {available}")
     for counter in s.get("counters") or []:
         if counter["id"] in item_ids: err(f"setup '{s['id']}': duplicate setup item id '{counter['id']}'")
         item_ids.add(counter["id"])

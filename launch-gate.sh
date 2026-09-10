@@ -45,6 +45,9 @@ run "production dependency audit" npm audit --omit=dev
 run "Python dependency integrity" "${FORGE_PYTHON:-$ROOT/.venv/bin/python}" -m pip check
 run "static types" npm run typecheck
 run "adapter contracts" node tools/check-adapters.mjs
+run "default-deny internal fixture discovery" npm run test:fixture-discovery
+run "print-ready output contracts" npm run test:print-ready
+run "staged Tabletop Simulator component contracts" npm run test:tts-components
 run "portable project server round-trip" node tools/test-forge-project-server.mjs
 run "responsive Explore browser smoke" node tools/ui-smoke.mjs
 run "functional integration" ./e2e.sh

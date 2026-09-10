@@ -1,24 +1,12 @@
 version: 1
 kind: pnpink
-description: A deliberately isolated adapter proof. Forge commits remain canonical; CSV and .pnp files are derived on demand from the committed card data.
+description: A version-pinned PnPInk/Inkscape working copy for all production card families. Forge commits remain canonical; family CSV and .pnp files are derived from an exact committed baseline.
 upstream:
   repository: https://github.com/xoellijo/pnpink
   license: MIT
-  tested_tag: v0.55
+  tested_tag: v0.57
 template: templates/card-design/experiments/pnpink/netrunner-proof.svg
 families:
-  - id: program
-    specimen: buzzsaw
-    bbox: bbox_program
-    fields:
-      id: program_forge_id
-      name: program_name
-      subtypes: program_subtypes
-      text: program_text
-      attributes.cost: program_cost
-      attributes.memory_cost: program_memory
-      attributes.strength: program_strength
-      attributes.faction: program_faction
   - id: agenda
     specimen: luminal_transubstantiation
     bbox: bbox_agenda
@@ -26,7 +14,136 @@ families:
       id: agenda_forge_id
       name: agenda_name
       subtypes: agenda_subtypes
+      keywords: agenda_keywords
       text: agenda_text
       attributes.advancement_cost: agenda_advancement
       attributes.agenda_points: agenda_points
+      attributes.influence: agenda_influence
       attributes.faction: agenda_faction
+  - id: asset
+    specimen: urtica_cipher
+    bbox: bbox_asset
+    fields:
+      id: asset_forge_id
+      name: asset_name
+      subtypes: asset_subtypes
+      keywords: asset_keywords
+      text: asset_text
+      attributes.cost: asset_cost
+      attributes.trash_cost: asset_trash
+      attributes.influence: asset_influence
+      attributes.faction: asset_faction
+  - id: event
+    specimen: mutual_favor
+    bbox: bbox_event
+    fields:
+      id: event_forge_id
+      name: event_name
+      subtypes: event_subtypes
+      keywords: event_keywords
+      text: event_text
+      attributes.cost: event_cost
+      attributes.influence: event_influence
+      attributes.faction: event_faction
+  - id: hardware
+    specimen: pennyshaver
+    bbox: bbox_hardware
+    fields:
+      id: hardware_forge_id
+      name: hardware_name
+      subtypes: hardware_subtypes
+      keywords: hardware_keywords
+      text: hardware_text
+      attributes.cost: hardware_cost
+      attributes.influence: hardware_influence
+      attributes.faction: hardware_faction
+  - id: ice
+    specimen: ansel_1_0
+    bbox: bbox_ice
+    fields:
+      id: ice_forge_id
+      name: ice_name
+      subtypes: ice_subtypes
+      keywords: ice_keywords
+      text: ice_text
+      attributes.cost: ice_cost
+      attributes.strength: ice_strength
+      attributes.influence: ice_influence
+      attributes.faction: ice_faction
+  - id: corp-identity
+    specimen: haas_bioroid_precision_design
+    bbox: bbox_corp_identity
+    fields:
+      id: corp_identity_forge_id
+      name: corp_identity_name
+      subtypes: corp_identity_subtypes
+      keywords: corp_identity_keywords
+      text: corp_identity_text
+      attributes.minimum_deck_size: corp_identity_deck
+      attributes.influence_limit: corp_identity_influence
+      attributes.faction: corp_identity_faction
+  - id: runner-identity
+    specimen: zahya_sadeghi_versatile_smuggler
+    bbox: bbox_runner_identity
+    fields:
+      id: runner_identity_forge_id
+      name: runner_identity_name
+      subtypes: runner_identity_subtypes
+      keywords: runner_identity_keywords
+      text: runner_identity_text
+      attributes.minimum_deck_size: runner_identity_deck
+      attributes.influence_limit: runner_identity_influence
+      attributes.base_link: runner_identity_link
+      attributes.memory_limit: runner_identity_memory
+      attributes.faction: runner_identity_faction
+  - id: operation
+    specimen: public_trail
+    bbox: bbox_operation
+    fields:
+      id: operation_forge_id
+      name: operation_name
+      subtypes: operation_subtypes
+      keywords: operation_keywords
+      text: operation_text
+      attributes.cost: operation_cost
+      attributes.influence: operation_influence
+      attributes.faction: operation_faction
+  - id: program
+    specimen: tranquilizer
+    bbox: bbox_program
+    fields:
+      id: program_forge_id
+      name: program_name
+      subtypes: program_subtypes
+      keywords: program_keywords
+      text: program_text
+      attributes.cost: program_cost
+      attributes.memory_cost: program_memory
+      attributes.strength: program_strength
+      attributes.influence: program_influence
+      attributes.faction: program_faction
+  - id: resource
+    specimen: red_team
+    bbox: bbox_resource
+    fields:
+      id: resource_forge_id
+      name: resource_name
+      subtypes: resource_subtypes
+      keywords: resource_keywords
+      text: resource_text
+      attributes.cost: resource_cost
+      attributes.influence: resource_influence
+      attributes.faction: resource_faction
+  - id: upgrade
+    specimen: amaze_amusements
+    bbox: bbox_upgrade
+    fields:
+      id: upgrade_forge_id
+      name: upgrade_name
+      subtypes: upgrade_subtypes
+      keywords: upgrade_keywords
+      text: upgrade_text
+      attributes.cost: upgrade_cost
+      attributes.trash_cost: upgrade_trash
+      attributes.influence: upgrade_influence
+      attributes.faction: upgrade_faction

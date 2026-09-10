@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "production": {
+    "player_count": 2,
+    "large_piece_overlap_mm": 8,
+    "bleed_mm": 2,
+    "safe_mm": 1.5,
+    "sheet": { "page": "A4", "margin_mm": 10, "gap_mm": 3 }
+  },
+  "families": [
+    {
+      "id": "ember-token",
+      "label": "Ember resource token",
+      "match": { "kinds": ["token"] },
+      "shape": "circle",
+      "size_mm": { "width": 20, "height": 20 },
+      "style": {
+        "fill": "#2d1d18",
+        "border": "#f59e42",
+        "border_mm": 1.2,
+        "text": "#fff5df",
+        "font_family": "Arial",
+        "font_size_pt": 7.5
+      },
+      "regions": [
+        { "id": "symbol", "type": "symbol", "source": "symbol", "x": 25, "y": 15, "w": 50, "h": 42, "align": "center", "font_size_pt": 11 },
+        { "id": "name", "type": "text", "source": "name", "x": 13, "y": 62, "w": 74, "h": 18, "align": "center", "uppercase": true, "font_size_pt": 5.5 }
+      ]
+    },
+    {
+      "id": "ember-dial",
+      "label": "Ember flame dial",
+      "match": { "kinds": ["dial"] },
+      "shape": "circle",
+      "size_mm": { "width": 38, "height": 38 },
+      "style": {
+        "fill": "#6f1d1b",
+        "border": "#f6bd60",
+        "border_mm": 1.6,
+        "text": "#fff7e6",
+        "font_family": "Arial",
+        "font_size_pt": 9
+      },
+      "regions": [
+        { "id": "name", "type": "text", "source": "name", "x": 12, "y": 24, "w": 76, "h": 20, "align": "center", "uppercase": true, "font_size_pt": 7 },
+        { "id": "range", "type": "text", "source": "attributes.max_value", "x": 28, "y": 50, "w": 44, "h": 24, "align": "center", "font_size_pt": 11 }
+      ]
+    }
+  ]
+}

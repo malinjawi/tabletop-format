@@ -17,44 +17,51 @@
  *   catalogVersion()              → change token across all games
  *   readFile(slug, rel)           → Buffer | null
  *   readMeta(slug)                → { title, license, cardCount } (index fodder, DA-3)
+ *   setVisibility(slug, value)     → storage-layer visibility reconciliation
  *   writeFiles(slug, files, message, author) → { sha }   // atomic multi-file commit
  *   createGame(slug, srcTree, message, author) → { sha } // import a validated tree
  *   fork(src, dest, transformYaml, message, author, ref?) → { sha }
  *   history(slug, rel, n)         → [{ full, sha, author, date, subject }]
  *   fileAt(slug, ref, rel)        → Buffer | null        // file content at a commit
- *   headSha(slug)                 → short sha
+ *   resolveRef(slug, ref)         → full 40-character commit sha
+ *   headSha(slug)                 → full 40-character commit sha
  *   materialize(slug, ref)        → { dir, cleanup }     // exact tree at ref (Store 3 feed)
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync,
          mkdirSync, mkdtempSync, rmSync, cpSync } from "node:fs";
-import { join, dirname, isAbsolute, relative } from "node:path";
+import { join, dirname, isAbsolute, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { uploadAsset, downloadAsset } from "../tools/lib/lfs.mjs";
 import { PROJECT_META, parseProjectMeta } from "./project-ref.mjs";
+import { fullStore1ObjectId, localStore1Ref } from "./store1-ref.mjs";
 
-/** @param {{root: string, gamesDir: string, lfsUrl?: string|null}} cfg */
-export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
+/** @param {{root: string, gamesDir: string, lfsUrl?: string|null, includeFixtures?: boolean}} cfg */
+export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixtures = false }) {
   const git = (a, opts = {}) =>
     execFileSync("git", ["-C", root, ...a], { encoding: "utf8", ...opts }).trimEnd();
+  // Local Forge commits must work on a clean machine with no global Git
+  // identity. The signed-in person remains the commit author; Forge is the
+  // deterministic committer that writes the reviewed transaction.
+  const commit = (args) => git(["-c", "user.name=Forge Platform",
+    "-c", "user.email=noreply@forge.local", "commit", ...args]);
   const QUIET = { stdio: ["pipe", "pipe", "ignore"] };
-  // Discovery scans DIRECT children of gamesDir, plus ONE nested level under
-  // FIXTURES_DIR (examples/_fixtures/<slug>/game.yaml) — the ported real-game test
-  // fixtures (Netrunner SG, Hearthstone, Hearts). Slugs are always the basename.
+  // Hosted projects are DIRECT children of gamesDir. Internal regression
+  // fixtures under FIXTURES_DIR are deliberately invisible unless a local test
+  // opts in; fixture location must never imply publication or route access.
   // `abs`/`rel` are the ONE shared path helper every method below routes through
   // (has/readFile/writeFiles/history/fileAt/materialize/...), so patching them here
   // is enough to make fixture games work everywhere, not just in list().
   const FIXTURES_DIR = "_fixtures";
   const hasGameYaml = (dir) => existsSync(join(dir, "game.yaml"));
-  /** slug -> absolute directory. Direct child wins; falls back to _fixtures/<slug>;
-   *  falls back to the (nonexistent) direct-child path otherwise, so creating a
-   *  brand-new game (createGame/fork) still lands as a normal top-level game. */
+  /** slug -> absolute directory. Direct child wins; an explicitly enabled test
+   *  may fall back to _fixtures/<slug>. New projects always land at top level. */
   const abs = (slug) => {
     const top = join(gamesDir, slug);
     if (hasGameYaml(top)) return top;
     const fixture = join(gamesDir, FIXTURES_DIR, slug);
-    if (hasGameYaml(fixture)) return fixture;
+    if (includeFixtures && hasGameYaml(fixture)) return fixture;
     return top;
   };
   const rel = (slug) => relative(root, abs(slug)).replaceAll("\\", "/");
@@ -94,13 +101,32 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
 
     list() {
       const top = readdirSync(gamesDir).filter(d => hasGameYaml(join(gamesDir, d)));
+      if (!includeFixtures) return top;
       const fixturesDir = join(gamesDir, FIXTURES_DIR);
       const nested = existsSync(fixturesDir)
         ? readdirSync(fixturesDir).filter(d => hasGameYaml(join(fixturesDir, d)))
         : [];
       return [...top, ...nested.filter(slug => !top.includes(slug))]; // top-level hosted game wins
     },
+
+    isFixture(slug) {
+      return includeFixtures && abs(slug).startsWith(join(gamesDir, FIXTURES_DIR) + sep);
+    },
     has(slug) { return okSlug(slug) && store.list().includes(slug); },
+    repositoryIdentity(slug) {
+      const meta = store.readMeta(slug);
+      return { repoId: meta.repoId, namespace: meta.namespace, repoSlug: meta.repoSlug };
+    },
+    // Hosted Store 1 can remap a mutable discovery name to a durable key and
+    // quarantine a conflicting native repository. The local monorepo already
+    // uses its directory name as the durable key, so these interface hooks are
+    // deliberately strict/no-op equivalents.
+    bindProjectKey(currentKey, stableKey) {
+      if (currentKey !== stableKey)
+        throw new Error("the local Store1 backend cannot rename a project during reindex");
+      return stableKey;
+    },
+    quarantineProject(_slug) { return false; },
     dir(slug) { return store.has(slug) ? abs(slug) : null; },
     treeRoot() { return gamesDir; },
 
@@ -123,7 +149,18 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       return { title: (gy.match(/^title:\s*"?([^"\n]+)"?/m) ?? [])[1] ?? slug,
                license: (gy.match(/^license:\s*(\S+)/m) ?? [])[1] ?? null,
                cardCount, projectId: project.project_id, namespace: project.namespace,
-               repoSlug: project.slug, repoId: null };
+               repoSlug: project.slug, repoId: null, projectKind: project.project_kind,
+               ownerNamespaceTrusted: project.metadata_valid };
+    },
+
+    // The local backend is one developer-owned checkout, so project privacy is
+    // enforced by the gateway. The production Forgejo backend implements the
+    // same method by reconciling the repository's native private flag.
+    async setVisibility(_slug, visibility) {
+      return { visibility: visibility === "public" ? "public" : "private" };
+    },
+    async ensurePrivate(_slug) {
+      return { visibility: "private", changed: false, confirmed: true };
     },
 
     projectKey(namespace, repoSlug) {
@@ -159,20 +196,20 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
         "-c", "filter.lfs.smudge=cat", "-c", "filter.lfs.required=false", ...add]);
       try {
         git(["diff", "--cached", "--quiet", "--", ...files.map(f => join(abs(slug), f.path))], QUIET);
-        return { sha: git(["rev-parse", "--short", "HEAD"]), unchanged: true };
+        return { sha: store.headSha(slug), unchanged: true };
       } catch (error) {
         if (error.status !== 1) throw error;
       }
-      git(["commit", "-m", message, "--author", author]);
-      return { sha: git(["rev-parse", "--short", "HEAD"]) };
+      commit(["-m", message, "--author", author]);
+      return { sha: fullStore1ObjectId(git(["rev-parse", "HEAD"]), "committed revision") };
     },
 
     /** Import an already-validated tree as a new hosted game. */
     createGame(slug, srcTree, message, author) {
       cpSync(srcTree, abs(slug), { recursive: true });
       git(["add", "--", abs(slug)]);
-      git(["commit", "-m", message, "--author", author]);
-      return { sha: git(["rev-parse", "--short", "HEAD"]) };
+      commit(["-m", message, "--author", author]);
+      return { sha: fullStore1ObjectId(git(["rev-parse", "HEAD"]), "created project revision") };
     },
 
     /** Copy-fork an exact source ref with a game.yaml transform (id rewrite +
@@ -195,8 +232,8 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
           writeFileSync(target, file.content);
         }
         git(["add", "--", abs(dest)]);
-        git(["commit", "-m", message, "--author", author]);
-        return { sha: git(["rev-parse", "--short", "HEAD"]) };
+        commit(["-m", message, "--author", author]);
+        return { sha: fullStore1ObjectId(git(["rev-parse", "HEAD"]), "fork revision") };
       } finally { cleanup(); }
     },
 
@@ -205,7 +242,8 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       const log = git(["log", `-${n}`, "--format=%H|%h|%an|%as|%s", "--", p], QUIET);
       return (log ? log.split("\n") : []).map(line => {
         const [full, sha, author, date, subject] = line.split("|");
-        return { full, sha, author, date, subject };
+        return { full: fullStore1ObjectId(full, `history revision for ${slug}`),
+          sha, author, date, subject };
       });
     },
     fileAt(slug, ref, relPath) {
@@ -216,9 +254,19 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
     // driver stores several game directories in one checkout. Key versions to
     // the latest commit that touched THIS game so an unrelated game's commit
     // cannot invalidate exports or make Sheet sync report false local drift.
+    resolveRef(slug, ref) {
+      const safeRef = localStore1Ref(ref, slug);
+      try {
+        return fullStore1ObjectId(git(["rev-parse", "--verify", `${safeRef}^{commit}`], QUIET),
+          `resolved revision for ${slug}`);
+      } catch (cause) {
+        throw Object.assign(new Error(`version '${ref}' is unavailable for ${slug}`), { status: 422, cause });
+      }
+    },
     headSha(slug) {
-      return git(["log", "-1", "--format=%h", "--", rel(slug)], QUIET)
-        || git(["rev-parse", "--short", "HEAD"]);
+      const sha = git(["log", "-1", "--format=%H", "--", rel(slug)], QUIET)
+        || git(["rev-parse", "HEAD"]);
+      return fullStore1ObjectId(sha, `head revision for ${slug}`);
     },
 
     createReleaseTag(slug, tag, target, message, author) {
@@ -226,18 +274,22 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
       const ref = `refs/tags/forge/${slug}/${tag}`;
       try { git(["show-ref", "--verify", "--quiet", ref], QUIET); throw new Error(`release tag '${tag}' already exists`); }
       catch (error) { if (/already exists/.test(error.message)) throw error; }
-      const fullTarget = git(["rev-parse", target]);
+      const fullTarget = fullStore1ObjectId(git(["rev-parse", "--verify", `${target}^{commit}`]),
+        `release target for ${slug}`);
       const parsed = String(author ?? "Forge <releases@forge.invalid>").match(/^(.*?)\s*<(.+)>$/);
       const name = parsed?.[1] || "Forge", email = parsed?.[2] || "releases@forge.invalid";
       git(["tag", "-a", `forge/${slug}/${tag}`, fullTarget, "-m", message],
         { env: { ...process.env, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email } });
-      return { tag, target: git(["rev-parse", `${ref}^{}`]), tagObject: git(["rev-parse", ref]),
+      return { tag, target: fullStore1ObjectId(git(["rev-parse", `${ref}^{commit}`]), "release target"),
+        tagObject: fullStore1ObjectId(git(["rev-parse", ref]), "release tag object"),
         annotated: git(["cat-file", "-t", ref]) === "tag", protected: true };
     },
 
     releaseTagInfo(slug, tag) {
       const ref = `refs/tags/forge/${slug}/${tag}`;
-      try { return { tag, target: git(["rev-parse", `${ref}^{}`]), tagObject: git(["rev-parse", ref]),
+      try { return { tag,
+        target: fullStore1ObjectId(git(["rev-parse", `${ref}^{commit}`]), "release target"),
+        tagObject: fullStore1ObjectId(git(["rev-parse", ref]), "release tag object"),
         annotated: git(["cat-file", "-t", ref]) === "tag", protected: true,
         message: git(["for-each-ref", "--format=%(contents)", ref]) }; }
       catch { return null; }
@@ -266,22 +318,33 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null }) {
     },
 
     async materialize(slug, ref, { resolveLfs = true } = {}) {
-      const tmp = mkdtempSync(join(tmpdir(), "at-sha-"));
-      execFileSync("bash", ["-c",
-        `set -o pipefail; git archive ${ref === "HEAD" ? "HEAD" : ref} -- ${JSON.stringify(rel(slug))} | tar -x -C ${JSON.stringify(tmp)}`],
-        { cwd: root, env: { ...process.env, GIT_LFS_SKIP_SMUDGE: "1" } });
-      const dir = join(tmp, rel(slug));
-      if (resolveLfs && existsSync(join(dir, "assets"))) {
-        const walk = d => readdirSync(d).flatMap(name => {
-          const path = join(d, name); return statSync(path).isDirectory() ? walk(path) : [path];
-        });
-        for (const path of walk(join(dir, "assets"))) {
-          const bytes = readFileSync(path);
-          if (isPointer(bytes)) writeFileSync(path,
-            lfsUrl ? await downloadAsset(lfsUrl, bytes.toString()) : localLfsObject(bytes));
+      const safeRef = store.resolveRef(slug, ref);
+      const tmp = mkdtempSync(join(tmpdir(), "at-sha-")), archive = join(tmp, "source.tar");
+      try {
+        // Keep ref and paths as process arguments. They must never cross a
+        // command-language boundary: materialize is reached by public version
+        // selectors as well as trusted internal callers.
+        execFileSync("git", ["-C", root, "archive", "--format=tar", `--output=${archive}`,
+          safeRef, "--", rel(slug)],
+          { env: { ...process.env, GIT_LFS_SKIP_SMUDGE: "1" } });
+        execFileSync("tar", ["-xf", archive, "-C", tmp]);
+        rmSync(archive, { force: true });
+        const dir = join(tmp, rel(slug));
+        if (resolveLfs && existsSync(join(dir, "assets"))) {
+          const walk = d => readdirSync(d).flatMap(name => {
+            const path = join(d, name); return statSync(path).isDirectory() ? walk(path) : [path];
+          });
+          for (const path of walk(join(dir, "assets"))) {
+            const bytes = readFileSync(path);
+            if (isPointer(bytes)) writeFileSync(path,
+              lfsUrl ? await downloadAsset(lfsUrl, bytes.toString()) : localLfsObject(bytes));
+          }
         }
+        return { dir, cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
+      } catch (error) {
+        rmSync(tmp, { recursive: true, force: true });
+        throw error;
       }
-      return { dir, cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
     },
   };
   return store;

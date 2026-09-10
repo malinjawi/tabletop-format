@@ -1,24 +1,21 @@
-name: Shared by Hardware, Program, Resource
-description: 1 ordered region reused by hardware, program, resource.
+name: Shared by Agenda, Asset, Corp Identity, Event, Hardware, Operation, Program, Resource, Runner Identity, Upgrade
+description: 2 ordered regions reused by agenda, asset, corp-identity, event, hardware, operation, program, resource, runner-identity, upgrade.
 regions:
-  - id: art_runner_installed
-    type: image
-    src: printing.scan_data
-    fallback_srcs:
-      - printing.art_data
-      - printing.art_url
-      - printing.art
-    x: 1.15
-    "y": 9.4
-    w: 60.7
-    h: 39.1
-    source_crop:
-      - 50
-      - 145
-      - 644
-      - 401
-    source_size:
-      - 744
-      - 1030
-    source_crop_fit: cover
-    show_if: type == hardware || type == program || type == resource
+  - id: right_signal
+    type: rect
+    x: 62.05
+    "y": 0
+    w: 0.95
+    h: 87.21
+    fill: palette-gradient
+    opacity: 0.76
+    show_if: type != ice
+  - id: right_signal_faction_motif
+    type: rect
+    x: 62.05
+    "y": 0
+    w: 0.95
+    h: 87.21
+    fill: palette-shell-motif
+    opacity: 0.56
+    show_if: type != ice

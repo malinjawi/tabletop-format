@@ -1134,8 +1134,9 @@ Cross-referencing every tool above, a template format needs, at minimum:
 - **Text auto-fit** for variable-length rules text — the single most universally painful
   problem in this entire survey (InDesign's overset text needs a paid plugin to work
   around; Component Studio and CIDEr both build it in as a first-class feature) — already
-  present as `richtext.autoshrink`, honestly documented as "a deterministic heuristic, not a
-  real text measurement" (`docs/layout-engine.md`).
+  present as `text`/`richtext`/`body` `autoshrink`: a fast deterministic estimate followed
+  by loaded-font DOM measurement shared by Studio and the canonical Chromium exporter
+  (`docs/layout-engine.md`).
 - **Data-driven color/palette** (faction-colored frames) — already present.
 - **Per-type variants / conditional elements** — confirmed necessary by this project's own
   Arcmage import (Attack+Defense on Creature cards, Defense-only on City cards, neither on
@@ -1297,14 +1298,12 @@ talking to each other, achieves lossless template round-tripping.
 ### 6.6 What's hard — flagged plainly
 
 - **Text auto-fit is a real rendering problem, not a solved one, anywhere in this survey.**
-  This project's own `autoshrink` is already honestly documented as "a deterministic
-  heuristic... not a real text measurement" (`docs/layout-engine.md`). A box-dragging editor
-  makes overset text *visible* immediately (a real improvement — InDesign's silent overset
-  is a top complaint in 1.1(f)), but the editor's live canvas can use real DOM measurement
-  (`getBoundingClientRect`) since it runs in a browser, while the wider pipeline (Node smoke
-  tests, non-browser renders) cannot — these two code paths need to be reconciled so what a
-  designer sees while dragging matches what actually prints, or the editor will lie exactly
-  where it matters most.
+  Forge now reconciles its preview and print paths: the same measured 0.25pt fitting loop
+  runs after fonts load in normal card views, Studio, and the canonical Chromium renderer.
+  What remains hard is policy rather than hidden clipping: teams must choose an honest
+  minimum readable size, and change copy or geometry when text still overflows at that
+  floor. Forge reports that as a blocking review/export error rather than silently scaling
+  below the declared minimum.
 - **Conditional/per-type layouts are inherently harder to author visually than a single
   fixed template**, because a box's presence depends on data, not just position (6.4.6).
   This is real added design work — a visual condition-builder plus a multi-sample-card

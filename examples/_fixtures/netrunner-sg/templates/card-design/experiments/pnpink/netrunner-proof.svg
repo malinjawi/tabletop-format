@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-     width="143mm" height="93.56mm" viewBox="0 0 143 93.56" version="1.1">
-  <title>Forge Netrunner PnPInk adapter proof</title>
-  <desc>Two editable representative templates. The active Forge renderer remains the production source of truth.</desc>
+     width="289mm" height="279.56mm" viewBox="0 0 289 279.56" version="1.1">
+  <title>Forge Netrunner PnPInk working-copy templates</title>
+  <desc>Eleven editable family templates. The active Forge renderer remains the production source of truth.</desc>
   <defs>
     <linearGradient id="program_frame" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#07141d"/><stop offset="1" stop-color="#238fc2"/>
@@ -13,6 +13,15 @@
     </linearGradient>
     <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e8eceb"/>
+    </linearGradient>
+    <linearGradient id="corp_frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827"/><stop offset="1" stop-color="#7c3b74"/>
+    </linearGradient>
+    <linearGradient id="runner_frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10212a"/><stop offset="1" stop-color="#db5b2f"/>
+    </linearGradient>
+    <linearGradient id="neutral_frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b2329"/><stop offset="1" stop-color="#62717a"/>
     </linearGradient>
   </defs>
 
@@ -27,6 +36,7 @@
     <path d="M5.3 41 L64 20 M5.3 48 L64 27" stroke="#5aa9c8" stroke-width="0.25" opacity="0.48"/>
     <rect x="17.3" y="50.7" width="46.7" height="5.1" rx="0.8" fill="url(#paper)" stroke="#12384a" stroke-width="0.3"/>
     <text id="program_subtypes" x="23.1" y="54.1" font-family="sans-serif" font-size="2.2" fill="#303a43">Program subtypes</text>
+    <text id="program_keywords" x="23.1" y="57" font-family="sans-serif" font-size="0.1" opacity="0">keywords</text>
     <rect x="9" y="56.4" width="51.4" height="24.2" rx="1.1" fill="#f7f5ef" stroke="#12384a" stroke-width="0.35"/>
     <text id="program_text" x="11" y="60.2" font-family="serif" font-size="2.45" fill="#151b21">Program rules text</text>
     <circle cx="8.15" cy="8.9" r="4.15" fill="#111518" stroke="#dfe5e4" stroke-width="0.55"/>
@@ -35,6 +45,7 @@
     <text id="program_memory" x="8.05" y="20.05" text-anchor="middle" font-family="sans-serif" font-size="2.8" font-weight="700" fill="#11171d">0</text>
     <circle cx="9" cy="84.3" r="5.7" fill="url(#paper)" stroke="#343b3e" stroke-width="0.5"/>
     <text id="program_strength" x="9" y="85.8" text-anchor="middle" font-family="sans-serif" font-size="4.5" font-weight="700" fill="#11171d">0</text>
+    <text id="program_influence" x="55" y="86.7" font-family="sans-serif" font-size="0.1" opacity="0">0</text>
     <text id="program_faction" x="60.8" y="86.7" text-anchor="end" font-family="sans-serif" font-size="1.8" font-weight="700" fill="#d8f1fb">criminal</text>
   </g>
 
@@ -49,6 +60,7 @@
     <path d="M78 45 L138.7 18 M78 50 L138.7 23" stroke="#9f6b9e" stroke-width="0.25" opacity="0.48"/>
     <rect x="95.3" y="51.2" width="33.8" height="5.1" rx="0.8" fill="url(#paper)" stroke="#3d243d" stroke-width="0.3"/>
     <text id="agenda_subtypes" x="97" y="54.65" font-family="sans-serif" font-size="2.2" fill="#303a43">Agenda subtypes</text>
+    <text id="agenda_keywords" x="97" y="57" font-family="sans-serif" font-size="0.1" opacity="0">keywords</text>
     <rect x="82.6" y="56.9" width="51.4" height="23.7" rx="1.1" fill="#f7f5ef" stroke="#3d243d" stroke-width="0.35"/>
     <text id="agenda_text" x="84.6" y="60.7" font-family="serif" font-size="2.45" fill="#151b21">Agenda rules text</text>
     <circle cx="134.1" cy="8.9" r="4.85" fill="url(#paper)" stroke="#676e70" stroke-width="0.45"/>
@@ -56,6 +68,81 @@
     <text id="agenda_advancement" x="134.1" y="10.35" text-anchor="middle" font-family="sans-serif" font-size="4.6" font-weight="700" fill="#11171d">0</text>
     <path d="M79.2 45.2 l3.6-3.4 3.6 3.4-3.6 3.4z M84.7 45.2 l3.6-3.4 3.6 3.4-3.6 3.4z M81.95 41.9 l3.6-3.4 3.6 3.4-3.6 3.4z" fill="#eef1ef" stroke="#6d7478" stroke-width="0.3"/>
     <text id="agenda_points" x="85.55" y="43.35" text-anchor="middle" font-family="sans-serif" font-size="4.5" font-weight="700" fill="#11171d">0</text>
+    <text id="agenda_influence" x="129" y="86.7" font-family="sans-serif" font-size="0.1" opacity="0">0</text>
     <text id="agenda_faction" x="134.45" y="86.7" text-anchor="end" font-family="sans-serif" font-size="1.8" font-weight="700" fill="#f1dff0">haas-bioroid</text>
+  </g>
+
+  <!-- These nine compact templates are deliberately neutral PnPInk working
+       sources. A designer can refine them in Inkscape without changing the
+       active Forge renderer; every returned SVG is versioned and reviewed. -->
+  <g id="asset_template" inkscape:groupmode="layer" inkscape:label="Asset template" transform="translate(150 3.175)">
+    <rect id="bbox_asset" width="63" height="87.21" rx="2.5" fill="url(#corp_frame)" stroke="#10151b" stroke-width="0.5"/>
+    <rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#e6b7dd" stroke-width="0.35"/>
+    <rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/><text id="asset_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Asset name</text>
+    <circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="asset_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text>
+    <rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#f5eee9"/>
+    <text id="asset_subtypes" x="8" y="55" font-size="2.2" font-family="sans-serif">Asset · subtype</text><text id="asset_text" x="8" y="60" font-size="2.35" font-family="serif">Rules text</text>
+    <text id="asset_trash" x="54" y="78" text-anchor="end" font-size="4" font-weight="700">0</text><text id="asset_faction" x="58" y="84" text-anchor="end" fill="#f0d7ea" font-size="1.7">faction</text>
+    <text id="asset_forge_id" opacity="0">id</text><text id="asset_keywords" opacity="0">keywords</text><text id="asset_influence" opacity="0">influence</text>
+  </g>
+
+  <g id="event_template" inkscape:groupmode="layer" inkscape:label="Event template" transform="translate(223 3.175)">
+    <rect id="bbox_event" width="63" height="87.21" rx="2.5" fill="url(#runner_frame)" stroke="#10151b" stroke-width="0.5"/>
+    <rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#ffd2bd" stroke-width="0.35"/>
+    <rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/><text id="event_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Event name</text>
+    <circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="event_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text>
+    <rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#fff0e9"/>
+    <text id="event_subtypes" x="8" y="55" font-size="2.2" font-family="sans-serif">Event · subtype</text><text id="event_text" x="8" y="60" font-size="2.35" font-family="serif">Rules text</text>
+    <text id="event_faction" x="58" y="84" text-anchor="end" fill="#ffe3d5" font-size="1.7">faction</text>
+    <text id="event_forge_id" opacity="0">id</text><text id="event_keywords" opacity="0">keywords</text><text id="event_influence" opacity="0">influence</text>
+  </g>
+
+  <g id="hardware_template" inkscape:groupmode="layer" inkscape:label="Hardware template" transform="translate(3.175 96.175)">
+    <rect id="bbox_hardware" width="63" height="87.21" rx="2.5" fill="url(#runner_frame)" stroke="#10151b" stroke-width="0.5"/>
+    <rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#ffd2bd" stroke-width="0.35"/><rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/>
+    <text id="hardware_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Hardware name</text><circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="hardware_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text>
+    <rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#fff0e9"/>
+    <text id="hardware_subtypes" x="8" y="55" font-size="2.2" font-family="sans-serif">Hardware · subtype</text><text id="hardware_text" x="8" y="60" font-size="2.35" font-family="serif">Rules text</text><text id="hardware_faction" x="58" y="84" text-anchor="end" fill="#ffe3d5" font-size="1.7">faction</text>
+    <text id="hardware_forge_id" opacity="0">id</text><text id="hardware_keywords" opacity="0">keywords</text><text id="hardware_influence" opacity="0">influence</text>
+  </g>
+
+  <g id="ice_template" inkscape:groupmode="layer" inkscape:label="Ice template" transform="translate(76.825 96.175)">
+    <rect id="bbox_ice" width="63" height="87.21" rx="2.5" fill="url(#neutral_frame)" stroke="#10151b" stroke-width="0.5"/><rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#c7d4db" stroke-width="0.35"/>
+    <rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/><text id="ice_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Ice name</text><circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="ice_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text>
+    <rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#eef3f3"/>
+    <text id="ice_subtypes" x="8" y="55" font-size="2.2" font-family="sans-serif">Ice · subtype</text><text id="ice_text" x="8" y="60" font-size="2.35" font-family="serif">Subroutines</text><text id="ice_strength" x="8" y="84" font-size="4" font-weight="700">0</text><text id="ice_faction" x="58" y="84" text-anchor="end" fill="#e4edf1" font-size="1.7">faction</text>
+    <text id="ice_forge_id" opacity="0">id</text><text id="ice_keywords" opacity="0">keywords</text><text id="ice_influence" opacity="0">influence</text>
+  </g>
+
+  <g id="corp_identity_template" inkscape:groupmode="layer" inkscape:label="Corp identity template" transform="translate(150 96.175)">
+    <rect id="bbox_corp_identity" width="63" height="87.21" rx="2.5" fill="url(#corp_frame)" stroke="#10151b" stroke-width="0.5"/><rect x="3" y="3" width="57" height="41" rx="1" fill="#293744"/>
+    <rect x="4" y="45" width="55" height="36" rx="1.5" fill="#f2e8ef"/><text id="corp_identity_name" x="7" y="50" font-family="Cinzel,serif" font-size="3.1">Corp identity</text><text id="corp_identity_subtypes" x="7" y="54" font-size="2.1">Identity · Megacorp</text><text id="corp_identity_text" x="7" y="60" font-family="serif" font-size="2.4">Rules text</text>
+    <circle cx="8" cy="47" r="4.5" fill="#f6f7f5" stroke="#555"/><text id="corp_identity_deck" x="8" y="48.3" text-anchor="middle" font-size="3.6" font-weight="700">40</text><circle cx="55" cy="47" r="4.5" fill="#111820" stroke="#ddd"/><text id="corp_identity_influence" x="55" y="48.3" text-anchor="middle" fill="white" font-size="3.6" font-weight="700">15</text>
+    <text id="corp_identity_faction" x="58" y="85" text-anchor="end" fill="#f0d7ea" font-size="1.7">faction</text><text id="corp_identity_forge_id" opacity="0">id</text><text id="corp_identity_keywords" opacity="0">keywords</text>
+  </g>
+
+  <g id="runner_identity_template" inkscape:groupmode="layer" inkscape:label="Runner identity template" transform="translate(223 96.175)">
+    <rect id="bbox_runner_identity" width="63" height="87.21" rx="2.5" fill="url(#runner_frame)" stroke="#10151b" stroke-width="0.5"/><rect x="3" y="3" width="57" height="41" rx="1" fill="#293744"/>
+    <rect x="4" y="45" width="55" height="36" rx="1.5" fill="#fff0e9"/><text id="runner_identity_name" x="7" y="50" font-family="Cinzel,serif" font-size="3.1">Runner identity</text><text id="runner_identity_subtypes" x="7" y="54" font-size="2.1">Identity · Natural</text><text id="runner_identity_text" x="7" y="60" font-family="serif" font-size="2.4">Rules text</text>
+    <circle cx="8" cy="47" r="4.5" fill="#f6f7f5" stroke="#555"/><text id="runner_identity_deck" x="8" y="48.3" text-anchor="middle" font-size="3.6" font-weight="700">40</text><circle cx="55" cy="47" r="4.5" fill="#111820" stroke="#ddd"/><text id="runner_identity_influence" x="55" y="48.3" text-anchor="middle" fill="white" font-size="3.6" font-weight="700">15</text>
+    <text id="runner_identity_link" x="8" y="85" font-size="2.4">0</text><text id="runner_identity_memory" x="14" y="85" font-size="2.4">4</text><text id="runner_identity_faction" x="58" y="85" text-anchor="end" fill="#ffe3d5" font-size="1.7">faction</text><text id="runner_identity_forge_id" opacity="0">id</text><text id="runner_identity_keywords" opacity="0">keywords</text>
+  </g>
+
+  <g id="operation_template" inkscape:groupmode="layer" inkscape:label="Operation template" transform="translate(3.175 189.175)">
+    <rect id="bbox_operation" width="63" height="87.21" rx="2.5" fill="url(#corp_frame)" stroke="#10151b" stroke-width="0.5"/><rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#e6b7dd" stroke-width="0.35"/><rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/>
+    <text id="operation_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Operation name</text><circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="operation_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text><rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#f5eee9"/>
+    <text id="operation_subtypes" x="8" y="55" font-size="2.2">Operation · subtype</text><text id="operation_text" x="8" y="60" font-family="serif" font-size="2.35">Rules text</text><text id="operation_faction" x="58" y="84" text-anchor="end" fill="#f0d7ea" font-size="1.7">faction</text><text id="operation_forge_id" opacity="0">id</text><text id="operation_keywords" opacity="0">keywords</text><text id="operation_influence" opacity="0">influence</text>
+  </g>
+
+  <g id="resource_template" inkscape:groupmode="layer" inkscape:label="Resource template" transform="translate(76.825 189.175)">
+    <rect id="bbox_resource" width="63" height="87.21" rx="2.5" fill="url(#runner_frame)" stroke="#10151b" stroke-width="0.5"/><rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#ffd2bd" stroke-width="0.35"/><rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/>
+    <text id="resource_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Resource name</text><circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="resource_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text><rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#fff0e9"/>
+    <text id="resource_subtypes" x="8" y="55" font-size="2.2">Resource · subtype</text><text id="resource_text" x="8" y="60" font-family="serif" font-size="2.35">Rules text</text><text id="resource_faction" x="58" y="84" text-anchor="end" fill="#ffe3d5" font-size="1.7">faction</text><text id="resource_forge_id" opacity="0">id</text><text id="resource_keywords" opacity="0">keywords</text><text id="resource_influence" opacity="0">influence</text>
+  </g>
+
+  <g id="upgrade_template" inkscape:groupmode="layer" inkscape:label="Upgrade template" transform="translate(150 189.175)">
+    <rect id="bbox_upgrade" width="63" height="87.21" rx="2.5" fill="url(#corp_frame)" stroke="#10151b" stroke-width="0.5"/><rect x="2" y="2" width="59" height="83.2" rx="1.8" fill="none" stroke="#e6b7dd" stroke-width="0.35"/><rect x="2" y="3" width="59" height="7" rx="1.4" fill="url(#paper)"/>
+    <text id="upgrade_name" x="11" y="8" font-family="Cinzel,serif" font-size="3.4">Upgrade name</text><circle cx="7" cy="7" r="4.4" fill="#111820" stroke="#e8edf0"/><text id="upgrade_cost" x="7" y="8.3" text-anchor="middle" fill="white" font-size="4" font-weight="700">0</text><rect x="3.5" y="12" width="56" height="38" rx="1" fill="#293744"/><rect x="6" y="51" width="51" height="29" rx="1" fill="#f5eee9"/>
+    <text id="upgrade_subtypes" x="8" y="55" font-size="2.2">Upgrade · subtype</text><text id="upgrade_text" x="8" y="60" font-family="serif" font-size="2.35">Rules text</text><text id="upgrade_trash" x="54" y="78" text-anchor="end" font-size="4" font-weight="700">0</text><text id="upgrade_faction" x="58" y="84" text-anchor="end" fill="#f0d7ea" font-size="1.7">faction</text><text id="upgrade_forge_id" opacity="0">id</text><text id="upgrade_keywords" opacity="0">keywords</text><text id="upgrade_influence" opacity="0">influence</text>
   </g>
 </svg>

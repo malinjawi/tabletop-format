@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadJob, readyReceiptCurrent, sealReadyStatus } from './affinity-mcp-worker.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BRIDGE = join(ROOT, 'tools', 'affinity-bridge.mjs');
@@ -102,6 +103,30 @@ try {
     assert.equal(value.provenance.reproducible, true);
     assert.equal(value.bindings.find(item => item.source === 'printing').value, 'prototype');
     assert.equal(JSON.stringify(value).toLowerCase().includes('netrunner'), false);
+  });
+
+  check('seals preview bytes and invalidates changed renderers or tampered PNGs', () => {
+    const f = makeFixture('receipt-proof'); cleanups.push(f.repo);
+    prepare(f);
+    const prepared=input(f),png=Buffer.from('a deterministic Affinity PNG fixture');
+    write(prepared.render.absolute_path,png);
+    let job=loadJob(f.bridgeDir);
+    const returned={schema_version:1,state:'ready',game:prepared.game,card_id:prepared.card.id,
+      printing_id:prepared.printing_id,commit_sha:prepared.commit_sha,commit_short:prepared.commit_short,
+      input_hash:prepared.input_hash,preview_file:prepared.render.file,applied_fields:['name']};
+    const receipt=sealReadyStatus(job,returned);
+    assert.equal(receipt.preview_bytes,png.length);
+    assert.match(receipt.preview_sha256,/^[0-9a-f]{64}$/);
+    assert.equal(receipt.renderer_sha256,job.rendererHash);
+    assert.equal(readyReceiptCurrent(job,receipt),true);
+
+    write(join(f.bridgeDir,'forge-affinity-sync.js'),readFileSync(join(f.bridgeDir,'forge-affinity-sync.js'),'utf8')+'\n// renderer v2\n');
+    job=loadJob(f.bridgeDir);
+    assert.equal(readyReceiptCurrent(job,receipt),false,'renderer source participates in currentness');
+    const rerendered=sealReadyStatus(job,returned);
+    assert.equal(readyReceiptCurrent(job,rerendered),true);
+    write(prepared.render.absolute_path,Buffer.from('tampered'));
+    assert.equal(readyReceiptCurrent(job,rerendered),false,'output bytes participate in currentness');
   });
 
   check('consumes the shared production contract without duplicating field bindings', () => {

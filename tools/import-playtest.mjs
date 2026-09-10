@@ -32,7 +32,16 @@ const warn = [];
 
 // version_ref: the pin. explicit flag → session's own → game repo HEAD → unknown.
 let ref = opt("--ref") || raw.version_ref;
-if (!ref) { try { ref = execFileSync("git", ["-C", gameDir, "rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim(); } catch { /* not a repo */ } }
+if (ref) {
+  // Expand any Git-recognized short SHA or tag before it enters the durable
+  // playtest record. Non-Git external identifiers remain valid interoperability
+  // inputs and are preserved verbatim.
+  try { ref = execFileSync("git", ["-C", gameDir, "rev-parse", "--verify", `${ref}^{commit}`], { encoding: "utf8" }).trim(); }
+  catch { /* external/non-Git version identifier */ }
+} else {
+  try { ref = execFileSync("git", ["-C", gameDir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(); }
+  catch { /* not a repo */ }
+}
 if (!ref) { ref = "unknown"; warn.push("no version_ref — pass --ref <sha> to pin feedback to the tested version"); }
 
 const date = opt("--date") || raw.date || today();

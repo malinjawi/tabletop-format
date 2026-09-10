@@ -10,6 +10,7 @@ data
 tmp
 output
 beta-site
+hub.html
 examples
 *.log
 *.mp4

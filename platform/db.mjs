@@ -257,17 +257,59 @@ export const q = {
   pruneSessions: (db) => db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now()),
 
   upsertGame: (db, g) => db.prepare(
-    `INSERT INTO games (slug, project_id, namespace, repo_slug, repo_id, title, license, card_count, description, topics_json, players_min, players_max, visibility, updated_at, indexed_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO games (slug, project_id, namespace, repo_slug, repo_id, title, license, card_count, description, topics_json, players_min, players_max, visibility, owner_id, project_kind, updated_at, indexed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(slug) DO UPDATE SET title=excluded.title, license=excluded.license,
        project_id=excluded.project_id, namespace=excluded.namespace, repo_slug=excluded.repo_slug,
        repo_id=excluded.repo_id, card_count=excluded.card_count, description=excluded.description,
        topics_json=excluded.topics_json, players_min=excluded.players_min, players_max=excluded.players_max,
        visibility=excluded.visibility,
+       project_kind=CASE WHEN games.owner_id IS NOT NULL OR excluded.owner_id IS NOT NULL
+                         THEN 'owned' ELSE excluded.project_kind END,
+       owner_id=COALESCE(games.owner_id, excluded.owner_id),
        updated_at=excluded.updated_at, indexed_at=excluded.indexed_at`)
     .run(g.slug, g.project_id, g.namespace, g.repo_slug, g.repo_id ?? null,
       g.title, g.license ?? null, g.card_count ?? null, g.description ?? "", g.topics_json ?? "[]",
-      g.players_min ?? null, g.players_max ?? null, g.visibility ?? "public", Date.now(), Date.now()),
+      g.players_min ?? null, g.players_max ?? null, g.visibility ?? "public", g.owner_id ?? null,
+      !g.owner_id && g.project_kind === "public-sandbox" ? "public-sandbox" : "owned", Date.now(), Date.now()),
+  // Forgejo discovery is an authoritative ownership boundary. Update the
+  // searchable metadata, exact owner, and transfer-sensitive grants in one
+  // transaction so no request can observe new repository metadata with the
+  // prior owner's access still attached.
+  reindexHostedGame: (db, g) => {
+    const nextOwner = g.owner_id ?? null;
+    const nextKind = nextOwner == null && g.project_kind === "public-sandbox"
+      ? "public-sandbox" : "owned";
+    const now = Date.now();
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const before = db.prepare("SELECT owner_id FROM games WHERE slug = ?").get(g.slug);
+      const changedOwner = !!before && (before.owner_id ?? null) !== nextOwner;
+      db.prepare(
+        `INSERT INTO games (slug, project_id, namespace, repo_slug, repo_id, title, license, card_count, description, topics_json, players_min, players_max, visibility, owner_id, project_kind, updated_at, indexed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(slug) DO UPDATE SET title=excluded.title, license=excluded.license,
+           project_id=excluded.project_id, namespace=excluded.namespace, repo_slug=excluded.repo_slug,
+           repo_id=excluded.repo_id, card_count=excluded.card_count, description=excluded.description,
+           topics_json=excluded.topics_json, players_min=excluded.players_min, players_max=excluded.players_max,
+           visibility=excluded.visibility, owner_id=excluded.owner_id, project_kind=excluded.project_kind,
+           updated_at=excluded.updated_at, indexed_at=excluded.indexed_at`)
+        .run(g.slug, g.project_id, g.namespace, g.repo_slug, g.repo_id ?? null,
+          g.title, g.license ?? null, g.card_count ?? null, g.description ?? "", g.topics_json ?? "[]",
+          g.players_min ?? null, g.players_max ?? null, g.visibility ?? "public", nextOwner,
+          nextKind, now, now);
+      if (changedOwner) db.prepare("DELETE FROM collaborators WHERE game_slug = ?").run(g.slug);
+      db.exec("COMMIT");
+      return { changedOwner, owner_id: nextOwner, project_kind: nextKind };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+  tombstoneGameIndex: (db, slug) => db.prepare(
+    `UPDATE games SET visibility = 'private', card_count = 0,
+       description = '', topics_json = '[]', players_min = NULL,
+       players_max = NULL, indexed_at = ? WHERE slug = ?`).run(Date.now(), slug),
   listGames: (db) => db.prepare(
     `SELECT g.*, u.handle AS owner_handle,
             (SELECT COUNT(*) FROM stars s WHERE s.game_slug = g.slug) AS stars
@@ -276,7 +318,7 @@ export const q = {
   gamesOwnedBy: (db, userId) => db.prepare(
     "SELECT slug FROM games WHERE owner_id = ? ORDER BY updated_at DESC").all(userId).map(r => r.slug),
   setForkMeta: (db, slug, forkedFrom, ownerId) => db.prepare(
-    "UPDATE games SET forked_from = ?, owner_id = ? WHERE slug = ?").run(forkedFrom, ownerId, slug),
+    "UPDATE games SET forked_from = ?, owner_id = ?, project_kind = 'owned' WHERE slug = ?").run(forkedFrom, ownerId, slug),
 
   star:   (db, userId, slug) => db.prepare(
     `INSERT INTO stars (user_id, game_slug, created_at) VALUES (?, ?, ?)
@@ -291,6 +333,30 @@ export const q = {
   gameBySlug: (db, slug) => db.prepare("SELECT * FROM games WHERE slug = ?").get(slug),
   gameByProject: (db, namespace, repoSlug) => db.prepare(
     "SELECT * FROM games WHERE namespace = ? AND repo_slug = ?").get(namespace, repoSlug),
+  gameByProjectId: (db, projectId) => db.prepare(
+    "SELECT * FROM games WHERE project_id = ?").get(projectId),
+  gameByRepoId: (db, repoId) => db.prepare(
+    "SELECT * FROM games WHERE repo_id = ?").get(repoId),
+  reconcileIndexedOwner: (db, { slug, owner_id, project_kind = "owned" }) => {
+    const nextOwner = owner_id ?? null;
+    const nextKind = nextOwner == null && project_kind === "public-sandbox" ? "public-sandbox" : "owned";
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const before = db.prepare("SELECT owner_id FROM games WHERE slug = ?").get(slug);
+      if (!before) throw new Error(`cannot reconcile owner for missing project '${slug}'`);
+      const changed = (before.owner_id ?? null) !== nextOwner;
+      db.prepare("UPDATE games SET owner_id = ?, project_kind = ? WHERE slug = ?")
+        .run(nextOwner, nextKind, slug);
+      // Collaborator grants belong to the prior ownership boundary. A transfer
+      // or an unresolved new Forgejo owner must not carry them forward.
+      if (changed) db.prepare("DELETE FROM collaborators WHERE game_slug = ?").run(slug);
+      db.exec("COMMIT");
+      return { changed, owner_id: nextOwner, project_kind: nextKind };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
 
   createPr: (db, pr) => db.prepare(
     `INSERT INTO prs (id, to_slug, from_slug, title, body, author_id, status, base, proposed, created_at)
@@ -367,7 +433,7 @@ export const q = {
       e.state ?? "draft", e.release_tag ?? null, e.release_sha ?? null, e.receipt_json ?? null,
       e.team_json ?? null, e.replaced_at ?? null),
   jamEntriesFor: (db, jamId) => db.prepare(
-    `SELECT je.jam_id, je.game_slug, je.submitted_at, je.qualified, je.award, je.state,
+    `SELECT je.jam_id, je.game_slug, je.user_id, je.submitted_at, je.qualified, je.award, je.state,
             je.release_tag, je.release_sha, je.receipt_json, je.team_json, je.replaced_at, je.disqualified_reason,
             g.title, g.forked_from, u.handle AS author_handle
      FROM jam_entries je LEFT JOIN games g ON g.slug = je.game_slug LEFT JOIN users u ON u.id = je.user_id
@@ -401,6 +467,43 @@ export const q = {
     `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
      WHERE rl.game_slug = ? AND rl.tag = ?`).get(slug, tag),
 
+  createPrintDelivery: (db, d) => db.prepare(
+    `INSERT INTO print_deliveries
+       (id, game_slug, release_tag, release_sha, artifact_name, artifact_sha256, artifact_bytes,
+        printer_name, job_reference, submission_evidence_url, submission_evidence_sha256,
+        note, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      d.id, d.game_slug, d.release_tag, d.release_sha, d.artifact_name, d.artifact_sha256,
+      d.artifact_bytes, d.printer_name, d.job_reference, d.submission_evidence_url ?? null,
+      d.submission_evidence_sha256 ?? null, d.note ?? null, d.created_by ?? null, Date.now()),
+  printDeliveriesForRelease: (db, slug, tag) => db.prepare(
+    `SELECT d.*, creator.handle AS created_by_handle,
+            x.id AS decision_id, x.decision, x.reviewer_name, x.organization,
+            x.evidence_url, x.evidence_sha256, x.note AS decision_note,
+            x.created_at AS decided_at, recorder.handle AS recorded_by_handle
+     FROM print_deliveries d
+     LEFT JOIN users creator ON creator.id = d.created_by
+     LEFT JOIN print_delivery_decisions x ON x.delivery_id = d.id
+     LEFT JOIN users recorder ON recorder.id = x.recorded_by
+     WHERE d.game_slug = ? AND d.release_tag = ? ORDER BY d.created_at DESC`).all(slug, tag),
+  printDeliveryById: (db, id) => db.prepare(
+    `SELECT d.*, creator.handle AS created_by_handle,
+            x.id AS decision_id, x.decision, x.reviewer_name, x.organization,
+            x.evidence_url, x.evidence_sha256, x.note AS decision_note,
+            x.created_at AS decided_at, recorder.handle AS recorded_by_handle
+     FROM print_deliveries d
+     LEFT JOIN users creator ON creator.id = d.created_by
+     LEFT JOIN print_delivery_decisions x ON x.delivery_id = d.id
+     LEFT JOIN users recorder ON recorder.id = x.recorded_by
+     WHERE d.id = ?`).get(id),
+  decidePrintDelivery: (db, d) => db.prepare(
+    `INSERT INTO print_delivery_decisions
+       (id, delivery_id, decision, reviewer_name, organization, evidence_url,
+        evidence_sha256, note, recorded_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      d.id, d.delivery_id, d.decision, d.reviewer_name, d.organization,
+      d.evidence_url ?? null, d.evidence_sha256, d.note ?? null, d.recorded_by ?? null, Date.now()),
+
   createExportJob: (db, job) => db.prepare(
     `INSERT INTO export_jobs (id, game_slug, ref, kind, exporter_version, status, progress, attempt,
        input_hash, created_by, budget_json, created_at)
@@ -411,6 +514,10 @@ export const q = {
   exportJobByKey: (db, slug, ref, kind, version) => db.prepare(
     "SELECT * FROM export_jobs WHERE game_slug = ? AND ref = ? AND kind = ? AND exporter_version = ?")
     .get(slug, ref, kind, version),
+  succeededExportJobsForRef: (db, slug, ref) => db.prepare(
+    `SELECT * FROM export_jobs
+     WHERE game_slug = ? AND ref = ? AND status = 'succeeded'
+     ORDER BY finished_at DESC`).all(slug, ref),
   retryExportJob: (db, id) => db.prepare(
     "UPDATE export_jobs SET status = 'queued', progress = 0, attempt = attempt + 1, output_json = NULL, error = NULL, started_at = NULL, finished_at = NULL WHERE id = ?")
     .run(id),
