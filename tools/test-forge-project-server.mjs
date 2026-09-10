@@ -8,7 +8,9 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeForgeProject, loadForgeProject } from "./lib/forge-project.mjs";
 import { deterministicZip, readZip } from "./lib/deterministic-zip.mjs";
+import { loadDesignEngines } from "./lib/design-engines.mjs";
 import { csvToTable, tableToCsv } from "./lib/interchange-table.mjs";
+import yaml from "js-yaml";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const temp = mkdtempSync(join(tmpdir(), "forge-project-server-test-"));
@@ -630,8 +632,11 @@ w.save(p)
   assert.equal(starterDry.layout.card.h_mm, 86);
   assert.equal(starterDry.layout.back.text, "WIZARD SMOKE");
   assert.deepEqual(starterDry.layout.back.regions.map(region => region.id), ["back_field", "back_border", "back_title"]);
+  assert.match(JSON.stringify(starterDry.layout), /card\.attributes\.category/,
+    "every selected starter field must be bound into the visible card template");
   assert.deepEqual(starterDry.changed_files, ["game.yaml", "components/cards.json", "components/printings.json",
-    "sets/sets.yaml", "templates/layout.yaml", "templates/print.yaml", "design/card-starter.json"]);
+    "sets/sets.yaml", "templates/layout.yaml", "templates/card-design/manifest.yaml", "templates/card-design/system.yaml",
+    "templates/card-design/families/card.yaml", "templates/print.yaml", "design/card-starter.json"]);
   assert(!existsSync(join(games, starterProject.slug, "templates", "layout.yaml")),
     "reviewing the first component must not touch the working tree");
   const starterCommit = await api(`/api/games/${starterProject.slug}/design/card-starter?commit=1`, {
@@ -642,10 +647,48 @@ w.save(p)
   assert.equal(JSON.parse(readFileSync(join(games, starterProject.slug, "components", "printings.json")))[0].quantity, 2);
   assert.match(readFileSync(join(games, starterProject.slug, "templates", "layout.yaml"), "utf8"), /back:/);
   assert.equal(JSON.parse(readFileSync(join(games, starterProject.slug, "design", "card-starter.json"))).size, "japanese");
+  const starterRegistry = loadDesignEngines(join(games, starterProject.slug));
+  const starterLegacyLayout = yaml.load(readFileSync(join(games, starterProject.slug, "templates", "layout.yaml"), "utf8"));
+  assert.equal(starterRegistry.inferred, true);
+  assert.equal(starterRegistry.active, "forge-native");
+  assert.equal(starterRegistry.card_design.families.length, 1);
+  assert.equal(starterRegistry.card_design.families[0].id, "card");
+  assert.deepEqual(starterRegistry.card_design.families[0].layout, starterLegacyLayout,
+    "the native Studio family and portable legacy layout must compile identically");
   const starterCommitFiles = spawnSync("git", ["show", "--pretty=", "--name-only", starterCommit.commit],
     { cwd: temp, encoding: "utf8" }).stdout.trim().split("\n");
   for (const path of starterDry.changed_files) assert(starterCommitFiles.includes(`games/${starterProject.slug}/${path}`),
     `first-component commit includes ${path}`);
+  const cardEditBase = await api(`/api/games/${starterProject.slug}/access`, { token: owner.token });
+  const concurrentCards = JSON.parse(readFileSync(join(games, starterProject.slug, "components", "cards.json"), "utf8"));
+  concurrentCards[0].text = "A newer Sheet or collaborator change.";
+  await api(`/api/games/${starterProject.slug}/cards`, { method: "PUT", token: owner.token, json: concurrentCards });
+  const staleCards = structuredClone(concurrentCards);
+  staleCards[0].text = "A stale editor must not overwrite the newer change.";
+  const staleCardResponse = await fetch(`${origin}/api/games/${starterProject.slug}/cards`, { method: "PUT",
+    headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ cards: staleCards, base_ref: cardEditBase.ref }) });
+  const staleCardBody = await staleCardResponse.json();
+  assert.equal(staleCardResponse.status, 409);
+  assert.equal(staleCardBody.written, false);
+  assert.equal(JSON.parse(readFileSync(join(games, starterProject.slug, "components", "cards.json"), "utf8"))[0].text,
+    "A newer Sheet or collaborator change.", "a stale visual editor cannot overwrite a newer card commit");
+  const proposalBase = await api(`/api/games/${starterProject.slug}/access`, { token: outsider.token });
+  const newerCards = structuredClone(concurrentCards);
+  newerCards[1].text = "A maintainer change after the contributor opened the source.";
+  await api(`/api/games/${starterProject.slug}/cards`, { method: "PUT", token: owner.token,
+    json: { cards: newerCards, base_ref: proposalBase.ref } });
+  const staleProposalCards = structuredClone(newerCards);
+  staleProposalCards[0].text = "A stale proposal must not fork an obsolete source version.";
+  const staleProposalResponse = await fetch(`${origin}/api/games/${starterProject.slug}/cards/propose`, { method: "POST",
+    headers: { authorization: `Bearer ${outsider.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ cards: staleProposalCards, title: "Stale card proposal", base_ref: proposalBase.ref }) });
+  const staleProposalBody = await staleProposalResponse.json();
+  assert.equal(staleProposalResponse.status, 409);
+  assert.equal(staleProposalBody.written, false);
+  assert.equal(JSON.parse(readFileSync(join(games, starterProject.slug, "components", "cards.json"), "utf8"))[1].text,
+    "A maintainer change after the contributor opened the source.",
+    "a stale no-write-access proposal cannot branch from an obsolete source version");
   const repeatedStarter = await fetch(`${origin}/api/games/${starterProject.slug}/design/card-starter`, {
     method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
     body: JSON.stringify({ starter: starterDry.starter }),

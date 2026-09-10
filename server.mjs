@@ -1334,6 +1334,11 @@ gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
   const bodyIn = await json(ctx);
   const cards = Array.isArray(bodyIn) ? bodyIn : bodyIn.cards;
   const prTitle = (!Array.isArray(bodyIn) && bodyIn.title) || null;
+  const baseRef = !Array.isArray(bodyIn) ? String(bodyIn.base_ref || "").trim() : "";
+  const currentRef = await store.headSha(slug);
+  if (baseRef && baseRef !== currentRef)
+    return ctx.send(409, { error: "this game changed after the card editor opened; reload to review the newer version before proposing",
+      base_ref: baseRef, current_ref: currentRef, written: false });
   const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
   const changes = diffCards(before, cards ?? []);
   if (!changes.length) return ctx.send(422, { error: "no changes to propose" });
@@ -1365,7 +1370,8 @@ gw.route("GET", "/api/games/:slug/access", async (ctx) => {
     role: access.is_owner ? "owner" : access.role,
     isOwner: access.is_owner,
     ownerless: access.ownerless,
-    sandbox: access.sandbox });
+    sandbox: access.sandbox,
+    ref: await store.headSha(slug) });
 }, "can the current user act here? sandbox:true means this is an explicitly marked ownerless PUBLIC demo where signed-in users can write and merge, but must fork before releasing");
 gw.route("GET", "/api/games/:slug/collaborators", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -1748,13 +1754,25 @@ gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
-  const incoming = await json(ctx);
+  const body = await json(ctx);
+  const incoming = Array.isArray(body) ? body : body.cards;
+  if (!Array.isArray(incoming)) return ctx.send(422, { saved: false, error: "body must contain {cards: [...], base_ref}" });
+  const baseRef = Array.isArray(body) ? "" : String(body.base_ref || "").trim();
+  const currentRef = await store.headSha(slug);
+  if (baseRef && baseRef !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: "this game changed after the card editor opened; reload to review the newer version before committing",
+      base_ref: baseRef, current_ref: currentRef });
   const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
   const changes = diffCards(before, incoming);
   if (!changes.length) return ctx.send(200, { saved: false, message: "no changes" });
   const content = JSON.stringify(incoming, null, 2) + "\n";
   const v = await validateCandidate(slug, "components/cards.json", content);
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
+  if (baseRef && await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: "this game changed while Forge validated the card draft; reload before committing",
+      base_ref: baseRef, current_ref: await store.headSha(slug) });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(slug, [{ path: "components/cards.json", content }],
     `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);

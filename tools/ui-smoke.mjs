@@ -303,9 +303,12 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
 
   await page.goto(`${origin}/#g/netrunner-sg/design`, { waitUntil:"domcontentloaded" });
   await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
-  assert(await page.getByRole("button", { name:"Open Forge Studio" }).first().isVisible()
-    && await page.getByText("Keep your existing tools", { exact:true }).isVisible(),
-    "Design starts with a visible choice between Forge Studio and an external working copy");
+  assert(await page.getByRole("button", { name:"Open Forge Studio", exact:true }).count()===1
+    && await page.getByText("Use another editor · traced round trips", { exact:true }).isVisible(),
+    "Design starts with one primary Forge Studio action and a clear external-working-copy choice");
+  await page.getByText("Use another editor · traced round trips", { exact:true }).click();
+  assert(await page.getByText("Keep your existing tools", { exact:true }).isVisible(),
+    "the external-tool path expands on demand instead of competing with the primary studio action");
   assert(await page.getByText("Excel · LibreOffice · Dextrous · Component Studio · Sheets", { exact:true }).isVisible()
     && await page.getByRole("button", { name:"Excel / LibreOffice" }).isVisible()
     && await page.getByRole("button", { name:"Cards CSV" }).isVisible()
@@ -928,8 +931,15 @@ w.save(p)
   });
   assert(wizardProject.status===201&&wizardProject.data.cards===0,
     "idea-first onboarding creates an empty versioned project for the card wizard",JSON.stringify(wizardProject));
-  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
-  await page.getByRole("button",{name:"Build first card component",exact:true}).click();
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/overview`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Build the first card system",exact:true}).click();
+  await page.waitForURL(/\/design$/);
+  await page.getByRole("heading",{name:"Put the first playable cards on the table",exact:true}).waitFor();
+  assert(await page.getByRole("heading",{name:"Put the first playable cards on the table",exact:true}).isVisible()
+    && await page.getByText("Already have card data? Start from a traced workbook or CSV.",{exact:true}).isVisible()
+    && await page.getByRole("button",{name:"Open Forge Studio",exact:true}).count()===0,
+    "an empty idea reaches one focused setup choice instead of a blank editor or dead Studio action");
+  await page.getByRole("button",{name:"Build the first card system",exact:true}).click();
   await page.getByLabel("Starting layout").selectOption("classic");
   await page.getByLabel("Physical size").selectOption("japanese");
   await page.getByLabel("Copies of each").fill("2");
@@ -951,6 +961,12 @@ w.save(p)
     &&new URL(response.url()).pathname.endsWith("/design/card-starter")&&new URL(response.url()).searchParams.get("commit")==="1");
   await page.getByRole("button",{name:"Commit first component",exact:true}).click();
   assert((await starterCommitResponse).ok(),"the exact reviewed starter commits successfully");
+  await page.waitForURL(/#g\/wizard-ui-smoke\/cards\/edit$/);
+  await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).waitFor();
+  assert(await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).isVisible()
+    && await page.getByRole("button",{name:"+ New card",exact:true}).isVisible()
+    && await page.getByText("Live print preview",{exact:true}).isVisible(),
+    "the starter continues directly into a real editable card instead of stranding the creator");
   await page.waitForFunction(async()=>{
     const cards=await (await fetch("/api/games/wizard-ui-smoke/cards")).json();return cards.length===2;
   });
@@ -961,6 +977,61 @@ w.save(p)
     &&/w_mm: 59/.test(wizardLayout)&&/text: WIZARD DECK/.test(wizardLayout)
     &&/preset: balanced-duplex/.test(wizardPrint),
     "the browser commits stable rows, typed fields, Japanese trim, shared back, and print contract atomically");
+
+  const editorBase=await page.evaluate(()=>ED?.access?.ref);
+  assert(/^[0-9a-f]{40}$/.test(editorBase||""),"the visible editor is pinned to the exact Git version it opened",editorBase);
+  await page.locator("#ef-text").fill("A stale browser draft must not overwrite a newer change.");
+  const concurrentCommit=await page.evaluate(async(baseRef)=>{
+    const cards=await (await fetch("/api/games/wizard-ui-smoke/cards")).json();
+    cards[0].text="A newer Sheet or maintainer change wins.";
+    const response=await fetch("/api/games/wizard-ui-smoke/cards",{method:"PUT",headers:{"content-type":"application/json"},
+      body:JSON.stringify({cards,base_ref:baseRef})});
+    return {status:response.status,body:await response.json()};
+  },editorBase);
+  assert(concurrentCommit.status===200&&concurrentCommit.body.saved,
+    "a concurrent version is committed after the editor opens",JSON.stringify(concurrentCommit));
+  const staleWriteResponse=page.waitForResponse(response=>response.request().method()==="PUT"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/cards"));
+  await page.getByRole("button",{name:"Commit changes",exact:true}).click();
+  const staleWriteHttp=await staleWriteResponse,staleWriteBody=await staleWriteHttp.json();
+  assert(staleWriteHttp.status()===409&&staleWriteBody.written===false,
+    "the real card-editor request refuses to overwrite a newer Sheet or maintainer commit",JSON.stringify(staleWriteBody));
+  const expectedConflict=errors.lastIndexOf("409 /api/games/wizard-ui-smoke/cards");
+  if(expectedConflict>=0)errors.splice(expectedConflict,1);
+  await page.getByRole("button",{name:"Reload newer version",exact:true}).waitFor();
+  assert((await page.locator("#hubtoast").innerText()).includes("Your draft was not written"),
+    "the editor explains the no-write result and offers a clear recovery action");
+  const persistedCards=await page.evaluate(async()=>await (await fetch("/api/games/wizard-ui-smoke/cards")).json());
+  assert(persistedCards[0].text==="A newer Sheet or maintainer change wins.",
+    "the newer committed value survives the rejected stale draft",JSON.stringify(persistedCards[0]));
+  await Promise.all([
+    page.waitForNavigation({waitUntil:"domcontentloaded"}),
+    page.getByRole("button",{name:"Reload newer version",exact:true}).click(),
+  ]);
+  await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).waitFor();
+  assert(await page.locator("#ef-text").inputValue()==="A newer Sheet or maintainer change wins.",
+    "reload brings the editor forward to the accepted repository version");
+
+  await page.route("**/api/games/wizard-ui-smoke/access",route=>route.abort());
+  await page.goto(`${origin}/?access-failure=1#/g/onboarding-smoke/wizard-ui-smoke/cards/edit`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).waitFor();
+  await page.locator("#ef-text").fill("This disconnected draft must remain local.");
+  assert(await page.getByText(/exact opening version unavailable — editing is safe, but commit is paused/).isVisible()
+    &&await page.getByRole("button",{name:"Reconnect to commit",exact:true}).isDisabled(),
+    "a failed exact-version handshake leaves editing available but makes a blind commit impossible");
+  await page.unroute("**/api/games/wizard-ui-smoke/access");
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).waitFor();
+  const starterStudioResponse=page.waitForResponse(response=>response.request().method()==="GET"
+    &&new URL(response.url()).pathname.endsWith("/design/svg/card"));
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  assert((await starterStudioResponse).ok(),"the generated native family opens as a traced Studio working copy");
+  await page.getByRole("heading",{name:"Wizard UI Smoke · Card",exact:true}).waitFor();
+  assert(await page.locator(".forge-studio-panel-tabs").getByRole("button",{name:"Layers",exact:true}).isVisible()
+    && await page.locator('[data-design-card="strike"]').isVisible()
+    && await page.locator("#des-content-name").inputValue()==="Strike",
+    "a first-time project reaches the full native visual Studio with its real cards and layers");
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("heading",{name:"Save the exact cards you intend to test or manufacture",exact:true}).waitFor();
@@ -1004,7 +1075,7 @@ w.save(p)
   await page.getByRole("button",{name:"Close",exact:false}).click();
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
-  await page.getByRole("button",{name:"Print profile",exact:true}).click();
+  await page.getByRole("button",{name:"Configure print",exact:true}).click();
   await page.getByRole("heading",{name:"Choose exactly what Forge will manufacture",exact:true}).waitFor();
   await page.getByLabel("Starting preset").selectOption("the-game-crafter-poker");
   assert(await page.getByLabel("Production target").inputValue()==="the-game-crafter-poker"
