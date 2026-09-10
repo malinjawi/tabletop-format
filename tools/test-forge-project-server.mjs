@@ -382,9 +382,28 @@ w.save(p)
   assert.equal(pnpinkCommitted.proposed, undefined);
   assert.equal(JSON.parse(readFileSync(join(games, "netrunner-sg", "components", "cards.json")))
     .find(card => card.id === "buzzsaw").name, "Buzzsaw Server Test");
+  const studioCardsPath = join(games, "netrunner-sg", "components", "cards.json");
+  const studioPrintingsPath = join(games, "netrunner-sg", "components", "printings.json");
+  const exactStudioCardsText = readFileSync(studioCardsPath, "utf8");
+  const exactStudioPrintingsText = readFileSync(studioPrintingsPath, "utf8");
+  const dirtyStudioCards = JSON.parse(exactStudioCardsText);
+  const dirtyStudioPrintings = JSON.parse(exactStudioPrintingsText);
+  dirtyStudioCards.find(card => card.id === "botulus").name = "DIRTY WORKTREE CARD";
+  dirtyStudioPrintings.find(printing => printing.card_id === "botulus").quantity += 99;
+  writeFileSync(studioCardsPath, JSON.stringify(dirtyStudioCards, null, 2) + "\n");
+  writeFileSync(studioPrintingsPath, JSON.stringify(dirtyStudioPrintings, null, 2) + "\n");
   const studioFamily = await api("/api/games/netrunner-sg/design/svg/program", { token: owner.token });
-  const studioCards = JSON.parse(readFileSync(join(games, "netrunner-sg", "components", "cards.json")));
-  const studioPrintings = JSON.parse(readFileSync(join(games, "netrunner-sg", "components", "printings.json")));
+  assert.deepEqual(studioFamily.cards, JSON.parse(exactStudioCardsText),
+    "Studio card rows must come from the same immutable ref as its SVG and layout");
+  assert.deepEqual(studioFamily.printings, JSON.parse(exactStudioPrintingsText),
+    "Studio printing rows must come from the same immutable ref as its SVG and layout");
+  assert.notEqual(studioFamily.cards.find(card => card.id === "botulus").name,
+    dirtyStudioCards.find(card => card.id === "botulus").name,
+    "a dirty local card table must never leak into an exact Studio source bundle");
+  writeFileSync(studioCardsPath, exactStudioCardsText);
+  writeFileSync(studioPrintingsPath, exactStudioPrintingsText);
+  const studioCards = structuredClone(studioFamily.cards);
+  const studioPrintings = structuredClone(studioFamily.printings);
   studioCards.find(card => card.id === "botulus").name = "Botulus Studio Draft";
   const studioPrinting = studioPrintings.find(printing => printing.card_id === "botulus");
   const studioArtPath = "assets/card-art/botulus-studio-test.png";
@@ -481,7 +500,26 @@ w.save(p)
   await api("/api/games/netrunner-sg/collaborators/project-editor", { method: "PUT", token: owner.token,
     json: { role: "commenter" } });
   const contributorFamily = await api("/api/games/netrunner-sg/design/svg/program", { token: outsider.token });
-  const contributorCards = JSON.parse(readFileSync(join(games, "netrunner-sg", "components", "cards.json")));
+  assert.deepEqual(contributorFamily.family_definition.layout, contributorFamily.layout,
+    "the exact Studio source bundle carries its matching family definition");
+  const contributorRulesSource = await api(`/api/games/netrunner-sg/artifact?path=${encodeURIComponent("rules/rules.md")}`,
+    { token: outsider.token });
+  assert.equal(contributorRulesSource.ref, contributorFamily.ref,
+    "the independently opened rulebook and Studio both identify their exact source revision");
+  const netrunnerRulesProposal = await api("/api/games/netrunner-sg/artifact", { method: "PUT", token: outsider.token,
+    json: { path: "rules/rules.md", base_ref: contributorRulesSource.ref,
+      content: `${contributorRulesSource.content.trimEnd()}\n\n## Scoped review test\nKeep this separate from Studio.\n` } });
+  assert.equal(netrunnerRulesProposal.proposed, true);
+  const contributorForkAccess = await api(`/api/games/${netrunnerRulesProposal.fork}/access`, { token: outsider.token });
+  const contributorForkCards = await api(`/api/games/${netrunnerRulesProposal.fork}/cards`, { token: outsider.token });
+  contributorForkCards.find(card => card.id === "buzzsaw").name = "Independent edition-only Buzzsaw";
+  const independentCardCommit = await api(`/api/games/${netrunnerRulesProposal.fork}/cards`, {
+    method: "PUT", token: outsider.token,
+    json: { cards: contributorForkCards, base_ref: contributorForkAccess.ref },
+  });
+  assert.equal(independentCardCommit.saved, true,
+    "the contributor edition may contain card work unrelated to the focused Studio proposal");
+  const contributorCards = structuredClone(contributorFamily.cards);
   contributorCards.find(card => card.id === "botulus").name = "Botulus Community Proposal";
   const contributorStudioDry = await api("/api/games/netrunner-sg/design/studio", { method: "POST", token: outsider.token,
     json: { base_ref: contributorFamily.ref, cards: contributorCards } });
@@ -492,8 +530,53 @@ w.save(p)
     method: "POST", token: outsider.token, json: { base_ref: contributorFamily.ref, cards: contributorCards } });
   assert.equal(contributorStudioCommit.proposed, true);
   assert.equal(contributorStudioCommit.fork, "netrunner-sg-project-editor");
+  assert.notEqual(contributorStudioCommit.pr, netrunnerRulesProposal.pr,
+    "a Studio proposal must not overwrite an open rulebook proposal from the same edition");
+  const [netrunnerRulesDetail, contributorStudioDetail] = await Promise.all([
+    api(`/api/games/netrunner-sg/prs/${netrunnerRulesProposal.pr}`, { token: owner.token }),
+    api(`/api/games/netrunner-sg/prs/${contributorStudioCommit.pr}`, { token: owner.token }),
+  ]);
+  assert.deepEqual(netrunnerRulesDetail.file_changes.map(change => change.path), ["rules/rules.md"],
+    "the rulebook proposal remains independently scoped after Studio commits to the same edition");
+  assert.deepEqual(contributorStudioDetail.changes.map(change => change.card), ["botulus"],
+    "the Studio proposal contains only its card change, not independent edition work");
+  assert.deepEqual(contributorStudioDetail.file_changes, [],
+    "the Studio proposal excludes the unrelated rulebook commit already present in the contributor edition");
+  assert.match(contributorStudioDetail.body, /^Forge proposal scope: studio\n/);
+  const contributorFollowupCards = structuredClone(contributorCards);
+  contributorFollowupCards.find(card => card.id === "cleaver").name = "Cleaver Follow-up Proposal";
+  const contributorStudioFollowup = await api("/api/games/netrunner-sg/design/studio?commit=1", {
+    method: "POST", token: outsider.token,
+    json: { base_ref: contributorFamily.ref, cards: contributorFollowupCards },
+  });
+  assert.equal(contributorStudioFollowup.pr, contributorStudioCommit.pr,
+    "continuing in Studio refreshes the same focused proposal");
+  const contributorStudioFollowupDetail = await api(
+    `/api/games/netrunner-sg/prs/${contributorStudioFollowup.pr}`, { token: owner.token });
+  assert.deepEqual([...new Set(contributorStudioFollowupDetail.changes.map(change => change.card))].sort(),
+    ["botulus", "cleaver"],
+    "refreshing a Studio proposal retains earlier unmerged Studio work alongside the follow-up");
+  assert(!contributorStudioFollowupDetail.changes.some(change => change.card === "buzzsaw"),
+    "refreshing a Studio proposal still excludes unrelated edition work");
+  assert.deepEqual(contributorStudioFollowupDetail.file_changes, [],
+    "refreshing a Studio proposal still excludes its edition's unrelated rulebook work");
+  const scopedProposalDb = new DatabaseSync(dbPath);
+  try {
+    const openScopes = scopedProposalDb.prepare(
+      "SELECT id, body FROM prs WHERE to_slug = ? AND from_slug = ? AND status = 'open' ORDER BY created_at, id"
+    ).all("netrunner-sg", contributorStudioCommit.fork);
+    assert.equal(openScopes.length, 2,
+      "the same edition may hold independently reviewable rulebook and Studio proposals");
+    assert(openScopes.some(row => row.id === netrunnerRulesProposal.pr && row.body.startsWith("Forge artifact proposal: rules/rules.md")));
+    assert(openScopes.some(row => row.id === contributorStudioCommit.pr && row.body.startsWith("Forge proposal scope: studio")));
+  } finally { scopedProposalDb.close(); }
   assert.equal(JSON.parse(readFileSync(join(games, contributorStudioCommit.fork, "components", "cards.json")))
     .find(card => card.id === "botulus").name, "Botulus Community Proposal");
+  assert.equal(JSON.parse(readFileSync(join(games, contributorStudioCommit.fork, "components", "cards.json")))
+    .find(card => card.id === "cleaver").name, "Cleaver Follow-up Proposal");
+  assert.equal(JSON.parse(readFileSync(join(games, contributorStudioCommit.fork, "components", "cards.json")))
+    .find(card => card.id === "buzzsaw").name, "Independent edition-only Buzzsaw",
+  "the Studio commit preserves unrelated work in the contributor's edition without proposing it");
   assert.equal(spawnSync("git", ["show", "-s", "--format=%an <%ae>", contributorStudioCommit.commit],
     { cwd: temp, encoding: "utf8" }).stdout.trim(), "project-editor <editor@example.invalid>");
   const liveLayoutPath = join(games, "ember", "templates", "layout.yaml");
@@ -929,6 +1012,117 @@ w.save(p)
   assert(editionProposalActivity.some(event => event.kind === "pr_open" && event.game_slug === starterProject.slug
     && event.target === editionProposal.id),
   "opening an edition proposal records attributed pr_open activity");
+
+  const rulesPath = join(games, starterProject.slug, "rules", "rules.md");
+  const initialRules = existsSync(rulesPath) ? readFileSync(rulesPath, "utf8") : "# Rules\n";
+  const directRulesBase = await api(`/api/games/${starterProject.slug}/access`, { token: owner.token });
+  const directRulesContent = `${initialRules.trimEnd()}\n\n## Exact artifact test\nResolve the test turn in order.\n`;
+  for (const base_ref of [undefined, "not-a-git-ref"]) {
+    const missingBaseResponse = await fetch(`${origin}/api/games/${starterProject.slug}/artifact`, {
+      method: "PUT", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ path: "rules/rules.md", content: directRulesContent,
+        ...(base_ref === undefined ? {} : { base_ref }) }),
+    });
+    const missingBase = await missingBaseResponse.json();
+    assert.equal(missingBaseResponse.status, 422,
+      "artifact writes require the exact Git revision opened by the editor");
+    assert.equal(missingBase.written, false);
+  }
+  const directRulesCommit = await api(`/api/games/${starterProject.slug}/artifact`, {
+    method: "PUT", token: owner.token,
+    json: { path: "rules/rules.md", content: directRulesContent, base_ref: directRulesBase.ref },
+  });
+  assert.equal(directRulesCommit.saved, true);
+  assert.equal(directRulesCommit.base_ref, directRulesBase.ref);
+  assert.equal(directRulesCommit.proposed_ref, directRulesCommit.commit);
+  writeFileSync(rulesPath, `${directRulesContent}\nDIRTY LOCAL RULES MUST NOT LEAK\n`);
+  const exactRulesRead = await api(`/api/games/${starterProject.slug}/artifact?path=${encodeURIComponent("rules/rules.md")}`);
+  assert.deepEqual(exactRulesRead, { path: "rules/rules.md", content: directRulesContent,
+    ref: directRulesCommit.commit },
+  "the artifact editor receives content and ref atomically from one immutable revision");
+  writeFileSync(rulesPath, directRulesContent);
+  const staleRulesResponse = await fetch(`${origin}/api/games/${starterProject.slug}/artifact`, {
+    method: "PUT", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ path: "rules/rules.md",
+      content: `${directRulesContent}\nThis stale draft must never land.\n`, base_ref: directRulesBase.ref }),
+  });
+  const staleRules = await staleRulesResponse.json();
+  assert.equal(staleRulesResponse.status, 409);
+  assert.equal(staleRules.written, false);
+  assert.equal(readFileSync(rulesPath, "utf8"), directRulesContent,
+    "a stale rulebook save must not overwrite the exact committed source");
+
+  const rulesEditor = await api("/api/auth/register", { method: "POST", json: {
+    handle: "rules-editor", email: "rules-editor@example.invalid", password: "password123",
+  } });
+  const ruleProposalBase = await api(`/api/games/${starterProject.slug}/access`, { token: rulesEditor.token });
+  const proposedRulesContent = `${directRulesContent.trimEnd()}\n\n## Community clarification\nThe active player resolves ties.\n`;
+  const rulesProposal = await api(`/api/games/${starterProject.slug}/artifact`, {
+    method: "PUT", token: rulesEditor.token,
+    json: { path: "rules/rules.md", content: proposedRulesContent, base_ref: ruleProposalBase.ref },
+  });
+  assert.equal(rulesProposal.proposed, true);
+  assert.equal(rulesProposal.saved, true);
+  assert.equal(rulesProposal.base_ref, ruleProposalBase.ref);
+  assert.equal(rulesProposal.proposed_ref, rulesProposal.commit);
+  assert.equal(rulesProposal.fork, `${starterProject.slug}-rules-editor`);
+  assert.equal(rulesProposal.url,
+    `/#/g/${encodeURIComponent(starterProject.namespace)}/${encodeURIComponent(starterProject.repo_slug)}`
+      + `/suggestions/${encodeURIComponent(rulesProposal.pr)}`);
+  assert.equal(readFileSync(join(games, rulesProposal.fork, "rules", "rules.md"), "utf8"), proposedRulesContent,
+    "the contributor's exact rulebook draft is committed only in their edition");
+  assert.equal(readFileSync(rulesPath, "utf8"), directRulesContent,
+    "opening a rulebook proposal must not write into the source project");
+  const rulesProposalDetail = await api(`/api/games/${starterProject.slug}/prs/${rulesProposal.pr}`);
+  assert.deepEqual(rulesProposalDetail.file_changes.map(change => change.path), ["rules/rules.md"],
+    "the focused proposal contains only the artifact edited in the rulebook UI");
+  assert.deepEqual(rulesProposalDetail.changes, []);
+  assert.deepEqual(rulesProposalDetail.printing_changes,
+    { kind: "printings", changed: [], added: [], removed: [] });
+  assert.equal(rulesProposalDetail.file_conflicts.length, 0);
+  const rulesProposalDb = new DatabaseSync(dbPath);
+  try {
+    const row = rulesProposalDb.prepare("SELECT base, proposed FROM prs WHERE id = ?").get(rulesProposal.pr);
+    const storedBase = JSON.parse(row.base), storedProposed = JSON.parse(row.proposed);
+    assert.equal(storedBase.ref, rulesProposal.base_ref);
+    assert.equal(storedProposed.ref, rulesProposal.proposed_ref);
+    const changedFiles = [...new Set([...Object.keys(storedBase.files), ...Object.keys(storedProposed.files)])]
+      .filter(path => (storedBase.files[path]?.hash ?? null) !== (storedProposed.files[path]?.hash ?? null));
+    assert.deepEqual(changedFiles, ["rules/rules.md"],
+      "the persisted PR snapshots carry one exact rulebook file diff and no unrelated fork work");
+  } finally { rulesProposalDb.close(); }
+
+  const refreshedRulesContent = proposedRulesContent.replace("resolves ties", "breaks ties");
+  const refreshedRulesProposal = await api(`/api/games/${starterProject.slug}/artifact`, {
+    method: "PUT", token: rulesEditor.token,
+    json: { path: "rules/rules.md", content: refreshedRulesContent, base_ref: ruleProposalBase.ref },
+  });
+  assert.equal(refreshedRulesProposal.pr, rulesProposal.pr,
+    "continuing the same rulebook draft refreshes its focused proposal");
+  assert.notEqual(refreshedRulesProposal.proposed_ref, rulesProposal.proposed_ref);
+  assert.equal(readFileSync(join(games, rulesProposal.fork, "rules", "rules.md"), "utf8"), refreshedRulesContent);
+
+  const independentForkRules = `${refreshedRulesContent.trimEnd()}\n\n## Edition-only experiment\nDo not overwrite this work.\n`;
+  const independentForkCommit = await api(`/api/games/${rulesProposal.fork}/artifact`, {
+    method: "PUT", token: rulesEditor.token,
+    json: { path: "rules/rules.md", content: independentForkRules,
+      base_ref: refreshedRulesProposal.proposed_ref },
+  });
+  const conflictingProposalResponse = await fetch(`${origin}/api/games/${starterProject.slug}/artifact`, {
+    method: "PUT", headers: { authorization: `Bearer ${rulesEditor.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ path: "rules/rules.md",
+      content: `${refreshedRulesContent}\nA different follow-up proposal.\n`, base_ref: ruleProposalBase.ref }),
+  });
+  const conflictingProposal = await conflictingProposalResponse.json();
+  assert.equal(conflictingProposalResponse.status, 409);
+  assert.equal(conflictingProposal.written, false);
+  assert.deepEqual(conflictingProposal.dirty_files, ["rules/rules.md"]);
+  assert.equal((await api(`/api/games/${rulesProposal.fork}/access`, { token: rulesEditor.token })).ref,
+    independentForkCommit.commit, "a proposal conflict must not create another fork commit");
+  assert.equal(readFileSync(join(games, rulesProposal.fork, "rules", "rules.md"), "utf8"), independentForkRules,
+    "Forge must preserve an independently changed artifact in an existing edition");
+  assert.equal(readFileSync(rulesPath, "utf8"), directRulesContent,
+    "a rejected contributor proposal must leave the source rulebook unchanged");
 
   console.log(`forge-project-server: HTTP project + first-component wizard + versioned print profile + direct editor CSV + pieces + nanDECK + Squib + SVG + PnPInk + native Tabletop Playground export → dry-run → direct commit or fork/commit/PR${hasYaml ? " → merge" : " (merge skipped: PyYAML unavailable)"} verified`);
 } finally {

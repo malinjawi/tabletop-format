@@ -482,10 +482,10 @@ const optionalJson = async (ctx) => {
   return raw ? JSON.parse(raw) : {};
 };
 
-/** Validate a candidate tree = game at HEAD + one replaced file. Never touches
- *  the live tree — the rollback path is simply "don't commit". Backend-agnostic. */
-async function validateCandidate(slug, relPath, content, extra = {}) {
-  const { dir, cleanup } = await store.materialize(slug, "HEAD");
+/** Validate a candidate tree = game at one exact ref + one replaced file. Never
+ *  touches the live tree — the rollback path is simply "don't commit". */
+async function validateCandidateAt(slug, ref, relPath, content, extra = {}) {
+  const { dir, cleanup } = await store.materialize(slug, ref);
   try {
     const full = join(dir, relPath);
     mkdirSync(dirname(full), { recursive: true });   // new-file artifacts (e.g. playtests/) may need the dir
@@ -497,6 +497,16 @@ async function validateCandidate(slug, relPath, content, extra = {}) {
     return { ok: v.status === 0, report: `${v.stdout || ""}\n${v.stderr || ""}`.trim().split("\n") };
   } finally { cleanup(); }
 }
+async function validateCandidate(slug, relPath, content, extra = {}) {
+  return validateCandidateAt(slug, "HEAD", relPath, content, extra);
+}
+async function exactFileBytes(slug, ref, relPath) {
+  const { dir, cleanup } = await store.materialize(slug, ref);
+  try {
+    const path = join(dir, relPath);
+    return existsSync(path) ? readFileSync(path) : null;
+  } finally { cleanup(); }
+}
 
 /* ---------- reusable repository assets ----------
  * Cards are structured objects, but the playable game also depends on files:
@@ -504,7 +514,7 @@ async function validateCandidate(slug, relPath, content, extra = {}) {
  * setups. These paths are first-class game source. The helpers below provide
  * one safe, renderer-neutral inventory used by the Assets tab and by PRs. */
 const REUSABLE_ROOTS = ["assets/", "templates/", "setups/", "rules/"];
-const REVIEWED_EXACT = new Set(["game.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST,
+const REVIEWED_EXACT = new Set(["game.yaml", "community.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST,
   SOURCE_ASSETS_MANIFEST]);
 // These files define project identity, legal publication authority, or access
 // control. Contributors may propose them through a fork/PR, but direct generic
@@ -632,6 +642,13 @@ function mergeRepoFiles(base = {}, proposed = {}, current = {}) {
   }
   return { changes, conflicts };
 }
+function reviewableFileEntry(path, bytes) {
+  if (bytes == null) return null;
+  const buf = Buffer.from(bytes);
+  const hash = path === RIGHTS_MANIFEST ? rightsContributionHash(buf)
+    : path === "game.yaml" ? gameYamlContributionHash(buf) : hashBuffer(buf);
+  return { hash, size: buf.length };
+}
 const snapshotCache = new Map();
 async function gameSnapshot(slug, ref = null) {
   const pinned = ref ? await store.resolveRef(slug, ref) : await store.headSha(slug);
@@ -645,9 +662,7 @@ async function gameSnapshot(slug, ref = null) {
     const files = {};
     for (const item of walkRepo(dir).filter(item => isReviewablePath(item.path) && !PR_LOCAL_ONLY.has(item.path))) {
       const buf = readFileSync(item.full);
-      const hash = item.path === RIGHTS_MANIFEST ? rightsContributionHash(buf)
-        : item.path === "game.yaml" ? gameYamlContributionHash(buf) : hashBuffer(buf);
-      files[item.path] = { hash, size: buf.length };
+      files[item.path] = reviewableFileEntry(item.path, buf);
     }
     const snapshot = { version: 3, ref: pinned, cards, printings, files };
     snapshotCache.set(cacheKey, snapshot);
@@ -1821,21 +1836,139 @@ const ARTIFACTS = {
   "design/notes.md":    { label: "design notes",   msg: "design: update notes" },
   "game.yaml":          { label: "game metadata",  msg: "meta: update game info" },
 };
+gw.route("GET", "/api/games/:slug/artifact", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const path = String(ctx.url.searchParams.get("path") || "");
+  const spec = ARTIFACTS[path];
+  if (!spec) return ctx.send(422, { error: `not an editable artifact: ${path}`, editable: Object.keys(ARTIFACTS) });
+  const ref = await store.headSha(slug);
+  const bytes = await exactFileBytes(slug, ref, path);
+  if (bytes == null) return ctx.send(404, { error: `${spec.label} does not exist at this version`, path, ref });
+  ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
+  ctx.send(200, { path, content: bytes.toString(), ref });
+}, "fetch one editable artifact and its content from the same exact Git revision");
+async function matchingArtifactProposal(user, slug, forkSlug, path) {
+  const marker = `Forge artifact proposal: ${path}`;
+  const candidates = (await q.prsFor(db, slug))
+    .filter(pr => pr.from_slug === forkSlug && pr.status === "open");
+  for (const candidate of candidates) {
+    const row = await q.prById(db, candidate.id);
+    if (!row || row.author_id !== user.id) continue;
+    const base = normalizePrSnapshot(JSON.parse(row.base));
+    const proposed = normalizePrSnapshot(JSON.parse(row.proposed));
+    if (String(row.body || "").startsWith(marker)) return { row, base, proposed };
+    const printings = diffRows(base.printings, proposed.printings, "printings");
+    const files = repoFileChanges(base.files, proposed.files);
+    if (!diffCards(base.cards, proposed.cards).length
+      && !printings.changed.length && !printings.added.length && !printings.removed.length
+      && files.length === 1 && files[0].path === path)
+      return { row, base, proposed };
+  }
+  return null;
+}
 gw.route("PUT", "/api/games/:slug/artifact", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const u = await authedUser(ctx);
-  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
-  const { path, content } = await json(ctx);
+  const u = await requireAuth(ctx); if (!u) return;
+  const body = await json(ctx);
+  const { path, content } = body;
   const spec = ARTIFACTS[path];
   if (!spec) return ctx.send(422, { error: `not an editable artifact: ${path}`, editable: Object.keys(ARTIFACTS) });
   if (typeof content !== "string") return ctx.send(422, { error: "content must be a string" });
-  const before = (await store.readFile(slug, path))?.toString() ?? "";
-  if (before === content) return ctx.send(200, { saved: false, message: "no changes" });
-  const v = await validateCandidate(slug, path, content);
+  const baseRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(baseRef))
+    return ctx.send(422, { saved: false, written: false,
+      error: `base_ref must be the exact Git revision opened by the ${spec.label} editor` });
+  const currentRef = await store.headSha(slug);
+  if (baseRef !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `this game changed after the ${spec.label} editor opened; reload to review the newer version before saving`,
+      base_ref: baseRef, current_ref: currentRef });
+  const sourceBytes = await exactFileBytes(slug, currentRef, path);
+  const before = sourceBytes?.toString() ?? "";
+  const direct = await canWrite(u, slug);
+  if (direct && before === content)
+    return ctx.send(200, { saved: false, message: "no changes", base_ref: currentRef, proposed_ref: currentRef });
+  const proposedSourceEntry = reviewableFileEntry(path, Buffer.from(content));
+  if (!direct && (reviewableFileEntry(path, sourceBytes)?.hash ?? null) === (proposedSourceEntry?.hash ?? null))
+    return ctx.send(200, { saved: false, proposed: false, message: "no changes", base_ref: currentRef });
+  const v = await validateCandidateAt(slug, currentRef, path, content);
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
-  const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
-  ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label });
-}, "edit a non-card artifact (rules, community, design, metadata) → validated commit");
+  if (await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `this game changed while Forge validated the ${spec.label}; reload before saving`,
+      base_ref: currentRef, current_ref: await store.headSha(slug) });
+
+  if (direct) {
+    const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
+    if (path === "game.yaml") await reindexGames();
+    return ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label,
+      base_ref: currentRef, proposed_ref: sha });
+  }
+
+  let forkSlug;
+  try { forkSlug = await ensureUserFork(u, slug, currentRef); }
+  catch (error) { return ctx.send(error.code ?? 500, { error: error.message }); }
+  const forkRef = await store.headSha(forkSlug);
+  const forkBytes = await exactFileBytes(forkSlug, forkRef, path);
+  const desiredForkContent = path === "game.yaml"
+    ? mergeContributedGameYaml(forkBytes, Buffer.from(content)) : content;
+  const desiredForkBytes = Buffer.from(desiredForkContent);
+  const forkEntry = reviewableFileEntry(path, forkBytes);
+  const desiredForkEntry = reviewableFileEntry(path, desiredForkBytes);
+  const prior = await matchingArtifactProposal(u, slug, forkSlug, path);
+  const forkPoint = await directForkBaseRef(forkSlug, slug);
+  const forkPointBytes = forkPoint ? await exactFileBytes(slug, forkPoint, path) : null;
+  const safeHashes = new Set([
+    reviewableFileEntry(path, sourceBytes)?.hash ?? null,
+    desiredForkEntry?.hash ?? null,
+  ]);
+  if (prior) safeHashes.add(prior.proposed.files?.[path]?.hash ?? null);
+  if (forkPoint) safeHashes.add(reviewableFileEntry(path, forkPointBytes)?.hash ?? null);
+  if (!safeHashes.has(forkEntry?.hash ?? null))
+    return ctx.send(409, { saved: false, written: false, proposed: false,
+      error: `your edition has an independent change to ${path}; Forge did not overwrite it`,
+      fork: forkSlug, base_ref: currentRef, fork_ref: forkRef, dirty_files: [path] });
+
+  const forkValidation = await validateCandidateAt(forkSlug, forkRef, path, desiredForkContent);
+  if (!forkValidation.ok)
+    return ctx.send(422, { saved: false, error: "the proposed artifact fails validation in your edition",
+      report: forkValidation.report });
+  const [sourceNow, forkNow] = await Promise.all([store.headSha(slug), store.headSha(forkSlug)]);
+  if (sourceNow !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `this game changed while Forge prepared the ${spec.label} proposal; reload before proposing`,
+      base_ref: currentRef, current_ref: sourceNow });
+  if (forkNow !== forkRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `your edition changed while Forge prepared the ${spec.label} proposal; reload before proposing`,
+      fork: forkSlug, base_ref: forkRef, current_ref: forkNow });
+
+  let sha = forkRef, saved = false;
+  if (!forkBytes || !forkBytes.equals(desiredForkBytes)) {
+    ({ sha } = await store.writeFiles(forkSlug, [{ path, content: desiredForkContent }], spec.msg,
+      `${u.handle} <${u.email}>`));
+    saved = true;
+    if (path === "game.yaml") await reindexGames();
+  }
+  const baseSnapshot = await gameSnapshot(slug, currentRef);
+  const proposedSnapshot = { ...baseSnapshot, ref: sha, files: { ...baseSnapshot.files,
+    [path]: reviewableFileEntry(path, desiredForkBytes) } };
+  let pr, url, created = false;
+  if (prior) {
+    pr = prior.row.id;
+    await q.refreshPr(db, pr, spec.msg, JSON.stringify(baseSnapshot), JSON.stringify(proposedSnapshot));
+    if ((await prPolicy(slug)).dismiss_stale_reviews) await q.clearReviews(db, pr);
+    url = focusedPrUrl(await q.gameBySlug(db, slug), pr);
+  } else {
+    pr = newId("pr"); created = true;
+    await q.createPr(db, { id: pr, to_slug: slug, from_slug: forkSlug, title: spec.msg,
+      body: `Forge artifact proposal: ${path}\n\nProposed from Forge's ${spec.label} editor after exact-ref validation.`, author_id: u.id,
+      base: JSON.stringify(baseSnapshot), proposed: JSON.stringify(proposedSnapshot) });
+    url = await announcePrOpened(u, slug, pr);
+  }
+  ctx.send(created ? 201 : 200, { saved, proposed: true, pr, fork: forkSlug, commit: sha,
+    message: spec.msg, artifact: spec.label, base_ref: currentRef, proposed_ref: sha, url });
+}, "edit a rules/community/design/metadata artifact → exact commit or focused fork + PR");
 
 gw.route("GET", "/api/games/:slug/prototype", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -2604,20 +2737,70 @@ function reviewState(policy, reviews, conflicts = []) {
     required_approvals: policy.required_approvals, checks,
     mergeable: checks.filter(check => check.pass !== null).every(check => check.pass) };
 }
-async function openOrRefreshImportedPr({ u, slug, destination, message, body }) {
+function scopedSnapshotRows(baseRows = [], destinationRows = [], changedIds = []) {
+  const ids = new Set(changedIds), destination = new Map(destinationRows.map(row => [row.id, row]));
+  const baseIds = new Set(baseRows.map(row => row.id)), rows = [];
+  for (const row of baseRows) {
+    if (!ids.has(row.id)) rows.push(row);
+    else if (destination.has(row.id)) rows.push(destination.get(row.id));
+  }
+  for (const row of destinationRows) if (ids.has(row.id) && !baseIds.has(row.id)) rows.push(row);
+  return rows;
+}
+async function openOrRefreshImportedPr({ u, slug, destination, message, body, scope = null,
+  sourceRef = null, changedPaths = null, changedCardIds = [], changedPrintingIds = [] }) {
   const fromRow = await q.gameBySlug(db, destination);
   const baseRef = await directForkBaseRef(destination, slug, fromRow);
-  const proposed = await gameSnapshot(destination);
-  const existing = (await q.prsFor(db, slug)).find(pr => pr.from_slug === destination && pr.status === "open");
-  let id;
+  const candidates = (await q.prsFor(db, slug))
+    .filter(pr => pr.from_slug === destination && pr.status === "open");
+  let existing = null;
+  if (scope) {
+    const marker = `Forge proposal scope: ${scope}`;
+    for (const candidate of candidates) {
+      const row = await q.prById(db, candidate.id);
+      if (row?.author_id === u.id && String(row.body || "").startsWith(marker)) {
+        existing = row;
+        break;
+      }
+    }
+  } else existing = candidates[0] || null;
+  let id, base, previousProposed = null;
   if (existing) {
-    const full = await q.prById(db, existing.id), base = normalizePrSnapshot(JSON.parse(full.base));
+    const full = existing.base ? existing : await q.prById(db, existing.id);
+    base = normalizePrSnapshot(JSON.parse(full.base));
+    previousProposed = normalizePrSnapshot(JSON.parse(full.proposed));
+  } else base = await gameSnapshot(slug, sourceRef || baseRef);
+  const destinationSnapshot = await gameSnapshot(destination);
+  let proposed = destinationSnapshot;
+  if (Array.isArray(changedPaths)) {
+    const accumulatedCardIds = new Set(changedCardIds);
+    const accumulatedPrintingIds = new Set(changedPrintingIds);
+    const accumulatedPaths = new Set(changedPaths);
+    if (previousProposed) {
+      for (const change of diffCards(base.cards, previousProposed.cards)) accumulatedCardIds.add(change.card);
+      const priorPrintings = diffRows(base.printings, previousProposed.printings, "printings");
+      for (const id of [...priorPrintings.changed, ...priorPrintings.added, ...priorPrintings.removed])
+        accumulatedPrintingIds.add(id);
+      for (const change of repoFileChanges(base.files, previousProposed.files)) accumulatedPaths.add(change.path);
+    }
+    proposed = { ...base, ref: destinationSnapshot.ref,
+      cards: scopedSnapshotRows(base.cards, destinationSnapshot.cards, [...accumulatedCardIds]),
+      printings: scopedSnapshotRows(base.printings, destinationSnapshot.printings, [...accumulatedPrintingIds]),
+      files: { ...base.files } };
+    for (const path of accumulatedPaths) {
+      if (path === "components/cards.json" || path === "components/printings.json") continue;
+      if (destinationSnapshot.files[path]) proposed.files[path] = destinationSnapshot.files[path];
+      else delete proposed.files[path];
+    }
+  }
+  if (existing) {
     id = existing.id;
     await q.refreshPr(db, id, message, JSON.stringify(base), JSON.stringify(proposed));
     if ((await prPolicy(slug)).dismiss_stale_reviews) await q.clearReviews(db, id);
   } else {
-    const base = await gameSnapshot(slug, baseRef); id = newId("pr");
-    await q.createPr(db, { id, to_slug: slug, from_slug: destination, title: message, body, author_id: u.id,
+    id = newId("pr");
+    const scopedBody = scope ? `Forge proposal scope: ${scope}\n\n${body}` : body;
+    await q.createPr(db, { id, to_slug: slug, from_slug: destination, title: message, body: scopedBody, author_id: u.id,
       base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
     await announcePrOpened(u, slug, id);
   }
@@ -3461,10 +3644,18 @@ gw.route("GET", "/api/games/:slug/design/svg/:family", async (ctx) => {
     try { artLibrary = parseArtLibrary(existsSync(join(materialized.dir, ART_LIBRARY_MANIFEST))
       ? readFileSync(join(materialized.dir, ART_LIBRARY_MANIFEST)) : null); }
     catch (error) { return ctx.send(422, { error: error.message }); }
+    let cards, printings;
+    try {
+      cards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
+      printings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
+    } catch (error) {
+      return ctx.send(422, { error: `the exact Studio source bundle is invalid: ${error.message}` });
+    }
     ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
     ctx.send(200, { ok: true, ref: sha, family: family.family, source_hash: built.manifest.source_hash,
-      file: family.file, layout: sourceFamily.layout, origins: sourceFamily.origins,
-      art_library: artLibrary,
+      file: family.file, family_definition: sourceFamily,
+      layout: sourceFamily.layout, origins: sourceFamily.origins,
+      cards, printings, art_library: artLibrary,
       svg: built.entries.get(family.file).toString("utf8") });
   } finally { materialized.cleanup(); }
 }, "fetch one current SVG family working copy for the in-Forge visual editor");
@@ -3550,9 +3741,9 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
     baseArtLibrary = parseArtLibrary(await store.fileAt(slug, baseRef, ART_LIBRARY_MANIFEST));
   }
   catch (error) { return ctx.send(409, { error: `the Studio baseline is no longer available; reopen the family (${error.message})` }); }
-  const materialized = await store.materialize(destination, "HEAD");
+  const currentHead = await store.headSha(destination);
+  const materialized = await store.materialize(destination, currentHead);
   try {
-    const currentHead = await store.headSha(destination);
     const currentCards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
     const currentPrintings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
     let currentArtLibrary;
@@ -3660,7 +3851,10 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
     const { sha } = await store.writeFiles(destination, files, `${message}\n\n${detail}`, `${u.handle} <${u.email}>`);
     if (incomingAssets.length) await reindexGames();
     if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
-    const pr = await openOrRefreshImportedPr({ u, slug, destination, message,
+    const pr = await openOrRefreshImportedPr({ u, slug, destination, message, scope: "studio",
+      sourceRef: baseRef, changedPaths: files.map(file => file.path),
+      changedCardIds: cardChanges.map(change => change.card),
+      changedPrintingIds: [...printingChanges.added, ...printingChanges.changed, ...printingChanges.removed],
       body: "Edited card content and its shared visual family together in Forge Studio, then validated as one candidate." });
     ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
   } finally { materialized.cleanup(); }

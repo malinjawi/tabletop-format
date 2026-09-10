@@ -453,7 +453,8 @@ REDIR=$(curl -s -o /dev/null -w '%{redirect_url}' "localhost:$PORT/edit/ember")
 case "$REDIR" in *"#/g/ember/cards/edit") ok "/edit/:slug redirects into the SPA route (#/g/:slug/cards/edit)";; *) bad "edit redirect" "$REDIR";; esac
 ANONART=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -d '{"path":"rules/rules.md","content":"x"}' "localhost:$PORT/api/games/ember/artifact")
 [ "$ANONART" = "401" ] && ok "artifact write requires auth (401)" || bad "artifact auth" "$ANONART"
-ARTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d '{"path":"rules/rules.md","content":"# Ember\n\nEdited rulebook via artifact route."}' "localhost:$PORT/api/games/ember/artifact" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message'))" 2>/dev/null)
+ARTREF=$(curl -s "localhost:$PORT/api/games/ember/artifact?path=rules%2Frules.md" | python3 -c "import json,sys;print(json.load(sys.stdin).get('ref',''))" 2>/dev/null)
+ARTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d "{\"path\":\"rules/rules.md\",\"content\":\"# Ember\\n\\nEdited rulebook via artifact route.\",\"base_ref\":\"$ARTREF\"}" "localhost:$PORT/api/games/ember/artifact" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message'))" 2>/dev/null)
 echo "$ARTMSG" | grep -q "True rules: update rulebook" && ok "rules editable as an artifact → committed (not just cards)" || bad "artifact rules commit" "$ARTMSG"
 BADART=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d '{"path":"../secret","content":"x"}' "localhost:$PORT/api/games/ember/artifact")
 [ "$BADART" = "422" ] && ok "artifact path allowlist blocks traversal (422)" || bad "artifact allowlist" "$BADART"

@@ -281,7 +281,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
   <a href="/policies/community">Community rules</a> · <a href="/policies/rights">Rights &amp; takedown</a> ·
   <a href="/policies/support">Support</a>
 </footer>
-<div id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
+<div id="modal" onclick="if(event.target===this&&!DES_DRAFT_OFFER)this.classList.remove('on')"><div class="mbox" id="mbody"></div></div>
 <script>
 let DATA = __DATA__;
 // The prototype historically used <a onclick> for client-side navigation.
@@ -325,6 +325,7 @@ async function refreshLive(){
     const r = await fetch("/api/me",{headers:authH()});
     if(r.ok){ ME=await r.json(); MYSTARS=new Set(ME.starred); }
     else { ME=null; MYSTARS=new Set(); }
+    await desDraftHandleActorChange();
     renderAuthArea(); render();
   } catch{}
 }
@@ -393,6 +394,8 @@ async function authSubmit(){
   finally{submit.textContent=mode==="register"?"Create account":"Continue";syncAuthSubmit();}
 }
 async function signOut(){
+  await desDraftFlush().catch(()=>{});
+  desDraftResetMemory();
   await fetch("/api/auth/logout",{method:"POST",headers:{"x-forge-browser":"1"}});
   ME=null;MYSTARS=new Set();renderAuthArea();render();
 }
@@ -1732,8 +1735,116 @@ function openPnpPackage(slug){
  * the rest of the hub (Cards grid, card modal, print sheet) reflects the change
  * without a full page reload.
  */
-let DES=null, DES_DRAG=null, DES_FIELD_DRAG=null, DES_REVIEW=null;
+let DES=null, DES_DRAG=null, DES_FIELD_DRAG=null, DES_REVIEW=null, DES_DRAFT_TIMER=null, DES_DRAFT_OFFER=null;
 const DES_HANDLES=["nw","n","ne","e","se","s","sw","w"];
+
+/* Native Studio recovery lives in IndexedDB instead of localStorage because a
+ * legitimate design draft can include image bytes as well as card/layout JSON.
+ * Every record is scoped to one game, one visual family, and the exact Git ref
+ * the Studio opened. A record is never applied until the designer explicitly
+ * restores it, and a record from an older ref is never offered as restorable. */
+const DES_DRAFT_DB="forge-studio-drafts", DES_DRAFT_STORE="drafts", DES_DRAFT_VERSION=2;
+function desDraftActor(){return LIVE?(ME?.id?`user:${ME.id}`:"signed-out"):"offline";}
+function desDraftIdentity(state=DES){
+  const actor=state?._draftActor||desDraftActor(),slug=state?.slug,family=state?.family?.id,ref=state?.sourceRef;
+  return actor&&slug&&family&&ref?{actor:String(actor),slug:String(slug),family:String(family),ref:String(ref)}:null;
+}
+function desDraftKey(identity=desDraftIdentity()){return identity?`${identity.actor}\u001f${identity.slug}\u001f${identity.family}\u001f${identity.ref}`:null;}
+function desDraftDb(){
+  return new Promise((resolve,reject)=>{
+    if(!window.indexedDB){reject(new Error("browser draft storage is unavailable"));return;}
+    const request=indexedDB.open(DES_DRAFT_DB,DES_DRAFT_VERSION);
+    request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(DES_DRAFT_STORE))db.createObjectStore(DES_DRAFT_STORE,{keyPath:"key"});};
+    request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("could not open browser draft storage"));
+  });
+}
+async function desDraftStore(mode,operation){
+  const db=await desDraftDb();
+  try{return await new Promise((resolve,reject)=>{const tx=db.transaction(DES_DRAFT_STORE,mode),store=tx.objectStore(DES_DRAFT_STORE);let value;try{value=operation(store);}catch(error){reject(error);return;}tx.oncomplete=()=>resolve(value?.result);tx.onerror=()=>reject(tx.error||new Error("browser draft storage failed"));tx.onabort=()=>reject(tx.error||new Error("browser draft storage stopped"));});}
+  finally{db.close();}
+}
+function desDraftAssetMime(path){const extension=String(path||"").split(".").pop()?.toLowerCase();return extension==="svg"?"image/svg+xml":extension==="jpg"||extension==="jpeg"?"image/jpeg":extension==="webp"?"image/webp":"image/png";}
+function desDraftSnapshot(){
+  const identity=desDraftIdentity();if(!identity||!DES?.family)return null;
+  const pendingAssets=Object.fromEntries(Object.entries(DES.pendingAssets||{}).map(([path,asset])=>{const copy={...asset};delete copy.preview_url;return[path,copy];}));
+  return {key:desDraftKey(identity),version:DES_DRAFT_VERSION,...identity,source_hash:DES.sourceHash||"",saved_at:new Date().toISOString(),dirty:desAnyDirty(),state:structuredClone({
+    layout:DES.layout,cards:DES.cards,printings:DES.printings,pendingAssets,printingSel:DES.printingSel||{},artLibrary:DES.artLibrary,
+    sel:DES.sel,face:DES.face,leftTab:DES.leftTab,rightTab:DES.rightTab,gridSelection:DES.gridSelection||[],artTargetIds:DES.artTargetIds||[]
+  })};
+}
+async function desDraftDeleteKeys(keys){for(const key of [...new Set((keys||[]).filter(Boolean))])await desDraftStore("readwrite",store=>store.delete(key));}
+async function desDraftClearCurrent(){clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;const key=desDraftKey();if(key)await desDraftDeleteKeys([key]);}
+async function desDraftAll(){return await desDraftStore("readonly",store=>store.getAll())||[];}
+async function desDraftPersist(snapshot=desDraftSnapshot()){
+  if(!snapshot)return;
+  if(!snapshot.dirty){await desDraftDeleteKeys([snapshot.key]);return;}
+  await desDraftStore("readwrite",store=>store.put(snapshot));
+  if(DES&&desDraftKey()===snapshot.key){DES._draftSavedAt=snapshot.saved_at;DES._draftError=null;}
+}
+function desDraftFailure(error,snapshot){
+  if(!DES||!snapshot||desDraftKey()!==snapshot.key)return;
+  DES._draftError=String(error?.message||"browser storage unavailable");
+  const title=document.querySelector(".forge-studio-title span");if(title)title.textContent=`${desCard()?.name||""} · base ${String(DES.sourceRef||"working tree").slice(0,8)} · local recovery unavailable`;
+  if(!DES._draftErrorNotified){DES._draftErrorNotified=true;toast("Local Studio recovery is unavailable in this browser. Keep this tab open until you commit or export your work.",7000);}
+}
+function desDraftQueue(delay=240){
+  if(!DES?.family||!DES._draftReady)return;
+  const snapshot=desDraftSnapshot();if(!snapshot)return;
+  clearTimeout(DES_DRAFT_TIMER);
+  DES_DRAFT_TIMER=setTimeout(()=>{DES_DRAFT_TIMER=null;desDraftPersist(snapshot).catch(error=>desDraftFailure(error,snapshot));},delay);
+}
+async function desDraftFlush(){
+  clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;
+  if(!DES?.family||!DES._draftReady)return;
+  const snapshot=desDraftSnapshot();try{await desDraftPersist(snapshot);}catch(error){desDraftFailure(error,snapshot);throw error;}
+}
+function desDraftResetMemory(){
+  clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;DES_DRAFT_OFFER=null;DES_REVIEW=null;DES_DRAG=null;DES_FIELD_DRAG=null;DES=null;
+  document.getElementById("modal")?.classList.remove("on");
+}
+async function desDraftHandleActorChange(){
+  if(!DES)return;
+  const next=desDraftActor(),prior=DES._draftActor;
+  if(!prior){DES._draftActor=next;return;}
+  if(prior===next)return;
+  await desDraftFlush().catch(()=>{});desDraftResetMemory();
+}
+function desDraftApply(record){
+  const state=record?.state;if(!state||!Array.isArray(state.cards)||!Array.isArray(state.printings)||!state.layout)throw new Error("The local draft is incomplete");
+  DES.layout=structuredClone(state.layout);DES.cards=structuredClone(state.cards);DES.printings=structuredClone(state.printings);
+  DES.pendingAssets=Object.fromEntries(Object.entries(state.pendingAssets||{}).map(([path,asset])=>[path,{...structuredClone(asset),preview_url:asset.content_base64?`data:${desDraftAssetMime(path)};base64,${asset.content_base64}`:""}]));
+  DES.printingSel=structuredClone(state.printingSel||{});DES.artLibrary=structuredClone(state.artLibrary||{format:"forge-art-library",version:1,assets:[]});
+  DES.sel=DES.cards.some(card=>card.id===state.sel)?state.sel:(DES.cards[0]?.id||null);DES.face=state.face==="back"?"back":"front";DES.leftTab=state.leftTab==="layers"?"layers":"cards";DES.rightTab=state.rightTab==="design"?"design":"content";
+  DES.gridSelection=(state.gridSelection||[]).filter(id=>DES.cards.some(card=>card.id===id));DES.artTargetIds=state.artTargetIds||[];DES.undo=[];DES.assetItems=null;DES_REVIEW=null;
+}
+async function desDraftResolve(action){
+  const offer=DES_DRAFT_OFFER;DES_DRAFT_OFFER=null;if(!offer)return;
+  try{
+    if(action==="restore"){
+      const current=desDraftIdentity();
+      if(!current||offer.kind!=="exact"||offer.record.ref!==current.ref||offer.record.source_hash&&DES.sourceHash&&offer.record.source_hash!==DES.sourceHash)throw new Error("This draft belongs to a different repository version");
+      desDraftApply(offer.record);DES._draftReady=true;document.getElementById("modal")?.classList.remove("on");desRenderFull();desDraftQueue(0);toast("Local Studio draft restored. Nothing has been committed.",4500);return;
+    }
+    if(action==="discard"){clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;await desDraftDeleteKeys(offer.records.map(record=>record.key));}
+    DES._draftReady=true;document.getElementById("modal")?.classList.remove("on");desRenderFull();
+    if(action==="discard")toast(offer.kind==="exact"?"Local Studio draft discarded.":"Older local Studio draft discarded.",3500);
+  }catch(error){DES._draftReady=true;document.getElementById("modal")?.classList.remove("on");desRenderFull();toast(error.message||"Could not restore this local draft.",6000);}
+}
+function desDraftOfferHtml(offer){
+  const record=offer.record,saved=record.saved_at?new Date(record.saved_at).toLocaleString():"an earlier session",state=record.state||{},cards=(state.cards||[]).filter((card,index)=>JSON.stringify(card)!==JSON.stringify(DES.origCards?.[index])).length,art=Object.keys(state.pendingAssets||{}).length;
+  if(offer.kind==="exact")return `<div class="badge">BROWSER-LOCAL DRAFT · EXACT BASE</div><h2 style="margin:8px 0 4px">Restore local Studio draft?</h2><p class="mut" style="line-height:1.55">Forge found uncommitted work from ${esc(saved)} on the exact repository version <code>${esc(record.ref.slice(0,10))}</code>. It has not been applied or uploaded.</p><div class="chg"><b>Recovery copy</b><br>${cards} changed card${cards===1?"":"s"} · ${art} staged art file${art===1?"":"s"} · layout, card back, crops, tags, credit, and rights kept together in this browser.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="desDraftResolve('discard')">Discard draft</button><button class="btn primary" onclick="desDraftResolve('restore')">Restore draft</button></div>`;
+  return `<div class="badge">BROWSER-LOCAL DRAFT · OLDER BASE</div><h2 style="margin:8px 0 4px">Local draft belongs to an older version</h2><p class="mut" style="line-height:1.55">The repository moved from <code>${esc(record.ref.slice(0,10))}</code> to <code>${esc(String(DES.sourceRef||"").slice(0,10))}</code>. Forge will not apply the older work over newer cards or design files.</p><div class="warn"><b>Nothing was overwritten.</b><br>Keep the recovery copy for later, or discard it here. Reapplying it requires an intentional comparison against its original base.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="desDraftResolve('keep')">Keep for later</button><button class="btn primary" onclick="desDraftResolve('discard')">Discard older draft${offer.records.length===1?"":"s"}</button></div>`;
+}
+async function desDraftOfferRestore(){
+  const identity=desDraftIdentity();if(!identity){if(DES)DES._draftReady=true;return;}
+  let records=[];try{records=(await desDraftAll()).filter(record=>record?.version===DES_DRAFT_VERSION&&record.actor===identity.actor&&record.slug===identity.slug&&record.family===identity.family).sort((a,b)=>String(b.saved_at||"").localeCompare(String(a.saved_at||"")));}catch(error){DES._draftReady=true;DES._draftError=String(error?.message||"browser storage unavailable");return;}
+  const exact=records.find(record=>record.ref===identity.ref&&(!record.source_hash||!DES.sourceHash||record.source_hash===DES.sourceHash));
+  const offered=exact?{kind:"exact",record:exact,records:[exact]}:records.length?{kind:"stale",record:records[0],records}:null;
+  if(!offered){DES._draftReady=true;return;}
+  DES_DRAFT_OFFER=offered;$("#mbody").style.maxWidth="610px";$("#mbody").style.display="block";$("#mbody").innerHTML=desDraftOfferHtml(offered);$("#modal").classList.add("on");
+}
+window.addEventListener("pagehide",()=>{if(DES?.family&&DES._draftReady&&desAnyDirty()){const snapshot=desDraftSnapshot();if(snapshot)void desDraftPersist(snapshot).catch(error=>desDraftFailure(error,snapshot));}});
+window.addEventListener("beforeunload",event=>{if(DES?.family&&DES._draftReady&&desAnyDirty()){const snapshot=desDraftSnapshot();if(snapshot)void desDraftPersist(snapshot).catch(error=>desDraftFailure(error,snapshot));event.preventDefault();event.returnValue="";}});
 
 const DES_CSS = `
 .des-wrap{display:grid;grid-template-columns:240px 1fr 300px;gap:16px;align-items:start;margin-top:14px}
@@ -1991,12 +2102,13 @@ function desStageInnerHtml(){
   const original=DES.compare?'<div class="forge-studio-original">ORIGINAL · READ ONLY</div>':"";
   return `${original}<div class="des-cardhost">${cardHtml}</div><div class="des-overlay">${boxes}</div>${readout}`;
 }
-function desRenderCanvasOnly(){ const host=document.getElementById("des-stage-inner"); if(host) host.innerHTML=desStageInnerHtml(); desQueuePreflight(); }
+function desRenderCanvasOnly(){ const host=document.getElementById("des-stage-inner"); if(host) host.innerHTML=desStageInnerHtml(); desQueuePreflight(); desDraftQueue(); }
 function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desRightPanelHtml(); const label=document.getElementById("des-properties-selection"),count=desSelectionIds().length;if(label)label.textContent=DES.rightTab==="content"&&desFace()==="front"?(desCard()?.name||"SELECT A CARD"):(count>1?`${count} ELEMENTS`:DES.selRegion?desFriendlyRegionName(desRegion(DES.selRegion)):"SELECT AN ELEMENT"); }
 function desRefreshToolbar(){
   const g=G(DES.slug); if(!g) return;
   const host=document.querySelector(".des-toolbar-host");
   if(host) host.innerHTML=desToolbarHtml(g, DES.showGallery, desAnyDirty());
+  desDraftQueue();
 }
 function desDirty(){ return !!(DES.layout && JSON.stringify(DES.layout)!==JSON.stringify(DES.orig)); }
 function desCardsDirty(){return !!(DES?.cards&&DES?.origCards&&(JSON.stringify(DES.cards)!==JSON.stringify(DES.origCards)||JSON.stringify(DES.printings||[])!==JSON.stringify(DES.origPrintings||[])));}
@@ -3052,10 +3164,11 @@ function desRightPanelTab(tab){if(tab==="content"&&desFace()==="back")return;DES
 function desRefreshStudioChrome(){
   const card=desCard(),status=document.querySelector(".forge-studio-status");
   if(status){status.textContent=desDirtyLabel();status.classList.toggle("dirty",desAnyDirty());}
-  const title=document.querySelector(".forge-studio-title span");if(title)title.textContent=`${card?.name||""} · base ${String(DES.sourceRef||"working tree").slice(0,8)}`;
+  const title=document.querySelector(".forge-studio-title span");if(title)title.textContent=`${card?.name||""} · base ${String(DES.sourceRef||"working tree").slice(0,8)} · ${DES._draftError?"local recovery unavailable":"local recovery on"}`;
   const canvasTitle=document.querySelector(".forge-studio-canvasbar .card-title");if(canvasTitle)canvasTitle.textContent=desFace()==="back"?"Shared card back":(card?.name||"Card preview");
   const original=document.getElementById("des-original");if(original)original.disabled=!desAnyDirty();
   const cardLabel=document.querySelector(`[data-design-card="${CSS.escape(String(card?.id||""))}"] .card-copy b`);if(cardLabel)cardLabel.innerHTML=`${esc(card?.name||card?.id||"")}${desCardDirty(card?.id)?'<span class="forge-studio-dirty-dot" title="Uncommitted card changes"></span>':""}`;
+  desDraftQueue();
 }
 
 /* ---- presets: the zero-layout-work path (docs/card-formatting-pipelines.md 6.4.7) --
@@ -3171,7 +3284,7 @@ function desStartBlank(){
   desRenderFull();
 }
 function desReopenGallery(){
-  if(DES.family){if(desAnyDirty()&&!confirm("Discard the uncommitted card and layout draft?"))return;const g=G(DES.slug);DES=null;designCatalog(g);return;}
+  if(DES.family){if(desAnyDirty()&&!confirm("Discard the uncommitted card and layout draft?"))return;const g=G(DES.slug);if(desAnyDirty())void desDraftClearCurrent();DES=null;designCatalog(g);return;}
   DES.showGallery=true; DES.selRegion=null; desRenderFull();
 }
 
@@ -3584,8 +3697,10 @@ async function desStudioCommit(){
   if(!DES_REVIEW)return;if(desFamilyPreflight().some(issue=>issue.level==="error")){toast("Fix the family text-fit errors before committing.",7000);return;}const button=document.getElementById("des-studio-commit");if(button){button.disabled=true;button.textContent="Validating and committing…";}
   const response=await fetch(`/api/games/${encodeURIComponent(DES_REVIEW.slug)}/design/studio?commit=1`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(DES_REVIEW.payload)}),data=await response.json().catch(()=>({}));
   if(!response.ok){if(button){button.disabled=false;button.textContent="Review again";}toast(`<b style="color:#ffa198">✗ ${esc(data.error||response.status)}</b>`,8000);return;}
+  DES._draftReady=false;
+  await desDraftClearCurrent().catch(()=>{});
   $("#modal").classList.remove("on");toast(data.proposed?`<b>⇡ Pull request opened</b><br>${esc(data.message)} · commit ${esc(String(data.commit||"").slice(0,10))}`:`<b>✓ Committed</b><br>${esc(data.message)} · ${esc(String(data.commit||"").slice(0,10))}`,9000);
-  setTimeout(()=>location.reload(),900);
+  if(data.proposed)setTimeout(()=>openFocusedPr(DES_REVIEW.slug,data.pr),500);else setTimeout(()=>location.reload(),900);
 }
 function desCopyFallback(text,done){
   const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
@@ -3810,7 +3925,7 @@ function desStudioImpactHtml(g){
 function desStudioToolbarHtml(g){
   const dirty=desAnyDirty(),source=String(DES.sourceRef||"").slice(0,8);
   const pnpink=g.design_engines?.engines?.some(engine=>engine.type==="pnpink");
-  return `<div class="forge-studio-top"><button class="btn forge-studio-back" onclick="desReopenGallery()" title="Back to all card families">←</button><div class="forge-studio-title"><h2>${esc(g.title)} · ${esc(DES.family.label||DES.family.id)}</h2><span>${esc(desCard()?.name||"")} · base ${esc(source||"working tree")}</span></div><span class="forge-studio-status${dirty?" dirty":""}">${esc(desDirtyLabel())}</span><div class="forge-studio-actions"><details class="forge-studio-menu"><summary class="btn">Open in… ▾</summary><div class="forge-studio-pop"><button onclick="designExportSquib('${esc(g.slug)}')"><b>Download Squib project</b><small>Runnable Ruby DSL + CSV + declarative layouts</small></button><button onclick="designImportSquib('${esc(g.slug)}')"><b>Return Squib project</b><small>Review CSV and YAML; Forge never runs Ruby</small></button>${pnpink?`<button onclick="designExportPnpink('${esc(g.slug)}')"><b>Download PnPInk projects</b><small>Production working copies for Inkscape</small></button><button onclick="designImportPnpink('${esc(g.slug)}')"><b>Return PnPInk project</b><small>Review card data and SVG source together</small></button>`:""}<button onclick="designExportSvg('${esc(g.slug)}')"><b>Download SVG geometry kit</b><small>Round-trip simple named regions</small></button><button onclick="designImportSvg('${esc(g.slug)}')"><b>Return edited SVG</b><small>Dry-run supported geometry before Git</small></button><button onclick="designExportNandeck('${esc(g.slug)}')"><b>Download nanDECK kit</b><small>Script and committed card data</small></button><button onclick="designImportNandeck('${esc(g.slug)}')"><b>Return nanDECK script</b><small>Review script changes against Forge</small></button><button onclick="designExportProject('${esc(g.slug)}')"><b>Download full Forge project</b><small>Every card, asset, template, and adapter</small></button></div></details><button class="btn" onclick="desDataTableOpen()">Table</button><button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')">Proof ${desFamilyCards(g).length}</button><button class="btn primary" id="des-save" onclick="desSave()">Review changes</button></div></div>`;
+  return `<div class="forge-studio-top"><button class="btn forge-studio-back" onclick="desReopenGallery()" title="Back to all card families">←</button><div class="forge-studio-title"><h2>${esc(g.title)} · ${esc(DES.family.label||DES.family.id)}</h2><span>${esc(desCard()?.name||"")} · base ${esc(source||"working tree")} · ${DES._draftError?"local recovery unavailable":"local recovery on"}</span></div><span class="forge-studio-status${dirty?" dirty":""}">${esc(desDirtyLabel())}</span><div class="forge-studio-actions"><details class="forge-studio-menu"><summary class="btn">Open in… ▾</summary><div class="forge-studio-pop"><button onclick="designExportSquib('${esc(g.slug)}')"><b>Download Squib project</b><small>Runnable Ruby DSL + CSV + declarative layouts</small></button><button onclick="designImportSquib('${esc(g.slug)}')"><b>Return Squib project</b><small>Review CSV and YAML; Forge never runs Ruby</small></button>${pnpink?`<button onclick="designExportPnpink('${esc(g.slug)}')"><b>Download PnPInk projects</b><small>Production working copies for Inkscape</small></button><button onclick="designImportPnpink('${esc(g.slug)}')"><b>Return PnPInk project</b><small>Review card data and SVG source together</small></button>`:""}<button onclick="designExportSvg('${esc(g.slug)}')"><b>Download SVG geometry kit</b><small>Round-trip simple named regions</small></button><button onclick="designImportSvg('${esc(g.slug)}')"><b>Return edited SVG</b><small>Dry-run supported geometry before Git</small></button><button onclick="designExportNandeck('${esc(g.slug)}')"><b>Download nanDECK kit</b><small>Script and committed card data</small></button><button onclick="designImportNandeck('${esc(g.slug)}')"><b>Return nanDECK script</b><small>Review script changes against Forge</small></button><button onclick="designExportProject('${esc(g.slug)}')"><b>Download full Forge project</b><small>Every card, asset, template, and adapter</small></button></div></details><button class="btn" onclick="desDataTableOpen()">Table</button><button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')">Proof ${desFamilyCards(g).length}</button><button class="btn primary" id="des-save" onclick="desSave()">Review changes</button></div></div>`;
 }
 function desStudioHtml(g){
   const c=desCard(),geom=desGeom(),dirty=desDirty();
@@ -3877,6 +3992,7 @@ function desRenderFull(){
   }
   $("#pane").innerHTML = DES.family?desLayoutHtml(g):designProjectBridgeHtml(g)+desLayoutHtml(g);
   desQueuePreflight();
+  desDraftQueue();
 }
 
 /* ---- entry point: dispatched from repoPage() same as cards/rules/play. Route
@@ -3884,7 +4000,8 @@ function desRenderFull(){
  * game); revisiting the SAME game's design tab keeps your in-progress edits. ---- */
 async function design(g, mode){
   if(g.card_design){
-    if(DES?.slug===g.slug&&DES.family){desRenderFull();return;}
+    if(DES?.slug===g.slug&&DES.family&&DES._draftActor===desDraftActor()){desRenderFull();return;}
+    if(DES?.family&&DES._draftActor!==desDraftActor()){await desDraftFlush().catch(()=>{});desDraftResetMemory();}
     designCatalog(g); return;
   }
   if(!DES || DES.slug!==g.slug){
@@ -3893,7 +4010,7 @@ async function design(g, mode){
     if(typeof LIVE!=="undefined" && LIVE){
       try{ access=await (await fetch(`/api/games/${g.slug}/access`,{headers:authHdr()})).json(); }catch(e){}
     }
-    DES={ slug:g.slug,
+    DES={ slug:g.slug,_draftActor:desDraftActor(),
       layout: hasLayout ? JSON.parse(JSON.stringify(g.layout)) : null,
       orig:   hasLayout ? JSON.parse(JSON.stringify(g.layout)) : null,
       cards: JSON.parse(JSON.stringify(g.cards||[])), origCards: JSON.parse(JSON.stringify(g.cards||[])),
@@ -3912,6 +4029,7 @@ function designSpecimen(g,family){
 async function designFamilyEdit(slug,familyId,previewCardId=null){
   const g=G(slug),family=g?.card_design?.families?.find(item=>item.id===familyId);if(!g||!family)return;
   if(typeof LIVE!=="undefined"&&LIVE&&!ME){_afterAuth=()=>designFamilyEdit(slug,familyId);authOpen();return;}
+  if(DES?.family&&DES._draftReady)await desDraftFlush().catch(()=>{});
   prNote(`Opening ${family.label||family.id} in the visual editor…`);
   try{
     const [sourceResponse,accessResponse]=await Promise.all([
@@ -3923,14 +4041,16 @@ async function designFamilyEdit(slug,familyId,previewCardId=null){
     // Use the family compiled from the same immutable ref as the SVG working
     // copy. This matters in local development, where the broad page payload may
     // intentionally expose files that have not entered Git yet.
-    const stableFamily={...family,layout:source.layout,origins:source.origins||family.origins||{}};
-    const specimen=designSpecimen(g,stableFamily),layout=JSON.parse(JSON.stringify(stableFamily.layout));
-    const requested=previewCardId&&g.cards.find(card=>card.id===previewCardId&&cardDesignMatch(card,stableFamily.match));
-    DES={slug,layout,orig:JSON.parse(JSON.stringify(layout)),cards:JSON.parse(JSON.stringify(g.cards||[])),origCards:JSON.parse(JSON.stringify(g.cards||[])),printings:JSON.parse(JSON.stringify(g.printings||[])),origPrintings:JSON.parse(JSON.stringify(g.printings||[])),sel:requested?.id||specimen?.id||g.cards.find(card=>cardDesignMatch(card,family.match))?.id||null,
+    if(!Array.isArray(source.cards)||!Array.isArray(source.printings)||!source.ref)throw new Error("Forge could not open one coherent exact Studio version");
+    const stableFamily={...family,...(source.family_definition||{}),layout:source.layout,origins:source.origins||source.family_definition?.origins||family.origins||{}},exactGame={...g,cards:source.cards,printings:source.printings};
+    const specimen=designSpecimen(exactGame,stableFamily),layout=JSON.parse(JSON.stringify(stableFamily.layout));
+    const requested=previewCardId&&source.cards.find(card=>card.id===previewCardId&&cardDesignMatch(card,stableFamily.match));
+    DES={slug,_draftActor:desDraftActor(),layout,orig:JSON.parse(JSON.stringify(layout)),cards:JSON.parse(JSON.stringify(source.cards)),origCards:JSON.parse(JSON.stringify(source.cards)),printings:JSON.parse(JSON.stringify(source.printings)),origPrintings:JSON.parse(JSON.stringify(source.printings)),sel:requested?.id||specimen?.id||source.cards.find(card=>cardDesignMatch(card,family.match))?.id||null,
       selRegion:null,selRegions:[],undo:[],access,view:"fit",face:"front",rawOpen:false,showGallery:false,_addFontOpen:false,leftTab:"cards",rightTab:"content",compare:false,
-      family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null};
+      family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null,_draftReady:false};
     prNote(`${family.label||family.id} ready · changes stay local until review`);
-    desRenderFull();
+    await desDraftOfferRestore();
+    if(!DES_DRAFT_OFFER)desRenderFull();
   }catch(error){prNote(error.message||"Could not open family editor",true);}
 }
 function designMatchText(match){
@@ -6507,11 +6627,20 @@ async function liveDiff(g){
 
 
 /* ---------- Rules editor: markdown -> PUT /artifact -> commit rules.md ---------- */
+let RULES_EDIT=null;
 async function rulesEdit(g){
   if(LIVE && !ME){ authOpen(); go(`g/${g.slug}/rules`); return; }
-  let acc={canWrite:true};
-  try{acc=await (await fetch(`/api/games/${g.slug}/access`,{headers:authHdr()})).json();}catch(e){}
-  const raw = g.rules_md || "";
+  let acc={canWrite:!LIVE},source={content:g.rules_md||"",ref:LIVE?null:"working-tree"};
+  try{
+    const [accessResponse,sourceResponse]=await Promise.all([
+      fetch(`/api/games/${g.slug}/access`,{headers:authHdr()}),
+      fetch(`/api/games/${g.slug}/artifact?path=${encodeURIComponent("rules/rules.md")}`,{headers:authHdr()})
+    ]);
+    if(accessResponse.ok)acc=await accessResponse.json();
+    if(sourceResponse.ok)source=await sourceResponse.json();
+  }catch(e){}
+  const raw = source.content || "";
+  RULES_EDIT={slug:g.slug,baseRef:source.ref||null,original:raw};
   const syms = cfSym(g);
   window._mdPrev = (t)=>esc(t).replace(/^#{1,6}\s*(.+)$/gm,"<h4 style='margin:10px 0 4px'>$1</h4>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\[([a-z0-9_]+)\]/g,(m,k)=>cfSymHtml(g,k,"cf-sym")||(syms[k]?`<b>${esc(syms[k])}</b>`:m)).replace(/\n\n/g,"<br><br>");
   $("#pane").innerHTML = `
@@ -6528,8 +6657,8 @@ async function rulesEdit(g){
       </div>
     </div>
     <div class="dbar" style="border:none;padding:14px 0">
-      <div class="msg mut" id="rmsg">Markdown. Symbol tokens like [spark] render as glyphs. Every save is a commit - errata with a history.</div>
-      <button class="btn primary" id="rsave" onclick="rulesSave('${g.slug}')">${acc.canWrite?"Commit rulebook":"Propose as PR"}</button>
+      <div class="msg mut" id="rmsg">${source.ref?`Editing exact version <code>${esc(String(source.ref).slice(0,10))}</code>. `:"Exact version could not be confirmed. Reopen this editor before saving. "}Markdown and symbols stay portable; every accepted save has authored history.</div>
+      <button class="btn primary" id="rsave" onclick="rulesSave('${g.slug}')" ${LIVE&&!source.ref?"disabled":""}>${LIVE&&!source.ref?"Reconnect to save":acc.canWrite?"Commit rulebook":"Commit to my edition + open PR"}</button>
     </div>`;
   $("#rprev").innerHTML = window._mdPrev(raw);
 }
@@ -6539,11 +6668,12 @@ async function rulesSave(slug){
   const btn=$("#rsave"); btn.disabled=true; const was=btn.textContent; btn.textContent="Saving...";
   try{
     const r = await fetch(`/api/games/${slug}/artifact`,{method:"PUT",headers:{"content-type":"application/json",...authHdr()},
-      body:JSON.stringify({path:"rules/rules.md", content})});
+      body:JSON.stringify({path:"rules/rules.md", content,base_ref:RULES_EDIT?.baseRef||""})});
     const d = await r.json();
-    if(r.status===200 && d.saved){ prNote(`✓ Committed ${d.commit} - ${d.message}`); setTimeout(()=>location.reload(),900); }
+    if((r.status===200||r.status===201)&&d.proposed){prNote(`Committed ${d.commit} to your edition · proposal opened for review`);setTimeout(()=>openFocusedPr(slug,d.pr),450);}
+    else if(r.status===200 && d.saved){ prNote(`✓ Committed ${d.commit} - ${d.message}`); setTimeout(()=>location.reload(),900); }
     else if(r.status===200){ prNote("No changes."); }
-    else if(r.status===403 && d.propose){ prNote("No write access - fork & propose from the Cards tab for now.", true); }
+    else if(r.status===409&&d.written===false){prNote(`Nothing was written — ${d.error||"the game changed after this editor opened"}. Reload and review the current version.`,true);}
     else prNote("✗ "+(d.error||r.status), true);
   }catch(e){ prNote("✗ "+e.message, true); }
   btn.disabled=false; btn.textContent=was;

@@ -201,7 +201,7 @@ try {
   assert(registration.status === 201, "onboarding smoke account created in the disposable server", `${registration.status} ${registration.body}`);
   const fixtureOwner = new DatabaseSync(join(scratch, "platform.db"));
   fixtureOwner.prepare(`UPDATE games SET owner_id =
-    (SELECT id FROM users WHERE handle = 'onboarding-smoke') WHERE slug = 'netrunner-sg'`).run();
+    (SELECT id FROM users WHERE handle = 'onboarding-smoke') WHERE slug IN ('netrunner-sg','secret-hitler')`).run();
   fixtureOwner.close();
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Bring or start a game" }).click();
@@ -301,6 +301,25 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
     "the repository preserves original columns, reviewed mapping, and identity result in its import receipt");
   assert(imported.repository === null, "local projects do not advertise a fake hosted Git remote");
 
+  // The project payload is intentionally left cached while a separate writer
+  // advances the rulebook. Opening the editor must fetch prose and ref as one
+  // exact source, rather than pairing stale page text with the newer HEAD.
+  await page.goto(`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/rules`,{waitUntil:"domcontentloaded"});
+  await page.getByText("Official Rules",{exact:true}).waitFor();
+  const advancedRules=await page.evaluate(async()=>{
+    const sourceResponse=await fetch(`/api/games/onboarding-smoke-game/artifact?path=${encodeURIComponent("rules/rules.md")}`),source=await sourceResponse.json();
+    const content=`${String(source.content||"").trimEnd()}\n\n## Exact editor source\nThis line was committed after the page payload loaded.\n`;
+    const response=await fetch("/api/games/onboarding-smoke-game/artifact",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({path:"rules/rules.md",content,base_ref:source.ref})});
+    return {status:response.status,body:await response.json()};
+  });
+  assert(advancedRules.status===200&&advancedRules.body.saved,"a separate exact rulebook commit can advance beyond the cached page",JSON.stringify(advancedRules));
+  await page.getByRole("button",{name:"✎ Edit book",exact:true}).click();
+  await page.locator("#rmd").waitFor();
+  const exactRulesEditor=await page.evaluate(()=>({content:document.getElementById("rmd")?.value,base:RULES_EDIT?.baseRef}));
+  assert(exactRulesEditor.content.includes("This line was committed after the page payload loaded.")
+    &&exactRulesEditor.base===advancedRules.body.commit,
+    "the rulebook editor opens content and Git base from one exact source",JSON.stringify(exactRulesEditor));
+
   await page.goto(`${origin}/#g/netrunner-sg/design`, { waitUntil:"domcontentloaded" });
   await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
   assert(await page.getByRole("button", { name:"Open Forge Studio", exact:true }).count()===1
@@ -371,8 +390,22 @@ w.save(p)
     && await page.getByText("Rendered impact",{exact:true}).isVisible(),
     "a returned editor CSV opens a semantic and rendered dry run before any commit");
   await page.getByRole("button",{name:"× Close"}).click();
+  const exactStudioAdvance=await page.evaluate(async()=>{
+    const [access,cards]=await Promise.all([
+      (await fetch("/api/games/netrunner-sg/access")).json(),
+      (await fetch("/api/games/netrunner-sg/cards")).json()
+    ]),target=cards.find(card=>card.id==="buzzsaw")||cards[0],marker="Exact Studio source bundle marker.";
+    target.text=`${String(target.text||"").trimEnd()}\n${marker}`;
+    const response=await fetch("/api/games/netrunner-sg/cards",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({cards,base_ref:access.ref})});
+    return {status:response.status,body:await response.json(),card:target.id,marker};
+  });
+  assert(exactStudioAdvance.status===200&&exactStudioAdvance.body.saved,
+    "card data can advance after the broad Design page was cached",JSON.stringify(exactStudioAdvance));
   await page.getByRole("button", { name:"Open Forge Studio" }).first().click();
   await page.getByText("Edit the card, not the template", { exact:true }).waitFor();
+  const exactStudioSource=await page.evaluate(id=>({ref:DES.sourceRef,text:DES.cards.find(card=>card.id===id)?.text}),exactStudioAdvance.card);
+  assert(exactStudioSource.ref===exactStudioAdvance.body.commit&&exactStudioSource.text.includes(exactStudioAdvance.marker),
+    "Studio opens cards, printings, family layout, and Git base from one exact source bundle",JSON.stringify(exactStudioSource));
   assert(await page.getByRole("button", { name:"Content", exact:true }).isVisible()
     && await page.getByRole("button", { name:"Layout", exact:true }).isVisible()
     && await page.getByLabel("Name", { exact:true }).isVisible(),
@@ -570,6 +603,7 @@ w.save(p)
     && await page.getByRole("button", { name:"Commit reviewed candidate" }).isEnabled(),
     "Studio dry-runs the combined component candidate before enabling its atomic commit",JSON.stringify(studioReview));
   await page.getByRole("button", { name:"Keep editing", exact:true }).click();
+  page.once("dialog", dialog=>dialog.accept());
   await page.reload({ waitUntil:"domcontentloaded" });
   await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
   const designSteps=await page.locator(".design-golden-step").allTextContents();
@@ -895,6 +929,77 @@ w.save(p)
   });
   assert(bobLogin===200,"collaborator can sign into an independent browser session");
   await bobPage.evaluate(()=>refreshLive());
+
+  await bobPage.goto(`${origin}/#g/onboarding-smoke-game/rules`,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"✎ Edit rules",exact:true}).click();
+  await bobPage.locator("#rmd").waitFor();
+  const bobRulesBase=await bobPage.evaluate(()=>RULES_EDIT?.baseRef);
+  const bobRules=await bobPage.locator("#rmd").inputValue();
+  await bobPage.locator("#rmd").fill(`${bobRules.trimEnd()}\n\n## Community clarification\nResolve ties in active-player order.\n`);
+  const rulesProposalResponse=bobPage.waitForResponse(response=>response.request().method()==="PUT"
+    &&new URL(response.url()).pathname==="/api/games/onboarding-smoke-game/artifact");
+  await bobPage.getByRole("button",{name:"Commit to my edition + open PR",exact:true}).click();
+  const rulesProposalHttp=await rulesProposalResponse,rulesProposalBody=await rulesProposalHttp.json();
+  assert(rulesProposalHttp.ok()&&rulesProposalBody.proposed
+    &&rulesProposalBody.base_ref===bobRulesBase&&rulesProposalBody.proposed_ref===rulesProposalBody.commit,
+    "a contributor rulebook edit becomes one exact fork commit and proposal",JSON.stringify({status:rulesProposalHttp.status(),editor_base:bobRulesBase,...rulesProposalBody}));
+  await bobPage.waitForURL(url=>decodeURIComponent(url.hash).endsWith(`/suggestions/${rulesProposalBody.pr}`));
+  const rulesProposalPanel=bobPage.locator(`#prb-${rulesProposalBody.pr}`);await rulesProposalPanel.waitFor();
+  assert(await rulesProposalPanel.isVisible(),
+    "the rules editor hands the contributor directly to its focused file review");
+
+  // A contributor editing a source family's cards and layout in the native
+  // Studio must arrive at the exact proposal it just created. A transient
+  // toast followed by a source reload would make the advertised handoff false.
+  await bobPage.goto(`${origin}/#g/secret-hitler/design`,{waitUntil:"domcontentloaded"});
+  try{
+    await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).waitFor({timeout:15_000});
+  }catch(error){
+    const detail=await bobPage.evaluate(()=>({url:location.href,hash:location.hash,
+      text:document.getElementById("view")?.innerText?.slice(0,2000),
+      games:(typeof DATA!=="undefined"?DATA.games:[]).filter(game=>game.slug==="secret-hitler").map(game=>({slug:game.slug,namespace:game.namespace,summary:!!game._summary,has_design:!!game.card_design}))}));
+    throw new Error(`Contributor Studio route did not become ready: ${JSON.stringify(detail)}\n${error.message}`);
+  }
+  await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await bobPage.locator(".forge-studio-title").waitFor();
+  await bobPage.getByLabel("Keywords (comma-separated)",{exact:true}).fill("studio-proposal-smoke");
+  await bobPage.evaluate(()=>desDraftFlush());
+  const bobDraftScope=await bobPage.evaluate(async()=>({actor:desDraftIdentity()?.actor,user:ME?.id,
+    stored:(await desDraftAll()).some(record=>record.key===desDraftKey())}));
+  assert(bobDraftScope.stored&&bobDraftScope.actor===`user:${bobDraftScope.user}`,
+    "browser recovery scopes a contributor draft to that exact account",JSON.stringify(bobDraftScope));
+  await bobPage.evaluate(()=>signOut());
+  const switchedOwner=await bobPage.evaluate(async()=>{const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify({handle:"onboarding-smoke",password:"password123"})});await response.json();await refreshLive();return{status:response.status,id:ME?.id};});
+  assert(switchedOwner.status===200&&switchedOwner.id!==bobDraftScope.user,"the same browser can switch accounts without inheriting in-memory Studio state",JSON.stringify(switchedOwner));
+  await bobPage.goto(`${origin}/#g/secret-hitler/design`,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await bobPage.locator(".forge-studio-title").waitFor();
+  assert(await bobPage.getByRole("heading",{name:"Restore local Studio draft?",exact:true}).count()===0
+    &&await bobPage.evaluate(()=>desDraftIdentity()?.actor===`user:${ME?.id}`),
+    "a different signed-in account cannot see or restore the contributor's browser draft");
+  await bobPage.evaluate(()=>signOut());
+  const switchedBack=await bobPage.evaluate(async()=>{const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify({handle:"bob",password:"password123"})});await response.json();await refreshLive();return response.status;});
+  assert(switchedBack===200,"the contributor can return to the browser-scoped recovery copy");
+  await bobPage.goto(`${origin}/#g/secret-hitler/design`,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await bobPage.getByRole("heading",{name:"Restore local Studio draft?",exact:true}).waitFor();
+  await bobPage.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await bobPage.getByLabel("Keywords (comma-separated)",{exact:true}).inputValue()==="studio-proposal-smoke",
+    "returning to the original account restores only that account's exact-version draft");
+  await bobPage.getByRole("button",{name:"Review changes",exact:true}).click();
+  await bobPage.getByRole("button",{name:"Commit to my edition + open PR",exact:true}).waitFor();
+  const studioProposalResponse=bobPage.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/design/studio")&&new URL(response.url()).searchParams.get("commit")==="1");
+  await bobPage.getByRole("button",{name:"Commit to my edition + open PR",exact:true}).click();
+  const studioProposalHttp=await studioProposalResponse,studioProposalBody=await studioProposalHttp.json();
+  assert(studioProposalHttp.ok()&&studioProposalBody.proposed&&studioProposalBody.pr,
+    "a no-write Studio commit creates a credited fork proposal",JSON.stringify(studioProposalBody));
+  await bobPage.waitForURL(url=>decodeURIComponent(url.hash).endsWith(`/suggestions/${studioProposalBody.pr}`));
+  const studioProposalPanel=bobPage.locator(`#prb-${studioProposalBody.pr}`);
+  await studioProposalPanel.waitFor();
+  assert(await studioProposalPanel.isVisible(),
+    "native Studio hands the contributor directly to the exact proposal it opened");
+
   await bobPage.goto(origin+bobFork.data.url,{waitUntil:"domcontentloaded"});
   await bobPage.getByRole("button",{name:/Propose upstream/}).waitFor();
   await bobPage.getByRole("button",{name:/Propose upstream/}).click();
@@ -913,15 +1018,14 @@ w.save(p)
   assert(bobPrAccess.access?.is_author===true,"proposal API recognizes its author in the independent browser session",JSON.stringify(bobPrAccess.access));
   await bobPage.getByText(/A maintainer must review it/).waitFor();
   assert(await bobPage.getByRole("button",{name:"Close"}).isVisible()
-    && await bobPage.getByRole("button",{name:/Approve|Merge/}).count()===0
-    && await bobPage.getByRole("button",{name:"View game changes"}).count()===0,
+    && await bobPage.getByRole("button",{name:/Approve|Merge/}).count()===0,
     "the focused proposal opens expanded for its author without unauthorized review controls");
 
   await page.goto(proposalUrl,{waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"✓ Approve"}).waitFor();
   assert(await page.getByRole("button",{name:"Merge after approval"}).isDisabled()
     && await page.getByRole("button",{name:"✎ Request changes"}).isVisible()
-    && await page.getByRole("button",{name:"View game changes"}).count()===0,
+    && await page.getByRole("button",{name:"View game changes"}).count()===1,
     "the owner lands on the same focused review while merge stays locked behind approval");
 
   await page.getByRole("button",{name:"✓ Approve"}).click();
@@ -1061,6 +1165,86 @@ w.save(p)
     && await page.locator('[data-design-card="strike"]').isVisible()
     && await page.locator("#des-content-name").inputValue()==="Strike",
     "a first-time project reaches the full native visual Studio with its real cards and layers");
+
+  // A native Studio draft may include layout, card/back content, artwork bytes,
+  // and rights metadata. Keep that recovery copy in browser storage, pinned to
+  // the exact Git ref, and require an explicit decision before applying it.
+  const recoveryBase=await page.evaluate(()=>DES.sourceRef);
+  await page.locator("#des-content-name").fill("Strike — recovered locally");
+  const capturedDraftPersistence=await page.evaluate(async()=>{
+    const snapshot=desDraftSnapshot(),card=DES.cards.find(item=>item.id==="strike"),draftName=card.name;
+    card.name=DES.origCards.find(item=>item.id==="strike").name;
+    const laterStateDirty=desAnyDirty();await desDraftPersist(snapshot);card.name=draftName;
+    const stored=(await desDraftAll()).find(record=>record.key===snapshot.key);
+    return{laterStateDirty,storedName:stored?.state?.cards?.find(item=>item.id==="strike")?.name};
+  });
+  assert(!capturedDraftPersistence.laterStateDirty&&capturedDraftPersistence.storedName==="Strike — recovered locally",
+    "a queued recovery write uses its captured Studio state instead of a later family or account",JSON.stringify(capturedDraftPersistence));
+  await page.evaluate(()=>desDraftFlush());
+  const recoveryStored=await page.evaluate(async()=>{
+    const records=await desDraftAll(),identity=desDraftIdentity();
+    return records.find(record=>record.key===desDraftKey(identity));
+  });
+  assert(recoveryStored?.ref===recoveryBase&&recoveryStored?.actor===`user:${await page.evaluate(()=>ME?.id)}`
+    &&recoveryStored.state.cards.find(card=>card.id==="strike")?.name==="Strike — recovered locally",
+    "Studio saves the complete local draft against the exact Git version it opened",JSON.stringify({ref:recoveryStored?.ref,name:recoveryStored?.state?.cards?.[0]?.name}));
+  const unloadProtection=await page.evaluate(()=>{const event=new Event("beforeunload",{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;});
+  assert(unloadProtection,"dirty Studio work installs accidental reload/navigation protection");
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Studio draft?",exact:true}).waitFor();
+  const beforeRestore=await page.evaluate(()=>DES.cards.find(card=>card.id==="strike")?.name);
+  assert(beforeRestore==="Strike"
+    &&await page.getByRole("button",{name:"Restore draft",exact:true}).isVisible()
+    &&await page.getByRole("button",{name:"Discard draft",exact:true}).isVisible(),
+    "returning to the exact base offers Restore and Discard without silently applying the draft",beforeRestore);
+  await page.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await page.locator("#des-content-name").inputValue()==="Strike — recovered locally"
+    &&(await page.locator(".forge-studio-status").innerText()).includes("draft"),
+    "Restore returns the card draft to the live production preview without committing it");
+  await page.evaluate(()=>desDraftFlush());
+
+  const advancedWhileDraftOpen=await page.evaluate(async baseRef=>{
+    const cards=await (await fetch("/api/games/wizard-ui-smoke/cards")).json();
+    cards.find(card=>card.id==="strike").text="A newer collaborator version must stay intact.";
+    const response=await fetch("/api/games/wizard-ui-smoke/cards",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({cards,base_ref:baseRef})});
+    return {status:response.status,body:await response.json()};
+  },recoveryBase);
+  assert(advancedWhileDraftOpen.status===200&&advancedWhileDraftOpen.body.saved,
+    "the repository can advance independently while an older Studio draft remains local",JSON.stringify(advancedWhileDraftOpen));
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await page.getByRole("heading",{name:"Local draft belongs to an older version",exact:true}).waitFor();
+  const staleBoundary=await page.evaluate(()=>({name:DES.cards.find(card=>card.id==="strike")?.name,ref:DES.sourceRef}));
+  assert(staleBoundary.name==="Strike"&&staleBoundary.ref!==recoveryBase
+    &&await page.getByRole("button",{name:"Restore draft",exact:true}).count()===0
+    &&await page.getByRole("button",{name:"Discard older draft",exact:true}).isVisible(),
+    "an older local draft cannot be restored over a newer repository version",JSON.stringify(staleBoundary));
+  await page.getByRole("button",{name:"Discard older draft",exact:true}).click();
+  const staleDraftsLeft=await page.evaluate(async()=>{
+    const identity=desDraftIdentity();return (await desDraftAll()).filter(record=>record.slug===identity.slug&&record.family===identity.family).length;
+  });
+  assert(staleDraftsLeft===0&&await page.locator("#des-content-name").inputValue()==="Strike",
+    "discard removes the browser recovery copy and keeps the newer repository version visible");
+
+  await page.getByLabel("Rules text",{exact:true}).fill("Committed after local recovery was verified.");
+  await page.evaluate(()=>desDraftFlush());
+  assert((await page.evaluate(async()=>{const identity=desDraftIdentity();return (await desDraftAll()).some(record=>record.key===desDraftKey(identity));})),
+    "a new exact-base draft is present before its reviewed commit");
+  await page.getByRole("button",{name:"Review changes",exact:true}).click();
+  await page.getByRole("heading",{name:"Review component content, artwork, and layout together",exact:true}).waitFor();
+  const recoveredCommitResponse=page.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/design/studio")&&new URL(response.url()).searchParams.get("commit")==="1");
+  const recoveredCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Commit reviewed candidate",exact:true}).click();
+  assert((await recoveredCommitResponse).ok(),"the restored workflow still commits through the normal exact candidate review");
+  await recoveredCommitNavigation;
+  const draftsAfterCommit=await page.evaluate(async()=>{
+    return (await desDraftAll()).filter(record=>record.slug==="wizard-ui-smoke"&&record.family==="card").length;
+  });
+  assert(draftsAfterCommit===0,"a successful Studio commit clears its browser recovery copy");
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("heading",{name:"Save the exact cards you intend to test or manufacture",exact:true}).waitFor();
