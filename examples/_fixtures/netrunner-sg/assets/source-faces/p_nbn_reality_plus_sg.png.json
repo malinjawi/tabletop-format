@@ -3,7 +3,7 @@
   "kind": "forge-pnp-face-extraction",
   "printing_id": "p_nbn_reality_plus_sg",
   "card_id": "nbn_reality_plus",
-  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "source_pdf": "system-gateway-official-1x.pdf",
   "pdf_page": 7,
   "slot": {
     "row": 1,

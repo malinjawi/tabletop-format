@@ -5,9 +5,10 @@
  * worker owns retries and the status file consumed by Forge's UI.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
@@ -68,6 +69,7 @@ function localEndpoint(value) {
 }
 
 function loadJob(bridge) {
+  bridge = existsSync(bridge) ? realpathSync(bridge) : resolve(bridge);
   const inputPath = resolve(bridge, 'input.json');
   const manifestPath = resolve(bridge, 'manifest.json');
   if (!existsSync(inputPath) || !existsSync(manifestPath)) throw new Error('bridge is not prepared yet');
@@ -79,7 +81,18 @@ function loadJob(bridge) {
   if (!within(bridge, scriptPath) || !within(bridge, statusPath)) throw new Error('manifest path escapes the bridge');
   const script = readFileSync(scriptPath, 'utf8');
   const scriptHash = createHash('sha256').update(script).digest('hex');
-  return { input, manifest, script, statusPath, key: `${input.input_hash}:${scriptHash}` };
+  const renderFile = input?.render?.file;
+  const renderPath = resolve(String(input?.render?.absolute_path || ''));
+  const canonicalRender = resolve(bridge, 'renders', String(input?.commit_sha || ''), String(renderFile || ''));
+  if (!/^[a-z0-9][a-z0-9_.-]*\.png$/i.test(renderFile || '') || renderPath !== canonicalRender
+    || !within(bridge, renderPath)) throw new Error('Affinity render path is not canonical for this input');
+  if (resolve(String(input.status_path || '')) !== statusPath
+    || manifest.game !== input.game || manifest.card_id !== input.card?.id
+    || manifest.printing_id !== input.printing_id || resolve(String(manifest.render || '')) !== renderPath) {
+    throw new Error('bridge manifest does not match the active Affinity input');
+  }
+  return { input, manifest, script, statusPath, renderPath, rendererHash: scriptHash,
+    key: `${input.input_hash}:${scriptHash}` };
 }
 
 function outputJson(result) {
@@ -98,13 +111,40 @@ function outputJson(result) {
 
 function validateStatus(job, status) {
   const { input } = job;
-  if (status.commit_sha !== input.commit_sha || status.input_hash !== input.input_hash || status.card_id !== input.card.id) {
+  if (!status || status.game !== input.game || status.commit_sha !== input.commit_sha
+    || status.input_hash !== input.input_hash || status.card_id !== input.card.id
+    || status.printing_id !== input.printing_id) {
     throw new Error('Affinity returned status for a different Forge input');
   }
-  if (status.state === 'ready' && !existsSync(input.render.absolute_path)) {
+  if (status.state === 'ready' && (status.preview_file !== input.render.file || !existsSync(job.renderPath))) {
     throw new Error('Affinity reported ready without producing the PNG');
   }
   return status;
+}
+
+function sealReadyStatus(job, status) {
+  validateStatus(job, status);
+  if (status.state !== 'ready') return status;
+  if (!lstatSync(job.renderPath).isFile() || lstatSync(job.renderPath).isSymbolicLink())
+    throw new Error('Affinity preview must be a regular local PNG');
+  const size=statSync(job.renderPath).size;
+  if(size<=0||size>128*1024*1024)throw new Error('Affinity preview is empty or exceeds 128 MiB');
+  const bytes=readFileSync(job.renderPath);
+  return { ...status, renderer_sha256: job.rendererHash, preview_bytes: bytes.length,
+    preview_sha256: createHash('sha256').update(bytes).digest('hex') };
+}
+
+function readyReceiptCurrent(job, status) {
+  try {
+    validateStatus(job,status);
+    if(status.state!=="ready"||status.renderer_sha256!==job.rendererHash
+      ||!Number.isSafeInteger(status.preview_bytes)||status.preview_bytes<=0
+      ||!/^[0-9a-f]{64}$/i.test(status.preview_sha256||"")
+      ||!existsSync(job.renderPath)||!lstatSync(job.renderPath).isFile()
+      ||lstatSync(job.renderPath).isSymbolicLink()||statSync(job.renderPath).size!==status.preview_bytes)return false;
+    const bytes=readFileSync(job.renderPath);
+    return createHash('sha256').update(bytes).digest('hex')===status.preview_sha256;
+  } catch { return false; }
 }
 
 async function execute(job, endpoint, timeout) {
@@ -125,7 +165,8 @@ async function execute(job, endpoint, timeout) {
   }
 }
 
-function runningStatus(input) {
+function runningStatus(job) {
+  const { input }=job;
   return {
     schema_version: 1,
     state: 'rendering',
@@ -135,13 +176,14 @@ function runningStatus(input) {
     commit_sha: input.commit_sha,
     commit_short: input.commit_short,
     input_hash: input.input_hash,
+    renderer_sha256: job.rendererHash,
     updated_at: new Date().toISOString(),
   };
 }
 
-function errorStatus(input, error) {
+function errorStatus(job, error) {
   return {
-    ...runningStatus(input),
+    ...runningStatus(job),
     state: 'error',
     error: error?.stack || error?.message || String(error),
     updated_at: new Date().toISOString(),
@@ -153,10 +195,11 @@ async function runOnce(options) {
   const endpoint = localEndpoint(options.endpoint);
   const timeout = Math.max(5000, Number(options.timeout || 120000));
   const job = loadJob(bridge);
-  atomicJson(job.statusPath, runningStatus(job.input));
+  atomicJson(job.statusPath, runningStatus(job));
   try {
     const payload = await execute(job, endpoint, timeout);
-    const status = validateStatus(job, payload.status);
+    const validated = validateStatus(job, payload.status);
+    const status = validated.state === 'ready' ? sealReadyStatus(job, validated) : validated;
     atomicJson(job.statusPath, status);
     if (status.state !== 'ready') {
       const error = new Error(status.error || 'Affinity render failed');
@@ -166,7 +209,7 @@ async function runOnce(options) {
     console.log(`Affinity render ready: ${job.input.card.id} @ ${job.input.commit_short}`);
     return { job, status };
   } catch (error) {
-    atomicJson(job.statusPath, error.affinityStatus || errorStatus(job.input, error));
+    atomicJson(job.statusPath, error.affinityStatus || errorStatus(job, error));
     throw error;
   }
 }
@@ -182,10 +225,7 @@ async function watch(options) {
     try {
       const job = loadJob(bridge);
       const prior = existsSync(job.statusPath) ? json(job.statusPath) : null;
-      const current = prior?.state === 'ready'
-        && prior.commit_sha === job.input.commit_sha
-        && prior.input_hash === job.input.input_hash
-        && existsSync(job.input.render.absolute_path);
+      const current = readyReceiptCurrent(job,prior);
       const now = Date.now();
       if (!current && (job.key !== lastKey || now - lastAttempt >= retry)) {
         lastKey = job.key;
@@ -199,11 +239,15 @@ async function watch(options) {
   }
 }
 
-const options = argsOf(process.argv.slice(2));
-try {
-  if (options.command === 'run') await runOnce(options);
-  else if (options.command === 'watch') await watch(options);
-  else die(`unknown command '${options.command}' (use run or watch)`);
-} catch (error) {
-  die(error.message || String(error));
+export { loadJob, readyReceiptCurrent, sealReadyStatus };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const options = argsOf(process.argv.slice(2));
+  try {
+    if (options.command === 'run') await runOnce(options);
+    else if (options.command === 'watch') await watch(options);
+    else die(`unknown command '${options.command}' (use run or watch)`);
+  } catch (error) {
+    die(error.message || String(error));
+  }
 }

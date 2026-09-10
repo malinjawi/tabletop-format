@@ -3,7 +3,7 @@
   "kind": "forge-pnp-face-extraction",
   "printing_id": "p_carmen_sg",
   "card_id": "carmen",
-  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "source_pdf": "system-gateway-official-1x.pdf",
   "pdf_page": 3,
   "slot": {
     "row": 1,

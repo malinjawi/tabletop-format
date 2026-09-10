@@ -1,5 +1,5 @@
 name: Shared foundation
-description: 10 ordered regions reused by every card family.
+description: 16 ordered regions reused by every card family.
 regions:
   - id: shell
     type: rect
@@ -8,7 +8,16 @@ regions:
     w: 63
     h: 87.21
     fill: palette-gradient
-    radius_mm: 2.5
+    radius_mm: 0
+  - id: shell_faction_motif
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 87.21
+    fill: palette-shell-motif
+    opacity: 0.88
+    radius_mm: 0
   - id: shell_mesh
     type: rect
     x: 0
@@ -16,8 +25,8 @@ regions:
     w: 63
     h: 87.21
     fill: repeating-linear-gradient(60deg,transparent 0 4.4mm,rgba(255,255,255,.13) 4.45mm 4.7mm)
-    opacity: 0.32
-    radius_mm: 2.5
+    opacity: 0.12
+    radius_mm: 0
   - id: shell_scanlines
     type: rect
     x: 0
@@ -25,31 +34,62 @@ regions:
     w: 63
     h: 87.21
     fill: repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 .12mm,transparent .12mm .7mm)
-    opacity: 0.28
-    radius_mm: 2.5
+    opacity: 0.18
+    radius_mm: 0
+  - id: shell_outer_keyline
+    type: rect
+    x: 0.22
+    "y": 0.22
+    w: 62.56
+    h: 86.77
+    fill: none
+    stroke: palette-dark
+    stroke_w_mm: 0.42
+    opacity: 0.92
+    radius_mm: 0
+  - id: shell_inner_keyline
+    type: rect
+    x: 0.82
+    "y": 0.74
+    w: 61.36
+    h: 85.73
+    fill: none
+    stroke: palette-light
+    stroke_w_mm: 0.24
+    opacity: 0.74
+    radius_mm: 0
   - id: top_signal
     type: rect
     x: 0
     "y": 0
     w: 63
     h: 1.65
-    fill: palette
+    fill: palette-gradient
+    opacity: 0.96
+  - id: top_signal_faction_motif
+    type: rect
+    x: 0
+    "y": 0
+    w: 63
+    h: 1.65
+    fill: palette-shell-motif
+    opacity: 0.72
   - id: left_signal
     type: rect
     x: 0
     "y": 0
     w: 1.2
     h: 87.21
-    fill: palette-light
-    opacity: 0.82
-  - id: right_signal
+    fill: palette-gradient
+    opacity: 0.78
+  - id: left_signal_faction_motif
     type: rect
-    x: 62.05
+    x: 0
     "y": 0
-    w: 0.95
+    w: 1.2
     h: 87.21
-    fill: palette
-    opacity: 0.7
+    fill: palette-shell-motif
+    opacity: 0.58
   - id: standard_panel_watermark
     type: richtext
     src: card.attributes.faction
@@ -73,6 +113,38 @@ regions:
     show_if: >-
       attributes.faction == anarch || attributes.faction == criminal || attributes.faction == shaper || attributes.faction == haas-bioroid || attributes.faction == jinteki || attributes.faction == nbn || attributes.faction ==
       weyland-consortium
+  - id: standard_type
+    type: text
+    src: card.type
+    transform: uppercase
+    suffix: ":"
+    x: 5.9
+    "y": 48.03
+    w: 26
+    h: 4.5
+    font: tech
+    size_pt: 7.1
+    horizontal_scale: 0.78
+    align: left
+    valign: middle
+    color: "#101820"
+    show_if: type != identity && type != ice && attributes.side == runner && subtypes
+  - id: corp_standard_type
+    type: text
+    src: card.type
+    transform: uppercase
+    suffix: ":"
+    x: 7.8
+    "y": 48.03
+    w: 26
+    h: 4.5
+    font: tech
+    size_pt: 7.1
+    horizontal_scale: 0.78
+    align: left
+    valign: middle
+    color: "#101820"
+    show_if: type != identity && type != ice && attributes.side == corp && subtypes
   - id: standard_trash_icon
     type: richtext
     text: "[trash_cost]"
@@ -105,6 +177,6 @@ regions:
     w: 63
     h: 87.21
     fill: none
-    stroke: "#05080b"
-    stroke_w_mm: 0.36
-    radius_mm: 2.5
+    stroke: none
+    stroke_w_mm: 0
+    radius_mm: 0

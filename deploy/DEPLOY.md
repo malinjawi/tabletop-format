@@ -4,6 +4,9 @@ Forge launches behind HTTPS as three digest-pinned services: the immutable
 gateway image, Forgejo (repository truth), and Postgres (identity/conversation
 state). R2 holds LFS objects. The host proxy is the only public ingress;
 Compose binds the gateway to loopback by default and does not expose Postgres.
+Forgejo is configured to force every new repository private. Forge promotes
+source visibility only after its rights index authorizes the public project;
+an unverified or identity-conflicting repository remains private.
 
 ## 1. Build and promote the gateway
 
@@ -30,6 +33,32 @@ The same build-and-recovery proof runs in CI for every pull request and push to
 npm ci
 FORGE_REQUIRE_CLEAN_TREE=1 npm run test:production-image
 ```
+
+On a push to `main`, the tracked qualification workflow preserves the exact
+image used by the recovery gate. Manual dispatches qualify but never publish.
+Only after both qualification jobs succeed, a separate job publishes those
+same image bytes to:
+
+```text
+ghcr.io/<repository-owner>/forge-platform:sha-<full-40-character-commit>
+```
+
+The publisher has only `packages: write`; the qualification jobs retain only
+`contents: read`. It runs only for a push to `main`, creates no `latest`,
+branch, or release tag, and refuses to overwrite an existing commit tag unless
+that tag resolves to the exact same qualified image and revision. A safe rerun
+therefore reuses the existing digest and repairs the workflow receipt. The job
+records the resulting `@sha256:...` reference in its summary. Deploy using that
+digest reference, not the tag. Registry administrators can still delete or
+retag packages outside this workflow, so retain the workflow receipt and apply
+organization retention controls where available. Image promotion does not
+deploy a host, alter DNS, configure R2, or establish operator readiness.
+
+GHCR package visibility is separate from repository visibility. Before booting
+the host, either make this one container package public or configure a
+read-only package credential on the host. Prove that the deployment identity
+can pull the recorded digest directly; do not rely on an operator's interactive
+registry session or change Forge source-repository visibility as a workaround.
 
 Put the resulting `registry/...@sha256:...` reference in
 `FORGE_GATEWAY_IMAGE`. Put tested digest references—not floating majors—in
@@ -179,6 +208,18 @@ failed acceptance leaves the invitation available. These receipts are included
 in the normal PostgreSQL backup and verified by the restore drill. They are
 operational evidence, not a substitute for jurisdiction-specific legal review.
 
+### Project-kind transitions
+
+`forge/project.json` declares whether a project is owned or an explicit public
+sandbox. After a hosted repository receives a stable Forgejo repository ID,
+Forge treats that project kind as immutable: editing repository content cannot
+silently expand its write or merge authority. The controlled beta deliberately
+has no in-place sandbox toggle. To retire a sandbox or move work into normal
+ownership, create an owned project, carry the work through the ordinary
+fork/proposal review path, verify its rights, and archive the old sandbox. To
+create a new sandbox, use an operator-reviewed import with a new project and
+repository identity. Record either transition in the pilot operations log.
+
 After registration, verify the receipt without opening PostgreSQL or printing
 the participant's email or any policy body:
 
@@ -297,8 +338,10 @@ Terminate TLS at the host proxy/CDN and forward the Forge origin to
 `127.0.0.1:${FORGEJO_BIND_PORT:-3000}`. Preserve
 the real client address and set `FORGE_TRUST_PROXY=1` only for that trusted
 proxy path. Forward the original `Host` and `X-Forwarded-Proto`. Do not cache
-API or HTML responses. Immutable `/cache/*` responses may be cached only when
-Forge itself returns `public, max-age=31536000, immutable`.
+API or HTML responses. Forge's `/cache/*` paths are content-addressed, but a
+project can still move from public to private. Honor Forge's response policy:
+public artifacts currently require revalidation and private artifacts are
+`private, no-store`. Never override those headers at the CDN.
 
 Both application ports bind to loopback; TLS is the only public ingress. The
 application refuses production startup with HTTP, local Store-1, missing

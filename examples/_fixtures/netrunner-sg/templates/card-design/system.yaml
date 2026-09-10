@@ -2,7 +2,7 @@ card:
   w_mm: 63
   h_mm: 87.21
   bleed_mm: 3.175
-  radius_mm: 2.5
+  radius_mm: 0
   bg: palette-deep
 fonts:
   - id: title
@@ -10,11 +10,14 @@ fonts:
     weight: 600
     asset: assets/source-fonts/Cinzel-Variable.ttf
   - id: tech
-    family: Forge Gill Sans Ultra Bold
+    family: Forge Orbitron Black
     weight: 900
     asset: assets/source-fonts/Orbitron-Black.ttf
-    local_asset: assets/source-fonts/GillSansUltraBold.local.ttf
   - id: subtype
+    family: Forge Lato
+    weight: 400
+    asset: assets/source-fonts/Lato-Regular.ttf
+  - id: ice_type
     family: Forge Bank Gothic Light
     weight: 300
     asset: assets/source-fonts/Orbitron-Variable.ttf
@@ -31,6 +34,10 @@ fonts:
   - id: body
     family: Forge Source Serif 4
     weight: 400
+    asset: assets/source-fonts/SourceSerif4-Variable.ttf
+  - id: body_strong
+    family: Forge Source Serif 4
+    weight: 800
     asset: assets/source-fonts/SourceSerif4-Variable.ttf
   - id: flavor
     family: Forge Source Serif 4
@@ -50,3 +57,62 @@ palette:
     neutral-corp: "#687078"
     neutral-runner: "#7d8389"
   default: "#7d8389"
+  motifs:
+    anarch:
+      shell: >-
+        repeating-radial-gradient(circle at 1% 72%,transparent 0 4.6mm,rgba(255,255,255,.22) 4.7mm 4.96mm,transparent 5.08mm 8.2mm),repeating-conic-gradient(from -8deg at 1% 72%,rgba(255,255,255,.18) 0deg .68deg,transparent .84deg
+        16deg),linear-gradient(125deg,transparent 0 61%,rgba(255,255,255,.12) 61.2% 61.8%,transparent 62% 100%)
+      panel: >-
+        repeating-radial-gradient(circle at 0% 68%,transparent 0 4.1mm,color-mix(in srgb,{palette} 34%,transparent) 4.2mm 4.46mm,transparent 4.58mm 7.8mm),repeating-conic-gradient(from -7deg at 0% 68%,color-mix(in srgb,{palette}
+        28%,transparent) 0deg .7deg,transparent .9deg 18deg)
+    criminal:
+      shell: >-
+        radial-gradient(circle,rgba(255,255,255,.3) 0 .25mm,transparent .31mm) 1.2mm 1.2mm/7mm 7mm,repeating-linear-gradient(0deg,transparent 0 5.45mm,rgba(255,255,255,.18) 5.52mm 5.74mm,transparent 5.82mm
+        10.9mm),repeating-linear-gradient(90deg,transparent 0 6.85mm,rgba(255,255,255,.14) 6.92mm 7.12mm,transparent 7.2mm 13.8mm)
+      panel: >-
+        radial-gradient(circle,color-mix(in srgb,{palette} 40%,transparent) 0 .24mm,transparent .3mm) 0 0/7mm 7mm,repeating-linear-gradient(0deg,transparent 0 5.4mm,color-mix(in srgb,{palette} 25%,transparent) 5.48mm 5.7mm,transparent
+        5.78mm 10.8mm),repeating-linear-gradient(90deg,transparent 0 6.8mm,color-mix(in srgb,{palette} 22%,transparent) 6.88mm 7.08mm,transparent 7.16mm 13.6mm)
+    shaper:
+      shell: >-
+        repeating-radial-gradient(circle at 0% 70%,transparent 0 3.6mm,rgba(255,255,255,.22) 3.72mm 3.98mm,transparent 4.1mm 7.2mm),repeating-linear-gradient(45deg,transparent 0 5.6mm,rgba(255,255,255,.16) 5.68mm 5.92mm,transparent 6mm
+        11.2mm),radial-gradient(circle at 77% 15%,rgba(255,255,255,.18) 0 .3mm,transparent .36mm) 0 0/6mm 6mm
+      panel: >-
+        repeating-radial-gradient(circle at 0% 66%,transparent 0 3.5mm,color-mix(in srgb,{palette} 32%,transparent) 3.62mm 3.9mm,transparent 4.04mm 7mm),repeating-linear-gradient(45deg,transparent 0 5.5mm,color-mix(in srgb,{palette}
+        24%,transparent) 5.58mm 5.82mm,transparent 5.9mm 11mm)
+    haas-bioroid:
+      shell: >-
+        repeating-linear-gradient(60deg,transparent 0 5mm,rgba(255,255,255,.2) 5.08mm 5.32mm,transparent 5.4mm 10mm),repeating-linear-gradient(-60deg,transparent 0 5mm,rgba(255,255,255,.16) 5.08mm 5.32mm,transparent 5.4mm
+        10mm),repeating-linear-gradient(0deg,transparent 0 8.6mm,rgba(255,255,255,.13) 8.68mm 8.9mm,transparent 8.98mm 17.2mm)
+      panel: >-
+        repeating-linear-gradient(60deg,transparent 0 5mm,color-mix(in srgb,{palette} 27%,transparent) 5.08mm 5.3mm,transparent 5.38mm 10mm),repeating-linear-gradient(-60deg,transparent 0 5mm,color-mix(in srgb,{palette} 22%,transparent)
+        5.08mm 5.3mm,transparent 5.38mm 10mm),repeating-linear-gradient(0deg,transparent 0 8.6mm,color-mix(in srgb,{palette} 18%,transparent) 8.68mm 8.88mm,transparent 8.96mm 17.2mm)
+    jinteki:
+      shell: >-
+        repeating-radial-gradient(ellipse at 100% 69%,transparent 0 4.2mm,rgba(255,255,255,.2) 4.34mm 4.62mm,transparent 4.78mm 8.4mm),repeating-linear-gradient(74deg,transparent 0 7.2mm,rgba(255,255,255,.16) 7.3mm 7.55mm,transparent 7.65mm
+        14.4mm),linear-gradient(22deg,transparent 0 69%,rgba(255,255,255,.13) 69.2% 69.8%,transparent 70% 100%)
+      panel: >-
+        repeating-radial-gradient(ellipse at 100% 67%,transparent 0 4mm,color-mix(in srgb,{palette} 30%,transparent) 4.14mm 4.42mm,transparent 4.56mm 8mm),repeating-linear-gradient(74deg,transparent 0 7mm,color-mix(in srgb,{palette}
+        21%,transparent) 7.1mm 7.34mm,transparent 7.44mm 14mm)
+    nbn:
+      shell: >-
+        repeating-radial-gradient(circle at 74% 72%,transparent 0 3.8mm,rgba(255,255,255,.24) 3.92mm 4.2mm,transparent 4.34mm 7.6mm),repeating-linear-gradient(90deg,transparent 0 8mm,rgba(255,255,255,.16) 8.08mm 8.42mm,transparent 8.5mm
+        16mm),linear-gradient(0deg,transparent 0 20%,rgba(255,255,255,.12) 20.2% 22%,transparent 22.2% 100%)
+      panel: >-
+        repeating-radial-gradient(circle at 72% 72%,transparent 0 3.8mm,color-mix(in srgb,{palette} 32%,transparent) 3.92mm 4.2mm,transparent 4.34mm 7.6mm),repeating-linear-gradient(90deg,transparent 0 8mm,color-mix(in srgb,{palette}
+        22%,transparent) 8.08mm 8.38mm,transparent 8.46mm 16mm)
+    weyland-consortium:
+      shell: >-
+        repeating-linear-gradient(135deg,transparent 0 5.1mm,rgba(255,255,255,.22) 5.2mm 5.55mm,transparent 5.66mm 10.2mm),repeating-linear-gradient(45deg,transparent 0 10.2mm,rgba(255,255,255,.13) 10.3mm 10.6mm,transparent 10.7mm
+        20.4mm),linear-gradient(90deg,rgba(255,255,255,.1) 0 1.1mm,transparent 1.15mm 100%)
+      panel: >-
+        repeating-linear-gradient(135deg,transparent 0 5mm,color-mix(in srgb,{palette} 30%,transparent) 5.1mm 5.46mm,transparent 5.56mm 10mm),repeating-linear-gradient(45deg,transparent 0 10mm,color-mix(in srgb,{palette} 18%,transparent)
+        10.1mm 10.4mm,transparent 10.5mm 20mm)
+    neutral-corp:
+      shell: repeating-linear-gradient(135deg,transparent 0 6mm,rgba(255,255,255,.2) 6.1mm 6.48mm,transparent 6.58mm 12mm),linear-gradient(90deg,rgba(255,255,255,.12),transparent 28%,rgba(0,0,0,.18) 100%)
+      panel: repeating-linear-gradient(135deg,transparent 0 6mm,color-mix(in srgb,{palette} 25%,transparent) 6.1mm 6.42mm,transparent 6.52mm 12mm)
+    neutral-runner:
+      shell: repeating-linear-gradient(135deg,transparent 0 6mm,rgba(255,255,255,.2) 6.1mm 6.48mm,transparent 6.58mm 12mm),linear-gradient(90deg,rgba(255,255,255,.12),transparent 28%,rgba(0,0,0,.18) 100%)
+      panel: repeating-linear-gradient(135deg,transparent 0 6mm,color-mix(in srgb,{palette} 25%,transparent) 6.1mm 6.42mm,transparent 6.52mm 12mm)
+  default_motif:
+    shell: repeating-linear-gradient(135deg,transparent 0 6mm,rgba(255,255,255,.18) 6.1mm 6.42mm,transparent 6.52mm 12mm)
+    panel: repeating-linear-gradient(135deg,transparent 0 6mm,color-mix(in srgb,{palette} 22%,transparent) 6.1mm 6.4mm,transparent 6.5mm 12mm)

@@ -43,7 +43,7 @@ image_id="$(docker image inspect --format '{{.Id}}' "$image_tag")"
 [ "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' "$image_id")" = "Apache-2.0" ]
 [ "$(docker image inspect --format '{{.Config.User}}' "$image_id")" = "node" ]
 docker run --rm --read-only --tmpfs /tmp:size=67108864,mode=1777 \
-  "$image_id" /bin/sh -ec 'node --version && chromium --version && git --version && python3 --version'
+  "$image_id" /bin/sh -ec 'node --version && chromium --version && git --version && python3 --version && python3 tools/test_print_ready.py'
 
 printf '\n== Qualify exact gateway image with real stores and synchronized recovery ==\n'
 FORGE_GATEWAY_TEST_IMAGE="$image_id" \

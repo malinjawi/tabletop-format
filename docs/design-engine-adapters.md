@@ -22,31 +22,36 @@ engines:
     type: forge-native
     source: templates/card-design/manifest.yaml
     status: active
-  - id: pnpink-proof
+  - id: pnpink-working-copy
     type: pnpink
     source: templates/card-design/experiments/pnpink/manifest.yaml
-    status: experimental
+    status: beta
 ```
 
-The System Gateway fixture includes an isolated PnPInk v0.55 proof for Program
-and Agenda. It does not replace the production renderer. Generate it with:
+The System Gateway fixture includes a PnPInk v0.57 working-copy adapter for all
+11 declared card families. It does not replace the production renderer.
+Generate the deterministic suite with:
 
 ```sh
 node tools/export-pnpink.mjs examples/_fixtures/netrunner-sg /tmp/netrunner-pnpink
 ```
 
-The output contains an editable SVG, a CSV derived from committed cards, a
-PnPInk `manifest.json`, provenance, and a deterministic `.pnp` package. Open the
-package with PnPInk/Inkscape, edit the CSV, and inspect the proposed Forge change
-without writing anything:
+The suite contains one portable `.pnp` project per family, plus inspectable SVG,
+CSV, and provenance files. Each CSV is derived from the exact committed cards;
+each SVG is a versioned external production source. Open one family project in
+PnPInk/Inkscape, edit its linked data or SVG, then return that family `.pnp` and
+inspect the proposed Forge change without writing anything:
 
 ```sh
-node tools/import-pnpink.mjs examples/_fixtures/netrunner-sg /path/to/netrunner-proof.csv
+node tools/import-pnpink.mjs examples/_fixtures/netrunner-sg /path/to/netrunner-sg-program.pnp
 ```
 
-`--write` updates `components/cards.json`, but deliberately does not commit.
-The ordinary Forge review boundary still applies: inspect the semantic and
-visual diff, then commit or open a pull request.
+Returning CSV alone is supported for a data-only change. Returning `.pnp`
+compares both the card fields and SVG source with their embedded baseline.
+Card fields use a field-level three-way merge; the SVG uses a byte-level merge.
+The hosted Design page shows the same dry run and then either commits directly
+or commits to the user's fork and opens a pull request. The CLI `--write` writes
+the analyzed files but deliberately does not commit.
 
 ## Promotion gate
 
@@ -62,9 +67,11 @@ An experimental engine must not become active until it passes all of these:
 6. Existing releases and the Forge-native renderer remain unchanged behind a
    feature flag during staged migration.
 
-PnPInk is still beta and its DSL may change. Pin the tested upstream tag in the
-adapter manifest and keep generated CSV/PDF/PNG files out of Git; commit the
-canonical data, adapter manifest, SVG templates, declared assets, and tool pin.
+PnPInk is still beta and its package/DSL may change. Pin the tested upstream tag
+in the adapter manifest. Generated PDF/PNG output remains an artifact; commit
+canonical Forge data, the adapter manifest, external SVG sources, declared
+assets, and the tool pin. Forge does not bundle or execute Inkscape/PnPInk on the
+server, and an external SVG never becomes the active Forge renderer implicitly.
 
 ## nanDECK adapter
 

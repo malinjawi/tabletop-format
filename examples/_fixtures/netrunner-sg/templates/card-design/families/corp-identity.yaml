@@ -17,7 +17,7 @@ regions:
     "y": 1.05
     w: 51.1
     h: 5.15
-    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    fill: palette-metallic
     stroke: palette-dark
     stroke_w_mm: 0.38
     clip_path: polygon(0 0,100% 0,92% 100%,0 100%)
@@ -38,7 +38,7 @@ regions:
     "y": 6.15
     w: 38.7
     h: 3.65
-    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    fill: palette-metallic
     stroke: palette-dark
     stroke_w_mm: 0.34
     clip_path: polygon(0 0,100% 0,91% 100%,4% 100%)
@@ -119,7 +119,6 @@ regions:
       - 744
       - 1030
     source_crop_fit: cover
-    credit: printing.artist
     show_if: type == identity && attributes.side == corp
   - id: identity_art_edge_corp
     type: rect
@@ -133,80 +132,174 @@ regions:
     shadow: inset 0 0 2.2mm rgba(0,0,0,.45)
     show_if: type == identity && attributes.side == corp
   - id: corp_identity_stats_shadow
-    type: rect
-    x: 0
-    "y": 72.15
-    w: 8.95
-    h: 14.75
-    fill: "#07090b"
-    clip_path: polygon(0 0,87% 0,100% 9%,100% 100%,0 100%)
-    shadow: .25mm 0 .85mm rgba(0,0,0,.52)
+    type: badge
+    text: ""
+    x: 2.4
+    "y": 54.2
+    d: 9.2
+    bg: "#07090b"
+    shadow: 0 .55mm .85mm rgba(0,0,0,.52)
     show_if: type == identity && attributes.side == corp
   - id: corp_identity_stats_edge
-    type: rect
-    x: 0
-    "y": 72.52
-    w: 8.55
-    h: 14.25
-    fill: palette-gradient
-    stroke: palette-light
-    stroke_w_mm: 0.28
-    clip_path: polygon(0 0,87% 0,100% 9%,100% 100%,0 100%)
+    type: badge
+    text: ""
+    x: 2.65
+    "y": 54.45
+    d: 8.7
+    bg: linear-gradient(135deg,#151a1d 0%,#697174 42%,#151a1d 100%)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_deck_accent_ne
+    type: badge
+    text: ""
+    x: 2.525
+    "y": 54.325
+    d: 8.95
+    bg: palette
+    clip_path: polygon(50% 50%,55% 0,78% 0,100% 22%,100% 45%)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_deck_accent_sw
+    type: badge
+    text: ""
+    x: 2.525
+    "y": 54.325
+    d: 8.95
+    bg: palette
+    clip_path: polygon(50% 50%,45% 100%,22% 100%,0 78%,0 55%)
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_deck_bezel
+    type: badge
+    text: ""
+    x: 3.125
+    "y": 54.925
+    d: 7.75
+    bg: linear-gradient(135deg,#f8faf8 0%,#737c80 42%,#eef0ee 68%,#596165 100%)
     show_if: type == identity && attributes.side == corp
   - id: corp_identity_deck_face
-    type: rect
-    x: 0.65
-    "y": 73.1
-    w: 7.35
-    h: 5.65
-    fill: linear-gradient(145deg,#ffffff 0%,#e4e7e6 60%,#aab0af 100%)
-    stroke: "#20262a"
-    stroke_w_mm: 0.28
-    clip_path: polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)
+    type: badge
+    text: ""
+    x: 3.7
+    "y": 55.5
+    d: 6.6
+    bg: radial-gradient(circle at 43% 35%,#fbfcfa 0%,#d9ddde 58%,#7b8387 100%)
     show_if: type == identity && attributes.side == corp
   - id: corp_identity_deck
     type: text
     src: card.attributes.minimum_deck_size
-    x: 0.65
-    "y": 73.22
-    w: 7.35
-    h: 5.35
+    x: 4.13
+    "y": 56.62
+    w: 5.74
+    h: 4.06
     font: stat
-    size_pt: 11.2
+    size_pt: 9
+    horizontal_scale: 0.86
     align: center
     valign: middle
     color: "#11171d"
+    text_shadow: 0 .08mm .12mm rgba(255,255,255,.7)
     show_if: type == identity && attributes.side == corp
-  - id: corp_identity_stats_divider
-    type: rect
-    x: 0.8
-    "y": 79.05
-    w: 7.05
-    h: 0.42
-    fill: palette-light
-    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_influence_shadow
+    type: badge
+    text: ""
+    x: 51.4
+    "y": 54.2
+    d: 9.2
+    bg: "#07090b"
+    shadow: 0 .55mm .85mm rgba(0,0,0,.52)
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit
+  - id: corp_identity_influence_edge
+    type: badge
+    text: ""
+    x: 51.65
+    "y": 54.45
+    d: 8.7
+    bg: linear-gradient(135deg,#151a1d 0%,#697174 42%,#151a1d 100%)
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit
+  - id: corp_identity_influence_accent_nw
+    type: badge
+    text: ""
+    x: 51.525
+    "y": 54.325
+    d: 8.95
+    bg: palette
+    clip_path: polygon(50% 50%,45% 0,22% 0,0 22%,0 45%)
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit
+  - id: corp_identity_influence_accent_se
+    type: badge
+    text: ""
+    x: 51.525
+    "y": 54.325
+    d: 8.95
+    bg: palette
+    clip_path: polygon(50% 50%,55% 100%,78% 100%,100% 78%,100% 55%)
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit
+  - id: corp_identity_influence_bezel
+    type: badge
+    text: ""
+    x: 52.125
+    "y": 54.925
+    d: 7.75
+    bg: linear-gradient(135deg,#f8faf8 0%,#737c80 42%,#eef0ee 68%,#596165 100%)
+    show_if: type == identity && attributes.side == corp && attributes.influence_limit
   - id: corp_identity_influence_face
-    type: rect
-    x: 0.65
-    "y": 79.75
-    w: 7.35
-    h: 5.65
-    fill: linear-gradient(180deg,#343a3d,#080b0d)
-    stroke: "#c7ccca"
-    stroke_w_mm: 0.28
-    clip_path: polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)
+    type: badge
+    text: ""
+    x: 52.7
+    "y": 55.5
+    d: 6.6
+    bg: radial-gradient(circle at 43% 35%,#343a3d 0%,#171c1f 58%,#070a0c 100%)
     show_if: type == identity && attributes.side == corp && attributes.influence_limit
   - id: corp_identity_influence
     type: text
     src: card.attributes.influence_limit
-    x: 0.65
-    "y": 79.87
-    w: 7.35
-    h: 5.35
+    x: 53.13
+    "y": 56.62
+    w: 5.74
+    h: 4.06
     font: stat
-    size_pt: 11.2
+    size_pt: 9
+    horizontal_scale: 0.86
     align: center
     valign: middle
     color: "#ffffff"
     text_shadow: "0 .12mm .16mm #000"
     show_if: type == identity && attributes.side == corp && attributes.influence_limit
+  - id: corp_identity_artist
+    type: text
+    src: printing.artist
+    prefix: "ILLUS. "
+    x: 4.7
+    "y": 80.75
+    w: 36
+    h: 2.25
+    font: label
+    size_pt: 3.15
+    align: left
+    valign: middle
+    color: "#151b21"
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_set_icon
+    type: richtext
+    text: "[set_system_gateway]"
+    x: 51.75
+    "y": 80.55
+    w: 3
+    h: 3
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    opacity: 0.9
+    show_if: type == identity && attributes.side == corp
+  - id: corp_identity_collector
+    type: text
+    src: printing.collector_number
+    transform: strip-leading-zeros
+    x: 55
+    "y": 80.85
+    w: 3.6
+    h: 2.5
+    font: label
+    size_pt: 4
+    align: left
+    valign: middle
+    color: "#151b21"
+    show_if: type == identity && attributes.side == corp

@@ -37,8 +37,14 @@ ok(dockerfile.includes("test -f /etc/debian_version")
   "image requires a compatible Debian base and records its exact source revision");
 ok(dockerfile.includes("mkdir -p /app/data && chown node:node /app/data"),
   "image seeds the writable data-volume mountpoint for the unprivileged runtime user");
-ok(/apt-get install[\s\S]*\bchromium\b/.test(dockerfile),
-  "image includes the headless Chromium runtime required by card and rulebook renderers");
+const dockerignore=readFileSync(resolve(ROOT,".dockerignore"),"utf8");
+ok(/^hub\.html$/m.test(dockerignore) && /^beta-site$/m.test(dockerignore)
+  && /^data$/m.test(dockerignore) && /^output$/m.test(dockerignore),
+  "image excludes generated hubs, static previews, runtime data, and export output");
+ok(/apt-get install[\s\S]*\bchromium\b/.test(dockerfile)
+  && /apt-get install[\s\S]*\bpython3-pypdf\b/.test(dockerfile)
+  && /apt-get install[\s\S]*\bpython3-openpyxl\b/.test(dockerfile),
+  "image includes the headless renderer, PDF inspector, and workbook adapter required by production exports");
 ok(env.STORE1==="forgejo" && env.DB==="postgres" && env.FORGE_URL==="http://forgejo:3000",
   "production uses Forgejo and PostgreSQL rather than local stores");
 ok(env.FORGE_HUB_PATH==="/app/data/hub.html" && env.CACHE_DIR?.startsWith("/app/data/")
@@ -63,8 +69,10 @@ ok(config.networks?.backend?.internal===true && Object.keys(db.networks||{}).len
   && "backend" in (db.networks||{}) && !db.ports,
   "PostgreSQL stays on the private backend network with no host port");
 ok(forgejo.environment?.FORGEJO__service__DISABLE_REGISTRATION==="true"
-  && forgejo.environment?.FORGEJO__security__INSTALL_LOCK==="true",
-  "Forgejo cannot become a second uncontrolled account surface");
+  && forgejo.environment?.FORGEJO__security__INSTALL_LOCK==="true"
+  && forgejo.environment?.FORGEJO__repository__FORCE_PRIVATE==="true"
+  && forgejo.environment?.FORGEJO__repository__DEFAULT_PRIVATE==="private",
+  "Forgejo cannot become a second uncontrolled account surface and repositories start private");
 const forgejoRecoverySecrets={
   forgejo_secret_key:["FORGEJO__security__SECRET_KEY__FILE","/run/secrets/forgejo_secret_key"],
   forgejo_internal_token:["FORGEJO__security__INTERNAL_TOKEN__FILE","/run/secrets/forgejo_internal_token"],
@@ -109,8 +117,26 @@ ok(imageGate.includes("deploy/qualified-images.env")
   && imageGate.includes("disposable-restore-drill.sh")
   && workflow.includes("./tools/qualify-production-image.sh"),
   "CI builds the source-labelled gateway and rehearses synchronized recovery through that exact image");
-ok((workflow.match(/uses: actions\/(?:checkout|setup-node|setup-python)@[a-f0-9]{40}/g)||[]).length===5,
-  "CI actions are pinned to immutable commit SHAs");
+const workflowActions=[...workflow.matchAll(/^\s*uses:\s*([^@\s]+)@([^\s#]+)/gm)];
+const trustedActions=new Set(["actions/checkout", "actions/setup-node", "actions/setup-python",
+  "actions/upload-artifact", "actions/download-artifact"]);
+ok(workflowActions.length===7
+  && workflowActions.every(([, action, revision])=>trustedActions.has(action) && /^[a-f0-9]{40}$/.test(revision)),
+  "CI uses only allowlisted first-party actions pinned to immutable commit SHAs");
+const publisher=workflow.slice(workflow.indexOf("  publish-image:"));
+ok(workflow.includes("needs: [product-gate, release-image]")
+  && publisher.includes("packages: write")
+  && !publisher.includes("contents: write")
+  && publisher.includes("if: github.event_name == 'push' && github.ref == 'refs/heads/main'")
+  && publisher.includes(":sha-${GITHUB_SHA}")
+  && publisher.includes('existing_image_id" != "$local_image_id')
+  && publisher.includes("refusing to overwrite")
+  && publisher.includes("docker load")
+  && !publisher.includes("docker build"),
+  "GHCR promotion is main-push-only, reuses the qualified image, and refuses mismatched commit tags");
+ok(workflow.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
+  && workflow.includes("github.event_name == 'pull_request' && github.ref || github.sha"),
+  "only superseded pull-request checks may cancel; main release runs are isolated by commit");
 const backup=readFileSync(resolve(ROOT,"deploy/backup.sh"),"utf8");
 ok(backup.includes("s3-snapshot.mjs\" backup")
   && backup.includes("object-store/manifest.json")

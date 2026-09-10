@@ -48,7 +48,7 @@ const ATTR_FIELDS = {
   cost: ["cost", "integer"], faction_cost: ["influence", "integer"],
   strength: ["strength", "integer"], advancement_cost: ["advancement_cost", "integer"],
   agenda_points: ["agenda_points", "integer"], trash_cost: ["trash_cost", "integer"],
-  memory_cost: ["memory", "integer"], base_link: ["base_link", "integer"],
+  memory_cost: ["memory_cost", "integer"], base_link: ["base_link", "integer"],
   influence_limit: ["influence_limit", "integer"], minimum_deck_size: ["minimum_deck_size", "integer"],
   uniqueness: ["unique", "boolean"],
 };
@@ -69,6 +69,12 @@ for (const rc of rawCards) {
         attrs[key] = type === "integer" ? Number(rc[src]) : rc[src];
         usedAttrs.add(`${key}:${type}`);
       }
+    }
+    // Netrunner runner identities have 4 base MU even though NRDB does not
+    // expose that printed identity statistic as a card-data field.
+    if (rc.type_code === "identity" && rc.side_code === "runner") {
+      attrs.memory_limit = 4;
+      usedAttrs.add("memory_limit:integer");
     }
     if (Object.keys(attrs).length) card.attributes = attrs;
     if (rc.deck_limit != null) card.deck_limit = rc.deck_limit;

@@ -9,7 +9,7 @@ Generates a self-contained SPA from REAL repo data:
   before/after card art) | Releases (tags) | Banlist | Decks (live legality).
 Everything is baked at build time from git + format data. No server.
 """
-import base64, hashlib, html, json, mimetypes, posixpath, re, subprocess, sys, tempfile
+import base64, hashlib, html, json, mimetypes, os, posixpath, re, subprocess, sys, tempfile
 from urllib.parse import quote
 from pathlib import Path
 import yaml
@@ -22,13 +22,11 @@ LIVE_ASSETS = False
 
 FIXTURES_DIR = "_fixtures"
 
-def discover_games(base=None):
+def discover_games(base=None, include_fixtures=False):
     """Any directory with a game.yaml is a game — no hard-coded list.
 
-    Scans direct children of `base`, plus one nested level under FIXTURES_DIR
-    (examples/_fixtures/<slug>/game.yaml) — the ported real-game test fixtures
-    (Netrunner SG, Hearthstone, Hearts) that were previously invisible to the
-    live server/hub (only the static showcase build knew about them).
+    Scans direct children of `base`. Internal regression fixtures are included
+    only when a local test or private proof explicitly opts in.
     """
     base = Path(base) if base else ROOT / "examples"
     # A hosted top-level game is the canonical path. A same-slug fixture may
@@ -36,7 +34,7 @@ def discover_games(base=None):
     # whose first entry wins unpredictably in the SPA's G(slug) lookup.
     games = {p.parent.name: p.parent for p in base.glob("*/game.yaml")}
     fixtures = base / FIXTURES_DIR
-    if fixtures.is_dir():
+    if include_fixtures and fixtures.is_dir():
         for child in sorted(fixtures.iterdir()):
             if not child.is_dir() or child.name.startswith("."):
                 continue  # skip files (e.g. PHASE1-REPORT.md) and dotdirs
@@ -271,13 +269,27 @@ def render_ref_faces(game_rel, ref, want_ids):
     """Render card faces for a git ref; return {card_id: dataURI} for first printings."""
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td) / "g"
-        subprocess.run(["cp", "-r", str(GIT_ROOT / game_rel), str(tmp)], check=True)
         rel = f"{game_rel}/components/cards.json"
-        content = sh(["git", "show", f"{ref}:{rel}"], ok_fail=True)
-        if not content: return {}
-        (tmp / "components/cards.json").write_text(content)
-        subprocess.run(["node", str(ROOT / "tools/render_cards.mjs"), str(tmp), str(tmp / "f2")],
-                       check=True, capture_output=True)
+        tracked = sh(["git", "ls-tree", "-r", "--name-only", ref, "--", game_rel], ok_fail=True)
+        if not tracked or rel not in tracked.splitlines(): return {}
+        # A branch preview is an immutable project snapshot, not today's tree
+        # with only cards.json swapped in. Materialize every tracked game file
+        # at the requested ref so cards, printings, layouts, fonts, and artwork
+        # can never be mixed across versions.
+        tmp.mkdir(parents=True)
+        prefix = f"{game_rel}/"
+        for source_path in tracked.splitlines():
+            if not source_path.startswith(prefix): continue
+            target = tmp / source_path[len(prefix):]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            content = subprocess.run(["git", "show", f"{ref}:{source_path}"], cwd=GIT_ROOT,
+                                     capture_output=True, check=True).stdout
+            target.write_bytes(content)
+        rendered = subprocess.run(["node", str(ROOT / "tools/render_cards.mjs"), str(tmp), str(tmp / "f2")],
+                                  capture_output=True, text=True)
+        if rendered.returncode:
+            detail = (rendered.stderr or rendered.stdout or "unknown renderer failure").strip()
+            raise RuntimeError(f"could not render {game_rel} at {ref}: {detail}")
         printings = json.loads((tmp / "components/printings.json").read_text())
         first = {}
         for p in printings: first.setdefault(p["card_id"], p["id"])
@@ -332,6 +344,10 @@ def build_game(gd):
             if asset and not re.match(r"^(?:data:|https?:|file:)", asset, re.I):
                 asset_path = gd / asset
                 if asset_path.is_file(): font["asset_data"] = runtime_asset(gd, asset_path)
+        back_art = (layout.get("back") or {}).get("art")
+        if back_art and not re.match(r"^(?:data:|https?:|file:)", back_art, re.I):
+            back_art_path = gd / back_art
+            if back_art_path.is_file(): layout["back"]["art_data"] = runtime_asset(gd, back_art_path)
     def normalize_card_design_layout(value):
         value = dict(value)
         value["fonts"] = [dict(font) for font in value.get("fonts") or []]
@@ -342,6 +358,12 @@ def build_game(gd):
             if asset and not re.match(r"^(?:data:|https?:|file:)", asset, re.I):
                 asset_path = gd / asset
                 if asset_path.is_file(): font["asset_data"] = runtime_asset(gd, asset_path)
+        if value.get("back"):
+            value["back"] = dict(value["back"])
+            back_art = value["back"].get("art")
+            if back_art and not re.match(r"^(?:data:|https?:|file:)", back_art, re.I):
+                back_art_path = gd / back_art
+                if back_art_path.is_file(): value["back"]["art_data"] = runtime_asset(gd, back_art_path)
         return value
     design_engines = load_design_engines(gd, normalize_card_design_layout)
     card_design = design_engines.get("card_design") if design_engines else None
@@ -427,6 +449,9 @@ def build_game(gd):
     tokens = []
     tk = gd / "components" / "tokens.json"
     if tk.exists(): tokens = json.loads(tk.read_text())
+    component_design = None
+    cd = gd / "templates" / "component-design.json"
+    if cd.exists(): component_design = json.loads(cd.read_text())
     playtests = load_dir(gd, "playtests")
     playtests.sort(key=lambda s: s.get("date", ""), reverse=True)
     community = {}
@@ -512,6 +537,7 @@ def build_game(gd):
         "slug_path": f"{quote(str(namespace), safe='')}/{quote(str(repo_slug), safe='')}",
         "title": game.get("title", repo_slug), "description": game.get("description", ""),
         "license": game.get("license", "?"), "version": game.get("version", ""),
+        "players": game.get("players") or {},
         "provenance": (game.get("default_provenance") or {}).get("source", "?"),
         "authors": [a.get("name") for a in (game.get("authors") or [])],
         "attribution": game.get("attribution"),
@@ -532,7 +558,7 @@ def build_game(gd):
         "decks": deck_data, "setups": setups, "history": history, "prs": prs, "releases": releases,
         "rules_html": md_to_html(rules_md), "rules_md": rules_md, "rules_assets": embed_rules_assets(gd, rules_md),
         "rulebook_pipeline": rulebook_pipeline, "rulebook_publication": rulebook_publication,
-        "rules_history": rules_history, "tokens": tokens,
+        "rules_history": rules_history, "tokens": tokens, "component_design": component_design,
         "playtests": playtests,
         "community": community, "design_html": design_md, "design_brief": design_brief,
         "prototype": prototype,
@@ -585,8 +611,13 @@ def main():
         return
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else ROOT / "hub.html"
     base = args[args.index("--games") + 1] if "--games" in args else None
+    include_fixtures = "--include-fixtures" in args
+    if include_fixtures and os.environ.get("NODE_ENV") == "production":
+        raise SystemExit("production cannot include internal test fixtures")
     jams = load_jams()
-    games = [] if "--shell" in args else [build_game(g) for g in discover_games(base)]
+    games = [] if "--shell" in args else [
+        build_game(g) for g in discover_games(base, include_fixtures)
+    ]
     data = {"games": games, "jams": jams, "people": build_people(games, jams)}
     data_js = json.dumps(data).replace("</", "<\\/")
     tpl = (ROOT / "tools" / "hub_template.html").read_text()

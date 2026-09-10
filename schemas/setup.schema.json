@@ -124,6 +124,26 @@
         }
       }
     },
+    "pieces": {
+      "type": "array",
+      "description": "Versioned placement of non-card component inventory on the table. Positions use the same board coordinate space as seats and zones.",
+      "items": {
+        "type": "object",
+        "required": ["id", "component_id", "position"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string" },
+          "component_id": { "$ref": "#/$defs/id" },
+          "quantity": { "type": "integer", "minimum": 1, "default": 1 },
+          "position": { "$ref": "#/$defs/position" },
+          "rotation": { "type": "number", "default": 0 },
+          "zone_id": { "$ref": "#/$defs/id" },
+          "seat_id": { "$ref": "#/$defs/id" },
+          "face": { "enum": ["front", "back"], "default": "front" }
+        }
+      }
+    },
     "counters": {
       "type": "array",
       "items": {

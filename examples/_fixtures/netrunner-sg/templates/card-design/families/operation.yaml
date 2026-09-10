@@ -17,7 +17,7 @@ regions:
     "y": 2.62
     w: 49.2
     h: 5.15
-    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    fill: palette-metallic
     stroke: palette-dark
     stroke_w_mm: 0.35
     clip_path: polygon(5% 0,100% 0,100% 100%,4% 100%,0 45%)
@@ -77,13 +77,13 @@ regions:
     type: richtext
     src: card.subtypes
     transform: join
-    separator: " · "
-    x: 25
-    "y": 48.55
-    w: 26.9
+    separator: " - "
+    x: 22.4
+    "y": 48.15
+    w: 29.5
     h: 4.7
     font: subtype
-    size_pt: 6.6
+    size_pt: 7.3
     min_size_pt: 4.6
     char_width_em: 0.58
     line_height: 1

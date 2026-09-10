@@ -51,9 +51,33 @@ export function inspectSvg(value) {
   for (const { pattern, label } of active) if (pattern.test(text)) fail(`SVG ${label} are not allowed`);
   return { kind: "svg" };
 }
+export function inspectIcc(value) {
+  const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+  if (buf.length < 132) fail("ICC profile is shorter than its required header and tag count");
+  const declaredSize = buf.readUInt32BE(0);
+  if (declaredSize !== buf.length) fail(`ICC profile declares ${declaredSize} bytes but upload contains ${buf.length}`);
+  if (buf.subarray(36, 40).toString("ascii") !== "acsp") fail("ICC profile signature is missing");
+  const deviceClass = buf.subarray(12, 16).toString("ascii");
+  const colorSpace = buf.subarray(16, 20).toString("ascii");
+  const pcs = buf.subarray(20, 24).toString("ascii");
+  if (deviceClass !== "prtr") fail(`printer output profile required; ICC device class is '${deviceClass.trim() || "unknown"}'`);
+  if (colorSpace !== "CMYK") fail(`CMYK output profile required; ICC data color space is '${colorSpace.trim() || "unknown"}'`);
+  if (!new Set(["XYZ ", "Lab "]).has(pcs)) fail(`ICC profile connection space '${pcs.trim() || "unknown"}' is unsupported`);
+  const majorVersion = buf[8];
+  if (majorVersion !== 2 && majorVersion !== 4) fail(`ICC major version ${majorVersion} is unsupported; use ICC v2 or v4`);
+  const tagCount = buf.readUInt32BE(128);
+  if (tagCount > 4096 || 132 + tagCount * 12 > buf.length) fail("ICC tag table is outside the uploaded file");
+  for (let index = 0; index < tagCount; index++) {
+    const row = 132 + index * 12, offset = buf.readUInt32BE(row + 4), size = buf.readUInt32BE(row + 8);
+    if (offset < 132 + tagCount * 12 || size === 0 || offset + size > buf.length)
+      fail(`ICC tag ${index + 1} points outside the uploaded file`);
+  }
+  return { kind: "icc", device_class: deviceClass, color_space: colorSpace, pcs: pcs.trim(), version: majorVersion };
+}
 export function inspectAsset(path, value) {
   const buf = Buffer.isBuffer(value) ? value : Buffer.from(value), ext = String(path).toLowerCase().split(".").pop();
   if (ext === "svg") return inspectSvg(buf);
+  if (ext === "icc" || ext === "icm") return inspectIcc(buf);
   if (ext === "png") {
     if (buf.length < 24 || !buf.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))) fail("file extension says PNG but bytes do not");
     return { kind: "png", ...dimensions(buf.readUInt32BE(16), buf.readUInt32BE(20)) };

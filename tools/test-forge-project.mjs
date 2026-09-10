@@ -5,7 +5,7 @@ import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
-  analyzeForgeProject, buildForgeProject, exportForgeProject, loadForgeProject, mergeRows, writeForgeProjectChanges,
+  analyzeForgeProject, buildForgeDataWorkingCopy, buildForgeProject, exportForgeProject, loadForgeProject, mergeRows, writeForgeProjectChanges,
 } from "./lib/forge-project.mjs";
 import { tableToCsv } from "./lib/interchange-table.mjs";
 
@@ -35,6 +35,35 @@ try {
   }
 
   const ember = join(examples, "ember"), built = buildForgeProject(ember);
+  const squibAdapter = built.manifest.adapters.find(adapter => adapter.id === "squib");
+  assert(squibAdapter && !squibAdapter.unavailable, "complete Forge project should embed its Squib working copy");
+  assert.equal(squibAdapter.root, "adapters/squib");
+  assert.equal(squibAdapter.format, "forge-squib-working-copy");
+  const builtEntries = new Map(loadForgeProject(built.archive).entries);
+  const squibFamily = squibAdapter.families[0];
+  for (const expected of [
+    "adapters/squib/manifest.json", "adapters/squib/Gemfile", "adapters/squib/Gemfile.lock",
+    `adapters/squib/families/${squibFamily}/cards.csv`, `adapters/squib/families/${squibFamily}/layout.yml`,
+    `adapters/squib/families/${squibFamily}/forge-source.json`, `adapters/squib/families/${squibFamily}/deck.rb`,
+  ]) assert(builtEntries.has(expected), `complete Forge project should contain ${expected}`);
+  const dataCopy = buildForgeDataWorkingCopy(ember, { sourceRef: "abc123" });
+  const dataCopyAgain = buildForgeDataWorkingCopy(ember, { sourceRef: "abc123" });
+  assert.equal(hash(dataCopy.archive), hash(dataCopyAgain.archive), "data working copy must be deterministic");
+  assert.equal(dataCopy.manifest.profile, "forge-tabular-working-copy");
+  assert.equal(dataCopy.manifest.source.ref, "abc123");
+  assert.deepEqual(dataCopy.manifest.files.map(file => file.source_path), ["components/cards.json", "components/printings.json", "components/tokens.json"]);
+  assert(dataCopy.manifest.tables.tokens, "games with pieces should include an editable token table");
+  assert.equal(analyzeForgeProject(ember, dataCopy.archive).files.length, 0, "clean data working copy must be a no-op");
+  const dataEntries = new Map(loadForgeProject(dataCopy.archive).entries);
+  assert.match(dataEntries.get("README.md").toString(), /Dextrous, Component Studio/);
+  dataEntries.set(dataCopy.manifest.tables.cards.editable_path, Buffer.from(
+    dataEntries.get(dataCopy.manifest.tables.cards.editable_path).toString().replace(",Kindling,", ",Kindling from Dextrous,")));
+  const dataChange = analyzeForgeProject(ember, dataEntries);
+  assert.deepEqual(dataChange.changes.cards.changed, ["kindling"], "returned editor CSV must become one semantic card change");
+  dataEntries.set(dataCopy.manifest.tables.tokens.editable_path,Buffer.from(
+    dataEntries.get(dataCopy.manifest.tables.tokens.editable_path).toString().replace("Spark,token","Spark counter,token")));
+  const dataAndTokenChange=analyzeForgeProject(ember,dataEntries);
+  assert.deepEqual(dataAndTokenChange.changes.tokens.changed,["spark_token"],"returned editor CSV must carry non-card piece changes");
   const portablePaths = new Set(built.manifest.files.map(file => file.source_path));
   for (const expected of [
     "components/tokens.json", "decks/burn-rush.json", "design/notes.md",
@@ -50,7 +79,7 @@ try {
   tokens[0].description = "Portable component edit";
   tokenEntries.set(tokenRecord.project_path, Buffer.from(`${JSON.stringify(tokens, null, 2)}\n`));
   const tokenChange = analyzeForgeProject(ember, tokenEntries);
-  assert(tokenChange.changes.files.some(file => file.path === "components/tokens.json" && file.kind === "changed-file"));
+  assert.deepEqual(tokenChange.changes.tokens.changed,["spark_token"]);
 
   const secretHitler = buildForgeProject(join(examples, "secret-hitler"));
   assert(secretHitler.manifest.files.some(file => file.source_path === "setups/standard-table.yaml"),

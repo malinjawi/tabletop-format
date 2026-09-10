@@ -14,7 +14,8 @@
       "unique": false,
       "minimum_deck_size": 40,
       "influence_limit": 15,
-      "base_link": 0
+      "base_link": 0,
+      "memory_limit": 4
     },
     "deck_limit": 1
   },
@@ -185,7 +186,8 @@
       "unique": false,
       "minimum_deck_size": 40,
       "influence_limit": 15,
-      "base_link": 0
+      "base_link": 0,
+      "memory_limit": 4
     },
     "deck_limit": 1
   },
@@ -352,7 +354,8 @@
       "unique": false,
       "minimum_deck_size": 40,
       "influence_limit": 15,
-      "base_link": 0
+      "base_link": 0,
+      "memory_limit": 4
     },
     "deck_limit": 1
   },
@@ -1397,7 +1400,8 @@
       "faction": "neutral-runner",
       "unique": false,
       "minimum_deck_size": 30,
-      "base_link": 0
+      "base_link": 0,
+      "memory_limit": 4
     },
     "deck_limit": 1
   },

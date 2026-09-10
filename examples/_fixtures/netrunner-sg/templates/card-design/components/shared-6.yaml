@@ -1,35 +1,50 @@
 name: Shared by Event, Hardware, Program, Resource
-description: 2 ordered regions reused by event, hardware, program, resource.
+description: 3 ordered regions reused by event, hardware, program, resource.
 regions:
-  - id: runner_track
-    type: pips
-    count: 5
-    glyph: ○
-    max: 5
-    direction: column
-    x: 58
-    "y": 61
-    w: 3
-    h: 16.8
-    gap_mm: 0.25
-    font: label
-    size_pt: 6.1
-    line_height: 0.78
-    color: "#68727a"
+  - id: standard_type_solo
+    type: text
+    src: card.type
+    transform: uppercase
+    x: 5.9
+    "y": 48.03
+    w: 26
+    h: 4.5
+    font: tech
+    size_pt: 7.1
+    horizontal_scale: 0.78
+    align: left
+    valign: middle
+    color: "#101820"
+    show_if: type != identity && type != ice && attributes.side == runner && !subtypes
+  - id: runner_influence_rail
+    type: rect
+    x: 59.55
+    "y": 61.55
+    w: 1.1
+    h: 15.9
+    fill: linear-gradient(90deg,#20262a 0%,#7b858a 48%,#262c30 100%)
+    stroke: "#b7bec0"
+    stroke_w_mm: 0.18
+    radius_mm: 0.55
+    shadow: 0 .18mm .28mm rgba(0,0,0,.48)
     show_if: attributes.side == runner && attributes.influence && type != identity && type != ice
   - id: runner_influence
     type: pips
-    src: card.attributes.influence
-    glyph: ●
-    max: 5
+    count: 5
+    filled_src: card.attributes.influence
+    fill_from: end
+    shape: circle
+    pip_d_mm: 1.75
+    filled_bg: radial-gradient(circle at 38% 32%,#ffffff 0%,#e4e9e8 42%,#8b969a 100%)
+    empty_bg: "#293036"
+    filled_stroke: "#ffffff"
+    empty_stroke: "#aeb6b8"
+    pip_stroke_w_mm: 0.18
+    pip_shadow: 0 .14mm .22mm rgba(0,0,0,.55)
     direction: column
-    x: 58
-    "y": 61
-    w: 3
-    h: 16.8
-    gap_mm: 0.25
-    font: label
-    size_pt: 5
-    line_height: 0.95
-    color: palette
+    x: 58.7
+    "y": 62.1
+    w: 2.8
+    h: 14.8
+    max: 5
     show_if: attributes.side == runner && attributes.influence && type != identity && type != ice

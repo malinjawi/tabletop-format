@@ -5,7 +5,8 @@ import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } f
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-import { analyzeNandeckImport, buildNandeckProject, parseNandeckScript } from "./lib/nandeck-layout.mjs";
+import { loadCardDesign } from "./lib/card-design.mjs";
+import { analyzeNandeckImport, buildNandeckProject, layoutToNandeck, parseNandeckScript } from "./lib/nandeck-layout.mjs";
 
 const root = resolve(import.meta.dirname, ".."), fixture = join(root, "examples", "_fixtures", "netrunner-sg");
 
@@ -29,6 +30,14 @@ assert.equal(noop.ok, true);
 assert.deepEqual(noop.changes, []);
 assert.deepEqual(noop.files, []);
 
+const programLayout = structuredClone(loadCardDesign(fixture).families.find(family => family.id === "program").layout);
+const styledRegion = programLayout.regions.find(region => region.id === "program_name");
+programLayout.text_styles = { card_title: { size_pt: 13, color: "#123456", uppercase: true } };
+styledRegion.text_style = "card_title";
+const flattenedStyle = layoutToNandeck(programLayout, { family: "program" });
+assert.match(flattenedStyle.script, /FONT=.*?,13,.*?,#123456/i);
+assert.match(flattenedStyle.report.warnings.join("\n"), /named text style 'card_title' is flattened.*will not silently break the shared relationship/);
+
 const edited = program.replace('TEXT=,"[name]",17.9,3.42,41,4.15', 'TEXT=,"[name]",18.4,3.42,41,4.15');
 assert.notEqual(edited, program);
 const proposed = analyzeNandeckImport(fixture, edited);
@@ -38,7 +47,9 @@ assert.deepEqual(proposed.files.map(file => file.path), ["templates/card-design/
 assert.deepEqual(proposed.affected_families, ["program"]);
 
 const event = built.entries.get("netrunner-sg-event.txt").toString();
-const sharedEdited = event.replace('TEXT=,"[cost]",4.15,4,8.75,6.8', 'TEXT=,"[cost]",5.15,4,8.75,6.8');
+const sharedCost = event.match(/TEXT=,"\[cost\]",([\d.]+),([\d.]+),([\d.]+),([\d.]+),center,[a-z]+/i);
+assert(sharedCost, "shared cost directive must be present");
+const sharedEdited = event.replace(sharedCost[0], sharedCost[0].replace(`,${sharedCost[1]},`, `,${Number(sharedCost[1])+1},`));
 const sharedProposed = analyzeNandeckImport(fixture, sharedEdited);
 assert.deepEqual(sharedProposed.affected_families, ["event", "hardware", "operation", "program", "resource"]);
 
@@ -71,4 +82,4 @@ assert.deepEqual(hostile.unsupported.map(item => item.directive), ["FOLDER"]);
 rmSync(scratch, { recursive: true });
 rmSync(applyScratch, { recursive: true });
 
-console.log("nanDECK adapter: units + 11 families + deterministic export + no-op/edit/conflict merge + validation + safe parsing passed");
+console.log("nanDECK adapter: units + 11 families + text-style flattening + deterministic export + no-op/edit/conflict merge + validation + safe parsing passed");

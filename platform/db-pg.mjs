@@ -295,17 +295,63 @@ export const q = {
   pruneSessions: (db) => db.query("DELETE FROM sessions WHERE expires_at <= $1", [Date.now()]),
 
   upsertGame: (db, g) => db.query(
-    `INSERT INTO games (slug, project_id, namespace, repo_slug, repo_id, title, license, card_count, description, topics_json, players_min, players_max, visibility, updated_at, indexed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    `INSERT INTO games (slug, project_id, namespace, repo_slug, repo_id, title, license, card_count, description, topics_json, players_min, players_max, visibility, owner_id, project_kind, updated_at, indexed_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
      ON CONFLICT (slug) DO UPDATE SET title=EXCLUDED.title, license=EXCLUDED.license,
        project_id=EXCLUDED.project_id, namespace=EXCLUDED.namespace, repo_slug=EXCLUDED.repo_slug,
        repo_id=EXCLUDED.repo_id, card_count=EXCLUDED.card_count, description=EXCLUDED.description,
        topics_json=EXCLUDED.topics_json, players_min=EXCLUDED.players_min, players_max=EXCLUDED.players_max,
        visibility=EXCLUDED.visibility,
+       project_kind=CASE WHEN games.owner_id IS NOT NULL OR EXCLUDED.owner_id IS NOT NULL
+                         THEN 'owned' ELSE EXCLUDED.project_kind END,
+       owner_id=COALESCE(games.owner_id, EXCLUDED.owner_id),
        updated_at=EXCLUDED.updated_at, indexed_at=EXCLUDED.indexed_at`,
     [g.slug, g.project_id, g.namespace, g.repo_slug, g.repo_id ?? null,
       g.title, g.license ?? null, g.card_count ?? null, g.description ?? "", g.topics_json ?? "[]",
-      g.players_min ?? null, g.players_max ?? null, g.visibility ?? "public", Date.now(), Date.now()]),
+      g.players_min ?? null, g.players_max ?? null, g.visibility ?? "public", g.owner_id ?? null,
+      !g.owner_id && g.project_kind === "public-sandbox" ? "public-sandbox" : "owned", Date.now(), Date.now()]),
+  // Keep the Forgejo repository metadata, authoritative owner, and
+  // transfer-sensitive collaborator revocation in one visible transaction.
+  reindexHostedGame: async (db, g) => {
+    const nextOwner = g.owner_id ?? null;
+    const nextKind = nextOwner == null && g.project_kind === "public-sandbox"
+      ? "public-sandbox" : "owned";
+    const now = Date.now();
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const selected = await client.query(
+        "SELECT owner_id FROM games WHERE slug = $1 FOR UPDATE", [g.slug]);
+      const before = selected.rows[0];
+      const changedOwner = !!before && (before.owner_id ?? null) !== nextOwner;
+      await client.query(
+        `INSERT INTO games (slug, project_id, namespace, repo_slug, repo_id, title, license, card_count, description, topics_json, players_min, players_max, visibility, owner_id, project_kind, updated_at, indexed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+         ON CONFLICT (slug) DO UPDATE SET title=EXCLUDED.title, license=EXCLUDED.license,
+           project_id=EXCLUDED.project_id, namespace=EXCLUDED.namespace, repo_slug=EXCLUDED.repo_slug,
+           repo_id=EXCLUDED.repo_id, card_count=EXCLUDED.card_count, description=EXCLUDED.description,
+           topics_json=EXCLUDED.topics_json, players_min=EXCLUDED.players_min, players_max=EXCLUDED.players_max,
+           visibility=EXCLUDED.visibility, owner_id=EXCLUDED.owner_id, project_kind=EXCLUDED.project_kind,
+           updated_at=EXCLUDED.updated_at, indexed_at=EXCLUDED.indexed_at`,
+        [g.slug, g.project_id, g.namespace, g.repo_slug, g.repo_id ?? null,
+          g.title, g.license ?? null, g.card_count ?? null, g.description ?? "", g.topics_json ?? "[]",
+          g.players_min ?? null, g.players_max ?? null, g.visibility ?? "public", nextOwner,
+          nextKind, now, now]);
+      if (changedOwner)
+        await client.query("DELETE FROM collaborators WHERE game_slug = $1", [g.slug]);
+      await client.query("COMMIT");
+      return { changedOwner, owner_id: nextOwner, project_kind: nextKind };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+  tombstoneGameIndex: (db, slug) => db.query(
+    `UPDATE games SET visibility = 'private', card_count = 0,
+       description = '', topics_json = '[]', players_min = NULL,
+       players_max = NULL, indexed_at = $1 WHERE slug = $2`, [Date.now(), slug]),
   listGames: (db) => all(db,
     `SELECT g.*, u.handle AS owner_handle,
             (SELECT COUNT(*)::int FROM stars s WHERE s.game_slug = g.slug) AS stars
@@ -314,7 +360,7 @@ export const q = {
   gamesOwnedBy: async (db, userId) => (await all(db,
     "SELECT slug FROM games WHERE owner_id = $1 ORDER BY updated_at DESC", [userId])).map(r => r.slug),
   setForkMeta: (db, slug, forkedFrom, ownerId) => db.query(
-    "UPDATE games SET forked_from = $1, owner_id = $2 WHERE slug = $3", [forkedFrom, ownerId, slug]),
+    "UPDATE games SET forked_from = $1, owner_id = $2, project_kind = 'owned' WHERE slug = $3", [forkedFrom, ownerId, slug]),
 
   star: (db, userId, slug) => db.query(
     `INSERT INTO stars (user_id, game_slug, created_at) VALUES ($1, $2, $3)
@@ -329,6 +375,32 @@ export const q = {
   gameBySlug: (db, slug) => one(db, "SELECT * FROM games WHERE slug = $1", [slug]),
   gameByProject: (db, namespace, repoSlug) => one(db,
     "SELECT * FROM games WHERE namespace = $1 AND repo_slug = $2", [namespace, repoSlug]),
+  gameByProjectId: (db, projectId) => one(db,
+    "SELECT * FROM games WHERE project_id = $1", [projectId]),
+  gameByRepoId: (db, repoId) => one(db,
+    "SELECT * FROM games WHERE repo_id = $1", [repoId]),
+  reconcileIndexedOwner: async (db, { slug, owner_id, project_kind = "owned" }) => {
+    const nextOwner = owner_id ?? null;
+    const nextKind = nextOwner == null && project_kind === "public-sandbox" ? "public-sandbox" : "owned";
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const selected = await client.query("SELECT owner_id FROM games WHERE slug = $1 FOR UPDATE", [slug]);
+      const before = selected.rows[0];
+      if (!before) throw new Error(`cannot reconcile owner for missing project '${slug}'`);
+      const changed = (before.owner_id ?? null) !== nextOwner;
+      await client.query("UPDATE games SET owner_id = $1, project_kind = $2 WHERE slug = $3",
+        [nextOwner, nextKind, slug]);
+      if (changed) await client.query("DELETE FROM collaborators WHERE game_slug = $1", [slug]);
+      await client.query("COMMIT");
+      return { changed, owner_id: nextOwner, project_kind: nextKind };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
 
   createPr: (db, pr) => db.query(
     `INSERT INTO prs (id, to_slug, from_slug, title, body, author_id, status, base, proposed, created_at)
@@ -407,7 +479,7 @@ export const q = {
       e.state ?? "draft", e.release_tag ?? null, e.release_sha ?? null, e.receipt_json ?? null,
       e.team_json ?? null, e.replaced_at ?? null]),
   jamEntriesFor: (db, jamId) => all(db,
-    `SELECT je.jam_id, je.game_slug, je.submitted_at, je.qualified, je.award, je.state,
+    `SELECT je.jam_id, je.game_slug, je.user_id, je.submitted_at, je.qualified, je.award, je.state,
             je.release_tag, je.release_sha, je.receipt_json, je.team_json, je.replaced_at, je.disqualified_reason,
             g.title, g.forked_from, u.handle AS author_handle
      FROM jam_entries je LEFT JOIN games g ON g.slug = je.game_slug LEFT JOIN users u ON u.id = je.user_id
@@ -441,6 +513,43 @@ export const q = {
     `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
      WHERE rl.game_slug = $1 AND rl.tag = $2`, [slug, tag]),
 
+  createPrintDelivery: (db, d) => db.query(
+    `INSERT INTO print_deliveries
+       (id, game_slug, release_tag, release_sha, artifact_name, artifact_sha256, artifact_bytes,
+        printer_name, job_reference, submission_evidence_url, submission_evidence_sha256,
+        note, created_by, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [d.id, d.game_slug, d.release_tag, d.release_sha, d.artifact_name, d.artifact_sha256,
+      d.artifact_bytes, d.printer_name, d.job_reference, d.submission_evidence_url ?? null,
+      d.submission_evidence_sha256 ?? null, d.note ?? null, d.created_by ?? null, Date.now()]),
+  printDeliveriesForRelease: (db, slug, tag) => all(db,
+    `SELECT d.*, creator.handle AS created_by_handle,
+            x.id AS decision_id, x.decision, x.reviewer_name, x.organization,
+            x.evidence_url, x.evidence_sha256, x.note AS decision_note,
+            x.created_at AS decided_at, recorder.handle AS recorded_by_handle
+     FROM print_deliveries d
+     LEFT JOIN users creator ON creator.id = d.created_by
+     LEFT JOIN print_delivery_decisions x ON x.delivery_id = d.id
+     LEFT JOIN users recorder ON recorder.id = x.recorded_by
+     WHERE d.game_slug = $1 AND d.release_tag = $2 ORDER BY d.created_at DESC`, [slug, tag]),
+  printDeliveryById: (db, id) => one(db,
+    `SELECT d.*, creator.handle AS created_by_handle,
+            x.id AS decision_id, x.decision, x.reviewer_name, x.organization,
+            x.evidence_url, x.evidence_sha256, x.note AS decision_note,
+            x.created_at AS decided_at, recorder.handle AS recorded_by_handle
+     FROM print_deliveries d
+     LEFT JOIN users creator ON creator.id = d.created_by
+     LEFT JOIN print_delivery_decisions x ON x.delivery_id = d.id
+     LEFT JOIN users recorder ON recorder.id = x.recorded_by
+     WHERE d.id = $1`, [id]),
+  decidePrintDelivery: (db, d) => db.query(
+    `INSERT INTO print_delivery_decisions
+       (id, delivery_id, decision, reviewer_name, organization, evidence_url,
+        evidence_sha256, note, recorded_by, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [d.id, d.delivery_id, d.decision, d.reviewer_name, d.organization,
+      d.evidence_url ?? null, d.evidence_sha256, d.note ?? null, d.recorded_by ?? null, Date.now()]),
+
   createExportJob: (db, job) => db.query(
     `INSERT INTO export_jobs (id, game_slug, ref, kind, exporter_version, status, progress, attempt,
        input_hash, created_by, budget_json, created_at)
@@ -451,6 +560,10 @@ export const q = {
   exportJobByKey: (db, slug, ref, kind, version) => one(db,
     "SELECT * FROM export_jobs WHERE game_slug = $1 AND ref = $2 AND kind = $3 AND exporter_version = $4",
     [slug, ref, kind, version]),
+  succeededExportJobsForRef: (db, slug, ref) => all(db,
+    `SELECT * FROM export_jobs
+     WHERE game_slug = $1 AND ref = $2 AND status = 'succeeded'
+     ORDER BY finished_at DESC`, [slug, ref]),
   retryExportJob: (db, id) => db.query(
     "UPDATE export_jobs SET status = 'queued', progress = 0, attempt = attempt + 1, output_json = NULL, error = NULL, started_at = NULL, finished_at = NULL WHERE id = $1", [id]),
   startExportJob: (db, id) => db.query(

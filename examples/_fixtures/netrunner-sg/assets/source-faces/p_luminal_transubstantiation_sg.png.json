@@ -3,7 +3,7 @@
   "kind": "forge-pnp-face-extraction",
   "printing_id": "p_luminal_transubstantiation_sg",
   "card_id": "luminal_transubstantiation",
-  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "source_pdf": "system-gateway-official-1x.pdf",
   "pdf_page": 5,
   "slot": {
     "row": 2,

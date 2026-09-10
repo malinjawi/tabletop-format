@@ -13,7 +13,7 @@ notice: "Private playtest proxy using an altered NSG source face. Do not publish
 baseline_data: templates/source-baseline-data.json
 source_ref: dea1633a4145435b0ca38c628dac0c88716bb6ea
 nonvisual_card_fields: [deck_limit, keywords]
-frame_defining_card_fields: [type, attributes.side, attributes.faction, attributes.unique]
+frame_defining_card_fields: [type, attributes.side, attributes.faction, attributes.unique, attributes.memory_limit]
 
 # Derived from the 300 dpi crop axes in NSG's official PnP PDF: 744 x 1030 px.
 card: { w_mm: 63.0, h_mm: 87.21, radius_mm: 2.5 }

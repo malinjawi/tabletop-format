@@ -10,21 +10,25 @@ card:
   w_mm: 63.0
   h_mm: 87.21
   bleed_mm: 3.175
-  radius_mm: 2.5
+  radius_mm: 0
   bg: "palette-deep"
 
 fonts:
   # NSG/FFG production references use Trajan Pro for card names and Minion Pro
   # for rules. Those commercial fonts are not redistributable through Forge.
   # Cinzel and Source Serif 4 are reproducible OFL substitutes with matching
-  # classical-cap and readable oldstyle-serif roles; Orbitron supplies the
-  # squared Bank Gothic-like numerals used by the physical stat hardware.
+  # classical-cap and readable oldstyle-serif roles. Orbitron supplies the
+  # squared primary type labels, while Lato supplies the mixed-case subtype
+  # text used by the NSG-era frame. Licensed Bank Gothic remains an optional
+  # local source for vertical ICE and stat typography.
   - { id: title, family: "Forge Cinzel", weight: 600, asset: "assets/source-fonts/Cinzel-Variable.ttf" }
-  - { id: tech, family: "Forge Gill Sans Ultra Bold", weight: 900, asset: "assets/source-fonts/Orbitron-Black.ttf", local_asset: "assets/source-fonts/GillSansUltraBold.local.ttf" }
-  - { id: subtype, family: "Forge Bank Gothic Light", weight: 300, asset: "assets/source-fonts/Orbitron-Variable.ttf", local_asset: "assets/source-fonts/BankGothic-Light.local.ttf" }
+  - { id: tech, family: "Forge Orbitron Black", weight: 900, asset: "assets/source-fonts/Orbitron-Black.ttf" }
+  - { id: subtype, family: "Forge Lato", weight: 400, asset: "assets/source-fonts/Lato-Regular.ttf" }
+  - { id: ice_type, family: "Forge Bank Gothic Light", weight: 300, asset: "assets/source-fonts/Orbitron-Variable.ttf", local_asset: "assets/source-fonts/BankGothic-Light.local.ttf" }
   - { id: stat, family: "Forge Bank Gothic", weight: 500, asset: "assets/source-fonts/Orbitron-Black.ttf", local_asset: "assets/source-fonts/BankGothic-Medium.local.ttf" }
   - { id: label, family: "Forge Lato", weight: 700, asset: "assets/source-fonts/Lato-Bold.ttf" }
   - { id: body, family: "Forge Source Serif 4", weight: 400, asset: "assets/source-fonts/SourceSerif4-Variable.ttf" }
+  - { id: body_strong, family: "Forge Source Serif 4", weight: 800, asset: "assets/source-fonts/SourceSerif4-Variable.ttf" }
   - { id: flavor, family: "Forge Source Serif 4", weight: 400, style: italic, asset: "assets/source-fonts/SourceSerif4-Italic-Variable.ttf" }
 
 palette:
@@ -43,63 +47,125 @@ palette:
     neutral-corp: "#687078"
     neutral-runner: "#7d8389"
   default: "#7d8389"
+  # Surface motifs are reusable design tokens, selected by the same semantic
+  # field as the faction color. They are independently authored geometry—not
+  # pixels copied from the source faces—and are shared by every card family.
+  motifs:
+    anarch:
+      shell: >-
+        repeating-radial-gradient(circle at 1% 72%,transparent 0 4.6mm,rgba(255,255,255,.22) 4.7mm 4.96mm,transparent 5.08mm 8.2mm),repeating-conic-gradient(from -8deg at 1% 72%,rgba(255,255,255,.18) 0deg .68deg,transparent .84deg 16deg),linear-gradient(125deg,transparent 0 61%,rgba(255,255,255,.12) 61.2% 61.8%,transparent 62% 100%)
+      panel: >-
+        repeating-radial-gradient(circle at 0% 68%,transparent 0 4.1mm,color-mix(in srgb,{palette} 34%,transparent) 4.2mm 4.46mm,transparent 4.58mm 7.8mm),repeating-conic-gradient(from -7deg at 0% 68%,color-mix(in srgb,{palette} 28%,transparent) 0deg .7deg,transparent .9deg 18deg)
+    criminal:
+      shell: >-
+        radial-gradient(circle,rgba(255,255,255,.3) 0 .25mm,transparent .31mm) 1.2mm 1.2mm/7mm 7mm,repeating-linear-gradient(0deg,transparent 0 5.45mm,rgba(255,255,255,.18) 5.52mm 5.74mm,transparent 5.82mm 10.9mm),repeating-linear-gradient(90deg,transparent 0 6.85mm,rgba(255,255,255,.14) 6.92mm 7.12mm,transparent 7.2mm 13.8mm)
+      panel: >-
+        radial-gradient(circle,color-mix(in srgb,{palette} 40%,transparent) 0 .24mm,transparent .3mm) 0 0/7mm 7mm,repeating-linear-gradient(0deg,transparent 0 5.4mm,color-mix(in srgb,{palette} 25%,transparent) 5.48mm 5.7mm,transparent 5.78mm 10.8mm),repeating-linear-gradient(90deg,transparent 0 6.8mm,color-mix(in srgb,{palette} 22%,transparent) 6.88mm 7.08mm,transparent 7.16mm 13.6mm)
+    shaper:
+      shell: >-
+        repeating-radial-gradient(circle at 0% 70%,transparent 0 3.6mm,rgba(255,255,255,.22) 3.72mm 3.98mm,transparent 4.1mm 7.2mm),repeating-linear-gradient(45deg,transparent 0 5.6mm,rgba(255,255,255,.16) 5.68mm 5.92mm,transparent 6mm 11.2mm),radial-gradient(circle at 77% 15%,rgba(255,255,255,.18) 0 .3mm,transparent .36mm) 0 0/6mm 6mm
+      panel: >-
+        repeating-radial-gradient(circle at 0% 66%,transparent 0 3.5mm,color-mix(in srgb,{palette} 32%,transparent) 3.62mm 3.9mm,transparent 4.04mm 7mm),repeating-linear-gradient(45deg,transparent 0 5.5mm,color-mix(in srgb,{palette} 24%,transparent) 5.58mm 5.82mm,transparent 5.9mm 11mm)
+    haas-bioroid:
+      shell: >-
+        repeating-linear-gradient(60deg,transparent 0 5mm,rgba(255,255,255,.2) 5.08mm 5.32mm,transparent 5.4mm 10mm),repeating-linear-gradient(-60deg,transparent 0 5mm,rgba(255,255,255,.16) 5.08mm 5.32mm,transparent 5.4mm 10mm),repeating-linear-gradient(0deg,transparent 0 8.6mm,rgba(255,255,255,.13) 8.68mm 8.9mm,transparent 8.98mm 17.2mm)
+      panel: >-
+        repeating-linear-gradient(60deg,transparent 0 5mm,color-mix(in srgb,{palette} 27%,transparent) 5.08mm 5.3mm,transparent 5.38mm 10mm),repeating-linear-gradient(-60deg,transparent 0 5mm,color-mix(in srgb,{palette} 22%,transparent) 5.08mm 5.3mm,transparent 5.38mm 10mm),repeating-linear-gradient(0deg,transparent 0 8.6mm,color-mix(in srgb,{palette} 18%,transparent) 8.68mm 8.88mm,transparent 8.96mm 17.2mm)
+    jinteki:
+      shell: >-
+        repeating-radial-gradient(ellipse at 100% 69%,transparent 0 4.2mm,rgba(255,255,255,.2) 4.34mm 4.62mm,transparent 4.78mm 8.4mm),repeating-linear-gradient(74deg,transparent 0 7.2mm,rgba(255,255,255,.16) 7.3mm 7.55mm,transparent 7.65mm 14.4mm),linear-gradient(22deg,transparent 0 69%,rgba(255,255,255,.13) 69.2% 69.8%,transparent 70% 100%)
+      panel: >-
+        repeating-radial-gradient(ellipse at 100% 67%,transparent 0 4mm,color-mix(in srgb,{palette} 30%,transparent) 4.14mm 4.42mm,transparent 4.56mm 8mm),repeating-linear-gradient(74deg,transparent 0 7mm,color-mix(in srgb,{palette} 21%,transparent) 7.1mm 7.34mm,transparent 7.44mm 14mm)
+    nbn:
+      shell: >-
+        repeating-radial-gradient(circle at 74% 72%,transparent 0 3.8mm,rgba(255,255,255,.24) 3.92mm 4.2mm,transparent 4.34mm 7.6mm),repeating-linear-gradient(90deg,transparent 0 8mm,rgba(255,255,255,.16) 8.08mm 8.42mm,transparent 8.5mm 16mm),linear-gradient(0deg,transparent 0 20%,rgba(255,255,255,.12) 20.2% 22%,transparent 22.2% 100%)
+      panel: >-
+        repeating-radial-gradient(circle at 72% 72%,transparent 0 3.8mm,color-mix(in srgb,{palette} 32%,transparent) 3.92mm 4.2mm,transparent 4.34mm 7.6mm),repeating-linear-gradient(90deg,transparent 0 8mm,color-mix(in srgb,{palette} 22%,transparent) 8.08mm 8.38mm,transparent 8.46mm 16mm)
+    weyland-consortium:
+      shell: >-
+        repeating-linear-gradient(135deg,transparent 0 5.1mm,rgba(255,255,255,.22) 5.2mm 5.55mm,transparent 5.66mm 10.2mm),repeating-linear-gradient(45deg,transparent 0 10.2mm,rgba(255,255,255,.13) 10.3mm 10.6mm,transparent 10.7mm 20.4mm),linear-gradient(90deg,rgba(255,255,255,.1) 0 1.1mm,transparent 1.15mm 100%)
+      panel: >-
+        repeating-linear-gradient(135deg,transparent 0 5mm,color-mix(in srgb,{palette} 30%,transparent) 5.1mm 5.46mm,transparent 5.56mm 10mm),repeating-linear-gradient(45deg,transparent 0 10mm,color-mix(in srgb,{palette} 18%,transparent) 10.1mm 10.4mm,transparent 10.5mm 20mm)
+    neutral-corp:
+      shell: >-
+        repeating-linear-gradient(135deg,transparent 0 6mm,rgba(255,255,255,.2) 6.1mm 6.48mm,transparent 6.58mm 12mm),linear-gradient(90deg,rgba(255,255,255,.12),transparent 28%,rgba(0,0,0,.18) 100%)
+      panel: >-
+        repeating-linear-gradient(135deg,transparent 0 6mm,color-mix(in srgb,{palette} 25%,transparent) 6.1mm 6.42mm,transparent 6.52mm 12mm)
+    neutral-runner:
+      shell: >-
+        repeating-linear-gradient(135deg,transparent 0 6mm,rgba(255,255,255,.2) 6.1mm 6.48mm,transparent 6.58mm 12mm),linear-gradient(90deg,rgba(255,255,255,.12),transparent 28%,rgba(0,0,0,.18) 100%)
+      panel: >-
+        repeating-linear-gradient(135deg,transparent 0 6mm,color-mix(in srgb,{palette} 25%,transparent) 6.1mm 6.42mm,transparent 6.52mm 12mm)
+  default_motif:
+    shell: >-
+      repeating-linear-gradient(135deg,transparent 0 6mm,rgba(255,255,255,.18) 6.1mm 6.42mm,transparent 6.52mm 12mm)
+    panel: >-
+      repeating-linear-gradient(135deg,transparent 0 6mm,color-mix(in srgb,{palette} 22%,transparent) 6.1mm 6.4mm,transparent 6.5mm 12mm)
 
 regions:
   # ================= SHARED FACTION SHELL =================
-  - { id: shell, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "palette-gradient", radius_mm: 2.5 }
-  - { id: shell_mesh, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "repeating-linear-gradient(60deg,transparent 0 4.4mm,rgba(255,255,255,.13) 4.45mm 4.7mm)", opacity: 0.32, radius_mm: 2.5 }
-  - { id: shell_scanlines, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 .12mm,transparent .12mm .7mm)", opacity: 0.28, radius_mm: 2.5 }
-  - { id: top_signal, type: rect, x: 0, y: 0, w: 63, h: 1.65, fill: "palette" }
-  - { id: left_signal, type: rect, x: 0, y: 0, w: 1.2, h: 87.21, fill: "palette-light", opacity: 0.82 }
-  - { id: right_signal, type: rect, x: 62.05, y: 0, w: 0.95, h: 87.21, fill: "palette", opacity: 0.7 }
+  - { id: shell, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "palette-gradient", radius_mm: 0 }
+  - { id: shell_faction_motif, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "palette-shell-motif", opacity: 0.88, radius_mm: 0 }
+  - { id: shell_mesh, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "repeating-linear-gradient(60deg,transparent 0 4.4mm,rgba(255,255,255,.13) 4.45mm 4.7mm)", opacity: 0.12, radius_mm: 0 }
+  - { id: shell_scanlines, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 .12mm,transparent .12mm .7mm)", opacity: 0.18, radius_mm: 0 }
+  - { id: shell_outer_keyline, type: rect, x: 0.22, y: 0.22, w: 62.56, h: 86.77, fill: "none", stroke: "palette-dark", stroke_w_mm: 0.42, opacity: 0.92, radius_mm: 0 }
+  - { id: shell_inner_keyline, type: rect, x: 0.82, y: 0.74, w: 61.36, h: 85.73, fill: "none", stroke: "palette-light", stroke_w_mm: 0.24, opacity: 0.74, radius_mm: 0 }
+  - { id: top_signal, type: rect, x: 0, y: 0, w: 63, h: 1.65, fill: "palette-gradient", opacity: 0.96 }
+  - { id: top_signal_faction_motif, type: rect, x: 0, y: 0, w: 63, h: 1.65, fill: "palette-shell-motif", opacity: 0.72 }
+  - { id: left_signal, type: rect, x: 0, y: 0, w: 1.2, h: 87.21, fill: "palette-gradient", opacity: 0.78 }
+  - { id: left_signal_faction_motif, type: rect, x: 0, y: 0, w: 1.2, h: 87.21, fill: "palette-shell-motif", opacity: 0.58 }
+  - { id: right_signal, type: rect, x: 62.05, y: 0, w: 0.95, h: 87.21, fill: "palette-gradient", opacity: 0.76, show_if: "type != ice" }
+  - { id: right_signal_faction_motif, type: rect, x: 62.05, y: 0, w: 0.95, h: 87.21, fill: "palette-shell-motif", opacity: 0.56, show_if: "type != ice" }
+  - { id: ice_info_rail, type: rect, x: 58.4, y: 9.75, w: 4.6, h: 80.64, fill: "palette-gradient", show_if: "type == ice" }
+  - { id: ice_info_rail_faction_motif, type: rect, x: 58.4, y: 9.75, w: 4.6, h: 80.64, fill: "palette-shell-motif", opacity: 0.62, show_if: "type == ice" }
 
   # ================= STANDARD PORTRAIT FAMILIES =================
   # Title rails are family hardware, not a universal banner. Their positions
   # are measured from the corresponding System Gateway source faces.
   - { id: event_header_shadow, type: rect, x: 0.0, y: 1.72, w: 61.7, h: 7.15, fill: "#06090d", radius_mm: 2.3, shadow: "0 .7mm 1.25mm rgba(0,0,0,.42)", show_if: "type == event" }
-  - { id: event_header, type: rect, x: 0.0, y: 1.22, w: 61.1, h: 6.55, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, radius_mm: 2.1, show_if: "type == event" }
+  - { id: event_header, type: rect, x: 0.0, y: 1.22, w: 61.1, h: 6.55, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, radius_mm: 2.1, show_if: "type == event" }
   - { id: event_unique, type: text, text: "◆", x: 19.2, y: 2.35, w: 2.8, h: 3.9, font: title, size_pt: 5.2, align: center, valign: middle, color: "#111820", show_if: "type == event && attributes.unique" }
   - { id: event_name, type: richtext, src: "card.name", x: 17.5, y: 2.0, w: 40.8, h: 4.9, font: title, size_pt: 8.9, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == event && !attributes.unique" }
   - { id: event_name_unique, type: richtext, src: "card.name", x: 22.3, y: 2.0, w: 36.0, h: 4.9, font: title, size_pt: 8.9, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == event && attributes.unique" }
 
   - { id: resource_header_shadow, type: rect, x: 14.8, y: 2.52, w: 48.2, h: 5.25, fill: "#06090d", clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", shadow: "0 .55mm .9mm rgba(0,0,0,.42)", show_if: "type == resource" }
-  - { id: resource_header, type: rect, x: 14.55, y: 2.16, w: 48.45, h: 4.75, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", show_if: "type == resource" }
+  - { id: resource_header, type: rect, x: 14.55, y: 2.16, w: 48.45, h: 4.75, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", show_if: "type == resource" }
   - { id: resource_unique, type: text, text: "◆", x: 19.4, y: 2.6, w: 2.6, h: 3.7, font: title, size_pt: 5.1, align: center, valign: middle, color: "#111820", show_if: "type == resource && attributes.unique" }
   - { id: resource_name, type: richtext, src: "card.name", x: 18.2, y: 2.38, w: 42.0, h: 3.95, font: title, size_pt: 8.7, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == resource && !attributes.unique" }
   - { id: resource_name_unique, type: richtext, src: "card.name", x: 22.4, y: 2.38, w: 37.8, h: 3.95, font: title, size_pt: 8.7, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == resource && attributes.unique" }
 
   - { id: program_header_shadow, type: rect, x: 0.0, y: 3.48, w: 62.4, h: 5.9, fill: "#06090d", radius_mm: 1.9, shadow: "0 .55mm .95mm rgba(0,0,0,.42)", show_if: "type == program" }
-  - { id: program_header, type: rect, x: 0.0, y: 3.12, w: 62.0, h: 5.4, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, radius_mm: 1.7, show_if: "type == program" }
+  - { id: program_header, type: rect, x: 0.0, y: 3.12, w: 62.0, h: 5.4, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, radius_mm: 1.7, show_if: "type == program" }
   - { id: program_unique, type: text, text: "◆", x: 19.3, y: 3.7, w: 2.7, h: 3.8, font: title, size_pt: 5.1, align: center, valign: middle, color: "#111820", show_if: "type == program && attributes.unique" }
   - { id: program_name, type: richtext, src: "card.name", x: 17.9, y: 3.42, w: 41.0, h: 4.15, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == program && !attributes.unique" }
   - { id: program_name_unique, type: richtext, src: "card.name", x: 22.3, y: 3.42, w: 36.6, h: 4.15, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == program && attributes.unique" }
 
   - { id: hardware_header_shadow, type: rect, x: 15.4, y: 3.68, w: 47.6, h: 5.25, fill: "#06090d", clip_path: "polygon(6% 0,100% 0,100% 100%,5% 100%,0 50%)", shadow: "0 .55mm .9mm rgba(0,0,0,.42)", show_if: "type == hardware" }
-  - { id: hardware_header, type: rect, x: 15.6, y: 3.35, w: 47.4, h: 4.65, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(6% 0,100% 0,100% 100%,5% 100%,0 50%)", show_if: "type == hardware" }
+  - { id: hardware_header, type: rect, x: 15.6, y: 3.35, w: 47.4, h: 4.65, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(6% 0,100% 0,100% 100%,5% 100%,0 50%)", show_if: "type == hardware" }
   - { id: hardware_unique, type: text, text: "◆", x: 18.7, y: 3.8, w: 2.7, h: 3.7, font: title, size_pt: 5.1, align: center, valign: middle, color: "#111820", show_if: "type == hardware && attributes.unique" }
   - { id: hardware_name, type: richtext, src: "card.name", x: 20.2, y: 3.55, w: 40.2, h: 3.95, font: title, size_pt: 8.7, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == hardware && !attributes.unique" }
   - { id: hardware_name_unique, type: richtext, src: "card.name", x: 21.8, y: 3.55, w: 38.6, h: 3.95, font: title, size_pt: 8.7, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == hardware && attributes.unique" }
 
   - { id: operation_header_shadow, type: rect, x: 13.9, y: 3.0, w: 49.1, h: 5.65, fill: "#06090d", clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 45%)", shadow: "0 .55mm .9mm rgba(0,0,0,.42)", show_if: "type == operation" }
-  - { id: operation_header, type: rect, x: 13.8, y: 2.62, w: 49.2, h: 5.15, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 45%)", show_if: "type == operation" }
+  - { id: operation_header, type: rect, x: 13.8, y: 2.62, w: 49.2, h: 5.15, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 45%)", show_if: "type == operation" }
   - { id: operation_unique, type: text, text: "◆", x: 17.2, y: 3.18, w: 2.7, h: 3.8, font: title, size_pt: 5.1, align: center, valign: middle, color: "#111820", show_if: "type == operation && attributes.unique" }
   - { id: operation_name, type: richtext, src: "card.name", x: 18.5, y: 2.98, w: 41.7, h: 4.15, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == operation && !attributes.unique" }
   - { id: operation_name_unique, type: richtext, src: "card.name", x: 20.2, y: 2.98, w: 40.0, h: 4.15, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == operation && attributes.unique" }
 
   - { id: asset_header_shadow, type: rect, x: 14.8, y: 2.84, w: 48.2, h: 5.15, fill: "#06090d", clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", shadow: "0 .55mm .9mm rgba(0,0,0,.42)", show_if: "type == asset" }
-  - { id: asset_header, type: rect, x: 14.7, y: 2.48, w: 48.3, h: 4.65, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", show_if: "type == asset" }
+  - { id: asset_header, type: rect, x: 14.7, y: 2.48, w: 48.3, h: 4.65, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", show_if: "type == asset" }
   - { id: asset_unique, type: text, text: "◆", x: 19.5, y: 2.88, w: 2.7, h: 3.8, font: title, size_pt: 5.1, align: center, valign: middle, color: "#111820", show_if: "type == asset && attributes.unique" }
   - { id: asset_name, type: richtext, src: "card.name", x: 18.3, y: 2.68, w: 42.0, h: 4.0, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == asset && !attributes.unique" }
   - { id: asset_name_unique, type: richtext, src: "card.name", x: 22.4, y: 2.68, w: 37.9, h: 4.0, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == asset && attributes.unique" }
 
   - { id: upgrade_header_shadow, type: rect, x: 14.7, y: 3.5, w: 48.3, h: 5.6, fill: "#06090d", clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", shadow: "0 .55mm .9mm rgba(0,0,0,.42)", show_if: "type == upgrade" }
-  - { id: upgrade_header, type: rect, x: 14.6, y: 3.14, w: 48.4, h: 5.05, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", show_if: "type == upgrade" }
+  - { id: upgrade_header, type: rect, x: 14.6, y: 3.14, w: 48.4, h: 5.05, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(5% 0,100% 0,100% 100%,4% 100%,0 48%)", show_if: "type == upgrade" }
   - { id: upgrade_unique, type: text, text: "◆", x: 18.7, y: 3.62, w: 2.7, h: 3.8, font: title, size_pt: 5.1, align: center, valign: middle, color: "#111820", show_if: "type == upgrade && attributes.unique" }
   - { id: upgrade_name, type: richtext, src: "card.name", x: 17.5, y: 3.38, w: 42.8, h: 4.15, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == upgrade && !attributes.unique" }
   - { id: upgrade_name_unique, type: richtext, src: "card.name", x: 21.2, y: 3.38, w: 39.1, h: 4.15, font: title, size_pt: 8.8, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == upgrade && attributes.unique" }
 
   - { id: agenda_header_shadow, type: rect, x: 0.0, y: 2.02, w: 50.8, h: 6.15, fill: "#06090d", clip_path: "polygon(0 0,100% 0,96% 100%,0 100%)", shadow: "0 .55mm .95mm rgba(0,0,0,.42)", show_if: "type == agenda" }
-  - { id: agenda_header, type: rect, x: 0.0, y: 1.66, w: 50.5, h: 5.7, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(0 0,100% 0,96% 100%,0 100%)", show_if: "type == agenda" }
+  - { id: agenda_header, type: rect, x: 0.0, y: 1.66, w: 50.5, h: 5.7, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.35, clip_path: "polygon(0 0,100% 0,96% 100%,0 100%)", show_if: "type == agenda" }
   - { id: agenda_unique, type: text, text: "◆", x: 3.0, y: 2.48, w: 2.8, h: 3.9, font: title, size_pt: 5.2, align: center, valign: middle, color: "#111820", show_if: "type == agenda && attributes.unique" }
   - { id: agenda_name, type: richtext, src: "card.name", x: 2.6, y: 2.25, w: 45.4, h: 4.2, font: title, size_pt: 8.7, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == agenda && !attributes.unique" }
   - { id: agenda_name_unique, type: richtext, src: "card.name", x: 6.1, y: 2.25, w: 41.9, h: 4.2, font: title, size_pt: 8.7, min_size_pt: 4.4, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.045, align: left, valign: middle, color: "#111820", no_wrap: true, autoshrink: true, show_if: "type == agenda && attributes.unique" }
@@ -115,17 +181,8 @@ regions:
   # credit dial.  Its yellow metal is universal production hardware, not a
   # faction tint. Assets and upgrades use the smaller angular rez-cost plate.
   - { id: credit_dial_shadow, type: badge, text: "", x: 2.65, y: 2.05, d: 11.75, bg: "#07090b", color: "#ffffff", shadow: "0 .75mm 1.2mm rgba(0,0,0,.56)", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_dial_rim, type: badge, text: "", x: 2.85, y: 2.25, d: 11.35, bg: "linear-gradient(145deg,#f7df58 0%,#d4bb36 43%,#8c7a20 78%,#62571b 100%)", color: "#ffffff", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_dial_face, type: badge, text: "", x: 3.90, y: 3.20, d: 9.25, bg: "repeating-linear-gradient(0deg,rgba(255,255,255,.055) 0 .12mm,transparent .12mm .48mm),radial-gradient(circle at 50% 43%,#343b3e 0%,#161b1e 55%,#07090b 100%)", color: "#ffffff", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_dial_inner, type: badge, text: "", x: 4.15, y: 3.45, d: 8.75, bg: "radial-gradient(circle,transparent 0 68%,rgba(248,249,246,.96) 69% 71%,rgba(102,111,117,.78) 72%,transparent 74%)", color: "#ffffff", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_dial_number, type: text, src: "card.attributes.cost", x: 4.15, y: 4.0, w: 8.75, h: 6.8, font: stat, size_pt: 14.7, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .18mm .18mm #000,0 0 .35mm #000", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_l1, type: rect, x: 4.75, y: 10.75, w: 0.92, h: 0.18, fill: "#eef1ef", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_l2, type: rect, x: 5.95, y: 11.35, w: 0.74, h: 0.18, fill: "#eef1ef", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_dot_l, type: badge, text: "", x: 7.30, y: 11.62, d: 0.38, bg: "#eef1ef", color: "#ffffff", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_dot_c, type: badge, text: "", x: 8.15, y: 11.64, d: 0.52, bg: "#eef1ef", color: "#ffffff", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_dot_r, type: badge, text: "", x: 9.14, y: 11.62, d: 0.38, bg: "#eef1ef", color: "#ffffff", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_r2, type: rect, x: 10.16, y: 11.35, w: 0.74, h: 0.18, fill: "#eef1ef", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
-  - { id: credit_tick_r1, type: rect, x: 11.18, y: 10.75, w: 0.92, h: 0.18, fill: "#eef1ef", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
+  - { id: credit_dial_hardware, type: richtext, text: "[runner_credit_dial]", x: 1.525, y: 0.925, w: 14.0, h: 14.0, symbols: true, symbol_style: plain, icon_only: true, show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
+  - { id: credit_dial_number, type: text, src: "card.attributes.cost", x: 4.22, y: 4.0, w: 8.61, h: 6.55, font: stat, size_pt: 14.5, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .18mm .18mm #000,0 0 .35mm #000", show_if: "attributes.cost && type == event || attributes.cost && type == operation || attributes.cost && type == program || attributes.cost && type == hardware || attributes.cost && type == resource" }
 
   # Corp installed cards use a compact black rez-cost socket. Asset and
   # upgrade rails sit at different heights in the physical family templates.
@@ -133,46 +190,48 @@ regions:
   - { id: asset_cost_shadow, type: badge, text: "", x: 3.25, y: 2.52, d: 7.05, bg: "#07090b", color: "#ffffff", shadow: "0 .48mm .78mm rgba(0,0,0,.58)", show_if: "type == asset && attributes.cost" }
   - { id: asset_cost_edge, type: badge, text: "", x: 3.48, y: 2.75, d: 6.59, bg: "palette-dark", color: "#ffffff", show_if: "type == asset && attributes.cost" }
   - { id: asset_cost_face, type: badge, text: "", x: 3.77, y: 3.04, d: 6.01, bg: "radial-gradient(circle at 50% 42%,#2b3134,#090b0d 72%)", color: "#ffffff", show_if: "type == asset && attributes.cost" }
-  - { id: asset_cost_number, type: text, src: "card.attributes.cost", x: 3.77, y: 3.07, w: 6.01, h: 5.95, font: stat, size_pt: 11.4, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .14mm .16mm #000,0 0 .28mm #000", show_if: "type == asset && attributes.cost" }
+  - { id: asset_cost_number, type: text, src: "card.attributes.cost", x: 3.77, y: 3.07, w: 6.01, h: 5.95, font: stat, size_pt: 13.0, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .14mm .16mm #000,0 0 .28mm #000", show_if: "type == asset && attributes.cost" }
 
   - { id: upgrade_rez_cost_glyph, type: richtext, text: "[rez_cost]", x: 1.65, y: 1.40, w: 10.40, h: 10.40, symbols: true, symbol_style: plain, icon_only: true, filter: "drop-shadow(0 .35mm .45mm rgba(0,0,0,.5))", show_if: "type == upgrade && attributes.cost" }
   - { id: upgrade_cost_shadow, type: badge, text: "", x: 3.45, y: 3.20, d: 6.85, bg: "#07090b", color: "#ffffff", shadow: "0 .48mm .78mm rgba(0,0,0,.58)", show_if: "type == upgrade && attributes.cost" }
   - { id: upgrade_cost_edge, type: badge, text: "", x: 3.68, y: 3.43, d: 6.39, bg: "palette-dark", color: "#ffffff", show_if: "type == upgrade && attributes.cost" }
   - { id: upgrade_cost_face, type: badge, text: "", x: 3.97, y: 3.72, d: 5.81, bg: "radial-gradient(circle at 50% 42%,#2b3134,#090b0d 72%)", color: "#ffffff", show_if: "type == upgrade && attributes.cost" }
-  - { id: upgrade_cost_number, type: text, src: "card.attributes.cost", x: 3.97, y: 3.75, w: 5.81, h: 5.75, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .14mm .16mm #000,0 0 .28mm #000", show_if: "type == upgrade && attributes.cost" }
+  - { id: upgrade_cost_number, type: text, src: "card.attributes.cost", x: 3.97, y: 3.75, w: 5.81, h: 5.75, font: stat, size_pt: 12.8, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .14mm .16mm #000,0 0 .28mm #000", show_if: "type == upgrade && attributes.cost" }
 
   - { id: standard_panel_shadow, type: rect, x: 3.0, y: 48.4, w: 58.4, h: 34.2, fill: "#05080b", radius_mm: 1.0, shadow: "0 -1mm 1.5mm rgba(0,0,0,.38)", show_if: "type != identity && type != ice" }
-  - { id: standard_panel, type: rect, x: 3.7, y: 47.7, w: 58.2, h: 34.3, fill: "linear-gradient(145deg,#fafbf8,#edf1ed)", stroke: "palette-dark", stroke_w_mm: 0.45, radius_mm: 0.9, show_if: "type != identity && type != ice" }
+  - { id: standard_panel, type: rect, x: 3.7, y: 47.7, w: 58.2, h: 34.3, fill: "palette-paper", stroke: "palette-dark", stroke_w_mm: 0.45, radius_mm: 0.9, show_if: "type != identity && type != ice" }
+  - { id: standard_panel_faction_motif, type: rect, x: 3.95, y: 47.95, w: 57.7, h: 33.8, fill: "palette-panel-motif", opacity: 0.72, radius_mm: 0.66, show_if: "type != identity && type != ice" }
   - { id: standard_panel_trace, type: rect, x: 5.5, y: 53.7, w: 50.4, h: 0.62, fill: "palette", clip_path: "polygon(0 0,47% 0,49% 100%,100% 100%,100% 100%,0 100%)", show_if: "type != identity && type != ice" }
   - { id: standard_panel_watermark, type: richtext, src: "card.attributes.faction", map: { anarch: "[faction_anarch]", criminal: "[faction_criminal]", shaper: "[faction_shaper]", haas-bioroid: "[faction_hb]", jinteki: "[faction_jinteki]", nbn: "[faction_nbn]", weyland-consortium: "[faction_weyland]" }, x: 39.0, y: 62.0, w: 14.0, h: 14.0, symbols: true, symbol_style: plain, icon_only: true, opacity: 0.065, filter: "grayscale(1) contrast(1.5)", show_if: "attributes.faction == anarch || attributes.faction == criminal || attributes.faction == shaper || attributes.faction == haas-bioroid || attributes.faction == jinteki || attributes.faction == nbn || attributes.faction == weyland-consortium" }
-  - { id: standard_type, type: text, src: "card.type", transform: uppercase, suffix: ":", x: 7.4, y: 48.7, w: 18.5, h: 4.5, font: tech, size_pt: 6.1, align: left, valign: middle, color: "#101820", show_if: "type != identity && type != ice" }
+  - { id: standard_type, type: text, src: "card.type", transform: uppercase, suffix: ":", x: 5.9, y: 48.03, w: 26.0, h: 4.5, font: tech, size_pt: 7.1, horizontal_scale: 0.78, align: left, valign: middle, color: "#101820", show_if: "type != identity && type != ice && attributes.side == runner && subtypes" }
+  - { id: standard_type_solo, type: text, src: "card.type", transform: uppercase, x: 5.9, y: 48.03, w: 26.0, h: 4.5, font: tech, size_pt: 7.1, horizontal_scale: 0.78, align: left, valign: middle, color: "#101820", show_if: "type != identity && type != ice && attributes.side == runner && !subtypes" }
+  - { id: corp_standard_type, type: text, src: "card.type", transform: uppercase, suffix: ":", x: 7.8, y: 48.03, w: 26.0, h: 4.5, font: tech, size_pt: 7.1, horizontal_scale: 0.78, align: left, valign: middle, color: "#101820", show_if: "type != identity && type != ice && attributes.side == corp && subtypes" }
+  - { id: corp_standard_type_solo, type: text, src: "card.type", transform: uppercase, x: 7.8, y: 48.03, w: 26.0, h: 4.5, font: tech, size_pt: 7.1, horizontal_scale: 0.78, align: left, valign: middle, color: "#101820", show_if: "type != identity && type != ice && attributes.side == corp && !subtypes" }
   # The production typeface is proportional enough that a universal subtype
   # x-position leaves short labels (ASSET, EVENT) with a conspicuous gap.
   # Each family starts its keywords immediately after its own type label.
-  - { id: event_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 17.9, y: 48.55, w: 34.0, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == event" }
-  - { id: resource_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 22.3, y: 48.55, w: 29.6, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == resource" }
-  - { id: program_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 21.5, y: 48.55, w: 30.4, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == program" }
-  - { id: hardware_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 24.1, y: 48.55, w: 27.8, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == hardware" }
-  - { id: operation_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 25.0, y: 48.55, w: 26.9, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == operation" }
-  - { id: asset_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 17.0, y: 48.55, w: 34.9, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == asset" }
-  - { id: upgrade_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 22.9, y: 48.55, w: 29.0, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == upgrade" }
-  - { id: agenda_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 19.6, y: 48.55, w: 32.3, h: 4.7, font: subtype, size_pt: 6.6, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == agenda" }
-  - { id: standard_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#3f474e", secondary_scale: 0.86, x: 5.8, y: 54.9, w: 50.8, h: 26.3, font: body, size_pt: 8.25, min_size_pt: 5.8, line_height: 1.12, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type != identity && type != ice && type != program && !attributes.trash_cost" }
-  - { id: standard_body_trash, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#3f474e", secondary_scale: 0.86, x: 5.8, y: 54.9, w: 47.1, h: 26.3, font: body, size_pt: 8.25, min_size_pt: 5.8, line_height: 1.12, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type != identity && type != ice && type != program && attributes.trash_cost" }
-  - { id: program_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#3f474e", secondary_scale: 0.86, x: 5.8, y: 54.9, w: 50.8, h: 22.4, font: body, size_pt: 8.25, min_size_pt: 5.8, line_height: 1.12, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type == program" }
+  - { id: event_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 14.3, y: 48.15, w: 37.6, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == event" }
+  - { id: resource_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 19.2, y: 48.15, w: 32.7, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == resource" }
+  - { id: program_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 18.6, y: 48.15, w: 33.3, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == program" }
+  - { id: hardware_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 20.5, y: 48.15, w: 31.4, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == hardware" }
+  - { id: operation_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 22.4, y: 48.15, w: 29.5, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == operation" }
+  - { id: asset_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 16.6, y: 48.15, w: 35.3, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == asset" }
+  - { id: upgrade_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 20.3, y: 48.15, w: 31.6, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == upgrade" }
+  - { id: agenda_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " - ", x: 18.5, y: 48.15, w: 33.4, h: 4.7, font: subtype, size_pt: 7.3, min_size_pt: 4.6, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == agenda" }
+  - { id: standard_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#3f474e", secondary_scale: 0.86, x: 5.8, y: 54.9, w: 50.8, h: 26.3, font: body, size_pt: 8.25, strong_weight: 800, strong_terms: ["Persistent"], min_size_pt: 5.8, line_height: 1.12, paragraph_gap_em: 0.45, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type != identity && type != ice && type != program && !attributes.trash_cost" }
+  - { id: standard_body_trash, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#3f474e", secondary_scale: 0.86, x: 5.8, y: 54.9, w: 47.1, h: 26.3, font: body, size_pt: 8.25, strong_weight: 800, strong_terms: ["Persistent"], min_size_pt: 5.8, line_height: 1.12, paragraph_gap_em: 0.45, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type != identity && type != ice && type != program && attributes.trash_cost" }
+  - { id: program_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#3f474e", secondary_scale: 0.86, x: 5.8, y: 54.9, w: 50.8, h: 22.4, font: body, size_pt: 8.25, strong_weight: 800, min_size_pt: 5.8, line_height: 1.12, paragraph_gap_em: 0.45, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type == program" }
 
   # Faction marks are emblems, not UI buttons: let their native silhouettes read.
   - { id: standard_faction_glyph, type: richtext, src: "card.attributes.faction", map: { anarch: "[faction_anarch]", criminal: "[faction_criminal]", shaper: "[faction_shaper]", haas-bioroid: "[faction_hb]", jinteki: "[faction_jinteki]", nbn: "[faction_nbn]", weyland-consortium: "[faction_weyland]" }, x: 54.3, y: 47.7, w: 7.4, h: 7.4, symbols: true, symbol_style: plain, icon_only: true, show_if: "type != identity && type != ice && attributes.faction != neutral-corp && attributes.faction != neutral-runner" }
 
   # Agenda hardware.
-  - { id: agenda_adv_shadow, type: badge, text: "", x: 51.55, y: 1.15, d: 11.05, bg: "#c4cac8", color: "#151b21", shadow: "0 .65mm 1.05mm rgba(0,0,0,.42)", show_if: "type == agenda" }
-  - { id: agenda_adv_face, type: badge, text: "", x: 51.85, y: 1.42, d: 10.55, bg: "radial-gradient(circle at 40% 34%,#ffffff 0%,#f2f3f1 61%,#c9cecc 100%)", color: "#151b21", show_if: "type == agenda" }
-  - { id: agenda_adv_icon, type: richtext, text: "[advancement]", x: 51.85, y: 1.42, w: 10.55, h: 10.55, symbols: true, symbol_style: plain, icon_only: true, opacity: 0.24, show_if: "type == agenda" }
-  - { id: agenda_advancement, type: text, src: "card.attributes.advancement_cost", x: 53.08, y: 3.25, w: 8.1, h: 6.9, font: stat, size_pt: 14.2, align: center, valign: middle, color: "#11171d", text_shadow: "0 0 .28mm #ffffff,0 0 .28mm #ffffff", show_if: "type == agenda" }
-  - { id: agenda_points_hex_left, type: rect, x: 0.8, y: 40.05, w: 7.2, h: 6.8, fill: "#eef1ef", stroke: "#7d8389", stroke_w_mm: 0.32, clip_path: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)", shadow: "0 .4mm .65mm rgba(0,0,0,.3)", show_if: "type == agenda" }
-  - { id: agenda_points_hex_right, type: rect, x: 7.0, y: 40.05, w: 7.2, h: 6.8, fill: "#eef1ef", stroke: "#7d8389", stroke_w_mm: 0.32, clip_path: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)", shadow: "0 .4mm .65mm rgba(0,0,0,.3)", show_if: "type == agenda" }
-  - { id: agenda_points_hex_top, type: rect, x: 3.9, y: 36.65, w: 7.2, h: 6.8, fill: "#f7f8f6", stroke: "#7d8389", stroke_w_mm: 0.4, clip_path: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)", shadow: "0 .55mm .9mm rgba(0,0,0,.4)", show_if: "type == agenda" }
-  - { id: agenda_points, type: text, src: "card.attributes.agenda_points", x: 4.35, y: 37.25, w: 6.3, h: 5.8, font: stat, size_pt: 12.8, align: center, valign: middle, color: "#11171d", show_if: "type == agenda" }
+  - { id: agenda_adv_shadow, type: badge, text: "", x: 51.6, y: 1.0, d: 10.2, bg: "#c4cac8", color: "#151b21", shadow: "0 .65mm 1.05mm rgba(0,0,0,.42)", show_if: "type == agenda" }
+  - { id: agenda_adv_face, type: badge, text: "", x: 51.85, y: 1.25, d: 9.7, bg: "radial-gradient(circle at 40% 34%,#ffffff 0%,#f2f3f1 61%,#c9cecc 100%)", color: "#151b21", show_if: "type == agenda" }
+  - { id: agenda_adv_icon, type: richtext, text: "[agenda_advancement_dial]", x: 51.85, y: 1.25, w: 9.7, h: 9.7, symbols: true, symbol_style: plain, icon_only: true, show_if: "type == agenda" }
+  - { id: agenda_advancement, type: text, src: "card.attributes.advancement_cost", x: 52.85, y: 3.0, w: 7.75, h: 6.3, font: stat, size_pt: 13.2, align: center, valign: middle, color: "#11171d", text_shadow: "0 0 .28mm #ffffff,0 0 .28mm #ffffff", show_if: "type == agenda" }
+  - { id: agenda_points_underlay, type: richtext, text: "[agenda_points_plate]", x: 0.15, y: 35.3, w: 14.9, h: 13.15, symbols: true, symbol_style: plain, icon_only: true, show_if: "type == agenda" }
+  - { id: agenda_points, type: text, src: "card.attributes.agenda_points", x: 4.3, y: 36.55, w: 6.3, h: 5.75, font: stat, size_pt: 12.4, align: center, valign: middle, color: "#11171d", text_shadow: "0 0 .24mm #ffffff,0 0 .24mm #ffffff", show_if: "type == agenda" }
 
   # Installed-card statistics.
   # The MU readout is a small white/silver chip below the credit dial. The
@@ -189,28 +248,34 @@ regions:
   - { id: standard_trash_icon, type: richtext, text: "[trash_cost]", x: 53.5, y: 66.0, w: 8.0, h: 8.0, symbols: true, symbol_style: plain, icon_only: true, filter: "drop-shadow(0 0 .45mm #f7f8f6) drop-shadow(0 0 .45mm #f7f8f6)", show_if: "attributes.trash_cost" }
   - { id: standard_trash, type: text, src: "card.attributes.trash_cost", x: 55.05, y: 68.35, w: 4.9, h: 4.4, font: stat, size_pt: 9.8, align: center, valign: middle, color: "#11171d", show_if: "attributes.trash_cost" }
 
-  # Five-socket influence hardware.
-  - { id: runner_track, type: pips, count: 5, glyph: "○", max: 5, direction: column, x: 58.0, y: 61.0, w: 3.0, h: 16.8, gap_mm: 0.25, font: label, size_pt: 6.1, line_height: 0.78, color: "#68727a", show_if: "attributes.side == runner && attributes.influence && type != identity && type != ice" }
-  - { id: runner_influence, type: pips, src: "card.attributes.influence", glyph: "●", max: 5, direction: column, x: 58.0, y: 61.0, w: 3.0, h: 16.8, gap_mm: 0.25, font: label, size_pt: 5.0, line_height: 0.95, color: "palette", show_if: "attributes.side == runner && attributes.influence && type != identity && type != ice" }
-  - { id: corp_track, type: pips, count: 5, glyph: "○", max: 5, direction: column, x: 1.35, y: 61.0, w: 3.0, h: 16.8, gap_mm: 0.25, font: label, size_pt: 6.1, line_height: 0.78, color: "#68727a", show_if: "attributes.side == corp && attributes.influence && type != identity && type != ice" }
-  - { id: corp_influence, type: pips, src: "card.attributes.influence", glyph: "●", max: 5, direction: column, x: 1.35, y: 61.0, w: 3.0, h: 16.8, gap_mm: 0.25, font: label, size_pt: 5.0, line_height: 0.95, color: "palette", show_if: "attributes.side == corp && attributes.influence && type != identity && type != ice" }
+  # Five-socket influence hardware. Influence is a single semantic component:
+  # dark empty sockets plus an exact data-driven count of bright metallic pips,
+  # filled from the bottom as on NSG production cards. Geometric sockets avoid
+  # font-dependent bullets becoming illegible rings in browser/raster exports.
+  - { id: runner_influence_rail, type: rect, x: 59.55, y: 61.55, w: 1.1, h: 15.9, fill: "linear-gradient(90deg,#20262a 0%,#7b858a 48%,#262c30 100%)", stroke: "#b7bec0", stroke_w_mm: 0.18, radius_mm: 0.55, shadow: "0 .18mm .28mm rgba(0,0,0,.48)", show_if: "attributes.side == runner && attributes.influence && type != identity && type != ice" }
+  - { id: runner_influence, type: pips, count: 5, filled_src: "card.attributes.influence", fill_from: end, shape: circle, pip_d_mm: 1.75, filled_bg: "radial-gradient(circle at 38% 32%,#ffffff 0%,#e4e9e8 42%,#8b969a 100%)", empty_bg: "#293036", filled_stroke: "#ffffff", empty_stroke: "#aeb6b8", pip_stroke_w_mm: 0.18, pip_shadow: "0 .14mm .22mm rgba(0,0,0,.55)", direction: column, x: 58.7, y: 62.1, w: 2.8, h: 14.8, max: 5, show_if: "attributes.side == runner && attributes.influence && type != identity && type != ice" }
+  - { id: corp_influence_rail, type: rect, x: 2.35, y: 61.55, w: 1.1, h: 15.9, fill: "linear-gradient(90deg,#20262a 0%,#7b858a 48%,#262c30 100%)", stroke: "#b7bec0", stroke_w_mm: 0.18, radius_mm: 0.55, shadow: "0 .18mm .28mm rgba(0,0,0,.48)", show_if: "attributes.side == corp && attributes.influence && type != identity && type != ice" }
+  - { id: corp_influence, type: pips, count: 5, filled_src: "card.attributes.influence", fill_from: end, shape: circle, pip_d_mm: 1.75, filled_bg: "radial-gradient(circle at 38% 32%,#ffffff 0%,#e4e9e8 42%,#8b969a 100%)", empty_bg: "#293036", filled_stroke: "#ffffff", empty_stroke: "#aeb6b8", pip_stroke_w_mm: 0.18, pip_shadow: "0 .14mm .22mm rgba(0,0,0,.55)", direction: column, x: 1.5, y: 62.1, w: 2.8, h: 14.8, max: 5, show_if: "attributes.side == corp && attributes.influence && type != identity && type != ice" }
 
   # Standard footer and product metadata.
-  - { id: footer, type: rect, x: 0, y: 81.8, w: 63, h: 5.41, fill: "palette-deep", radius_mm: 1.3, show_if: "type != identity && type != ice" }
-  - { id: footer_signal, type: rect, x: 0, y: 81.8, w: 48.5, h: 0.55, fill: "palette-light", show_if: "type != identity && type != ice" }
-  - { id: footer_artist, type: text, src: "printing.artist", prefix: "ILLUS. ", x: 3.0, y: 82.8, w: 37.0, h: 2.7, font: label, size_pt: 4.2, align: left, valign: middle, color: "#f5f6f2", show_if: "type != identity && type != ice" }
+  - { id: footer, type: rect, x: 0, y: 81.8, w: 63, h: 8.6, fill: "palette-gradient", radius_mm: 0, show_if: "type != identity && type != ice" }
+  - { id: footer_faction_motif, type: rect, x: 0, y: 81.8, w: 63, h: 8.6, fill: "palette-shell-motif", opacity: 0.68, radius_mm: 0, show_if: "type != identity && type != ice" }
+  - { id: footer_signal, type: rect, x: 0, y: 81.8, w: 63, h: 0.62, fill: "palette-metallic", opacity: 0.82, show_if: "type != identity && type != ice" }
+  - { id: footer_artist, type: text, src: "printing.artist", prefix: "ILLUS. ", x: 3.0, y: 82.8, w: 37.0, h: 2.7, font: label, size_pt: 4.2, align: left, valign: middle, color: "#f5f6f2", show_if: "type != identity && type != ice && type != program" }
+  - { id: program_footer_artist, type: text, src: "printing.artist", prefix: "ILLUS. ", x: 14.5, y: 82.8, w: 24.5, h: 2.7, font: label, size_pt: 4.2, align: left, valign: middle, color: "#f5f6f2", show_if: "type == program" }
   - { id: footer_side, type: text, src: "card.attributes.side", transform: uppercase, prefix: "// ", x: 39.5, y: 82.8, w: 8.5, h: 2.7, font: subtype, size_pt: 3.2, align: right, valign: middle, color: "palette-light", show_if: "type != identity && type != ice" }
   - { id: footer_set_icon, type: richtext, text: "[set_system_gateway]", x: 50.0, y: 82.45, w: 3.35, h: 3.35, symbols: true, symbol_style: plain, icon_only: true, filter: "invert(1)", opacity: 0.92, show_if: "type != identity && type != ice" }
   - { id: footer_collector, type: text, src: "printing.collector_number", x: 53.85, y: 82.75, w: 6.35, h: 2.8, font: label, size_pt: 4.1, align: right, valign: middle, color: "#f5f6f2", show_if: "type != identity && type != ice" }
 
   # Program strength is a large, partially cropped lower-left instrument. It
   # intentionally paints over the footer, matching the physical card family.
-  - { id: program_strength_shadow, type: badge, text: "", x: -0.95, y: 78.05, d: 14.65, bg: "#101315", color: "#11171d", shadow: "0 .6mm 1.1mm rgba(0,0,0,.55)", show_if: "type == program && attributes.strength" }
-  - { id: program_strength_face, type: badge, text: "", x: -0.65, y: 78.32, d: 14.1, bg: "radial-gradient(circle at 58% 38%,#ffffff 0%,#eef0ef 64%,#aeb4b2 100%)", color: "#11171d", show_if: "type == program && attributes.strength" }
-  - { id: program_strength_bar_1, type: rect, x: 0.0, y: 82.55, w: 3.20, h: 0.54, fill: "#8e9493", show_if: "type == program && attributes.strength" }
-  - { id: program_strength_bar_2, type: rect, x: 0.0, y: 84.15, w: 4.40, h: 0.54, fill: "#8e9493", show_if: "type == program && attributes.strength" }
-  - { id: program_strength_bar_3, type: rect, x: 0.0, y: 85.75, w: 10.20, h: 0.54, fill: "#8e9493", show_if: "type == program && attributes.strength" }
-  - { id: program_strength, type: text, src: "card.attributes.strength", x: 3.0, y: 79.55, w: 7.6, h: 6.5, font: stat, size_pt: 14.4, align: center, valign: middle, color: "#11171d", show_if: "type == program && attributes.strength" }
+  - { id: program_strength_shadow, type: badge, text: "", x: -0.65, y: 77.8, d: 14.4, bg: "#101315", color: "#11171d", shadow: "0 .6mm 1.1mm rgba(0,0,0,.55)", show_if: "type == program" }
+  - { id: program_strength_face, type: badge, text: "", x: -0.35, y: 78.1, d: 13.85, bg: "radial-gradient(circle at 58% 38%,#ffffff 0%,#eef0ef 64%,#aeb4b2 100%)", color: "#11171d", show_if: "type == program" }
+  - { id: program_strength_inner, type: badge, text: "", x: 0.15, y: 78.6, d: 12.85, bg: "radial-gradient(circle,transparent 0 66%,rgba(117,125,125,.58) 67% 69%,rgba(255,255,255,.62) 70% 71%,transparent 72%)", color: "#11171d", show_if: "type == program" }
+  - { id: program_strength_bar_1, type: rect, x: 0.0, y: 82.55, w: 3.20, h: 0.54, fill: "#8e9493", show_if: "type == program" }
+  - { id: program_strength_bar_2, type: rect, x: 0.0, y: 84.25, w: 5.05, h: 0.54, fill: "#8e9493", show_if: "type == program" }
+  - { id: program_strength_bar_3, type: rect, x: 0.0, y: 85.95, w: 10.40, h: 0.54, fill: "#8e9493", show_if: "type == program" }
+  - { id: program_strength, type: text, src: "card.attributes.strength", map: { "": "-" }, x: 2.55, y: 79.35, w: 8.15, h: 6.65, font: stat, size_pt: 14.6, align: center, valign: middle, color: "#11171d", show_if: "type == program" }
 
   # ================= IDENTITY FAMILY =================
   - { id: identity_circuit_left, type: rect, x: 1.2, y: 12.0, w: 7.0, h: 45.0, fill: "repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 .35mm,transparent .35mm 2.4mm)", opacity: 0.55, show_if: "type == identity" }
@@ -220,69 +285,100 @@ regions:
   # second. Keeping the runner banner here was the source of the oversized,
   # incorrectly placed corp names.
   - { id: identity_header_shadow, type: rect, x: 8.0, y: 2.0, w: 54.8, h: 10.2, fill: "#070a0e", clip_path: "polygon(0 0,94% 0,100% 50%,94% 100%,5% 100%,0 50%)", shadow: "0 .8mm 1.4mm rgba(0,0,0,.5)", show_if: "type == identity && attributes.side == runner" }
-  - { id: identity_header, type: rect, x: 7.0, y: 1.35, w: 55.9, h: 10.2, fill: "linear-gradient(180deg,#ffffff,#e8ecea)", stroke: "palette-dark", stroke_w_mm: 0.42, clip_path: "polygon(0 0,94% 0,100% 50%,94% 100%,5% 100%,0 50%)", show_if: "type == identity && attributes.side == runner" }
+  - { id: identity_header, type: rect, x: 7.0, y: 1.35, w: 55.9, h: 10.2, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.42, clip_path: "polygon(0 0,94% 0,100% 50%,94% 100%,5% 100%,0 50%)", show_if: "type == identity && attributes.side == runner" }
   - { id: corp_identity_header_shadow, type: rect, x: 0.0, y: 1.35, w: 52.0, h: 5.65, fill: "#080a0d", clip_path: "polygon(0 0,100% 0,92% 100%,0 100%)", shadow: "0 .55mm .9mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_header, type: rect, x: 0.0, y: 1.05, w: 51.1, h: 5.15, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.38, clip_path: "polygon(0 0,100% 0,92% 100%,0 100%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_header, type: rect, x: 0.0, y: 1.05, w: 51.1, h: 5.15, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.38, clip_path: "polygon(0 0,100% 0,92% 100%,0 100%)", show_if: "type == identity && attributes.side == corp" }
   - { id: corp_identity_subtitle_shadow, type: rect, x: 1.55, y: 6.35, w: 39.8, h: 4.15, fill: "#080a0d", clip_path: "polygon(0 0,100% 0,91% 100%,4% 100%)", shadow: "0 .45mm .75mm rgba(0,0,0,.48)", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_subtitle_rail, type: rect, x: 1.85, y: 6.15, w: 38.7, h: 3.65, fill: "linear-gradient(180deg,#ffffff,#ecefed)", stroke: "palette-dark", stroke_w_mm: 0.34, clip_path: "polygon(0 0,100% 0,91% 100%,4% 100%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_subtitle_rail, type: rect, x: 1.85, y: 6.15, w: 38.7, h: 3.65, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.34, clip_path: "polygon(0 0,100% 0,91% 100%,4% 100%)", show_if: "type == identity && attributes.side == corp" }
   - { id: identity_title_runner, type: richtext, src: "card.name", transform: before-colon, x: 16.5, y: 2.35, w: 35.9, h: 5.0, font: title, size_pt: 9.0, min_size_pt: 5.0, char_width_em: 0.62, line_height: 1.0, align: left, valign: middle, color: "#10171d", no_wrap: true, autoshrink: true, show_if: "type == identity && attributes.side == runner" }
   - { id: identity_subtitle_runner, type: richtext, src: "card.name", transform: after-colon, x: 19.6, y: 7.1, w: 32.8, h: 3.3, font: title, size_pt: 5.5, min_size_pt: 4.1, char_width_em: 0.60, line_height: 1.0, align: left, valign: middle, color: "#303840", no_wrap: true, autoshrink: true, show_if: "type == identity && attributes.side == runner" }
   - { id: identity_title_corp, type: richtext, src: "card.name", transform: before-colon, x: 10.75, y: 1.35, w: 35.6, h: 4.35, font: title, size_pt: 8.4, min_size_pt: 4.8, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.035, align: left, valign: middle, color: "#10171d", no_wrap: true, autoshrink: true, show_if: "type == identity && attributes.side == corp" }
   - { id: identity_subtitle_corp, type: richtext, src: "card.name", transform: after-colon, x: 5.0, y: 6.28, w: 31.8, h: 3.05, font: title, size_pt: 5.35, min_size_pt: 3.9, char_width_em: 0.60, line_height: 1.0, letter_spacing_em: -0.025, align: left, valign: middle, color: "#202830", no_wrap: true, autoshrink: true, show_if: "type == identity && attributes.side == corp" }
-  - { id: runner_link_ring, type: badge, text: "", x: 0.55, y: 0.75, d: 11.0, bg: "palette", color: "#ffffff", shadow: "0 .7mm 1.2mm rgba(0,0,0,.5)", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_link, type: badge, src: "card.attributes.base_link", x: 1.45, y: 1.65, d: 9.2, font: stat, size_pt: 14.2, bg: "#15191c", color: "#ffffff", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_link_icon, type: richtext, text: "[link]", x: 7.15, y: 1.65, w: 2.8, h: 2.8, symbols: true, symbol_style: plain, icon_only: true, filter: "invert(1) drop-shadow(0 0 .25mm #15191c)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_link_shadow, type: rect, x: 1.05, y: 1.25, w: 14.2, h: 11.55, fill: "#080b0d", clip_path: "polygon(26% 0,100% 0,100% 65%,73% 100%,0 100%,0 29%)", shadow: "0 .7mm 1.2mm rgba(0,0,0,.55)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_link_edge, type: rect, x: 1.48, y: 1.62, w: 13.35, h: 10.72, fill: "linear-gradient(135deg,#f8faf9 0%,#7e898e 37%,#e8eceb 64%,#4d565b 100%)", clip_path: "polygon(25% 0,100% 0,100% 64%,72% 100%,0 100%,0 28%)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_link_face, type: rect, x: 1.93, y: 2.06, w: 12.45, h: 9.82, fill: "palette-gradient", stroke: "#12171a", stroke_w_mm: 0.24, clip_path: "polygon(24% 0,100% 0,100% 63%,71% 100%,0 100%,0 27%)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_link_number, type: text, src: "card.attributes.base_link", x: 3.25, y: 5.02, w: 5.45, h: 5.45, font: stat, size_pt: 14.2, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .16mm .22mm #000", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_link_icon, type: richtext, text: "[link]", x: 9.25, y: 2.72, w: 3.2, h: 3.05, symbols: true, symbol_style: plain, icon_only: true, filter: "invert(1) drop-shadow(0 0 .25mm #15191c)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_memory_shadow, type: rect, x: 1.92, y: 12.7, w: 6.65, h: 4.95, fill: "#111518", clip_path: "polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)", shadow: "0 .35mm .55mm rgba(0,0,0,.5)", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory_edge, type: rect, x: 2.08, y: 12.84, w: 6.3, h: 4.62, fill: "linear-gradient(135deg,#fbfdfc 0%,#9ba3a5 38%,#e9eceb 68%,#6b7376 100%)", stroke: "#e9edeb", stroke_w_mm: 0.16, clip_path: "polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory_face, type: rect, x: 2.4, y: 13.13, w: 4.62, h: 4.02, fill: "linear-gradient(180deg,#4d5356 0%,#252a2d 100%)", stroke: "#171b1d", stroke_w_mm: 0.18, clip_path: "polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory_pin_1, type: rect, x: 7.43, y: 13.28, w: 0.58, h: 0.24, fill: "#252a2d", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory_pin_2, type: rect, x: 7.43, y: 14.25, w: 0.58, h: 0.24, fill: "#252a2d", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory_pin_3, type: rect, x: 7.43, y: 15.22, w: 0.58, h: 0.24, fill: "#252a2d", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory_pin_4, type: rect, x: 7.43, y: 16.19, w: 0.58, h: 0.24, fill: "#252a2d", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
+  - { id: runner_memory, type: text, src: "card.attributes.memory_limit", x: 2.48, y: 13.16, w: 4.38, h: 3.9, font: stat, size_pt: 9.4, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .14mm .18mm #000", show_if: "type == identity && attributes.side == runner && attributes.memory_limit" }
   - { id: identity_faction_glyph_runner, type: richtext, src: "card.attributes.faction", map: { anarch: "[faction_anarch]", criminal: "[faction_criminal]", shaper: "[faction_shaper]" }, x: 52.8, y: 1.0, w: 9.8, h: 9.8, symbols: true, symbol_style: plain, icon_only: true, show_if: "type == identity && attributes.side == runner && attributes.faction != neutral-runner" }
   - { id: identity_faction_glyph_corp, type: richtext, src: "card.attributes.faction", map: { haas-bioroid: "[faction_hb]", jinteki: "[faction_jinteki]", nbn: "[faction_nbn]", weyland-consortium: "[faction_weyland]" }, x: 1.45, y: 1.25, w: 7.8, h: 5.1, symbols: true, symbol_style: plain, icon_only: true, show_if: "type == identity && attributes.side == corp && attributes.faction != neutral-corp" }
-  - { id: identity_art_runner, type: image, src: "printing.scan_data", fallback_srcs: ["printing.art_data", "printing.art_url", "printing.art"], x: 7.6, y: 12.5, w: 47.8, h: 44.7, source_crop: [110, 130, 524, 500], source_size: [744, 1030], source_crop_fit: cover, credit: "printing.artist", show_if: "type == identity && attributes.side == runner" }
-  - { id: identity_art_corp, type: image, src: "printing.scan_data", fallback_srcs: ["printing.art_data", "printing.art_url", "printing.art"], x: 0.0, y: 9.8, w: 63.0, h: 47.4, source_crop: [0, 115, 744, 550], source_size: [744, 1030], source_crop_fit: cover, credit: "printing.artist", show_if: "type == identity && attributes.side == corp" }
-  - { id: identity_art_edge_runner, type: rect, x: 1.5, y: 12.5, w: 60.0, h: 44.7, fill: "none", stroke: "palette-light", stroke_w_mm: 0.65, shadow: "inset 0 0 2.2mm rgba(0,0,0,.45)", show_if: "type == identity && attributes.side == runner" }
+  - { id: identity_art_runner, type: image, src: "printing.scan_data", fallback_srcs: ["printing.art_data", "printing.art_url", "printing.art"], x: 0, y: 12.5, w: 63, h: 44.7, source_crop: [0, 148, 744, 528], source_size: [744, 1030], source_crop_fit: cover, credit: "printing.artist", show_if: "type == identity && attributes.side == runner" }
+  - { id: identity_art_corp, type: image, src: "printing.scan_data", fallback_srcs: ["printing.art_data", "printing.art_url", "printing.art"], x: 0.0, y: 9.8, w: 63.0, h: 47.4, source_crop: [0, 115, 744, 550], source_size: [744, 1030], source_crop_fit: cover, show_if: "type == identity && attributes.side == corp" }
   - { id: identity_art_edge_corp, type: rect, x: 0.0, y: 9.8, w: 63.0, h: 47.4, fill: "none", stroke: "palette-dark", stroke_w_mm: 0.45, shadow: "inset 0 0 2.2mm rgba(0,0,0,.45)", show_if: "type == identity && attributes.side == corp" }
   - { id: identity_panel_shadow, type: rect, x: 3.0, y: 57.3, w: 57.0, h: 27.0, fill: "#05080b", radius_mm: 1.0, shadow: "0 -1mm 1.4mm rgba(0,0,0,.4)", show_if: "type == identity" }
-  - { id: identity_panel, type: rect, x: 3.8, y: 56.6, w: 55.4, h: 27.0, fill: "linear-gradient(145deg,#fafbf8,#edf1ed)", stroke: "palette-dark", stroke_w_mm: 0.5, radius_mm: 0.9, show_if: "type == identity" }
+  - { id: identity_panel, type: rect, x: 3.8, y: 56.6, w: 55.4, h: 27.0, fill: "palette-paper", stroke: "palette-dark", stroke_w_mm: 0.5, radius_mm: 0.9, show_if: "type == identity" }
+  - { id: identity_panel_faction_motif, type: rect, x: 4.05, y: 56.85, w: 54.9, h: 26.5, fill: "palette-panel-motif", opacity: 0.68, radius_mm: 0.66, show_if: "type == identity" }
   - { id: identity_watermark, type: richtext, src: "card.attributes.faction", map: { anarch: "[faction_anarch]", criminal: "[faction_criminal]", shaper: "[faction_shaper]", haas-bioroid: "[faction_hb]", jinteki: "[faction_jinteki]", nbn: "[faction_nbn]", weyland-consortium: "[faction_weyland]" }, x: 39.0, y: 64.2, w: 13.0, h: 13.0, symbols: true, symbol_style: plain, icon_only: true, opacity: 0.065, filter: "grayscale(1) contrast(1.5)", show_if: "type == identity && attributes.faction != neutral-corp && attributes.faction != neutral-runner" }
-  - { id: identity_type, type: text, text: "IDENTITY:", x: 11.5, y: 57.4, w: 14.2, h: 4.2, font: tech, size_pt: 6.4, align: left, valign: middle, color: "#10171d", show_if: "type == identity" }
-  - { id: identity_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 26.4, y: 57.25, w: 27.5, h: 4.45, font: subtype, size_pt: 6.6, min_size_pt: 4.8, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == identity" }
-  - { id: identity_rule, type: rect, x: 11.5, y: 61.5, w: 42.1, h: 0.62, fill: "palette", clip_path: "polygon(0 0,70% 0,72% 100%,100% 100%,100% 100%,0 100%)", show_if: "type == identity" }
-  - { id: identity_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#414950", secondary_scale: 0.84, x: 10.9, y: 63.0, w: 41.0, h: 17.5, font: body, size_pt: 7.8, min_size_pt: 5.8, line_height: 1.14, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type == identity" }
-  # Identity stats are a vertical paired module: right edge for Runner, left
-  # edge for Corp. Deck size sits above influence limit in both families.
-  - { id: runner_identity_stats_shadow, type: rect, x: 54.05, y: 72.15, w: 8.95, h: 14.75, fill: "#07090b", clip_path: "polygon(13% 0,100% 0,100% 100%,0 100%,0 9%)", shadow: "-.25mm 0 .85mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_identity_stats_edge, type: rect, x: 54.45, y: 72.52, w: 8.55, h: 14.25, fill: "palette-gradient", stroke: "palette-light", stroke_w_mm: 0.28, clip_path: "polygon(13% 0,100% 0,100% 100%,0 100%,0 9%)", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_identity_deck_face, type: rect, x: 55.00, y: 73.10, w: 7.35, h: 5.65, fill: "linear-gradient(145deg,#ffffff 0%,#e4e7e6 60%,#aab0af 100%)", stroke: "#20262a", stroke_w_mm: 0.28, clip_path: "polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_identity_deck, type: text, src: "card.attributes.minimum_deck_size", x: 55.00, y: 73.22, w: 7.35, h: 5.35, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#11171d", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_identity_stats_divider, type: rect, x: 55.15, y: 79.05, w: 7.05, h: 0.42, fill: "palette-light", show_if: "type == identity && attributes.side == runner" }
-  - { id: runner_identity_influence_face, type: rect, x: 55.00, y: 79.75, w: 7.35, h: 5.65, fill: "linear-gradient(180deg,#343a3d,#080b0d)", stroke: "#c7ccca", stroke_w_mm: 0.28, clip_path: "polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)", show_if: "type == identity && attributes.side == runner && attributes.influence_limit" }
-  - { id: runner_identity_influence, type: text, src: "card.attributes.influence_limit", x: 55.00, y: 79.87, w: 7.35, h: 5.35, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .12mm .16mm #000", show_if: "type == identity && attributes.side == runner && attributes.influence_limit" }
+  - { id: identity_type, type: text, text: "IDENTITY:", x: 11.9, y: 58.58, w: 18.0, h: 4.2, font: tech, size_pt: 7.1, horizontal_scale: 0.78, align: left, valign: middle, color: "#10171d", show_if: "type == identity" }
+  - { id: identity_subtypes, type: richtext, src: "card.subtypes", transform: join, separator: " · ", x: 23.2, y: 58.6, w: 30.7, h: 4.45, font: subtype, size_pt: 7.3, min_size_pt: 4.8, char_width_em: 0.58, line_height: 1.0, align: left, valign: middle, color: "#303a43", no_wrap: true, autoshrink: true, show_if: "type == identity" }
+  - { id: identity_rule, type: rect, x: 11.5, y: 62.85, w: 42.1, h: 0.62, fill: "palette", clip_path: "polygon(0 0,70% 0,72% 100%,100% 100%,100% 100%,0 100%)", show_if: "type == identity" }
+  - { id: identity_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#414950", secondary_scale: 0.84, x: 10.9, y: 63.0, w: 41.0, h: 17.5, font: body, size_pt: 7.8, strong_weight: 800, min_size_pt: 5.8, line_height: 1.14, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type == identity" }
+  # Identity stats use the side-specific physical geometry: Runner has deck
+  # size at lower left and influence at lower right; Corp uses paired circles
+  # where the rules panel meets the illustration.
+  - { id: runner_identity_stats_shadow, type: rect, x: 0.0, y: 78.5, w: 10.45, h: 8.71, fill: "#07090b", clip_path: "polygon(0 0,88% 0,100% 15%,100% 100%,0 100%)", shadow: ".25mm 0 .85mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_identity_stats_edge, type: rect, x: 0.35, y: 78.88, w: 9.7, h: 8.33, fill: "palette-gradient", stroke: "palette-light", stroke_w_mm: 0.28, clip_path: "polygon(0 0,88% 0,100% 15%,100% 100%,0 100%)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_identity_deck_face, type: rect, x: 1.08, y: 80.2, w: 8.1, h: 5.25, fill: "palette-metallic", stroke: "#20262a", stroke_w_mm: 0.28, clip_path: "polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_identity_deck, type: text, src: "card.attributes.minimum_deck_size", x: 1.08, y: 80.3, w: 8.1, h: 5.05, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#11171d", show_if: "type == identity && attributes.side == runner" }
+  - { id: runner_identity_influence_shadow, type: rect, x: 52.55, y: 78.5, w: 10.45, h: 8.71, fill: "#07090b", clip_path: "polygon(12% 0,100% 0,100% 100%,0 100%,0 15%)", shadow: "-.25mm 0 .85mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == runner && attributes.influence_limit" }
+  - { id: runner_identity_influence_edge, type: rect, x: 52.95, y: 78.88, w: 10.05, h: 8.33, fill: "palette-gradient", stroke: "palette-light", stroke_w_mm: 0.28, clip_path: "polygon(12% 0,100% 0,100% 100%,0 100%,0 15%)", show_if: "type == identity && attributes.side == runner && attributes.influence_limit" }
+  - { id: runner_identity_influence_face, type: rect, x: 53.82, y: 80.2, w: 8.1, h: 5.25, fill: "linear-gradient(180deg,#343a3d,#080b0d)", stroke: "#c7ccca", stroke_w_mm: 0.28, clip_path: "polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)", show_if: "type == identity && attributes.side == runner && attributes.influence_limit" }
+  - { id: runner_identity_influence, type: text, src: "card.attributes.influence_limit", x: 53.82, y: 80.3, w: 8.1, h: 5.05, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .12mm .16mm #000", show_if: "type == identity && attributes.side == runner && attributes.influence_limit" }
 
-  - { id: corp_identity_stats_shadow, type: rect, x: 0.00, y: 72.15, w: 8.95, h: 14.75, fill: "#07090b", clip_path: "polygon(0 0,87% 0,100% 9%,100% 100%,0 100%)", shadow: ".25mm 0 .85mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_stats_edge, type: rect, x: 0.00, y: 72.52, w: 8.55, h: 14.25, fill: "palette-gradient", stroke: "palette-light", stroke_w_mm: 0.28, clip_path: "polygon(0 0,87% 0,100% 9%,100% 100%,0 100%)", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_deck_face, type: rect, x: 0.65, y: 73.10, w: 7.35, h: 5.65, fill: "linear-gradient(145deg,#ffffff 0%,#e4e7e6 60%,#aab0af 100%)", stroke: "#20262a", stroke_w_mm: 0.28, clip_path: "polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_deck, type: text, src: "card.attributes.minimum_deck_size", x: 0.65, y: 73.22, w: 7.35, h: 5.35, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#11171d", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_stats_divider, type: rect, x: 0.80, y: 79.05, w: 7.05, h: 0.42, fill: "palette-light", show_if: "type == identity && attributes.side == corp" }
-  - { id: corp_identity_influence_face, type: rect, x: 0.65, y: 79.75, w: 7.35, h: 5.65, fill: "linear-gradient(180deg,#343a3d,#080b0d)", stroke: "#c7ccca", stroke_w_mm: 0.28, clip_path: "polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
-  - { id: corp_identity_influence, type: text, src: "card.attributes.influence_limit", x: 0.65, y: 79.87, w: 7.35, h: 5.35, font: stat, size_pt: 11.2, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .12mm .16mm #000", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
-  - { id: identity_set_icon, type: richtext, text: "[set_system_gateway]", x: 27.0, y: 82.3, w: 3.45, h: 3.45, symbols: true, symbol_style: plain, icon_only: true, filter: "invert(1)", opacity: 0.92, show_if: "type == identity" }
-  - { id: identity_collector, type: text, src: "printing.collector_number", x: 31.0, y: 82.75, w: 5.0, h: 2.8, font: label, size_pt: 4.1, align: left, valign: middle, color: "#ffffff", show_if: "type == identity" }
+  # Corp deck size and influence are a paired shoulder instrument. The outer
+  # faction-coloured brackets deliberately project into the art aperture, as
+  # on NSG production identities; the neutral silver bezel keeps the numbers
+  # readable across every faction. Deck accents run NE/SW, influence NW/SE.
+  - { id: corp_identity_stats_shadow, type: badge, text: "", x: 2.4, y: 54.2, d: 9.2, bg: "#07090b", shadow: "0 .55mm .85mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_stats_edge, type: badge, text: "", x: 2.65, y: 54.45, d: 8.7, bg: "linear-gradient(135deg,#151a1d 0%,#697174 42%,#151a1d 100%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_deck_accent_ne, type: badge, text: "", x: 2.525, y: 54.325, d: 8.95, bg: "palette", clip_path: "polygon(50% 50%,55% 0,78% 0,100% 22%,100% 45%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_deck_accent_sw, type: badge, text: "", x: 2.525, y: 54.325, d: 8.95, bg: "palette", clip_path: "polygon(50% 50%,45% 100%,22% 100%,0 78%,0 55%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_deck_bezel, type: badge, text: "", x: 3.125, y: 54.925, d: 7.75, bg: "linear-gradient(135deg,#f8faf8 0%,#737c80 42%,#eef0ee 68%,#596165 100%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_deck_face, type: badge, text: "", x: 3.7, y: 55.5, d: 6.6, bg: "radial-gradient(circle at 43% 35%,#fbfcfa 0%,#d9ddde 58%,#7b8387 100%)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_deck, type: text, src: "card.attributes.minimum_deck_size", x: 4.13, y: 56.62, w: 5.74, h: 4.06, font: stat, size_pt: 9.0, horizontal_scale: 0.86, align: center, valign: middle, color: "#11171d", text_shadow: "0 .08mm .12mm rgba(255,255,255,.7)", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_influence_shadow, type: badge, text: "", x: 51.4, y: 54.2, d: 9.2, bg: "#07090b", shadow: "0 .55mm .85mm rgba(0,0,0,.52)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  - { id: corp_identity_influence_edge, type: badge, text: "", x: 51.65, y: 54.45, d: 8.7, bg: "linear-gradient(135deg,#151a1d 0%,#697174 42%,#151a1d 100%)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  - { id: corp_identity_influence_accent_nw, type: badge, text: "", x: 51.525, y: 54.325, d: 8.95, bg: "palette", clip_path: "polygon(50% 50%,45% 0,22% 0,0 22%,0 45%)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  - { id: corp_identity_influence_accent_se, type: badge, text: "", x: 51.525, y: 54.325, d: 8.95, bg: "palette", clip_path: "polygon(50% 50%,55% 100%,78% 100%,100% 78%,100% 55%)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  - { id: corp_identity_influence_bezel, type: badge, text: "", x: 52.125, y: 54.925, d: 7.75, bg: "linear-gradient(135deg,#f8faf8 0%,#737c80 42%,#eef0ee 68%,#596165 100%)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  - { id: corp_identity_influence_face, type: badge, text: "", x: 52.7, y: 55.5, d: 6.6, bg: "radial-gradient(circle at 43% 35%,#343a3d 0%,#171c1f 58%,#070a0c 100%)", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  - { id: corp_identity_influence, type: text, src: "card.attributes.influence_limit", x: 53.13, y: 56.62, w: 5.74, h: 4.06, font: stat, size_pt: 9.0, horizontal_scale: 0.86, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .12mm .16mm #000", show_if: "type == identity && attributes.side == corp && attributes.influence_limit" }
+  # Identity metadata follows the two physical families. Runner identities keep
+  # the centered set/collector treatment between their lower stat plates. Corp
+  # identities put the illustrator at lower left and the set/collector pair at
+  # lower right on the paper panel, never over the illustration or stat dials.
+  - { id: identity_set_icon, type: richtext, text: "[set_system_gateway]", x: 27.0, y: 82.3, w: 3.45, h: 3.45, symbols: true, symbol_style: plain, icon_only: true, filter: "invert(1)", opacity: 0.92, show_if: "type == identity && attributes.side == runner" }
+  - { id: identity_collector, type: text, src: "printing.collector_number", x: 31.0, y: 82.75, w: 5.0, h: 2.8, font: label, size_pt: 4.1, align: left, valign: middle, color: "#ffffff", show_if: "type == identity && attributes.side == runner" }
+  - { id: corp_identity_artist, type: text, src: "printing.artist", prefix: "ILLUS. ", x: 4.7, y: 80.75, w: 36.0, h: 2.25, font: label, size_pt: 3.15, align: left, valign: middle, color: "#151b21", show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_set_icon, type: richtext, text: "[set_system_gateway]", x: 51.75, y: 80.55, w: 3.0, h: 3.0, symbols: true, symbol_style: plain, icon_only: true, opacity: 0.9, show_if: "type == identity && attributes.side == corp" }
+  - { id: corp_identity_collector, type: text, src: "printing.collector_number", transform: strip-leading-zeros, x: 55.0, y: 80.85, w: 3.6, h: 2.5, font: label, size_pt: 4.0, align: left, valign: middle, color: "#151b21", show_if: "type == identity && attributes.side == corp" }
 
   # ================= ICE FAMILY =================
   - { id: ice_header_shadow, type: rect, x: 7.2, y: 2.0, w: 55.8, h: 8.4, fill: "#06090d", clip_path: "polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)", shadow: "0 .7mm 1.2mm rgba(0,0,0,.5)", show_if: "type == ice" }
-  - { id: ice_header, type: rect, x: 6.2, y: 1.35, w: 56.8, h: 8.4, fill: "linear-gradient(180deg,#ffffff,#e8ece9)", stroke: "palette-dark", stroke_w_mm: 0.45, clip_path: "polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)", show_if: "type == ice" }
+  - { id: ice_header, type: rect, x: 6.2, y: 1.35, w: 56.8, h: 8.4, fill: "palette-metallic", stroke: "palette-dark", stroke_w_mm: 0.45, clip_path: "polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)", show_if: "type == ice" }
   - { id: ice_rez_cost_glyph, type: richtext, text: "[rez_cost]", x: 1.55, y: 0.58, w: 10.60, h: 10.60, symbols: true, symbol_style: plain, icon_only: true, filter: "drop-shadow(0 .4mm .5mm rgba(0,0,0,.55))", show_if: "type == ice && attributes.cost" }
   - { id: ice_cost_shadow, type: badge, text: "", x: 3.05, y: 2.12, d: 7.55, bg: "#050709", color: "#ffffff", shadow: "0 .55mm .9mm rgba(0,0,0,.58)", show_if: "type == ice" }
   - { id: ice_cost_edge, type: badge, text: "", x: 3.28, y: 2.35, d: 7.08, bg: "palette-dark", color: "#ffffff", show_if: "type == ice" }
   - { id: ice_cost_face, type: badge, text: "", x: 3.58, y: 2.65, d: 6.48, bg: "radial-gradient(circle at 50% 42%,#2d3336 0%,#111518 56%,#050709 100%)", color: "#ffffff", show_if: "type == ice" }
-  - { id: ice_cost_number, type: text, src: "card.attributes.cost", x: 3.58, y: 2.72, w: 6.48, h: 6.34, font: stat, size_pt: 11.6, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .15mm .18mm #000,0 0 .3mm #000", show_if: "type == ice" }
+  - { id: ice_cost_number, type: text, src: "card.attributes.cost", x: 3.58, y: 2.72, w: 6.48, h: 6.34, font: stat, size_pt: 13.2, align: center, valign: middle, color: "#ffffff", text_shadow: "0 .15mm .18mm #000,0 0 .3mm #000", show_if: "type == ice" }
   - { id: ice_name, type: richtext, src: "card.name", x: 14.2, y: 2.1, w: 43.6, h: 5.6, font: title, size_pt: 9.7, min_size_pt: 5.6, char_width_em: 0.62, line_height: 1.0, align: left, valign: middle, color: "#10171d", no_wrap: true, autoshrink: true, show_if: "type == ice" }
   - { id: ice_type_rail_shadow, type: rect, x: 1.0, y: 10.8, w: 6.0, h: 35.0, fill: "#05080b", radius_mm: 0.7, show_if: "type == ice" }
   - { id: ice_type_rail, type: rect, x: 1.45, y: 10.4, w: 5.5, h: 34.8, fill: "linear-gradient(180deg,#f8faf7,#e4e9e5)", stroke: "palette-dark", stroke_w_mm: 0.42, radius_mm: 0.65, show_if: "type == ice" }
-  - { id: ice_type, type: text, src: "card.subtypes", transform: join, separator: " · ", prefix: "ICE · ", x: 2.0, y: 11.4, w: 4.4, h: 32.8, font: subtype, size_pt: 5.1, align: center, valign: middle, color: "#151c22", writing_mode: vertical, show_if: "type == ice" }
-  - { id: ice_panel_shadow, type: rect, x: 7.5, y: 10.8, w: 53.4, h: 34.8, fill: "#05080b", radius_mm: 0.8, show_if: "type == ice" }
-  - { id: ice_panel, type: rect, x: 7.9, y: 10.4, w: 52.8, h: 34.8, fill: "linear-gradient(145deg,#f8faf7,#e6ede7)", stroke: "palette-dark", stroke_w_mm: 0.5, radius_mm: 0.75, show_if: "type == ice" }
+  - { id: ice_type, type: text, src: "card.subtypes", transform: join, separator: " - ", prefix: "ICE: ", x: 2.0, y: 11.4, w: 4.4, h: 32.8, font: ice_type, size_pt: 5.1, align: center, valign: middle, color: "#151c22", writing_mode: vertical, show_if: "type == ice" }
+  - { id: ice_panel_shadow, type: rect, x: 7.5, y: 10.8, w: 51.4, h: 34.8, fill: "#05080b", radius_mm: 0.8, show_if: "type == ice" }
+  - { id: ice_panel, type: rect, x: 7.9, y: 10.4, w: 50.5, h: 34.8, fill: "linear-gradient(145deg,#f8faf7,#e6ede7)", stroke: "palette-dark", stroke_w_mm: 0.5, radius_mm: 0.75, show_if: "type == ice" }
+  - { id: ice_panel_faction_motif, type: rect, x: 8.15, y: 10.65, w: 50.0, h: 34.3, fill: "palette-panel-motif", opacity: 0.62, radius_mm: 0.5, show_if: "type == ice" }
   - { id: ice_watermark, type: richtext, src: "card.attributes.faction", map: { haas-bioroid: "[faction_hb]", jinteki: "[faction_jinteki]", nbn: "[faction_nbn]", weyland-consortium: "[faction_weyland]" }, x: 42.0, y: 26.0, w: 12.5, h: 12.5, symbols: true, symbol_style: plain, icon_only: true, opacity: 0.065, filter: "grayscale(1) contrast(1.5)", show_if: "type == ice && attributes.faction != neutral-corp" }
-  - { id: ice_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#414950", secondary_scale: 0.84, x: 9.8, y: 12.0, w: 48.6, h: 31.6, font: body, size_pt: 8.2, min_size_pt: 5.8, line_height: 1.14, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type == ice" }
-  - { id: ice_art, type: image, src: "printing.scan_data", fallback_srcs: ["printing.art_data", "printing.art_url", "printing.art"], x: 7.9, y: 46.2, w: 52.8, h: 40.3, source_crop: [70, 550, 600, 450], source_size: [744, 1030], source_crop_fit: cover, show_if: "type == ice" }
-  - { id: ice_art_edge, type: rect, x: 7.9, y: 46.2, w: 52.8, h: 40.3, fill: "none", stroke: "palette-light", stroke_w_mm: 0.58, shadow: "inset 0 0 2mm rgba(0,0,0,.45)", show_if: "type == ice" }
+  - { id: ice_body, type: body, src: "card.text", secondary_src: "printing.flavor_text", secondary_font: flavor, secondary_color: "#414950", secondary_scale: 0.84, x: 9.8, y: 12.0, w: 46.3, h: 31.6, font: body, size_pt: 8.2, strong_weight: 800, min_size_pt: 5.8, line_height: 1.14, secondary_line_height: 1.06, color: "#151b21", symbols: true, symbol_style: plain, autoshrink: true, show_if: "type == ice" }
+  - { id: ice_art, type: image, src: "printing.scan_data", fallback_srcs: ["printing.art_data", "printing.art_url", "printing.art"], x: 7.9, y: 46.2, w: 50.5, h: 44.19, source_crop: [70, 550, 600, 450], source_size: [744, 1030], source_crop_fit: cover, show_if: "type == ice" }
+  - { id: ice_art_edge, type: rect, x: 7.9, y: 46.2, w: 50.5, h: 44.19, fill: "none", stroke: "palette-light", stroke_w_mm: 0.58, shadow: "inset 0 0 2mm rgba(0,0,0,.45)", show_if: "type == ice" }
   - { id: ice_faction_plate, type: rect, x: 52.3, y: 41.0, w: 9.7, h: 9.0, fill: "palette-light", stroke: "palette-dark", stroke_w_mm: 0.34, clip_path: "polygon(16% 0,84% 0,100% 22%,100% 78%,84% 100%,16% 100%,0 78%,0 22%)", show_if: "type == ice && attributes.faction != neutral-corp" }
   - { id: ice_faction_glyph, type: richtext, src: "card.attributes.faction", map: { haas-bioroid: "[faction_hb]", jinteki: "[faction_jinteki]", nbn: "[faction_nbn]", weyland-consortium: "[faction_weyland]" }, x: 52.9, y: 41.45, w: 8.5, h: 8.1, symbols: true, symbol_style: plain, icon_only: true, show_if: "type == ice && attributes.faction != neutral-corp" }
   - { id: ice_strength_shadow, type: badge, text: "", x: -1.05, y: 75.85, d: 14.75, bg: "#101315", color: "#11171d", shadow: "0 .6mm 1.1mm rgba(0,0,0,.55)", show_if: "type == ice && attributes.strength" }
@@ -300,4 +396,4 @@ regions:
   - { id: ice_artist, type: text, src: "printing.artist", prefix: "ILLUS. ", x: 60.15, y: 18.4, w: 1.8, h: 24.0, font: label, size_pt: 2.8, align: center, valign: middle, color: "#edf1ef", writing_mode: vertical, show_if: "type == ice" }
 
   # Shared trim edge is always last.
-  - { id: trim_edge, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "none", stroke: "#05080b", stroke_w_mm: 0.36, radius_mm: 2.5 }
+  - { id: trim_edge, type: rect, x: 0, y: 0, w: 63, h: 87.21, fill: "none", stroke: "none", stroke_w_mm: 0, radius_mm: 0 }

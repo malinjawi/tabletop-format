@@ -3,7 +3,7 @@
   "kind": "forge-pnp-face-extraction",
   "printing_id": "p_funhouse_sg",
   "card_id": "funhouse",
-  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "source_pdf": "system-gateway-official-1x.pdf",
   "pdf_page": 7,
   "slot": {
     "row": 2,

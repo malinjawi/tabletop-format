@@ -3,7 +3,7 @@
   "kind": "forge-pnp-face-extraction",
   "printing_id": "p_hedge_fund_sg",
   "card_id": "hedge_fund",
-  "source_pdf": "/Users/linjaboy/tabletop-format/tmp/pdfs/system-gateway-official-1x.pdf",
+  "source_pdf": "system-gateway-official-1x.pdf",
   "pdf_page": 10,
   "slot": {
     "row": 0,

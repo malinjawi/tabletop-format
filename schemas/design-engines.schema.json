@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://spec.example.dev/schemas/design-engines.schema.json",
   "title": "Card design engine registry",
-  "description": "Selects one active production renderer while allowing experimental editor adapters to be versioned and reviewed without changing releases.",
+  "description": "Selects one active production renderer while allowing beta, experimental, or disabled editor adapters to be versioned and reviewed without changing releases.",
   "type": "object",
   "required": ["version", "active", "engines"],
   "additionalProperties": false,
@@ -31,7 +31,7 @@
         "label": { "type": "string", "minLength": 1 },
         "description": { "type": "string" },
         "source": { "$ref": "#/$defs/path" },
-        "status": { "enum": ["active", "experimental", "disabled"] },
+        "status": { "enum": ["active", "beta", "experimental", "disabled"] },
         "families": {
           "type": "array",
           "uniqueItems": true,

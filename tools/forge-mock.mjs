@@ -9,6 +9,7 @@
  *
  *   POST /api/v1/admin/users                    lazy user provisioning (A)
  *   POST /api/v1/user/repos          (Sudo)     repo create, auto_init (A)
+ *   PATCH /api/v1/repos/:o/:r                   native repository privacy
  *   PUT  /api/v1/repos/:o/:r/topics/:t          discovery tag
  *   GET  /api/v1/repos/search?topic             discovery (DA-9)
  *   POST /api/v1/repos/:o/:r/contents           BATCH commit w/ author (B/D):
@@ -41,6 +42,7 @@ mkdirSync(join(STORE, "lfs"), { recursive: true });
 
 const users = new Map();   // handle → email
 const topics = new Map();  // "owner/repo" → Set(topic)
+const repositoryPrivacy = new Map(); // "owner/repo" → boolean
 const tagProtections = new Map(); // "owner/repo" → [{id,name_pattern,whitelist_usernames}]
 
 const repoDir = (o, r) => join(STORE, "repos", o, r);
@@ -62,8 +64,9 @@ const send = (res, code, obj, type = "application/json") => {
 const server = createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");
   const p = u.pathname;
-  const body = ["POST", "PUT"].includes(req.method) ? await readBody(req) : null;
+  const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readBody(req) : null;
   const j = () => { try { return JSON.parse(body.toString()); } catch { return {}; } };
+  const authenticated = /^token\s+\S+$/i.test(String(req.headers.authorization || ""));
   let m;
   try {
     /* ---- LFS (spike C shapes; R2 key layout) ---- */
@@ -102,7 +105,7 @@ const server = createServer(async (req, res) => {
     /* ---- repo create (Sudo = acting user) ---- */
     if (p === "/api/v1/user/repos" && req.method === "POST") {
       const owner = req.headers.sudo;
-      const { name, auto_init } = j();
+      const { name, auto_init, private: isPrivate = false } = j();
       if (!owner || !users.has(owner)) return send(res, 403, { message: "sudo user unknown" });
       const dir = repoDir(owner, name);
       if (existsSync(dir)) return send(res, 409, { message: "repo exists" });
@@ -113,7 +116,9 @@ const server = createServer(async (req, res) => {
         git(dir, ["add", "-A"]);
         git(dir, ["commit", "-qm", "Initial commit"], { env: env(owner, users.get(owner)) });
       }
-      return send(res, 201, { id: `${owner}/${name}`, name, owner: { login: owner } });
+      repositoryPrivacy.set(`${owner}/${name}`, isPrivate === true);
+      return send(res, 201, { id: `${owner}/${name}`, name, private: isPrivate === true,
+        owner: { login: owner } });
     }
     if ((m = p.match(/^\/api\/v1\/repos\/([^/]+)\/([^/]+)\/topics\/([^/]+)$/)) && req.method === "PUT") {
       const k = `${m[1]}/${m[2]}`;
@@ -126,7 +131,8 @@ const server = createServer(async (req, res) => {
       const data = [];
       for (const [k, ts] of topics) if (!want || ts.has(want)) {
         const [owner, name] = k.split("/");
-        if (existsSync(repoDir(owner, name))) data.push({ id: k, name, owner: { login: owner } });
+        if (existsSync(repoDir(owner, name))) data.push({ id: k, name,
+          private: repositoryPrivacy.get(k) === true, owner: { login: owner } });
       }
       const limit = Math.max(1, Number(u.searchParams.get("limit") || 50));
       const page = Math.max(1, Number(u.searchParams.get("page") || 1));
@@ -137,6 +143,18 @@ const server = createServer(async (req, res) => {
     if (rm) {
       const [, o, r] = rm; const rest = rm[3] ?? ""; const dir = repoDir(o, r);
       if (!existsSync(dir)) return send(res, 404, { message: "no repo" });
+
+      if (repositoryPrivacy.get(`${o}/${r}`) === true && !authenticated
+        && (rest === "" || rest.startsWith("/raw/"))) return send(res, 404, { message: "no repo" });
+
+      if (rest === "" && req.method === "GET") return send(res, 200, { id: `${o}/${r}`, name: r,
+        private: repositoryPrivacy.get(`${o}/${r}`) === true, owner: { login: o } });
+      if (rest === "" && req.method === "PATCH") {
+        const value = j();
+        if (typeof value.private !== "boolean") return send(res, 422, { message: "private must be boolean" });
+        repositoryPrivacy.set(`${o}/${r}`, value.private);
+        return send(res, 200, { id: `${o}/${r}`, name: r, private: value.private, owner: { login: o } });
+      }
 
       if (rest === "/tag_protections") {
         const key = `${o}/${r}`;
@@ -229,9 +247,12 @@ const server = createServer(async (req, res) => {
       }
       if ((m = rest.match(/^\/git\/commits\/([0-9a-f]+)$/))) {
         try {
-          const parent = git(dir, ["rev-parse", `${m[1]}^`]).trim();
-          return send(res, 200, { sha: m[1], parents: [{ sha: parent }] });
-        } catch { return send(res, 200, { sha: m[1], parents: [] }); }
+          const sha = git(dir, ["rev-parse", "--verify", `${m[1]}^{commit}`]).trim();
+          try {
+            const parent = git(dir, ["rev-parse", `${sha}^`]).trim();
+            return send(res, 200, { sha, parents: [{ sha: parent }] });
+          } catch { return send(res, 200, { sha, parents: [] }); }
+        } catch { return send(res, 404, { message: "commit not found" }); }
       }
       if (rest === "/branches/main")
         return send(res, 200, { name: "main", commit: { id: git(dir, ["rev-parse", "main"]).trim() } });

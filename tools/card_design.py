@@ -81,7 +81,7 @@ def load_card_design(game_dir, normalize_layout=lambda value: value, manifest_pa
         if family["id"] in seen:
             raise ValueError(f"duplicate card design family: {family['id']}")
         seen.add(family["id"])
-        region_map, component_ids = {}, []
+        region_map, origin_map, component_ids = {}, {}, []
         for component in manifest.get("components") or []:
             applies = component.get("applies_to")
             if applies != "*" and family["id"] not in (applies or []):
@@ -90,16 +90,20 @@ def load_card_design(game_dir, normalize_layout=lambda value: value, manifest_pa
             doc = component_docs[component["id"]]
             for region_id in doc.get("remove_regions") or []:
                 region_map.pop(region_id, None)
+                origin_map.pop(region_id, None)
             for region in doc["regions"]:
                 region_map[region["id"]] = deepcopy(region)
+                origin_map[region["id"]] = component["source"]
         family_doc = _fragment(game_dir, family["source"], f"family {family['id']}")
         for region_id in family_doc.get("remove_regions") or []:
             region_map.pop(region_id, None)
+            origin_map.pop(region_id, None)
         for region in family_doc["regions"]:
             region_map[region["id"]] = deepcopy(region)
+            origin_map[region["id"]] = family["source"]
         regions = sorted(region_map.values(), key=lambda region: (rank.get(region["id"], 10**9), region["id"]))
         layout = normalize_layout({**deepcopy(system), "regions": regions})
-        families.append({**deepcopy(family), "components": component_ids,
+        families.append({**deepcopy(family), "components": component_ids, "origins": origin_map,
                          "region_count": len(regions), "layout": layout})
     return {
         "version": manifest["version"],

@@ -128,7 +128,8 @@ const manifestFamilies = families.map(family => {
   return { id: family.id, label: family.label, description, match: family.match, source, specimens };
 });
 
-const system = { card: layout.card, fonts: layout.fonts || [], ...(layout.palette ? { palette: layout.palette } : {}) };
+const system = { card: layout.card, fonts: layout.fonts || [], ...(layout.palette ? { palette: layout.palette } : {}),
+  ...(layout.text_styles ? { text_styles: layout.text_styles } : {}), ...(layout.back ? { back: layout.back } : {}) };
 writeFileSync(join(outDir, "system.yaml"), dump(system));
 const manifest = {
   version: 1,

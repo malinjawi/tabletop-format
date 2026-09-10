@@ -2,7 +2,7 @@
 /**
  * render_cards.mjs — canonical card-face rasterizer.
  *
- * Usage: node tools/render_cards.mjs <game-dir> [out-dir] [--bleed]
+ * Usage: node tools/render_cards.mjs <game-dir> [out-dir] [--bleed] [--card <stable-id>]...
  *
  * The hub, editor, print sheet, and PR diff render cards with layoutCard()
  * from tools/hub_template.html. This command deliberately extracts and runs
@@ -33,7 +33,7 @@ const DEFAULT_H_MM = 88.9;
 
 function usage(message) {
   if (message) console.error(`render_cards: ${message}`);
-  console.error("Usage: node tools/render_cards.mjs <game-dir> [out-dir] [--bleed]");
+  console.error("Usage: node tools/render_cards.mjs <game-dir> [out-dir] [--bleed] [--card <stable-id>]...");
   process.exit(2);
 }
 
@@ -114,6 +114,7 @@ function normalizeLayout(gameDir, layout) {
     const selected = local || font.asset;
     if (selected) font.asset_data = localAssetUrl(gameDir, selected);
   }
+  if (out.back?.art) out.back.art_data = localAssetUrl(gameDir, out.back.art);
   return out;
 }
 
@@ -190,8 +191,6 @@ html,body{margin:0;padding:0;background:#fff;overflow:hidden}
 .render-bleed>.cf-card{position:absolute!important;left:var(--bleed-px)!important;top:var(--bleed-px)!important;width:var(--trim-width-px)!important;height:var(--trim-height-px)!important;min-height:var(--trim-height-px)!important;border-radius:0!important;box-shadow:none!important;z-index:2}
 .render-bleed>.cf-card [data-lay-region="shell"],.render-bleed>.cf-card [data-lay-region="shell_mesh"],.render-bleed>.cf-card [data-lay-region="shell_scanlines"]{border-radius:0!important}
 .render-bleed-field{position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(60deg,transparent 0 4.4mm,rgba(255,255,255,.11) 4.45mm 4.7mm),repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 .12mm,transparent .12mm .7mm)}
-.render-back{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--back-fg,#8c2f1b);color:var(--back-bg,#f6e3d3);font:800 72px/1.05 system-ui,sans-serif;text-align:center;padding:8%;overflow:hidden}
-.render-back:after{content:"";position:absolute;inset:3.8%;border:8px solid currentColor;border-radius:3.5%;opacity:.9}
 </style></head><body><div id="render-root"></div><script>
 const DATA=${data};
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -223,26 +222,34 @@ window.renderPrinting=async function(index,geometry){
     root.innerHTML='<div class="render-bleed" style="background:'+esc(bg)+'"><div class="render-bleed-field"></div>'+markup+'</div>';
   }else root.innerHTML=markup;
   await settleAssets();
+  const fitted=layMeasureAndFit(root);
   const overflow=[...root.querySelectorAll("[data-lay-region]")].filter(el=>!el.classList.contains("lay-rect")&&!el.classList.contains("lay-image")&&(el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1)).map(el=>({region:el.dataset.layRegion,text:el.textContent.trim().slice(0,80),client:[el.clientWidth,el.clientHeight],scroll:[el.scrollWidth,el.scrollHeight]}));
   const face=root.firstElementChild;
   const mode=face?.classList.contains("source-card")?"source":face?.classList.contains("production-card")?"production":"layout";
-  return {id:p.id,width:root.offsetWidth,height:root.offsetHeight,mode,source_status:face?.dataset?.sourceStatus||null,overflow,debug:[...root.querySelectorAll(".lay-region")].slice(0,12).map(el=>({id:el.textContent.trim().slice(0,40),style:el.getAttribute("style"),color:getComputedStyle(el).color,background:getComputedStyle(el).backgroundColor}))};
+  return {id:p.id,width:root.offsetWidth,height:root.offsetHeight,mode,source_status:face?.dataset?.sourceStatus||null,fitted,overflow,debug:[...root.querySelectorAll(".lay-region")].slice(0,12).map(el=>({id:el.textContent.trim().slice(0,40),style:el.getAttribute("style"),color:getComputedStyle(el).color,background:getComputedStyle(el).backgroundColor}))};
 };
 window.renderBack=async function(geometry){
   root.style.width=(geometry?.widthPx||${widthPx})+'px';root.style.height=(geometry?.heightPx||${heightPx})+'px';
   root.style.setProperty('--bleed-px',(geometry?.bleedPx??${bleedPx})+'px');root.style.setProperty('--trim-width-px',(geometry?.trimWidthPx||${trimWidthPx})+'px');root.style.setProperty('--trim-height-px',(geometry?.trimHeightPx||${trimHeightPx})+'px');
-  const colors=Object.values(g.type_colors||{});const col=colors[0]||{fg:"#8c2f1b",bg:"#f6e3d3"};
-  const back='<div class="render-back" style="--back-fg:'+esc(col.fg||"#8c2f1b")+';--back-bg:'+esc(col.bg||"#f6e3d3")+'">'+esc(g.title||g.id||"?")+'</div>';
-  root.innerHTML=${bleed}?'<div class="render-bleed" style="background:'+esc(col.fg||"#8c2f1b")+'"><div class="render-bleed-field"></div>'+back+'</div>':back;
+  const spec=(g.layout&&g.layout.back)||{},backBg=spec.bg||"#333b42",back=layoutBackCard(g,g.layout,{w:geometry?.trimWidthPx||${trimWidthPx}});
+  root.innerHTML=${bleed}?'<div class="render-bleed" style="background:'+esc(backBg)+'"><div class="render-bleed-field"></div>'+back+'</div>':back;
   await settleAssets();
+  return {regions:root.querySelectorAll('[data-lay-region]').length,face:root.querySelector('[data-card-face="back"]')?'legacy':'declarative'};
 };
 </script></body></html>`;
 }
 
 async function main() {
   const argv = process.argv.slice(2);
-  const bleedMode = argv.includes("--bleed");
-  const args = argv.filter(arg => arg !== "--bleed");
+  const args = [], selectedCardIds = [];
+  let bleedMode = false;
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === "--bleed") bleedMode = true;
+    else if (argv[index] === "--card") {
+      if (!argv[index + 1] || argv[index + 1].startsWith("--")) usage("--card requires a stable card ID");
+      selectedCardIds.push(argv[++index]);
+    } else args.push(argv[index]);
+  }
   if (!args.length || args.includes("-h") || args.includes("--help")) usage();
   const gameDir = resolve(args[0]);
   const outDir = resolve(args[1] || join(gameDir, "exports", "faces"));
@@ -266,9 +273,16 @@ async function main() {
     for (const assetKey of ["font_asset", "background_asset"])
       if (region.render?.[assetKey])
         region.render[assetKey] = localAssetUrl(gameDir, region.render[assetKey]);
-  const cards = readJson(join(gameDir, "components", "cards.json"));
-  const printings = readJson(join(gameDir, "components", "printings.json"))
+  let cards = readJson(join(gameDir, "components", "cards.json"));
+  let printings = readJson(join(gameDir, "components", "printings.json"))
     .map(printing => normalizePrinting(gameDir, printing));
+  if (selectedCardIds.length) {
+    const wanted = new Set(selectedCardIds), known = new Set(cards.map(card => card.id));
+    const unknown = [...wanted].filter(id => !known.has(id));
+    if (unknown.length) usage(`unknown card ID${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}`);
+    cards = cards.filter(card => wanted.has(card.id));
+    printings = printings.filter(printing => wanted.has(printing.card_id));
+  }
   const physicalCard = (production?.enabled !== false && production?.card)
     || (sourceOverlay?.enabled !== false && sourceOverlay?.card)
     || layout?.card || production?.card || sourceOverlay?.card || {};
@@ -310,7 +324,15 @@ async function main() {
   const browser = await chromium.launch({
     executablePath: findChrome(),
     headless: true,
-    args: ["--allow-file-access-from-files", "--disable-gpu"],
+    // Keep release rasters stable across fresh browser processes. In
+    // particular, macOS Chrome can otherwise alternate the final rounding of
+    // anti-aliased translucent corners by one RGB value, which changes exact
+    // package bytes despite being visually imperceptible.
+    args: [
+      "--allow-file-access-from-files", "--disable-gpu",
+      "--force-color-profile=srgb", "--force-device-scale-factor=1",
+      "--disable-font-subpixel-positioning", "--disable-lcd-text",
+    ],
   });
   try {
     const page = await browser.newPage({
@@ -351,7 +373,10 @@ async function main() {
     }
     const backGeometry = geometryFor({});
     await page.setViewportSize({ width: backGeometry.widthPx, height: backGeometry.heightPx });
-    await page.evaluate(geometry => window.renderBack(geometry), backGeometry);
+    const backResult = await page.evaluate(geometry => window.renderBack(geometry), backGeometry);
+    const declaredBackRegions = game.layout?.back?.regions?.length || 0;
+    if (declaredBackRegions && backResult.regions !== declaredBackRegions)
+      throw new Error(`card back rendered ${backResult.regions} of ${declaredBackRegions} declared regions`);
     await root.screenshot({
       path: join(outDir, "_back.png"), animations: "disabled", omitBackground: false,
     });

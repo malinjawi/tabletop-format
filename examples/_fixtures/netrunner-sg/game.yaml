@@ -68,6 +68,10 @@ attribute_definitions:
     name: Memory (MU)
     type: integer
     description: Memory units required to install this program.
+  - key: memory_limit
+    name: Memory limit (MU)
+    type: integer
+    description: Runner identity-only. Base memory available for installed programs before modifiers.
   - key: trash_cost
     name: Trash cost
     type: integer
@@ -146,6 +150,18 @@ symbols:
     name: Advancement (reverse)
     glyph: "△"
     asset: "assets/nsg-symbols/NSG_ADVANCEMENT_COUNTER_REVERSE.svg"
+  - key: agenda_advancement_dial
+    name: Agenda advancement dial
+    glyph: "▲"
+    asset: "assets/layout-symbols/forge-agenda-advancement-dial.svg"
+  - key: agenda_points_plate
+    name: Agenda points plate
+    glyph: "★"
+    asset: "assets/layout-symbols/forge-agenda-points-plate.svg"
+  - key: runner_credit_dial
+    name: Runner credit dial
+    glyph: "¢"
+    asset: "assets/layout-symbols/forge-runner-credit-dial.svg"
   - key: five_credits
     name: Five credits
     glyph: "5¢"

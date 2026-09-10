@@ -17,7 +17,7 @@ regions:
     "y": 3.12
     w: 62
     h: 5.4
-    fill: linear-gradient(180deg,#ffffff,#ecefed)
+    fill: palette-metallic
     stroke: palette-dark
     stroke_w_mm: 0.35
     radius_mm: 1.7
@@ -77,13 +77,13 @@ regions:
     type: richtext
     src: card.subtypes
     transform: join
-    separator: " · "
-    x: 21.5
-    "y": 48.55
-    w: 30.4
+    separator: " - "
+    x: 18.6
+    "y": 48.15
+    w: 33.3
     h: 4.7
     font: subtype
-    size_pt: 6.6
+    size_pt: 7.3
     min_size_pt: 4.6
     char_width_em: 0.58
     line_height: 1
@@ -106,8 +106,10 @@ regions:
     h: 22.4
     font: body
     size_pt: 8.25
+    strong_weight: 800
     min_size_pt: 5.8
     line_height: 1.12
+    paragraph_gap_em: 0.45
     secondary_line_height: 1.06
     color: "#151b21"
     symbols: true
@@ -198,25 +200,48 @@ regions:
     valign: middle
     color: "#11171d"
     show_if: type == program && attributes.memory_cost
+  - id: program_footer_artist
+    type: text
+    src: printing.artist
+    prefix: "ILLUS. "
+    x: 14.5
+    "y": 82.8
+    w: 24.5
+    h: 2.7
+    font: label
+    size_pt: 4.2
+    align: left
+    valign: middle
+    color: "#f5f6f2"
+    show_if: type == program
   - id: program_strength_shadow
     type: badge
     text: ""
-    x: -0.95
-    "y": 78.05
-    d: 14.65
+    x: -0.65
+    "y": 77.8
+    d: 14.4
     bg: "#101315"
     color: "#11171d"
     shadow: 0 .6mm 1.1mm rgba(0,0,0,.55)
-    show_if: type == program && attributes.strength
+    show_if: type == program
   - id: program_strength_face
     type: badge
     text: ""
-    x: -0.65
-    "y": 78.32
-    d: 14.1
+    x: -0.35
+    "y": 78.1
+    d: 13.85
     bg: radial-gradient(circle at 58% 38%,#ffffff 0%,#eef0ef 64%,#aeb4b2 100%)
     color: "#11171d"
-    show_if: type == program && attributes.strength
+    show_if: type == program
+  - id: program_strength_inner
+    type: badge
+    text: ""
+    x: 0.15
+    "y": 78.6
+    d: 12.85
+    bg: radial-gradient(circle,transparent 0 66%,rgba(117,125,125,.58) 67% 69%,rgba(255,255,255,.62) 70% 71%,transparent 72%)
+    color: "#11171d"
+    show_if: type == program
   - id: program_strength_bar_1
     type: rect
     x: 0
@@ -224,33 +249,35 @@ regions:
     w: 3.2
     h: 0.54
     fill: "#8e9493"
-    show_if: type == program && attributes.strength
+    show_if: type == program
   - id: program_strength_bar_2
     type: rect
     x: 0
-    "y": 84.15
-    w: 4.4
+    "y": 84.25
+    w: 5.05
     h: 0.54
     fill: "#8e9493"
-    show_if: type == program && attributes.strength
+    show_if: type == program
   - id: program_strength_bar_3
     type: rect
     x: 0
-    "y": 85.75
-    w: 10.2
+    "y": 85.95
+    w: 10.4
     h: 0.54
     fill: "#8e9493"
-    show_if: type == program && attributes.strength
+    show_if: type == program
   - id: program_strength
     type: text
     src: card.attributes.strength
-    x: 3
-    "y": 79.55
-    w: 7.6
-    h: 6.5
+    map:
+      "": "-"
+    x: 2.55
+    "y": 79.35
+    w: 8.15
+    h: 6.65
     font: stat
-    size_pt: 14.4
+    size_pt: 14.6
     align: center
     valign: middle
     color: "#11171d"
-    show_if: type == program && attributes.strength
+    show_if: type == program

@@ -1,7 +1,7 @@
-name: Shared by Asset, Operation, Upgrade
-description: 1 ordered region reused by asset, operation, upgrade.
+name: Shared by Hardware, Program, Resource
+description: 1 ordered region reused by hardware, program, resource.
 regions:
-  - id: art_corp_standard
+  - id: art_runner_installed
     type: image
     src: printing.scan_data
     fallback_srcs:
@@ -21,4 +21,4 @@ regions:
       - 744
       - 1030
     source_crop_fit: cover
-    show_if: type == asset || type == operation || type == upgrade
+    show_if: type == hardware || type == program || type == resource

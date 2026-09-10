@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.example.dev/schemas/component-design.schema.json",
+  "title": "Reusable non-card component design",
+  "description": "Portable visual families for tokens, counters, tiles, dials, standees, dice, boards, and player aids. Source: templates/component-design.json. Coordinates are percentages of the finished component so one family can scale across production sizes.",
+  "type": "object",
+  "required": ["version", "production", "families"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "production": {
+      "type": "object",
+      "required": ["bleed_mm", "safe_mm", "sheet"],
+      "additionalProperties": false,
+      "properties": {
+        "player_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Versioned player count used to resolve per-player piece quantities in exact manufacturing exports."
+        },
+        "large_piece_overlap_mm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30,
+          "description": "Shared overlap between adjacent home-print tiles for components larger than one page."
+        },
+        "bleed_mm": { "type": "number", "minimum": 0, "maximum": 10 },
+        "safe_mm": { "type": "number", "minimum": 0, "maximum": 20 },
+        "sheet": {
+          "type": "object",
+          "required": ["page", "margin_mm", "gap_mm"],
+          "additionalProperties": false,
+          "properties": {
+            "page": { "enum": ["A4", "Letter"] },
+            "margin_mm": { "type": "number", "minimum": 0, "maximum": 40 },
+            "gap_mm": { "type": "number", "minimum": 0, "maximum": 20 }
+          }
+        }
+      }
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "match", "shape", "size_mm", "style", "regions"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+          "label": { "type": "string", "minLength": 1 },
+          "match": {
+            "type": "object",
+            "required": ["kinds"],
+            "additionalProperties": false,
+            "properties": {
+              "kinds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+              "template_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+            }
+          },
+          "shape": { "enum": ["circle", "rounded-rectangle", "rectangle", "hexagon"] },
+          "size_mm": {
+            "type": "object",
+            "required": ["width", "height"],
+            "additionalProperties": false,
+            "properties": {
+              "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000 },
+              "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000 }
+            }
+          },
+          "style": {
+            "type": "object",
+            "required": ["fill", "border", "border_mm", "text", "font_family", "font_size_pt"],
+            "additionalProperties": false,
+            "properties": {
+              "fill": { "type": "string", "minLength": 1 },
+              "border": { "type": "string", "minLength": 1 },
+              "border_mm": { "type": "number", "minimum": 0, "maximum": 20 },
+              "text": { "type": "string", "minLength": 1 },
+              "font_family": { "type": "string", "minLength": 1 },
+              "font_size_pt": { "type": "number", "exclusiveMinimum": 0, "maximum": 144 },
+              "radius_mm": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "type", "source", "x", "y", "w", "h"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+                "type": { "enum": ["text", "image", "symbol"] },
+                "source": { "type": "string", "minLength": 1 },
+                "x": { "type": "number", "minimum": 0, "maximum": 100 },
+                "y": { "type": "number", "minimum": 0, "maximum": 100 },
+                "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+                "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+                "align": { "enum": ["left", "center", "right"] },
+                "uppercase": { "type": "boolean" },
+                "font_size_pt": { "type": "number", "exclusiveMinimum": 0, "maximum": 144 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

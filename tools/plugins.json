@@ -48,6 +48,12 @@
       "script": "import-nandeck-layout.mjs",
       "usage": "<game-dir> <script.txt> [--write] [--report FILE]",
       "desc": "nanDECK layout -> field-level three-way merge into versioned Forge family/component YAML"
+    },
+    "pnpink": {
+      "runner": "node",
+      "script": "import-pnpink.mjs",
+      "usage": "<game-dir> <family.pnp|family.csv> [--write]",
+      "desc": "PnPInk/Inkscape family working copy -> three-way card-data + SVG-source review"
     }
   },
   "exporters": {
@@ -75,6 +81,12 @@
       "usage": "<game-dir>",
       "desc": "Tabletop Club asset pack (open-source 3D playspace; carries provenance)"
     },
+    "ttpg": {
+      "runner": "python",
+      "script": "export_ttpg.py",
+      "usage": "<game-dir> [--setup ID] [--ref REF]",
+      "desc": "Tabletop Playground package (object templates + textures + staged .vts state; carries provenance)"
+    },
     "vtt": {
       "runner": "python",
       "script": "export_vtt.py",
@@ -92,6 +104,12 @@
       "script": "export-nandeck.mjs",
       "usage": "<game-dir> [--output-dir DIR]",
       "desc": "Family-aware nanDECK project (MM scripts + CSV + explicit fidelity report)"
+    },
+    "pnpink": {
+      "runner": "node",
+      "script": "export-pnpink.mjs",
+      "usage": "<game-dir> [output-dir]",
+      "desc": "Version-pinned PnPInk/Inkscape .pnp working copy for every configured card family"
     },
     "htmlcards": {
       "runner": "python",

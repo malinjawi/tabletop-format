@@ -17,7 +17,7 @@ regions:
     "y": 1.35
     w: 55.9
     h: 10.2
-    fill: linear-gradient(180deg,#ffffff,#e8ecea)
+    fill: palette-metallic
     stroke: palette-dark
     stroke_w_mm: 0.42
     clip_path: polygon(0 0,94% 0,100% 50%,94% 100%,5% 100%,0 50%)
@@ -60,39 +60,140 @@ regions:
     no_wrap: true
     autoshrink: true
     show_if: type == identity && attributes.side == runner
-  - id: runner_link_ring
-    type: badge
-    text: ""
-    x: 0.55
-    "y": 0.75
-    d: 11
-    bg: palette
-    color: "#ffffff"
-    shadow: 0 .7mm 1.2mm rgba(0,0,0,.5)
+  - id: runner_link_shadow
+    type: rect
+    x: 1.05
+    "y": 1.25
+    w: 14.2
+    h: 11.55
+    fill: "#080b0d"
+    clip_path: polygon(26% 0,100% 0,100% 65%,73% 100%,0 100%,0 29%)
+    shadow: 0 .7mm 1.2mm rgba(0,0,0,.55)
     show_if: type == identity && attributes.side == runner
-  - id: runner_link
-    type: badge
+  - id: runner_link_edge
+    type: rect
+    x: 1.48
+    "y": 1.62
+    w: 13.35
+    h: 10.72
+    fill: linear-gradient(135deg,#f8faf9 0%,#7e898e 37%,#e8eceb 64%,#4d565b 100%)
+    clip_path: polygon(25% 0,100% 0,100% 64%,72% 100%,0 100%,0 28%)
+    show_if: type == identity && attributes.side == runner
+  - id: runner_link_face
+    type: rect
+    x: 1.93
+    "y": 2.06
+    w: 12.45
+    h: 9.82
+    fill: palette-gradient
+    stroke: "#12171a"
+    stroke_w_mm: 0.24
+    clip_path: polygon(24% 0,100% 0,100% 63%,71% 100%,0 100%,0 27%)
+    show_if: type == identity && attributes.side == runner
+  - id: runner_link_number
+    type: text
     src: card.attributes.base_link
-    x: 1.45
-    "y": 1.65
-    d: 9.2
+    x: 3.25
+    "y": 5.02
+    w: 5.45
+    h: 5.45
     font: stat
     size_pt: 14.2
-    bg: "#15191c"
+    align: center
+    valign: middle
     color: "#ffffff"
+    text_shadow: "0 .16mm .22mm #000"
     show_if: type == identity && attributes.side == runner
   - id: runner_link_icon
     type: richtext
     text: "[link]"
-    x: 7.15
-    "y": 1.65
-    w: 2.8
-    h: 2.8
+    x: 9.25
+    "y": 2.72
+    w: 3.2
+    h: 3.05
     symbols: true
     symbol_style: plain
     icon_only: true
     filter: "invert(1) drop-shadow(0 0 .25mm #15191c)"
     show_if: type == identity && attributes.side == runner
+  - id: runner_memory_shadow
+    type: rect
+    x: 1.92
+    "y": 12.7
+    w: 6.65
+    h: 4.95
+    fill: "#111518"
+    clip_path: polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)
+    shadow: 0 .35mm .55mm rgba(0,0,0,.5)
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory_edge
+    type: rect
+    x: 2.08
+    "y": 12.84
+    w: 6.3
+    h: 4.62
+    fill: linear-gradient(135deg,#fbfdfc 0%,#9ba3a5 38%,#e9eceb 68%,#6b7376 100%)
+    stroke: "#e9edeb"
+    stroke_w_mm: 0.16
+    clip_path: polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory_face
+    type: rect
+    x: 2.4
+    "y": 13.13
+    w: 4.62
+    h: 4.02
+    fill: linear-gradient(180deg,#4d5356 0%,#252a2d 100%)
+    stroke: "#171b1d"
+    stroke_w_mm: 0.18
+    clip_path: polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory_pin_1
+    type: rect
+    x: 7.43
+    "y": 13.28
+    w: 0.58
+    h: 0.24
+    fill: "#252a2d"
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory_pin_2
+    type: rect
+    x: 7.43
+    "y": 14.25
+    w: 0.58
+    h: 0.24
+    fill: "#252a2d"
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory_pin_3
+    type: rect
+    x: 7.43
+    "y": 15.22
+    w: 0.58
+    h: 0.24
+    fill: "#252a2d"
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory_pin_4
+    type: rect
+    x: 7.43
+    "y": 16.19
+    w: 0.58
+    h: 0.24
+    fill: "#252a2d"
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
+  - id: runner_memory
+    type: text
+    src: card.attributes.memory_limit
+    x: 2.48
+    "y": 13.16
+    w: 4.38
+    h: 3.9
+    font: stat
+    size_pt: 9.4
+    align: center
+    valign: middle
+    color: "#ffffff"
+    text_shadow: "0 .14mm .18mm #000"
+    show_if: type == identity && attributes.side == runner && attributes.memory_limit
   - id: identity_faction_glyph_runner
     type: richtext
     src: card.attributes.faction
@@ -115,60 +216,49 @@ regions:
       - printing.art_data
       - printing.art_url
       - printing.art
-    x: 7.6
+    x: 0
     "y": 12.5
-    w: 47.8
+    w: 63
     h: 44.7
     source_crop:
-      - 110
-      - 130
-      - 524
-      - 500
+      - 0
+      - 148
+      - 744
+      - 528
     source_size:
       - 744
       - 1030
     source_crop_fit: cover
     credit: printing.artist
     show_if: type == identity && attributes.side == runner
-  - id: identity_art_edge_runner
-    type: rect
-    x: 1.5
-    "y": 12.5
-    w: 60
-    h: 44.7
-    fill: none
-    stroke: palette-light
-    stroke_w_mm: 0.65
-    shadow: inset 0 0 2.2mm rgba(0,0,0,.45)
-    show_if: type == identity && attributes.side == runner
   - id: runner_identity_stats_shadow
     type: rect
-    x: 54.05
-    "y": 72.15
-    w: 8.95
-    h: 14.75
+    x: 0
+    "y": 78.5
+    w: 10.45
+    h: 8.71
     fill: "#07090b"
-    clip_path: polygon(13% 0,100% 0,100% 100%,0 100%,0 9%)
-    shadow: "-.25mm 0 .85mm rgba(0,0,0,.52)"
+    clip_path: polygon(0 0,88% 0,100% 15%,100% 100%,0 100%)
+    shadow: .25mm 0 .85mm rgba(0,0,0,.52)
     show_if: type == identity && attributes.side == runner
   - id: runner_identity_stats_edge
     type: rect
-    x: 54.45
-    "y": 72.52
-    w: 8.55
-    h: 14.25
+    x: 0.35
+    "y": 78.88
+    w: 9.7
+    h: 8.33
     fill: palette-gradient
     stroke: palette-light
     stroke_w_mm: 0.28
-    clip_path: polygon(13% 0,100% 0,100% 100%,0 100%,0 9%)
+    clip_path: polygon(0 0,88% 0,100% 15%,100% 100%,0 100%)
     show_if: type == identity && attributes.side == runner
   - id: runner_identity_deck_face
     type: rect
-    x: 55
-    "y": 73.1
-    w: 7.35
-    h: 5.65
-    fill: linear-gradient(145deg,#ffffff 0%,#e4e7e6 60%,#aab0af 100%)
+    x: 1.08
+    "y": 80.2
+    w: 8.1
+    h: 5.25
+    fill: palette-metallic
     stroke: "#20262a"
     stroke_w_mm: 0.28
     clip_path: polygon(7% 0,93% 0,100% 11%,100% 89%,93% 100%,7% 100%,0 89%,0 11%)
@@ -176,30 +266,43 @@ regions:
   - id: runner_identity_deck
     type: text
     src: card.attributes.minimum_deck_size
-    x: 55
-    "y": 73.22
-    w: 7.35
-    h: 5.35
+    x: 1.08
+    "y": 80.3
+    w: 8.1
+    h: 5.05
     font: stat
     size_pt: 11.2
     align: center
     valign: middle
     color: "#11171d"
     show_if: type == identity && attributes.side == runner
-  - id: runner_identity_stats_divider
+  - id: runner_identity_influence_shadow
     type: rect
-    x: 55.15
-    "y": 79.05
-    w: 7.05
-    h: 0.42
-    fill: palette-light
-    show_if: type == identity && attributes.side == runner
+    x: 52.55
+    "y": 78.5
+    w: 10.45
+    h: 8.71
+    fill: "#07090b"
+    clip_path: polygon(12% 0,100% 0,100% 100%,0 100%,0 15%)
+    shadow: "-.25mm 0 .85mm rgba(0,0,0,.52)"
+    show_if: type == identity && attributes.side == runner && attributes.influence_limit
+  - id: runner_identity_influence_edge
+    type: rect
+    x: 52.95
+    "y": 78.88
+    w: 10.05
+    h: 8.33
+    fill: palette-gradient
+    stroke: palette-light
+    stroke_w_mm: 0.28
+    clip_path: polygon(12% 0,100% 0,100% 100%,0 100%,0 15%)
+    show_if: type == identity && attributes.side == runner && attributes.influence_limit
   - id: runner_identity_influence_face
     type: rect
-    x: 55
-    "y": 79.75
-    w: 7.35
-    h: 5.65
+    x: 53.82
+    "y": 80.2
+    w: 8.1
+    h: 5.25
     fill: linear-gradient(180deg,#343a3d,#080b0d)
     stroke: "#c7ccca"
     stroke_w_mm: 0.28
@@ -208,10 +311,10 @@ regions:
   - id: runner_identity_influence
     type: text
     src: card.attributes.influence_limit
-    x: 55
-    "y": 79.87
-    w: 7.35
-    h: 5.35
+    x: 53.82
+    "y": 80.3
+    w: 8.1
+    h: 5.05
     font: stat
     size_pt: 11.2
     align: center
@@ -219,3 +322,29 @@ regions:
     color: "#ffffff"
     text_shadow: "0 .12mm .16mm #000"
     show_if: type == identity && attributes.side == runner && attributes.influence_limit
+  - id: identity_set_icon
+    type: richtext
+    text: "[set_system_gateway]"
+    x: 27
+    "y": 82.3
+    w: 3.45
+    h: 3.45
+    symbols: true
+    symbol_style: plain
+    icon_only: true
+    filter: invert(1)
+    opacity: 0.92
+    show_if: type == identity && attributes.side == runner
+  - id: identity_collector
+    type: text
+    src: printing.collector_number
+    x: 31
+    "y": 82.75
+    w: 5
+    h: 2.8
+    font: label
+    size_pt: 4.1
+    align: left
+    valign: middle
+    color: "#ffffff"
+    show_if: type == identity && attributes.side == runner

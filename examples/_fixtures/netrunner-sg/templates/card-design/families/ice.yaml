@@ -1,6 +1,23 @@
 name: Ice template
 description: Production layout specific to ice cards. Shared frame and typography live in reusable components.
 regions:
+  - id: ice_info_rail
+    type: rect
+    x: 58.4
+    "y": 9.75
+    w: 4.6
+    h: 80.64
+    fill: palette-gradient
+    show_if: type == ice
+  - id: ice_info_rail_faction_motif
+    type: rect
+    x: 58.4
+    "y": 9.75
+    w: 4.6
+    h: 80.64
+    fill: palette-shell-motif
+    opacity: 0.62
+    show_if: type == ice
   - id: ice_header_shadow
     type: rect
     x: 7.2
@@ -17,7 +34,7 @@ regions:
     "y": 1.35
     w: 56.8
     h: 8.4
-    fill: linear-gradient(180deg,#ffffff,#e8ece9)
+    fill: palette-metallic
     stroke: palette-dark
     stroke_w_mm: 0.45
     clip_path: polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)
@@ -70,7 +87,7 @@ regions:
     w: 6.48
     h: 6.34
     font: stat
-    size_pt: 11.6
+    size_pt: 13.2
     align: center
     valign: middle
     color: "#ffffff"
@@ -118,13 +135,13 @@ regions:
     type: text
     src: card.subtypes
     transform: join
-    separator: " · "
-    prefix: "ICE · "
+    separator: " - "
+    prefix: "ICE: "
     x: 2
     "y": 11.4
     w: 4.4
     h: 32.8
-    font: subtype
+    font: ice_type
     size_pt: 5.1
     align: center
     valign: middle
@@ -135,7 +152,7 @@ regions:
     type: rect
     x: 7.5
     "y": 10.8
-    w: 53.4
+    w: 51.4
     h: 34.8
     fill: "#05080b"
     radius_mm: 0.8
@@ -144,12 +161,22 @@ regions:
     type: rect
     x: 7.9
     "y": 10.4
-    w: 52.8
+    w: 50.5
     h: 34.8
     fill: linear-gradient(145deg,#f8faf7,#e6ede7)
     stroke: palette-dark
     stroke_w_mm: 0.5
     radius_mm: 0.75
+    show_if: type == ice
+  - id: ice_panel_faction_motif
+    type: rect
+    x: 8.15
+    "y": 10.65
+    w: 50
+    h: 34.3
+    fill: palette-panel-motif
+    opacity: 0.62
+    radius_mm: 0.5
     show_if: type == ice
   - id: ice_watermark
     type: richtext
@@ -178,10 +205,11 @@ regions:
     secondary_scale: 0.84
     x: 9.8
     "y": 12
-    w: 48.6
+    w: 46.3
     h: 31.6
     font: body
     size_pt: 8.2
+    strong_weight: 800
     min_size_pt: 5.8
     line_height: 1.14
     secondary_line_height: 1.06
@@ -199,8 +227,8 @@ regions:
       - printing.art
     x: 7.9
     "y": 46.2
-    w: 52.8
-    h: 40.3
+    w: 50.5
+    h: 44.19
     source_crop:
       - 70
       - 550
@@ -215,8 +243,8 @@ regions:
     type: rect
     x: 7.9
     "y": 46.2
-    w: 52.8
-    h: 40.3
+    w: 50.5
+    h: 44.19
     fill: none
     stroke: palette-light
     stroke_w_mm: 0.58

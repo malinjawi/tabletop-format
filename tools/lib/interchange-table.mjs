@@ -1,7 +1,8 @@
 import { parseCSV } from "./cardcsv.mjs";
 
 const CARD_ORDER = ["id", "name", "type", "subtypes", "text", "keywords", "deck_limit", "orientation", "tags", "notes"];
-const PRINTING_ORDER = ["id", "card_id", "set_id", "collector_number", "quantity", "artist", "flavor_text", "art", "image", "scan", "art_url", "background_url", "back", "template_id", "variant", "provenance", "scan_provenance"];
+const PRINTING_ORDER = ["id", "card_id", "set_id", "collector_number", "quantity", "artist", "flavor_text", "art", "art_crop", "image", "scan", "art_url", "background_url", "back", "template_id", "variant", "provenance", "scan_provenance"];
+const TOKEN_ORDER = ["id", "name", "kind", "template_id", "quantity", "per_player", "description", "symbol", "art", "back", "size_mm", "faces", "parent", "notes"];
 
 const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
@@ -27,7 +28,10 @@ function cellType(values) {
 
 function orderedColumns(rows, kind) {
   const flattened = rows.map(flatten), names = new Set(flattened.flatMap(row => Object.keys(row)));
-  const preferred = kind === "cards" ? CARD_ORDER : PRINTING_ORDER;
+  const preferred = kind === "cards" ? CARD_ORDER : kind === "printings" ? PRINTING_ORDER : TOKEN_ORDER;
+  // Empty projects still need an immediately usable schema: a blank worksheet
+  // with no `id` header cannot accept its first component or round-trip safely.
+  if (!rows.length) return preferred.map(path => ({ path, type: "string" }));
   const ordered = preferred.filter(name => names.delete(name));
   const attributes = [...names].filter(name => name.startsWith("attributes.")).sort();
   for (const name of attributes) names.delete(name);

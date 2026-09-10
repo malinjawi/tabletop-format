@@ -98,13 +98,21 @@ const release=(await request("GET","/api/games/tidepool/releases/v0.1")).data;
 assert(release.repository_tag?.verified_now===true,"release tag re-verifies against restored Git truth");
 assert(release.build?.format==="forge-release-build"&&release.build?.public_origin,
   "release retains the external origin and exporter identity needed for exact rebuilds",release.build);
+assert(release.print_deliveries?.length===1
+  &&release.print_deliveries[0].status==="approved"
+  &&release.print_deliveries[0].release.sha===release.sha
+  &&release.print_deliveries[0].artifact.name==="print-ready.zip"
+  &&release.print_deliveries[0].decision.evidence_sha256==="2".repeat(64)
+  &&release.print_deliveries[0].trust.independently_verified===false,
+  "exact printer delivery and immutable approval evidence survived PostgreSQL restore",
+  release.print_deliveries);
 
 const verifyArtifact=async(name,label=name)=>{
   const expected=release.artifacts.find(item=>item.name===name&&item.status==="ready");
   assert(!!expected,`${label} remains declared in the frozen release`);
   const result=await request("GET",`/cache/exports/tidepool/${release.sha}/${encodeURIComponent(name)}`,{rawResponse:true});
-  assert(result.response.ok&&result.response.headers.get("cache-control")?.includes("immutable"),
-    `${label} is rebuilt and served immutably from an empty cache`);
+  assert(result.response.ok&&result.response.headers.get("cache-control")==="public, no-cache, must-revalidate",
+    `${label} is rebuilt from an empty cache with visibility revalidation`);
   const actual={bytes:Buffer.isBuffer(result.data)?result.data.length:-1,
     sha256:Buffer.isBuffer(result.data)?sha256(result.data):null};
   assert(Buffer.isBuffer(result.data)&&actual.bytes===expected.bytes&&actual.sha256===expected.sha256,

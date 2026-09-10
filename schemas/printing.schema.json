@@ -44,6 +44,36 @@
       "type": "string",
       "description": "Relative path to face art asset (assets/...). Omit for template-only cards."
     },
+    "art_crop": {
+      "type": "object",
+      "description": "Non-destructive placement of the raw artwork inside every image region that uses this printing. The source file is never rewritten, so focal changes remain reviewable data.",
+      "additionalProperties": false,
+      "properties": {
+        "fit": {
+          "type": "string",
+          "enum": ["cover", "contain"],
+          "default": "cover"
+        },
+        "focal_x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "focal_y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "zoom": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 1
+        }
+      }
+    },
     "image": {
       "type": "string",
       "format": "uri",

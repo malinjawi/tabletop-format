@@ -11,10 +11,17 @@ import { designEnginesMetadata, loadDesignEngines } from "./design-engines.mjs";
 import { deterministicZip, readZip } from "./deterministic-zip.mjs";
 import { csvToTable, tableToCsv } from "./interchange-table.mjs";
 import { buildNandeckProject } from "./nandeck-layout.mjs";
+import { buildPnpinkProject } from "./pnpink.mjs";
+import { diffRows, mergeRows } from "./row-merge.mjs";
+import { buildSquibProject } from "./squib.mjs";
+import { buildSvgDesignProject } from "./svg-design.mjs";
 import { SOURCE_ASSETS_MANIFEST, loadSourceAssets, sourceAssetMetadata } from "./source-assets.mjs";
 
 export const FORGE_PROJECT_FORMAT = "forge-design-project";
 export const FORGE_PROJECT_VERSION = 1;
+export const FORGE_DATA_WORKING_COPY_PROFILE = "forge-tabular-working-copy";
+export const FORGE_DATA_WORKING_COPY_VERSION = 2;
+export { diffRows, mergeRows } from "./row-merge.mjs";
 
 const MISSING = Symbol("missing");
 const clone = value => value === undefined ? undefined : structuredClone(value);
@@ -121,12 +128,70 @@ function sourceRole(path) {
   return "game-source";
 }
 
+/**
+ * Build the small interchange package used by spreadsheet-first and hosted
+ * component editors.  It deliberately uses the same manifest and analyzer as
+ * a full Forge design project, so returning the package gets the exact same
+ * three-way merge, validation, commit, fork, and PR behavior without carrying
+ * layout sources or artwork through a tool that cannot preserve them.
+ */
+export function buildForgeDataWorkingCopy(gamePathValue, { sourceRef = null } = {}) {
+  const gameDir = resolve(gamePathValue);
+  const game = yaml.load(readFileSync(gamePath(gameDir, "game.yaml"), "utf8")) || {};
+  const cards = JSON.parse(readFileSync(gamePath(gameDir, "components/cards.json"), "utf8"));
+  const printings = JSON.parse(readFileSync(gamePath(gameDir, "components/printings.json"), "utf8"));
+  const tokensPath = gamePath(gameDir, "components/tokens.json"), tokens = existsSync(tokensPath) ? JSON.parse(readFileSync(tokensPath, "utf8")) : [];
+  const cardTable = tableToCsv(cards, "cards"), printingTable = tableToCsv(printings, "printings");
+  const entries = new Map();
+  const cardBytes = jsonBytes(cards), printingBytes = jsonBytes(printings), tokenBytes = jsonBytes(tokens);
+  const files = [
+    fileRecord("components/cards.json", cardBytes, "canonical-cards"),
+    fileRecord("components/printings.json", printingBytes, "canonical-printings"),
+    fileRecord("components/tokens.json", tokenBytes, "canonical-pieces"),
+  ];
+  addEntry(entries, "project/components/cards.json", cardBytes);
+  addEntry(entries, "project/components/printings.json", printingBytes);
+  addEntry(entries, "base/components/cards.json", cardBytes);
+  addEntry(entries, "base/components/printings.json", printingBytes);
+  addEntry(entries, "editable/cards.csv", cardTable.csv);
+  addEntry(entries, "editable/printings.csv", printingTable.csv);
+  const tables = {
+    cards: { editable_path: "editable/cards.csv", base_path: "base/components/cards.json", project_path: "project/components/cards.json", id: "id", columns: cardTable.columns },
+    printings: { editable_path: "editable/printings.csv", base_path: "base/components/printings.json", project_path: "project/components/printings.json", id: "id", columns: printingTable.columns },
+  };
+  const tokenTable=tableToCsv(tokens,"tokens");
+  addEntry(entries,"project/components/tokens.json",tokenBytes);addEntry(entries,"base/components/tokens.json",tokenBytes);
+  addEntry(entries,"editable/tokens.csv",tokenTable.csv);
+  tables.tokens={editable_path:"editable/tokens.csv",base_path:"base/components/tokens.json",project_path:"project/components/tokens.json",id:"id",columns:tokenTable.columns};
+  addEntry(entries, "README.md", `# Forge data working copy\n\nThis is a small, commit-pinned table handoff for Dextrous, Component Studio, Google Sheets, Excel, LibreOffice, or a custom script.\n\n1. Keep the permanent \`id\` column. It is how Forge follows a component through renames.\n2. Import a table under \`editable/\` into your editor. You may edit it directly or export the updated table from that editor.\n3. Replace that CSV in this package. Keep \`manifest.json\`, \`base/**\`, and \`project/**\` unchanged.\n4. Zip the package contents at the root and return it through Forge's Design workspace.\n5. Forge shows the semantic and rendered impact before it creates one commit or pull request.\n\n\`cards.csv\` is playable card content; \`printings.csv\` carries edition, quantity, art, artist, and flavor metadata. \`tokens.csv\` carries non-card pieces such as tokens and dials and is present even when it starts empty. Layouts remain in Forge or their declared design adapter; Dextrous and Component Studio project layouts are not falsely treated as portable files.\n`);
+  const manifest = {
+    format: FORGE_PROJECT_FORMAT,
+    version: FORGE_PROJECT_VERSION,
+    profile: FORGE_DATA_WORKING_COPY_PROFILE,
+    profile_version: FORGE_DATA_WORKING_COPY_VERSION,
+    game: { id: game.id || basename(gameDir), title: game.title || game.id || basename(gameDir), version: game.version || "" },
+    source: { generated_at: "deterministic", with_art: false, hash: "", ...(sourceRef ? { ref: sourceRef } : {}) },
+    adapters: [
+      { id: "xlsx-workbook", format: "xlsx", version: 1 },
+      { id: "dextrous-csv", format: "csv", version: 1 },
+      { id: "component-studio-csv", format: "csv", version: 1 },
+      { id: "spreadsheet-csv", format: "csv", version: 1 },
+    ],
+    tables,
+    files,
+  };
+  manifest.source.hash = `sha256:${sha256(Buffer.from(files.map(file => `${file.source_path}:${file.sha256}`).join("\n")))}`;
+  addEntry(entries, "manifest.json", jsonBytes(manifest));
+  return { manifest, entries, archive: deterministicZip(entries) };
+}
+
 export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = null } = {}) {
   const gameDir = resolve(gamePathValue);
   const gameYaml = readFileSync(gamePath(gameDir, "game.yaml"), "utf8");
   const game = yaml.load(gameYaml) || {};
   const cards = JSON.parse(readFileSync(gamePath(gameDir, "components/cards.json"), "utf8"));
   const printings = JSON.parse(readFileSync(gamePath(gameDir, "components/printings.json"), "utf8"));
+  const tokensPath=gamePath(gameDir,"components/tokens.json"),tokens=existsSync(tokensPath)?JSON.parse(readFileSync(tokensPath,"utf8")):null;
   const cardTable = tableToCsv(cards, "cards"), printingTable = tableToCsv(printings, "printings");
   const entries = new Map(), files = [], projectAdded = new Set();
 
@@ -144,12 +209,14 @@ export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = 
   addEntry(entries, "base/components/printings.json", jsonBytes(printings));
   addEntry(entries, "editable/cards.csv", cardTable.csv);
   addEntry(entries, "editable/printings.csv", printingTable.csv);
+  let tokenTable=null;
+  if(tokens){const tokenBytes=jsonBytes(tokens);tokenTable=tableToCsv(tokens,"tokens");addProjectFile("components/tokens.json",tokenBytes,"canonical-pieces");addEntry(entries,"base/components/tokens.json",tokenBytes);addEntry(entries,"editable/tokens.csv",tokenTable.csv);}
 
   const printingAssetRefs = collectAssetRefs(printings);
   const assetRefs = collectAssetRefs(game);
   for (const root of PORTABLE_SOURCE_ROOTS.filter(root => root !== "assets")) {
     for (const rel of walk(join(gameDir, root), root)) {
-      if (rel === "components/cards.json" || rel === "components/printings.json") continue;
+      if (rel === "components/cards.json" || rel === "components/printings.json" || rel === "components/tokens.json") continue;
       const content = readFileSync(gamePath(gameDir, rel));
       addProjectFile(rel, content, sourceRole(rel));
       const parsed = parseDocument(gamePath(gameDir, rel));
@@ -199,6 +266,44 @@ export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = 
   } catch (error) {
     adapters.push({ id: "nandeck", unavailable: true, reason: error.message });
   }
+  try {
+    const svg = buildSvgDesignProject(gameDir);
+    for (const [rel, content] of svg.entries) addEntry(entries, `adapters/svg/${rel}`, content);
+    adapters.push({
+      id: "svg",
+      root: "adapters/svg",
+      format: svg.manifest.format,
+      version: svg.manifest.version,
+      source_hash: svg.manifest.source_hash,
+      families: svg.manifest.families.map(family => family.family),
+    });
+  } catch (error) {
+    adapters.push({ id: "svg", unavailable: true, reason: error.message });
+  }
+  try {
+    const pnpink = buildPnpinkProject(gameDir);
+    for (const [rel, content] of pnpink.entries) addEntry(entries, `adapters/pnpink/${rel}`, content);
+    adapters.push({
+      id: "pnpink", root: "adapters/pnpink", format: pnpink.manifest.format,
+      version: pnpink.manifest.version, source_hash: pnpink.manifest.source_hash,
+      upstream: pnpink.manifest.upstream,
+      families: pnpink.manifest.families.map(family => family.family),
+    });
+  } catch (error) {
+    adapters.push({ id: "pnpink", unavailable: true, reason: error.message });
+  }
+  try {
+    const squib = buildSquibProject(gameDir, { sourceRef: sourceRef || "working-tree" });
+    for (const [rel, content] of squib.entries) addEntry(entries, `adapters/squib/${rel}`, content);
+    adapters.push({
+      id: "squib", root: "adapters/squib", format: squib.manifest.format,
+      version: squib.manifest.version, source_hash: squib.manifest.source_hash,
+      upstream: squib.manifest.tested_upstream,
+      families: squib.manifest.families.map(family => family.id),
+    });
+  } catch (error) {
+    adapters.push({ id: "squib", unavailable: true, reason: error.message });
+  }
   const manifest = {
     format: FORGE_PROJECT_FORMAT,
     version: FORGE_PROJECT_VERSION,
@@ -210,6 +315,7 @@ export function buildForgeProject(gamePathValue, { withArt = false, sourceRef = 
     tables: {
       cards: { editable_path: "editable/cards.csv", base_path: "base/components/cards.json", project_path: "project/components/cards.json", id: "id", columns: cardTable.columns },
       printings: { editable_path: "editable/printings.csv", base_path: "base/components/printings.json", project_path: "project/components/printings.json", id: "id", columns: printingTable.columns },
+      ...(tokenTable?{tokens:{editable_path:"editable/tokens.csv",base_path:"base/components/tokens.json",project_path:"project/components/tokens.json",id:"id",columns:tokenTable.columns}}:{}),
     },
     files: files.sort((a, b) => a.source_path.localeCompare(b.source_path)),
   };
@@ -260,76 +366,6 @@ function required(entries, path) {
   return value;
 }
 
-function get(value, path) {
-  for (const key of path) {
-    if (!value || typeof value !== "object" || !Object.prototype.hasOwnProperty.call(value, key)) return MISSING;
-    value = value[key];
-  }
-  return value;
-}
-
-function leafPaths(...values) {
-  const out = [];
-  const visit = (candidates, prefix) => {
-    const objects = candidates.map(value => value !== MISSING && value != null
-      && typeof value === "object" && !Array.isArray(value));
-    // A whole object appeared or disappeared. Treat that parent as the changed
-    // leaf so the merge deletes/replaces it atomically instead of walking its
-    // old children and leaving an invalid empty shell.
-    if (prefix.length && objects.some(Boolean) && !objects.every(Boolean)) {
-      out.push(prefix);
-      return;
-    }
-    if (!objects.every(Boolean)) {
-      if (prefix.length) out.push(prefix);
-      return;
-    }
-    const keys = new Set(candidates.flatMap(value => Object.keys(value)));
-    if (!keys.size && prefix.length) out.push(prefix);
-    for (const key of keys) visit(candidates.map(value => Object.prototype.hasOwnProperty.call(value, key) ? value[key] : MISSING), [...prefix, key]);
-  };
-  visit(values, []);
-  return out;
-}
-
-function set(value, path, next) {
-  for (const key of path.slice(0, -1)) value = value[key] ||= {};
-  if (next === MISSING) delete value[path.at(-1)]; else value[path.at(-1)] = clone(next);
-}
-
-export function mergeRows(baseRows, proposedRows, currentRows, kind) {
-  const by = rows => new Map(rows.map(row => [row.id, row]));
-  const base = by(baseRows), proposed = by(proposedRows), current = by(currentRows);
-  const merged = currentRows.map(clone), mergedBy = by(merged), conflicts = [];
-  const ids = new Set([...base.keys(), ...proposed.keys()]);
-  for (const id of ids) {
-    const b = base.get(id) ?? MISSING, p = proposed.get(id) ?? MISSING, c = current.get(id) ?? MISSING;
-    if (equal(b, p)) continue;
-    if (b === MISSING || p === MISSING) {
-      if (equal(c, p)) continue;
-      if (!equal(c, b)) { conflicts.push({ kind, id, path: "*", base: b === MISSING ? null : b, proposed: p === MISSING ? null : p, current: c === MISSING ? null : c }); continue; }
-      if (p === MISSING) {
-        const index = merged.findIndex(row => row.id === id); if (index >= 0) merged.splice(index, 1);
-        mergedBy.delete(id);
-      } else { const next = clone(p); merged.push(next); mergedBy.set(id, next); }
-      continue;
-    }
-    const target = mergedBy.get(id);
-    for (const path of leafPaths(b, p)) {
-      const bv = get(b, path), pv = get(p, path);
-      if (equal(bv, pv)) continue;
-      const cv = get(c, path);
-      if (equal(cv, pv)) continue;
-      if (!equal(cv, bv)) {
-        conflicts.push({ kind, id, path: path.join("."), base: bv === MISSING ? null : bv, proposed: pv === MISSING ? null : pv, current: cv === MISSING ? null : cv });
-        continue;
-      }
-      set(target, path, pv);
-    }
-  }
-  return { merged, conflicts };
-}
-
 function chooseTable(entries, table, kind) {
   const baseBytes = required(entries, table.base_path), rawBytes = required(entries, table.project_path);
   const csvBytes = required(entries, table.editable_path);
@@ -341,17 +377,6 @@ function chooseTable(entries, table, kind) {
   return { base, proposed: rawChanged ? raw : csvChanged ? csv : base, conflict: null };
 }
 
-export function diffRows(before, after, kind = "rows") {
-  const b = new Map(before.map(row => [row.id, row])), a = new Map(after.map(row => [row.id, row]));
-  const changed = [], added = [], removed = [];
-  for (const [id, row] of b) {
-    if (!a.has(id)) removed.push(id);
-    else if (!equal(row, a.get(id))) changed.push(id);
-  }
-  for (const id of a.keys()) if (!b.has(id)) added.push(id);
-  return { kind, changed, added, removed };
-}
-
 export function analyzeForgeProject(gamePathValue, bundle, { allowGameIdMismatch = false } = {}) {
   const gameDir = resolve(gamePathValue), { manifest, entries } = loadForgeProject(bundle);
   const currentGame = yaml.load(readFileSync(gamePath(gameDir, "game.yaml"), "utf8")) || {};
@@ -359,21 +384,25 @@ export function analyzeForgeProject(gamePathValue, bundle, { allowGameIdMismatch
     throw new Error(`project belongs to '${manifest.game.id}', not '${currentGame.id}'`);
   const cardsChoice = chooseTable(entries, manifest.tables.cards, "cards");
   const printingsChoice = chooseTable(entries, manifest.tables.printings, "printings");
-  const conflicts = [cardsChoice.conflict, printingsChoice.conflict].filter(Boolean);
+  const tokensChoice = manifest.tables.tokens ? chooseTable(entries,manifest.tables.tokens,"tokens") : null;
+  const conflicts = [cardsChoice.conflict, printingsChoice.conflict,tokensChoice?.conflict].filter(Boolean);
   const currentCards = JSON.parse(readFileSync(gamePath(gameDir, "components/cards.json"), "utf8"));
   const currentPrintings = JSON.parse(readFileSync(gamePath(gameDir, "components/printings.json"), "utf8"));
+  const currentTokensPath=gamePath(gameDir,"components/tokens.json"),currentTokens=existsSync(currentTokensPath)?JSON.parse(readFileSync(currentTokensPath,"utf8")):[];
   const cardMerge = cardsChoice.proposed ? mergeRows(cardsChoice.base, cardsChoice.proposed, currentCards, "cards") : { merged: currentCards, conflicts: [] };
   const printingMerge = printingsChoice.proposed ? mergeRows(printingsChoice.base, printingsChoice.proposed, currentPrintings, "printings") : { merged: currentPrintings, conflicts: [] };
-  conflicts.push(...cardMerge.conflicts, ...printingMerge.conflicts);
+  const tokenMerge = tokensChoice?.proposed ? mergeRows(tokensChoice.base,tokensChoice.proposed,currentTokens,"tokens") : {merged:currentTokens,conflicts:[]};
+  conflicts.push(...cardMerge.conflicts, ...printingMerge.conflicts,...tokenMerge.conflicts);
   const files = [];
   if (!equal(currentCards, cardMerge.merged)) files.push({ path: "components/cards.json", content: jsonBytes(cardMerge.merged), kind: "cards" });
   if (!equal(currentPrintings, printingMerge.merged)) files.push({ path: "components/printings.json", content: jsonBytes(printingMerge.merged), kind: "printings" });
+  if(tokensChoice&&!equal(currentTokens,tokenMerge.merged))files.push({path:"components/tokens.json",content:jsonBytes(tokenMerge.merged),kind:"tokens"});
 
   const knownProjectPaths = new Set();
   for (const record of manifest.files || []) {
     const sourcePath = safeRel(record.source_path, "source_path"), projectPath = safeRel(record.project_path, "project_path");
     knownProjectPaths.add(projectPath);
-    if (["components/cards.json", "components/printings.json"].includes(sourcePath)) continue;
+    if (["components/cards.json", "components/printings.json", "components/tokens.json"].includes(sourcePath)) continue;
     const incoming = entries.get(projectPath) ?? MISSING;
     const incomingChanged = incoming === MISSING || sha256(incoming) !== record.sha256;
     if (!incomingChanged) continue;
@@ -392,20 +421,32 @@ export function analyzeForgeProject(gamePathValue, bundle, { allowGameIdMismatch
     if (!projectPath.startsWith("project/") || knownProjectPaths.has(projectPath)) continue;
     const sourcePath = safeRel(projectPath.slice("project/".length), "new project file");
     if (!allowedSourcePath(sourcePath) || sourcePath === "game.yaml"
-      || sourcePath === "components/cards.json" || sourcePath === "components/printings.json") continue;
+      || sourcePath === "components/cards.json" || sourcePath === "components/printings.json" || sourcePath === "components/tokens.json") continue;
     const currentPath = gamePath(gameDir, sourcePath), current = existsSync(currentPath) ? readFileSync(currentPath) : null;
     if (!current) files.push({ path: sourcePath, content: incoming, kind: "added-file" });
     else if (sha256(current) !== sha256(incoming)) conflicts.push({ kind: "file", id: sourcePath, path: "*", base: null, proposed: sha256(incoming), current: sha256(current) });
   }
+  const cardChanges = diffRows(currentCards, cardMerge.merged, "cards");
+  const printingChanges = diffRows(currentPrintings, printingMerge.merged, "printings");
+  const tokenChanges = diffRows(currentTokens,tokenMerge.merged,"tokens");
+  const previewCardIds = new Set([...cardChanges.changed, ...cardChanges.added]);
+  const previewPrintingIds = new Set([...printingChanges.changed, ...printingChanges.added]);
   return {
     format: manifest.format,
+    profile: manifest.profile || null,
     game: manifest.game,
     source_hash: manifest.source?.hash,
     changes: {
-      cards: diffRows(currentCards, cardMerge.merged, "cards"),
+      cards: cardChanges,
       card_fields: diffCards(currentCards, cardMerge.merged),
-      printings: diffRows(currentPrintings, printingMerge.merged, "printings"),
-      files: files.filter(file => !["cards", "printings"].includes(file.kind)).map(file => ({ path: file.path, kind: file.kind })),
+      printings: printingChanges,
+      tokens: tokenChanges,
+      files: files.filter(file => !["cards", "printings", "tokens"].includes(file.kind)).map(file => ({ path: file.path, kind: file.kind })),
+    },
+    preview: {
+      cards: cardMerge.merged.filter(card => previewCardIds.has(card.id)),
+      printings: printingMerge.merged.filter(printing => previewPrintingIds.has(printing.id)),
+      tokens: tokenMerge.merged.filter(token=>new Set([...tokenChanges.changed,...tokenChanges.added]).has(token.id)),
     },
     conflicts,
     files,
@@ -414,7 +455,7 @@ export function analyzeForgeProject(gamePathValue, bundle, { allowGameIdMismatch
 
 export function writeForgeProjectChanges(gamePathValue, result, { allowDelete = false } = {}) {
   if (result.conflicts.length) throw new Error(`cannot write a project with ${result.conflicts.length} conflict(s)`);
-  const removesRows = result.changes.cards.removed.length || result.changes.printings.removed.length;
+  const removesRows = result.changes.cards.removed.length || result.changes.printings.removed.length || result.changes.tokens?.removed.length;
   if (!allowDelete && (removesRows || result.files.some(file => file.content === null)))
     throw new Error("project removes files or rows; re-run with explicit deletion permission");
   const gameDir = resolve(gamePathValue);

@@ -44,6 +44,17 @@ export function personalDataQueries(bind) {
     authored_releases: { sql:
       `SELECT game_slug, tag, sha, title, notes, created_at
        FROM releases WHERE author_id = ${p} ORDER BY created_at DESC` },
+    print_deliveries: { sql:
+      `SELECT id, game_slug, release_tag, release_sha, artifact_name, artifact_sha256,
+              artifact_bytes, printer_name, job_reference, submission_evidence_url,
+              submission_evidence_sha256, note, created_at
+       FROM print_deliveries WHERE created_by = ${p} ORDER BY created_at DESC` },
+    print_delivery_decisions: { sql:
+      `SELECT x.id, d.game_slug, d.release_tag, x.delivery_id, x.decision,
+              x.reviewer_name, x.organization, x.evidence_url, x.evidence_sha256,
+              x.note, x.created_at
+       FROM print_delivery_decisions x JOIN print_deliveries d ON d.id = x.delivery_id
+       WHERE x.recorded_by = ${p} ORDER BY x.created_at DESC` },
     activity: { sql:
       `SELECT id, kind, game_slug, target, created_at
        FROM events WHERE actor_id = ${p} ORDER BY created_at DESC` },
