@@ -49,6 +49,7 @@ run "default-deny internal fixture discovery" npm run test:fixture-discovery
 run "print-ready output contracts" npm run test:print-ready
 run "staged Tabletop Simulator component contracts" npm run test:tts-components
 run "portable project server round-trip" node tools/test-forge-project-server.mjs
+run "decoded preview artwork, symbols, and fonts" node tools/ui-preview-assets.mjs
 run "responsive Explore browser smoke" node tools/ui-smoke.mjs
 run "functional integration" ./e2e.sh
 run "local two-user golden journey" ./journey.sh
@@ -62,6 +63,7 @@ deploy_preflight=0
 if [ -n "${FORGE_DEPLOY_ENV:-}" ]; then
   preflight_args=(--env "$FORGE_DEPLOY_ENV")
   [ "${FORGE_DEPLOY_ONLINE:-0}" != "1" ] || preflight_args+=(--online)
+  [ -z "${FORGE_DEPLOY_PREVIEW_GAME:-}" ] || preflight_args+=(--preview-game "$FORGE_DEPLOY_PREVIEW_GAME")
   [ -z "${FORGE_DEPLOY_EVIDENCE:-}" ] || preflight_args+=(--evidence "$FORGE_DEPLOY_EVIDENCE")
   run "actual production host preflight" node deploy/preflight.mjs "${preflight_args[@]}"
   deploy_preflight=1

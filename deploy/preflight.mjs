@@ -16,6 +16,7 @@ import { isAbsolute, resolve, sep } from "node:path";
 import { lookup } from "node:dns/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { checkPublicPreviewAssets } from "./preview-assets.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = process.argv.slice(2);
@@ -24,6 +25,7 @@ const envPath = resolve(valueAfter("--env") || "deploy/.env");
 const lint = args.includes("--lint"), online = args.includes("--online"), firstBoot = args.includes("--first-boot");
 const skipImageInspect = args.includes("--test-no-image-inspect");
 const evidencePath = valueAfter("--evidence");
+const previewGame = valueAfter("--preview-game") || process.env.FORGE_DEPLOY_PREVIEW_GAME;
 if (lint && (online || evidencePath)) throw new Error("--lint cannot perform online checks or write launch evidence");
 if (skipImageInspect && !envPath.startsWith(resolve(tmpdir()) + sep))
   throw new Error("--test-no-image-inspect is restricted to a temporary test environment");
@@ -178,6 +180,7 @@ async function checkR2() {
   } catch (error) { check(false, "R2 bucket read", error.message); }
 }
 
+let previewAssets = null;
 if (online && !checks.some(row => !row.ok)) {
   for (const [name, origin] of [["Forge DNS", value("FORGE_PUBLIC_ORIGIN")], ["Forgejo DNS", value("FORGEJO_PUBLIC_ORIGIN")]]) {
     try { const result = await lookup(new URL(origin).hostname); check(!!result.address, name, "resolves"); }
@@ -186,6 +189,10 @@ if (online && !checks.some(row => !row.ok)) {
   await checkHttp(`${value("FORGE_PUBLIC_ORIGIN")}/healthz`, "Forge HTTPS health",
     async response => response.status === 200 && /max-age=/.test(response.headers.get("strict-transport-security") || ""));
   await checkHttp(`${value("FORGEJO_PUBLIC_ORIGIN")}/api/healthz`, "Forgejo HTTPS health", async response => response.status === 200);
+  try {
+    previewAssets = await checkPublicPreviewAssets(value("FORGE_PUBLIC_ORIGIN"), { slug: previewGame });
+    check(true, "public card-preview assets", `${previewAssets.slug}@${previewAssets.ref}: ${previewAssets.checked}/${previewAssets.total} assets checked through the public origin`);
+  } catch (error) { check(false, "public card-preview assets", error.message); }
   await checkR2();
 }
 
@@ -195,7 +202,7 @@ const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "u
 if (evidencePath) {
   if (!isAbsolute(evidencePath)) throw new Error("--evidence path must be absolute");
   writeFileSync(evidencePath, `${JSON.stringify({ format: "forge-production-preflight", version: 1,
-    checked_at: new Date().toISOString(), commit, online, origins: {
+    checked_at: new Date().toISOString(), commit, online, preview_assets: previewAssets, origins: {
       forge: value("FORGE_PUBLIC_ORIGIN"), forgejo: value("FORGEJO_PUBLIC_ORIGIN"), r2_bucket: value("R2_LFS_BUCKET"),
     }, images: { gateway: value("FORGE_GATEWAY_IMAGE"), forgejo: value("FORGEJO_IMAGE"), forgejo_version: value("FORGEJO_VERSION"),
       postgres: value("POSTGRES_IMAGE"), postgres_major: value("POSTGRES_MAJOR") },

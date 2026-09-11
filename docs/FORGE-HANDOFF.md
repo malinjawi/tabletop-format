@@ -4,13 +4,13 @@ Reconciled on **2026-09-11**. This is a continuation guide, not a production qua
 
 ## 1. Start here
 
-**Current development branch: codex/software-golden-path.** Application baseline for this handoff: **d7bc4bad7a4709e58399d6d60f81404706d9797b**. Subsequent documentation commits do not imply additional application features. Use Git and the latest pull request checks to resolve the current publication state.
+**Continue from the latest protected `github/main`.** The six-commit application baseline through **d7bc4bad7a4709e58399d6d60f81404706d9797b** was merged in [PR #2](https://github.com/malinjawi/tabletop-format/pull/2) as **8aa6cf12d33672737d5122698da8f02b5c8098e0**. Its [main qualification and image publication](https://github.com/malinjawi/tabletop-format/actions/runs/34582258008) succeeded. The subsequent preview repair and launch regression coverage are tracked in [PR #3](https://github.com/malinjawi/tabletop-format/pull/3); use that PR and Git for their exact current state.
 
-The user's latest development direction, September 10, was: **“ignore the beta host now just make the software work and make it work well.”** The current follow-up is to synchronize the work, verify it, and assess progress before choosing the next slice. This does not request a real-host deployment or speculative feature expansion.
+The user's development direction is **“ignore the beta host now just make the software work and make it work well.”** On September 11 they also requested pushing and merging every open PR and preventing the missing-preview-assets failure at launch. Real-host deployment and speculative feature expansion remain outside this request.
 
 The two pasted milestones at 1d6cc7f and 6e1b8e2 are real historical checkpoints, but they are no longer the latest work. The newer line adds six substantial product and durability commits after the published beta baseline.
 
-Current assessment: **a capable local product with a separately qualified and published older beta baseline; the latest development build is not yet a qualified public deployment.** Adoption, native-client behavior, physical production, and the latest full hosted recovery still need evidence. “Complete Dextrous parity” remains too broad a claim.
+Current assessment: **a capable local product with qualified, published source and images; an actual public deployment still needs its own evidence.** Adoption, native-client behavior, physical production, and full production-inventory recovery still need evidence. “Complete Dextrous parity” remains too broad a claim.
 
 ## 2. Product intent and decisions to preserve
 
@@ -61,16 +61,18 @@ A verified incremental source bundle preserves the six application commits and r
 | 4e530f0 | Frozen playable-component evidence. | Required component kits in exact releases; append-only pinned playtests; browser component table; historical-art/access safety; hostile-text and offline-hub handling. |
 | d7bc4ba, September 11 | Crash-safe durable releases. | Prior task reports 205 functional checks, 112 Forgejo journey assertions, 111 DB checks on SQLite and real PostgreSQL, full UI/browser journeys, and concurrent PostgreSQL startup. A fresh retrospective run reproduced 205 functional checks, 109 local journey assertions and the full browser workflow; Forgejo counts remain separate. See PR #2 for production-toolchain qualification. |
 
-The last task's final result and Git HEAD agree on d7bc4ba. Matching retained full logs for all of the historical 205/112/111 counts were not located during initial handoff. The retrospective then independently reproduced 205 functional, 109 local journey and 234 browser assertions, preserving complete logs outside temporary storage. Current [PR #2](https://github.com/malinjawi/tabletop-format/pull/2) records the exact-head CI result; the first run exposed a test navigation race despite the local pass.
+The original full-context task ended at d7bc4ba. Matching retained full logs for all of its historical 205/112/111 counts were not located during initial handoff. The retrospective then independently reproduced 205 functional, 109 local journey and 234 browser assertions, preserving complete logs outside temporary storage. [PR #2](https://github.com/malinjawi/tabletop-format/pull/2) passed its final CI and merged; the first run exposed a test navigation race despite the local pass.
+
+The following local Netrunner preview exposed a second coverage gap: `/ui` succeeded while its exact-ref artwork and symbols returned 404. The explicit loopback fixture permission now also applies to its versioned assets, and restricted historical bytes stay `private, no-store`. Regression checks follow generated asset URLs and decode rendered card images/fonts. Before pilot approval, the online deployment preflight must additionally record public-origin preview asset evidence; a healthy server alone is insufficient.
 
 ### Qualified image identities
 
 - TTPG historical image: sha256:2f039fcf72d5bfcb50dacaaf07599225c6d963b989be0e7d1e59099c2202e18d, reported against 1d6cc7f in the prior task.
 - September 6 image: sha256:6b998a883f0ce7c76e9932e5f415818df727ea92f6dde2e3c330e3cfb348e5af. Local Docker presence and OCI revision 6e1b8e272f67f731b57328a9f85ffdfb8ceff1f2 were rechecked.
 - Published beta: **ghcr.io/malinjawi/forge-platform@sha256:e8d19c6aedd48e00e6235f38650a288c22cde1c6133271ff8456c331f77e3ed3**, OCI revision e1c2d9c78e2ad0052677ee47571df8435a4405b3. Local pulled-image identity was also checked.
-- **No qualified image for d7bc4ba was found.** Never attach the published beta's image/restore evidence to these six newer commits.
+- The later merged baseline **8aa6cf1** passed its own product/protocol and exact-image/recovery checks and was published by [run 34582258008](https://github.com/malinjawi/tabletop-format/actions/runs/34582258008). Use that run's immutable image receipt, or the latest successful main run, rather than attaching an older image to newer source.
 
-[PR #1](https://github.com/malinjawi/tabletop-format/pull/1) is merged. [Main qualification run 34509035940](https://github.com/malinjawi/tabletop-format/actions/runs/34509035940) passed Product and protocol gate, Exact image and recovery gate, and GHCR publication. The [promotion receipt](https://github.com/malinjawi/tabletop-format/pull/1#issuecomment-5622966828) records the immutable image and explicit deployment boundary. Main's two required checks, administrator enforcement, and disabled force pushes/deletions were rechecked. Remote main still equals e1c2d9c as of this handoff.
+[PR #1](https://github.com/malinjawi/tabletop-format/pull/1) and [PR #2](https://github.com/malinjawi/tabletop-format/pull/2) are merged. Both have successful main qualification and publication records. Main's two required checks, administrator enforcement, strict branch currency, and disabled force pushes/deletions were rechecked. No merge or image publication substitutes for deploying and preflighting the actual public host.
 
 ## 5. What is built, and where the boundaries are
 
