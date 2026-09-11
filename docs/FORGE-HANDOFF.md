@@ -1,5 +1,7 @@
 # Forge project handoff
 
+The latest creator-interface cleanup is documented in the [September 11 UX review](FORGE-UX-REVIEW-2026-09-11.md). It simplifies navigation and Design, adds bundled creator/connector help, and fixes truthful Sheets setup and selected downloads through sign-in. Check the current commit and its qualification run before treating a published image as current.
+
 Reconciled on **2026-09-11**. This is a continuation guide, not a production qualification. It combines prior project records, current source, local Git/runtime inspection, and GitHub evidence. See [the retrospective](FORGE-RETROSPECTIVE-2026-09-11.md) for the current assessment and verification rules. Machine-specific paths and backup details are preserved in the local workspace, outside the public repository.
 
 ## 1. Start here

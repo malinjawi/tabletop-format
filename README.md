@@ -1,4 +1,6 @@
 # An Open Format for Living Card Games
+
+Using the Forge app? Start with the [Creator guide](docs/CREATOR-GUIDE.md) or [Connectors and file handoffs](docs/CONNECTORS.md). Both are available from **Help** inside Forge.
 ### v0.1.0 — working draft
 
 Card games deserve source code. Today a living card game's truth is scattered across

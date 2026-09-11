@@ -39,6 +39,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .hero-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:760px;margin-top:18px}
 .hero-step{border:1px solid var(--bd);border-radius:9px;background:#fff;padding:10px 12px;font-size:12px;line-height:1.4;color:var(--mut)}
 .hero-step b{display:block;color:var(--fg);font-size:13px;margin-bottom:2px}
+.help-page{max-width:900px;padding-top:24px;padding-bottom:60px}.help-page nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}.help-page nav a{padding:10px 14px;border:1px solid var(--bd);border-radius:6px}.help-page nav a[aria-current]{background:var(--bg);font-weight:650}.help-page article{font-size:15px;line-height:1.7;overflow-wrap:anywhere}.help-page h1{font-size:28px;line-height:1.2}.help-page h2{font-size:20px;margin-top:28px}.help-page .help-table{overflow:auto}.help-page table{border-collapse:collapse;width:100%;font-size:13px}.help-page td,.help-page th{border:1px solid var(--bd);padding:9px;text-align:left;vertical-align:top}.help-page th{background:var(--bg)}.help-page li{margin:6px 0}.design-family details{margin:10px 0}.design-family summary{cursor:pointer;color:var(--mut);font-size:12px;min-height:32px;display:flex;align-items:center}.design-utilities{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 20px}.design-utilities .btn{min-height:44px}
 .gamegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;padding:24px 0}
 .gcard{border:1px solid var(--bd);border-radius:10px;padding:16px 18px;transition:box-shadow .15s}
 .gcard:hover{box-shadow:0 3px 14px rgba(0,0,0,.1)}
@@ -213,6 +214,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
   .tabs{flex-wrap:wrap}.more-tabs{margin-left:0}
 }
 @media(max-width:700px){
+  .help-page .help-table{overflow:visible}.help-page table,.help-page tbody{display:block}.help-page .help-table-header{display:none}.help-page tr{display:block;border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:14px}.help-page td{display:block;border:0;border-top:1px solid var(--bd);padding:10px 12px}.help-page td:first-child{border-top:0;background:var(--bg);font-size:15px;font-weight:650}.help-page td:not(:first-child)::before{content:attr(data-label);display:block;font-size:12px;font-weight:650;color:var(--mut);margin-bottom:3px}
   #top{padding:9px 14px;gap:8px;flex-wrap:wrap}
   #top .logo{margin-right:auto}
   #top .topnav{gap:10px}.top-inbox-label{display:none}
@@ -231,6 +233,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
   .card-system-empty{margin:10px auto;padding:26px 18px}.card-system-empty h2{font-size:24px}.card-system-steps{grid-template-columns:1fr}
 }
 @media(max-width:820px){.pub-canvas-wrap>.pub-canvas{zoom:.92}}
+@media(max-width:380px){.repohead .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.repohead .actions>.edit-action{grid-column:1/-1}.repohead .actions summary{justify-content:center;width:100%;box-sizing:border-box}.repohead .actions>.btn{white-space:normal}}
 @media(max-width:720px){.pub-canvas-wrap>.pub-canvas{zoom:.78}}
 @media(max-width:640px){.pub-canvas-wrap>.pub-canvas{zoom:.66}}
 @media(max-width:560px){.pub-canvas-wrap>.pub-canvas{zoom:.56}}
@@ -245,7 +248,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span class="brand-note">where games live</span></a>
   <textarea id="q" rows="1" wrap="off" name="forge-global-search" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search games and cards" placeholder="Search games and cards…" onkeydown="if(event.key==='Enter')event.preventDefault()" oninput="searchAll(this.value)"></textarea>
-  <nav class="topnav" aria-label="Global"><a class="nl" onclick="go('')">Explore</a><a class="nl" onclick="go('jams')">Jams</a><a class="nl" onclick="showNotifs()" title="Notifications">🔔 <span class="top-inbox-label">Inbox</span></a></nav>
+  <nav class="topnav" aria-label="Global"><a class="nl" href="#">Explore</a><a class="nl" href="#help">Help</a><a class="nl" onclick="showNotifs()" aria-label="Notifications" title="Notifications">🔔 <span class="top-inbox-label">Inbox</span></a></nav>
   <div class="spacer"></div>
   <button class="btn top-new" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)" onclick="newGameModal()">+ <span class="wide-label">New game</span><span class="compact-label" aria-hidden="true">New</span></button>
   <span id="authArea"><div class="av" title="you"></div></span>
@@ -253,7 +256,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 <div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(28,33,40,.6);z-index:70;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:12px;padding:26px 30px;width:340px">
     <h2 style="margin:0 0 4px" id="amTitle">Sign in</h2>
-    <p id="amLead" style="color:var(--mut);font-size:13px;margin:0 0 14px">Stars, forks, and claims need an account. Your games never do.</p>
+    <p id="amLead" style="color:var(--mut);font-size:13px;margin:0 0 14px">Browse public games without an account. Sign in to create, edit, or download a game.</p>
     <div id="amErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:8px"></div>
     <input id="amHandle" placeholder="handle" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px">
     <input id="amEmail" placeholder="email" style="width:100%;padding:9px 12px;margin:5px 0;border:1px solid var(--bd);border-radius:8px;display:none">
@@ -277,7 +280,7 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
 </div>
 <div id="view"></div>
 <footer style="max-width:1180px;margin:30px auto;padding:18px 24px;border-top:1px solid var(--bd);color:var(--mut);font-size:12px">
-  Forge controlled beta · <a href="/policies/terms">Terms</a> · <a href="/policies/privacy">Privacy</a> ·
+  Forge controlled beta · <a href="#help">Creator guide</a> · <a href="#help/connectors">Connectors</a> · <a href="#jams">Jams</a> · <a href="/policies/terms">Terms</a> · <a href="/policies/privacy">Privacy</a> ·
   <a href="/policies/community">Community rules</a> · <a href="/policies/rights">Rights &amp; takedown</a> ·
   <a href="/policies/support">Support</a>
 </footer>
@@ -345,7 +348,7 @@ function syncAuthSubmit(){
 function authMode(m){ amMode=m;
   const reset=m==="reset",register=m==="register";
   document.getElementById("amTitle").textContent = reset?"Reset password":m==="login"?"Sign in":"Create account";
-  document.getElementById("amLead").textContent = reset?"Ask the pilot operator for a one-use recovery token. Choosing a new password signs out every existing session.":"Stars, forks, and claims need an account. Your games never do.";
+  document.getElementById("amLead").textContent = reset?"Contact support for a one-use recovery token. Choosing a new password signs out every existing session.":"Browse public games without an account. Sign in to create, edit, or download a game.";
   document.getElementById("amHandle").style.display = reset?"none":"";
   document.getElementById("amEmail").style.display = register?"":"none";
   document.getElementById("amInvite").style.display = register&&REGISTRATION==="invite"?"":"none";
@@ -1836,7 +1839,7 @@ async function desDraftResolve(action){
 function desDraftOfferHtml(offer){
   const record=offer.record,saved=record.saved_at?new Date(record.saved_at).toLocaleString():"an earlier session",state=record.state||{},cards=(state.cards||[]).filter((card,index)=>JSON.stringify(card)!==JSON.stringify(DES.origCards?.[index])).length,art=Object.keys(state.pendingAssets||{}).length;
   if(offer.kind==="exact")return `<div class="badge">BROWSER-LOCAL DRAFT · EXACT BASE</div><h2 style="margin:8px 0 4px">Restore local Studio draft?</h2><p class="mut" style="line-height:1.55">Forge found uncommitted work from ${esc(saved)} on the exact repository version <code>${esc(record.ref.slice(0,10))}</code>. It has not been applied or uploaded.</p><div class="chg"><b>Recovery copy</b><br>${cards} changed card${cards===1?"":"s"} · ${art} staged art file${art===1?"":"s"} · layout, card back, crops, tags, credit, and rights kept together in this browser.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="desDraftResolve('discard')">Discard draft</button><button class="btn primary" onclick="desDraftResolve('restore')">Restore draft</button></div>`;
-  return `<div class="badge">BROWSER-LOCAL DRAFT · OLDER BASE</div><h2 style="margin:8px 0 4px">Local draft belongs to an older version</h2><p class="mut" style="line-height:1.55">The repository moved from <code>${esc(record.ref.slice(0,10))}</code> to <code>${esc(String(DES.sourceRef||"").slice(0,10))}</code>. Forge will not apply the older work over newer cards or design files.</p><div class="warn"><b>Nothing was overwritten.</b><br>Keep the recovery copy for later, or discard it here. Reapplying it requires an intentional comparison against its original base.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="desDraftResolve('keep')">Keep for later</button><button class="btn primary" onclick="desDraftResolve('discard')">Discard older draft${offer.records.length===1?"":"s"}</button></div>`;
+  return `<div class="badge">BROWSER-LOCAL DRAFT · OLDER BASE</div><h2 style="margin:8px 0 4px">Local draft belongs to an older version</h2><p class="mut" style="line-height:1.55">The repository moved from <code>${esc(record.ref.slice(0,10))}</code> to <code>${esc(String(DES.sourceRef||"").slice(0,10))}</code>. Forge will not apply the older work over newer cards or design files.</p><div class="warn"><b>Nothing was overwritten.</b><br>Keep the recovery copy for later, or discard it here. Reapplying it requires an intentional comparison against its original base.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn primary" onclick="desDraftResolve('keep')">Keep for later</button><button class="btn" onclick="desDraftResolve('discard')">Discard older draft${offer.records.length===1?"":"s"}</button></div>`;
 }
 async function desDraftOfferRestore(){
   const identity=desDraftIdentity();if(!identity){if(DES)DES._draftReady=true;return;}
@@ -3190,7 +3193,7 @@ function desBackAssignArt(encoded){
   const path=decodeURIComponent(encoded);if(!path.startsWith("assets/")||path.includes(".."))return;
   const pre=desBeginChange();if(!DES.layout.back?.regions?.length)DES.layout.back=desBackSeed(DES.layout);const previous=DES.layout.back.art;DES.layout.back.art=path;delete DES.layout.back.art_data;
   let art=(DES.layout.back.regions||[]).find(region=>region.id==="back_art");if(!art){const card=DES.layout.card||{},W=card.w_mm||63.5,H=card.h_mm||88.9;art={id:"back_art",type:"background",src:"g.layout.back.art",x:0,y:0,w:W,h:H,fit:"cover",bg:DES.layout.back.bg||"#202735"};const fieldIndex=DES.layout.back.regions.findIndex(region=>region.id==="back_field");DES.layout.back.regions.splice(fieldIndex>=0?fieldIndex+1:0,0,art);}
-  DES.selRegion=art.id;DES.selRegions=[art.id];DES.compare=false;desCommitChange(pre);if(previous&&previous!==path)desArtReleaseIfUnused(previous);document.getElementById("modal")?.classList.remove("on");desRenderFull();toast("Shared back artwork is staged with its complete 77-card impact. Review before it enters Git.",5000);
+  DES.selRegion=art.id;DES.selRegions=[art.id];DES.compare=false;desCommitChange(pre);if(previous&&previous!==path)desArtReleaseIfUnused(previous);document.getElementById("modal")?.classList.remove("on");desRenderFull();toast("Shared back artwork is ready for review across all card families. Save it after checking the proof.",5000);
 }
 function desBackClearArt(){
   const previous=DES.layout?.back?.art;if(!previous)return;const pre=desBeginChange();delete DES.layout.back.art;delete DES.layout.back.art_data;DES.layout.back.regions=(DES.layout.back.regions||[]).filter(region=>!(region.id==="back_art"&&region.src==="g.layout.back.art"));DES.selRegion="back_title";DES.selRegions=desRegion("back_title")?["back_title"]:[];desCommitChange(pre);desArtReleaseIfUnused(previous);desRenderFull();
@@ -4002,7 +4005,7 @@ function desStudioImpactHtml(g){
 function desStudioToolbarHtml(g){
   const dirty=desAnyDirty(),source=String(DES.sourceRef||"").slice(0,8);
   const pnpink=g.design_engines?.engines?.some(engine=>engine.type==="pnpink");
-  return `<div class="forge-studio-top"><button class="btn forge-studio-back" onclick="desReopenGallery()" aria-label="Back to all card families" title="Back to all card families">←</button><div class="forge-studio-title"><h2>${esc(g.title)} · ${esc(DES.family.label||DES.family.id)}</h2><span>${esc(desCard()?.name||"")} · base ${esc(source||"working tree")} · ${DES._draftError?"local recovery unavailable":"local recovery on"}</span></div><span class="forge-studio-status${dirty?" dirty":""}" role="status" aria-live="polite" aria-atomic="true">${esc(desDirtyLabel())}</span><div class="forge-studio-actions"><details class="forge-studio-menu"><summary class="btn">Open in… ▾</summary><div class="forge-studio-pop"><button onclick="designExportSquib('${esc(g.slug)}')"><b>Download Squib project</b><small>Runnable Ruby DSL + CSV + declarative layouts</small></button><button onclick="designImportSquib('${esc(g.slug)}')"><b>Return Squib project</b><small>Review CSV and YAML; Forge never runs Ruby</small></button>${pnpink?`<button onclick="designExportPnpink('${esc(g.slug)}')"><b>Download PnPInk projects</b><small>Production working copies for Inkscape</small></button><button onclick="designImportPnpink('${esc(g.slug)}')"><b>Return PnPInk project</b><small>Review card data and SVG source together</small></button>`:""}<button onclick="designExportSvg('${esc(g.slug)}')"><b>Download SVG geometry kit</b><small>Round-trip simple named regions</small></button><button onclick="designImportSvg('${esc(g.slug)}')"><b>Return edited SVG</b><small>Dry-run supported geometry before Git</small></button><button onclick="designExportNandeck('${esc(g.slug)}')"><b>Download nanDECK kit</b><small>Script and committed card data</small></button><button onclick="designImportNandeck('${esc(g.slug)}')"><b>Return nanDECK script</b><small>Review script changes against Forge</small></button><button onclick="designExportProject('${esc(g.slug)}')"><b>Download full Forge project</b><small>Every card, asset, template, and adapter</small></button></div></details><button class="btn" onclick="desDataTableOpen()">Table</button><button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')">Proof ${desFamilyCards(g).length}</button><button class="btn primary" id="des-save" onclick="desSave()">Review changes</button></div></div>`;
+  return `<div class="forge-studio-top"><button class="btn forge-studio-back" onclick="desReopenGallery()" aria-label="Back to all card families" title="Back to all card families">←</button><div class="forge-studio-title"><h2>${esc(g.title)} · ${esc(DES.family.label||DES.family.id)}</h2><span>${esc(desCard()?.name||"")} · base ${esc(source||"working tree")} · ${DES._draftError?"local recovery unavailable":"local recovery on"}</span></div><span class="forge-studio-status${dirty?" dirty":""}" role="status" aria-live="polite" aria-atomic="true">${esc(desDirtyLabel())}</span><div class="forge-studio-actions"><details class="forge-studio-menu"><summary class="btn">Other editors ▾</summary><div class="forge-studio-pop"><button onclick="designExportSquib('${esc(g.slug)}')"><b>Download Squib project</b><small>Runnable Ruby DSL + CSV + declarative layouts</small></button><button onclick="designImportSquib('${esc(g.slug)}')"><b>Return Squib project</b><small>Review CSV and YAML; Forge never runs Ruby</small></button>${pnpink?`<button onclick="designExportPnpink('${esc(g.slug)}')"><b>Download PnPInk projects</b><small>Production working copies for Inkscape</small></button><button onclick="designImportPnpink('${esc(g.slug)}')"><b>Return PnPInk project</b><small>Review card data and SVG source together</small></button>`:""}<button onclick="designExportSvg('${esc(g.slug)}')"><b>Download SVG geometry kit</b><small>Round-trip simple named regions</small></button><button onclick="designImportSvg('${esc(g.slug)}')"><b>Return edited SVG</b><small>Dry-run supported geometry before Git</small></button><button onclick="designExportNandeck('${esc(g.slug)}')"><b>Download nanDECK kit</b><small>Script and committed card data</small></button><button onclick="designImportNandeck('${esc(g.slug)}')"><b>Return nanDECK script</b><small>Review script changes against Forge</small></button><button onclick="designExportProject('${esc(g.slug)}')"><b>Download full Forge project</b><small>Every card, asset, template, and adapter</small></button></div></details><button class="btn" onclick="desDataTableOpen()">Table</button><button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')">Proof ${desFamilyCards(g).length}</button><button class="btn primary" id="des-save" onclick="desSave()">Review changes</button></div></div>`;
 }
 function desStudioHtml(g){
   const c=desCard(),geom=desGeom(),dirty=desDirty();
@@ -4151,15 +4154,18 @@ function designProjectBridgeHtml(g,{externalOnly=false}={}){
   const inputs=`<input id="design-svg-file" type="file" accept=".svg,image/svg+xml" style="display:none" onchange="designSvgPicked('${g.slug}',this)"><input id="design-nandeck-file" type="file" accept=".txt,text/plain" style="display:none" onchange="designNandeckPicked('${g.slug}',this)"><input id="design-squib-file" type="file" accept=".zip,application/zip" style="display:none" onchange="designSquibPicked('${g.slug}',this)">`;
   if(!g.cards.length&&!first)return `<details class="box" style="margin-top:16px"><summary class="bh" style="cursor:pointer">Already have card data? Start from a traced workbook or CSV.</summary><div class="bb"><p class="mut" style="margin-top:0">Download the empty project as a working copy, add your cards in the editor you know, then return it for a reviewed diff and commit.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" onclick="designExportData('${g.slug}','workbook')">Download workbook</button><button class="btn" onclick="designExportData('${g.slug}','cards')">Download cards CSV</button><button class="btn" onclick="designImportData('${g.slug}')">Return XLSX / CSV / ZIP</button></div><div class="mut" style="font-size:11px;margin-top:10px">A fresh Forge export carries the exact Git baseline. Forge will reject a stale return instead of guessing through concurrent changes.</div></div></details>${inputs}`;
   const internal=`<section class="design-choice primary"><div class="choice-kicker">Design inside Forge</div><h3>${first?"Open the visual studio":"Edit the visual layout"}</h3><p>Pick a real card, click a visible element, move or resize it, change typography and color, then review every affected card before one commit or pull request.</p>${first?`<button class="btn primary" onclick="designFamilyEdit('${g.slug}','${esc(first)}')">Open Forge Studio</button>`:`<button class="btn primary" onclick="document.querySelector('.des-wrap')?.scrollIntoView({behavior:'smooth'})">Edit layout below</button>`} <button class="btn" onclick="designProofOpen('${g.slug}')">Proof all ${g.cards.length}</button></section>`;
-  const external=`<section class="design-choice"><div class="choice-kicker">Keep your existing tools</div><h3>Take a traced working copy out—and bring it back</h3><p>Every return is compared with its exported Git baseline. Forge shows the data and rendered-card impact before it writes anything.</p><div class="design-tool-grid">
-      <div class="design-tool"><b>Excel · LibreOffice · Dextrous · Component Studio · Sheets</b><small>Edit one traced workbook, take <code>cards.csv</code> into a component dataset, or move the complete package. Layout stays in the editor that owns it.</small><button class="btn primary" onclick="designExportData('${g.slug}','workbook')">Excel / LibreOffice</button> <button class="btn" onclick="designExportData('${g.slug}','cards')">Cards CSV</button> <button class="btn" onclick="designExportData('${g.slug}','package')">All tables</button> <button class="btn" onclick="designImportData('${g.slug}')">Return XLSX / CSV / ZIP</button></div>
+  const external=`<section class="design-choice"><h3>Use another editor</h3><p>Download a working copy, edit it, then return it to review changes. Each format supports the fields listed below. <a href="#help/connectors">Setup and limits</a></p><div class="design-tool-grid">
+      <div class="design-tool"><b>Excel and LibreOffice</b><small>File handoff · card data in an XLSX workbook. Preserve the included IDs and version information when editing.</small><button class="btn primary" onclick="designExportData('${g.slug}','workbook')">Excel / LibreOffice</button> <button class="btn" onclick="designImportData('${g.slug}')">Return XLSX / CSV / ZIP</button></div>
+      <div class="design-tool"><b>CSV-compatible editors</b><small>File handoff · card data for Dextrous, Component Studio, and other CSV tools. Their native layouts do not transfer.</small><button class="btn" onclick="designExportData('${g.slug}','cards')">Cards CSV</button> <button class="btn" onclick="designExportData('${g.slug}','package')">All tables</button> <button class="btn" onclick="designImportData('${g.slug}')">Return data</button></div>
+      <div class="design-tool"><b>Google Sheets</b><small>Connected card data · attach a published tab from Cards. Private tabs need the Forge for Sheets add-on. Changes require review before saving to Forge.</small><button class="btn" onclick="go('g/${g.slug}/cards')">Open Sheets setup</button> <a href="#help/connectors">Setup guide</a></div>
       ${pnpink?`<div class="design-tool"><b>Inkscape + PnPInk</b><small>${families} family projects with card data and editable SVG source.</small><button class="btn" onclick="designExportPnpink('${g.slug}')">Download</button> <button class="btn" onclick="designImportPnpink('${g.slug}')">Return</button></div>`:""}
-      <div class="design-tool"><b>Affinity · Illustrator · Inkscape</b><small>Portable SVG geometry with explicit round-trip limits.</small><button class="btn" onclick="designExportSvg('${g.slug}')">Download SVG</button> <button class="btn" onclick="designImportSvg('${g.slug}')">Return</button></div>
+      <div class="design-tool"><b>Affinity · Illustrator · Inkscape</b><small>SVG file handoff · supported geometry and visual styles. Native application documents and arbitrary effects do not round-trip.</small><button class="btn" onclick="designExportSvg('${g.slug}')">Download SVG</button> <button class="btn" onclick="designImportSvg('${g.slug}')">Return</button></div>
       <div class="design-tool"><b>nanDECK</b><small>Family scripts and CSV for its visual or scripted editor.</small><button class="btn" onclick="designExportNandeck('${g.slug}')">Download</button> <button class="btn" onclick="designImportNandeck('${g.slug}')">Return</button></div>
       <div class="design-tool"><b>Squib</b><small>Runnable Ruby DSL projects with editable CSV and YAML. Forge safely reviews data and layout without executing Ruby.</small><button class="btn" onclick="designExportSquib('${g.slug}')">Download</button> <button class="btn" onclick="designImportSquib('${g.slug}')">Return</button></div>
     </div><details style="margin-top:10px"><summary class="mut" style="font-size:11px;cursor:pointer">Advanced: move the whole versioned project</summary><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><button class="btn" onclick="designExportProject('${g.slug}')">Download full project</button><button class="btn" onclick="designImportProject('${g.slug}')">Return full project</button></div></details></section>`;
-  if(externalOnly)return `<details class="box" style="margin-bottom:16px"><summary class="bh" style="cursor:pointer">Use another editor · traced round trips</summary><div class="bb">${external}</div></details>${inputs}`;
-  return `<div class="design-choice-grid" style="margin-bottom:16px">${internal}${external}</div>${inputs}`;
+  const externalDisclosure=`<details class="box" style="margin-bottom:16px"><summary class="bh" style="cursor:pointer">Use another editor</summary><div class="bb">${external}</div></details>`;
+  if(externalOnly)return `${externalDisclosure}${inputs}`;
+  return `<div style="margin-bottom:16px">${internal}</div>${externalDisclosure}${inputs}`;
 }
 function designExportData(slug,kind="cards"){ return doExport(slug,"data",kind==="package"?"complete editor data working copy":kind==="workbook"?"Excel / LibreOffice working copy":`${kind} editor table`,kind==="package"?".forge-project.zip":kind==="workbook"?".xlsx":`/${kind}.csv`); }
 function designImportData(slug){
@@ -4644,17 +4650,6 @@ async function printProfileReview(){
   const button=$("#print-review"),profile=printProfileValue();if(button){button.disabled=true;button.textContent="Validating profile…";}const response=await fetch(`/api/games/${encodeURIComponent(PRINT_PROFILE_EDIT.slug)}/design/print-profile`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({profile})}),data=await response.json().catch(()=>({}));if(!response.ok){if(button){button.disabled=false;button.textContent="Review exact profile";}const report=data.validation?.report||data.report||[];prNote([data.error||"Print profile validation failed",...report].join(" · "),true);return;}PRINT_PROFILE_EDIT={...PRINT_PROFILE_EDIT,review:data};const g=G(PRINT_PROFILE_EDIT.slug),faces=(data.selected_printings||[]).slice(0,6).map(item=>{const card=g.cards.find(card=>card.id===item.card_id),printing=(g.printings||[]).find(printing=>printing.id===item.id);return card?`<div>${layoutCard(g,card,printing||cfPrinting(g,card),{w:95,sourceBacked:false})}<div class="mut" style="font-size:10px;text-align:center">${esc(item.id)} · ${esc(item.quantity)}×</div></div>`:"";}).join("");const target=data.production_target,cmyk=profile.press.target==="custom-cmyk-pdfx1a",saveAction=data.access.can_write?`<button class="btn primary" id="print-commit" onclick="printProfileCommit()">Commit print profile</button>`:data.access.authenticated?`<button class="btn primary" id="print-commit" onclick="printProfileCommit()">Commit to edition & open PR</button>`:`<span class="mut">Sign in to propose this profile from your own edition.</span>`;const reviseDeck=PRINT_PROFILE_EDIT.seedDeckId||"";$("#mbody").innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px"><div><div class="badge">PRINT PROFILE DRY RUN · NOTHING WRITTEN</div><h2 style="margin:7px 0 2px">Review the exact production contract</h2><div class="mut">${data.selected_cards.length} card identities · ${data.printings} unique faces · ${data.physical_cards} physical cards</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div><div class="print-review-faces">${faces}</div><div class="chg" style="margin-top:13px"><b>✓ Complete project validation passed</b><br>${profile.home.fronts_only?"Fronts only":"Long-edge mirrored duplex"} · ${profile.home.gutter_mm} mm gutter · ${esc(profile.home.crop_marks)} marks on ${profile.home.crop_marks==="none"?"no pages":esc(profile.home.crop_mark_sides)} · ${profile.home.sleeve_profile==="none"?"native trim":esc(profile.home.sleeve_profile)} · press marks on ${profile.press.crop_marks==="none"?"no pages":esc(profile.press.crop_mark_sides)} · ${esc(target?.label||"Generic sRGB handoff")}${profile.press.include_back?" + shared back":""}.</div><div class="warn" style="margin-top:12px"><b>${cmyk?"CMYK/PDF-X candidate · profile verified":target?.status==="spec-checked-handoff"?"Named handoff · specification checked":"Honest generic press boundary"}</b><br>${cmyk?`Forge verified ${esc(data.profile_asset?.path||profile.press.icc_profile)} (${esc((data.profile_asset?.sha256||"").slice(0,12))}…) as a rights-tracked CMYK printer profile. Release preflight will convert every pixel, enforce ${esc(profile.press.max_ink_coverage_percent)}% total ink, embed the exact profile, and inspect the PDF object graph. Receiving-printer approval remains required.`:target?.status==="spec-checked-handoff"?`${esc(target.description)} The release preflight verifies every delivered file; Forge does not claim native publishing.`:"Forge reopens generated PDFs, checks page count, embedded fonts and page boxes, and labels generic output sRGB."}</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="printProfileOpen('${esc(PRINT_PROFILE_EDIT.slug)}','${esc(reviseDeck)}')">← Revise</button>${saveAction}</div>`;
 }
 async function printProfileCommit(){const review=PRINT_PROFILE_EDIT?.review;if(!review)return;const button=$("#print-commit");button.disabled=true;button.textContent="Validating and committing…";const response=await fetch(`/api/games/${encodeURIComponent(PRINT_PROFILE_EDIT.slug)}/design/print-profile`,{method:"PUT",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify({profile:review.profile,base_ref:review.base_ref})}),data=await response.json().catch(()=>({}));if(!response.ok){button.disabled=false;button.textContent="Review again";prNote(data.error||"Print profile commit failed",true);return;}$("#modal").classList.remove("on");prNote(data.proposed?`Committed ${data.commit} to ${data.fork} · PR opened for review`:data.saved?`Committed ${data.commit} · exact print profile is now part of the game`:data.message||"Print profile already matches");if(data.proposed)setTimeout(()=>openFocusedPr(PRINT_PROFILE_EDIT.slug,data.pr),500);else if(data.saved)setTimeout(()=>location.reload(),800);}
-function designWorkspaceMapHtml(g){
-  const art=(g.printings||[]).filter(p=>p.art||p.image||p.scan||p.art_url||p.scan_data||p.art_data).length;
-  const rules=!!String(g.rules_md||"").trim(),tokens=(g.tokens||[]).length;
-  return `<div class="design-workspace-map">
-    <div class="design-workspace-item"><b>1 · Card data</b><span>Names, rules, costs, quantities, and stable IDs.</span><div class="ready">✓ ${(g.cards||[]).length} cards versioned</div><button class="btn" style="margin-top:8px" onclick="go('g/${g.slug}/cards')">Edit card data</button></div>
-    <div class="design-workspace-item"><b>2 · Card templates</b><span>Shared layouts, typography, symbols, and family rules.</span><div class="ready">✓ ${g.card_design?.families?.length||0} templates connected</div><button class="btn" style="margin-top:8px" onclick="document.querySelector('.design-family-grid')?.scrollIntoView({behavior:'smooth'})">Browse templates</button></div>
-    <div class="design-workspace-item"><b>3 · Art and source assets</b><span>Artwork, fonts, icons, source files, ownership, and reuse rights.</span><div class="${art?"ready":"next"}">${art?`✓ ${art} printings have art`:'Next: add production assets'}</div><button class="btn" style="margin-top:8px" onclick="go('g/${g.slug}/assets')">Open assets</button></div>
-    <div class="design-workspace-item"><b>4 · Rules and pieces</b><span>Rulebook, tokens, boards, dice, trackers, and setup instructions.</span><div class="${rules||tokens?"ready":"next"}">${tokens?`✓ ${tokens} pieces versioned`:rules?"✓ rulebook source":'Next: define the playable set'}</div><button class="btn" style="margin-top:8px" onclick="componentStudioOpen('${g.slug}')">Open pieces</button> <button class="btn" style="margin-top:8px" onclick="go('g/${g.slug}/rules')">Rules</button></div>
-    <div class="design-workspace-item"><b>5 · Print production</b><span>Exact card selection, fronts/backs, crop behavior, sleeve fit, and press boundary.</span><div class="ready">✓ versioned output contract</div><button class="btn" style="margin-top:8px" onclick="printProfileOpen('${g.slug}')">Configure print</button></div>
-  </div>`;
-}
 function designCatalog(g){
   const catalog=g.card_design, total=catalog.families.length;
   const families=catalog.families.map(family=>{
@@ -4662,25 +4657,21 @@ function designCatalog(g){
     const familyCards=g.cards.filter(candidate=>cardDesignMatch(candidate,family.match));
     return `<article class="design-family" data-family="${esc(family.id)}">
       <div class="design-family-preview">${card?layoutCard(g,card,printing,{w:100,sourceBacked:false}):"<span class='mut'>No specimen</span>"}</div>
-      <div><span class="badge">${esc(family.id)}</span><h3>${esc(family.label)}</h3>
-        <div class="design-family-path">${esc(family.source)}</div>
-        <div class="design-family-meta"><b>${family.region_count}</b> composed regions · ${esc(designMatchText(family.match))}</div>
-        <div class="design-family-tags">${family.components.map(id=>`<span>${esc(id)}</span>`).join("")}</div>
+      <div><h3>${esc(family.label)}</h3><div class="mut">Used by ${familyCards.length} card${familyCards.length===1?"":"s"}</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn primary" onclick="designFamilyEdit('${g.slug}','${esc(family.id)}')">Edit visually</button><button class="btn" onclick="designProofOpen('${g.slug}','${esc(family.id)}')">Proof ${familyCards.length}</button><button class="btn" onclick="designOpenAsset('${g.slug}','${esc(family.source)}')">History & source</button></div>
+        <details><summary>Template details</summary><div class="design-family-path">${esc(family.source)}</div><div class="design-family-meta">${family.region_count} elements · ${esc(designMatchText(family.match))}</div><div class="design-family-tags">${family.components.map(id=>`<span>${esc(id)}</span>`).join("")}</div></details>
       </div></article>`;
   }).join("");
   const components=catalog.components.map(component=>`<div class="design-component"><b>${esc(component.label)}</b><div style="font-size:11px;color:var(--mut);margin:3px 0">${component.region_count} reusable region${component.region_count===1?"":"s"} · ${component.applies_to==="*"?"all families":component.applies_to.length+" families"}</div><button class="btn" onclick="designOpenAsset('${g.slug}','${esc(component.source)}')">Inspect component</button></div>`).join("");
   const registry=g.design_engines;
   const engineCards=(registry?.engines||[]).map(engine=>{const level=engine.type==="forge-native"?"Native renderer":engine.type==="pnpink"?"Connected working copy":"Portable adapter",familyCount=engine.families?.length||0;return `<div class="design-engine ${esc(engine.status)}"><div class="design-engine-head"><b>${esc(engine.label)}</b><span class="design-engine-status">${engine.id===registry.active?'active':esc(engine.status)}</span></div><div class="design-workflow-level" style="margin-top:7px">${esc(level)}${familyCount?` · ${familyCount} families`:""}</div><p>${esc(engine.description||"")}</p><code>${esc(engine.source)}</code><div style="margin-top:9px"><button class="btn" onclick="designOpenAsset('${g.slug}','${esc(engine.source)}')">Inspect adapter</button></div></div>`;}).join("");
   const engineRegistry=registry?`<details class="box" style="margin-bottom:16px"><summary class="bh" style="cursor:pointer">Technical adapter registry · ${registry.engines.length} versioned engines</summary><div class="bb"><div class="design-engines">${engineCards}</div><div class="mut" style="font-size:11.5px;margin-top:10px">Forge declares exactly what each editor can round-trip. An outside file never replaces the release renderer silently.</div>${registry.inferred?'':`<button class="btn" style="margin-top:9px" onclick="designOpenAsset('${g.slug}','${esc(registry.manifest_path)}')">Open registry source</button>`}</div></details>`:"";
-  $("#pane").innerHTML=`<div class="design-start"><div class="design-start-head"><div><div class="badge">PRODUCTION DESIGN WORKSPACE</div><h2>Design once. Review every card. Ship the exact version.</h2><p>${esc(catalog.description)} Work in Forge or the tool you already know; either way, no design reaches the game until its rendered impact has been reviewed and committed.</p></div><div class="design-start-actions"><button class="btn primary" onclick="designFamilyEdit('${g.slug}','${esc(catalog.families[0]?.id||"")}')">Open Forge Studio</button><button class="btn" onclick="designProofOpen('${g.slug}')">Proof all ${g.cards.length}</button></div></div>
-      <div class="design-golden-path"><div class="design-golden-step"><i>1</i><b>Choose a template</b><span>One shared family, not 77 copied cards</span></div><div class="design-golden-step"><i>2</i><b>Edit against real data</b><span>Test short, long, and unusual cards</span></div><div class="design-golden-step"><i>3</i><b>Review the impact</b><span>Visual and semantic before/after</span></div><div class="design-golden-step"><i>4</i><b>Commit or propose</b><span>One change with author credit</span></div><div class="design-golden-step"><i>5</i><b>Print or play</b><span>Every export pinned to that commit</span></div></div></div>
-    ${designWorkspaceMapHtml(g)}
-    ${designProjectBridgeHtml(g,{externalOnly:true})}
-    ${engineRegistry}
-    <div class="box" style="margin-bottom:16px"><div class="bh">Shared design system</div><div class="bb" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="font-size:13px"><b>${total} family templates</b> · ${catalog.components.length} shared components · one deterministic paint order<br><span class="mut">Dimensions, palette, and versioned fonts: <code>${esc(catalog.system_path)}</code></span></div><button class="btn" onclick="designOpenAsset('${g.slug}','${esc(catalog.system_path)}')">Inspect system</button></div></div>
+  $("#pane").innerHTML=`<div class="design-start"><div class="design-start-head"><div><h2>Card design</h2><p>Edit a shared template, preview the affected cards, then review and save your changes.</p></div><div class="design-start-actions"><button class="btn primary" onclick="designFamilyEdit('${g.slug}','${esc(catalog.families[0]?.id||"")}')">Open Forge Studio</button><button class="btn" onclick="designProofOpen('${g.slug}')">Proof all ${g.cards.length}</button></div></div></div>
+    <div class="design-utilities" aria-label="Design tools"><button class="btn" onclick="go('g/${g.slug}/assets')">Artwork & fonts</button><button class="btn" onclick="componentStudioOpen('${g.slug}')">Open pieces</button><button class="btn" onclick="printProfileOpen('${g.slug}')">Configure print</button><a class="btn" href="#help">Design help</a></div>
     <h3 style="margin:20px 0 10px">Card templates <span class="count">${total}</span></h3><div class="design-family-grid">${families}</div>
-    <h3 style="margin:24px 0 10px">Reusable card components <span class="count">${catalog.components.length}</span></h3><div class="design-components">${components}</div>
+    <div style="margin-top:24px">${designProjectBridgeHtml(g,{externalOnly:true})}</div>
+    <details class="box"><summary class="bh" style="cursor:pointer">Shared styles and reusable elements</summary><div class="bb"><p>${total} templates · ${catalog.components.length} shared elements</p><button class="btn" onclick="designOpenAsset('${g.slug}','${esc(catalog.system_path)}')">Inspect system</button><div class="design-components" style="margin-top:12px">${components}</div></div></details>
+    ${engineRegistry}
     ${componentSectionHtml(g)}`;
 }
 
@@ -5116,6 +5107,7 @@ function render(){
   else if (game) repoPage(game, tab||"overview", mode);
   else if (jamId) jamPage(jamId);
   else if (h === "jams") jamsPage();
+  else if (parts[0] === "help") creatorHelpPage(parts[1]);
   else if (userName) profilePage(decodeURIComponent(userName));
   else explorePage();
   // Chrome/password managers occasionally mistake filter boxes for the login
@@ -5157,6 +5149,11 @@ async function loadProjectView(slug){
 const person = name => (DATA.people||[]).find(p=>p.name===name);
 const userLink = name => person(name) ? `<a onclick="go('u/${encodeURIComponent(name)}')">${esc(name)}</a>` : esc(name);
 
+function creatorHelpPage(topic){
+  const key=topic==="connectors"?"connectors":"creator";
+  $("#view").innerHTML=`<div class="wrap help-page"><nav aria-label="Help topics"><a href="#help" ${key==="creator"?'aria-current="page"':""}>Creator guide</a><a href="#help/connectors" ${key==="connectors"?'aria-current="page"':""}>Connectors and file handoffs</a></nav><article>${DATA.help?.[key]||"<h1>Creator guide</h1><p>Rebuild this preview to load its bundled help.</p>"}</article></div>`;
+}
+
 /* ---------- explore ---------- */
 function explorePage(filter){
   if(filter!==undefined)EXPLORE_QUERY=String(filter||"").trim().toLowerCase();
@@ -5169,15 +5166,10 @@ function explorePage(filter){
   });
   $("#view").innerHTML = `
   <div class="hero"><div class="wrap">
-    <h1>Find a game. Make it yours.</h1>
-    <p>Bring a Sheet or CSV, or fork an exact community version. Forge turns each deliberate change into a visual review and an exact playable release—without hiding the portable source.</p>
-    <div class="hero-flow" aria-label="How Forge helps">
-      <div class="hero-step"><b>Use the tools you know</b>Sheets, CSV, visual editors, or Forge itself.</div>
-      <div class="hero-step"><b>Review the actual game</b>See changed cards, rules, layouts, and assets—not just files.</div>
-      <div class="hero-step"><b>Ship one exact version</b>Build print and tabletop packages with credit and rights attached.</div>
-    </div>
-    <button class="btn primary" style="margin-top:14px" onclick="document.getElementById('game-catalog')?.scrollIntoView({behavior:'smooth'})">⑂ Browse games to remix</button>
-    <button class="btn" style="margin-top:14px;margin-left:6px" onclick="newGameModal()">Bring or start a game</button>
+    <h1>Make your next playable version.</h1>
+    <p>Create cards, review changes with your team, and download a version to print or play.</p>
+    <button class="btn primary" style="margin-top:14px" onclick="newGameModal()">New game</button>
+    <a class="btn" style="margin-top:14px;margin-left:6px" href="#help">Getting started</a>
   </div></div>
   <div class="wrap" id="game-catalog">${CATALOG_LOADING?`<div class="box" style="margin-top:24px"><div class="bb"><b>Loading games…</b><div class="mut">Fetching the first catalog page.</div></div></div>`:`
   <div class="box" style="margin:24px 0 14px"><div class="bb" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" aria-label="Topic filters"><b style="margin-right:4px">Explore by topic</b><button class="btn ${EXPLORE_TOPIC?"":"primary"}" onclick="exploreTopic('')">All</button>${topics.map(topic=>`<button class="btn ${EXPLORE_TOPIC===topic?"primary":""}" onclick="exploreTopic('${encodeURIComponent(topic)}')">${esc(topic)}</button>`).join("")}${EXPLORE_QUERY||EXPLORE_TOPIC?`<span class="mut" style="margin-left:auto">${games.length} matching game${games.length===1?"":"s"}</span>`:""}</div></div>
@@ -5235,8 +5227,9 @@ function searchAll(v){
 function repoPage(g, tab, mode){
   const primaryTabs = [
     ["overview","Overview",null],["cards","Cards",g.ncards],["design","Design",null],["rules","Rules",null],
-    ["playtests","Playtests",g.playtests.length],["play","Play",null],["community","Community",g.credit_roll.length]];
+    ["play","Play",null]];
   const projectTabs = [
+    ["playtests","Playtests",g.playtests.length],["community","Community",g.credit_roll.length],
     ["assets","Assets",null],["history","Commits",g.history.length],
     ["suggestions","Pull requests",typeof LIVE!=="undefined"&&LIVE?null:g.prs.length],["issues","Issues",null],
     ["releases","Releases",g.releases.length],["banlist","Banlist",null],["decks","Decks",g.decks.length]];
@@ -5253,10 +5246,9 @@ function repoPage(g, tab, mode){
       <div class="actions">
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Create edition</button>
-        ${g.nsetups?`<button class="btn ${EDITABLE_TABS.includes(tab)?"":"primary"}" onclick="LIVE?doPlay('${g.slug}'):alert('Start Forge and the local tabletop, then use Play.\\n\\nnpm run vtt:up\\nnode server.mjs')">▶ Play</button>`:""}
-        ${EDITABLE_TABS.includes(tab)?`<button class="btn primary edit-action" onclick="go('${gameRoute(g)}/${tab}/edit')">✎ ${editLabel}</button>`:``}
-        <details class="repo-more"><summary class="btn">More ▾</summary><div class="repo-menu"><div class="menu-note">This exact version</div>
-          <button onclick="LIVE?exportMenu('${g.slug}'):alert('Same data, every output:\\n· Tabletop Playground package\\n· Tabletop Club asset pack\\n· Tabletop Simulator mod\\n· Print-and-play PDF')">⤓ Download</button>
+        <button class="btn" onclick="exportMenu('${g.slug}')">⤓ Download</button>
+        ${tab==="rules"?`<button class="btn primary edit-action" onclick="go('${gameRoute(g)}/rules/edit')">✎ ${editLabel}</button>`:``}
+        <details class="repo-more"><summary class="btn" aria-label="Game actions">Actions ▾</summary><div class="repo-menu"><div class="menu-note">This version</div>
           ${g.pnp_package?.baseline_current
             ?`<button onclick="openPnpPackage('${g.slug}')" title="Forge-generated package from this exact semantic version">🖨 Print Forge PnP</button>`
             :`<button onclick="printSheet('${g.slug}')" title="Every card at true physical size, ready to print">🖨 Print cards</button>`}
@@ -5264,9 +5256,9 @@ function repoPage(g, tab, mode){
       </div>
     </div>
     <nav class="tabs" aria-label="Game workspace">${primaryTabs.map(([id,label,n])=>
-      `<a class="${tab===id?"on":""}" onclick="go('${gameRoute(g)}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}
+      `<a href="#${gameRoute(g)}/${id}" ${tab===id?'aria-current="page"':""} class="${tab===id?"on":""}">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}
       <details class="more-tabs"><summary class="${projectActive?"on":""}">${projectActive?esc(projectActive[1]):"More"} ▾</summary><div class="repo-menu">
-        ${projectTabs.map(([id,label,n])=>`<a class="${tab===id?"on":""}" onclick="go('${gameRoute(g)}/${id}')">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}
+        ${projectTabs.map(([id,label,n])=>`<a href="#${gameRoute(g)}/${id}" ${tab===id?'aria-current="page"':""} class="${tab===id?"on":""}">${label}${n!=null?`<span class="count">${n}</span>`:""}</a>`).join("")}
       </div></details></nav>
   </div></div>
   <div class="wrap"><div class="pane" id="pane"></div></div>`;
@@ -5331,10 +5323,9 @@ function overview(g){
       </div>
     </div></div>`:"";
   $("#pane").innerHTML = `${editionPanel(g)}${briefPanel}${protoPanel}<div class="two"><div>
-    <div class="box"><div class="bh">README</div><div class="bb">
+    <div class="box"><div class="bh">About this game</div><div class="bb">
       <h2 style="margin-top:0">${esc(g.title)} <span style="color:var(--mut);font-weight:400">v${esc(g.version)}</span></h2>
       <p>${esc(g.description)}</p>
-      <p class="mono" style="color:var(--mut)">fmt validate · fmt save · fmt export pnp · fmt export tts</p>
     </div></div>
     <div class="box"><div class="bh">Recent activity</div><div class="bb">
       ${g.history.slice(0,5).map(h=>`<div class="activity"><span>●</span><div><b>${esc(h.author)}</b> ${esc(h.subject)} <span style="color:var(--mut)">· ${esc(h.date)}</span></div></div>`).join("")||"<div class='emptystate'>No history</div>"}
@@ -5348,7 +5339,7 @@ function overview(g){
       <div class="kv"><b>Updated</b>${esc(g.updated)}</div>
     </div></div>
     <div class="box"><div class="bh">Latest release</div><div class="bb">
-      ${g.releases.length?`<b>🏷 ${esc(g.releases[g.releases.length-1].tag)}</b> <span style="color:var(--mut)">${esc(g.releases[g.releases.length-1].date)}</span><br><a onclick="go('g/${g.slug}/releases')">release notes →</a>`:"<span style='color:var(--mut)'>None yet — <code>fmt release</code></span>"}
+      ${g.releases.length?`<b>🏷 ${esc(g.releases[g.releases.length-1].tag)}</b> <span style="color:var(--mut)">${esc(g.releases[g.releases.length-1].date)}</span><br><a onclick="go('g/${g.slug}/releases')">release notes →</a>`:`<span class="mut">No releases yet.</span><br><a href="#${gameRoute(g)}/releases">View releases</a>`}
     </div></div>
     <div class="box"><div class="bh">Keep the source</div><div class="bb">
       <p style="font-size:12.5px;line-height:1.5;color:var(--mut);margin:0 0 11px">Forge adds game-aware review and reproducible releases; it does not trap the project. Download the canonical data, rules, designs, assets, and editor handoffs together.</p>
@@ -5360,34 +5351,83 @@ function overview(g){
 
 async function liveSync(slug){
   if(typeof LIVE==="undefined"||!LIVE) return;
-  let s; try{ s=await (await fetch(`/api/games/${slug}/sync`)).json(); }catch{ return; }
-  const pane=$("#pane"); if(!pane) return;
+  const pane=$("#pane"), route=location.hash; if(!pane) return;
+  let s;
+  try{
+    const accessResponse=await fetch(`/api/games/${slug}/access`,{headers:authHdr()});
+    if(!accessResponse.ok)throw new Error("Could not check connection access.");
+    const access=await accessResponse.json();
+    if(!access.canWrite){if(pane===$("#pane")&&route===location.hash)document.getElementById("sync-box")?.remove();return;}
+    const response=await fetch(`/api/games/${slug}/sync`,{headers:authHdr()});
+    if(!response.ok)throw new Error("Could not load the Sheet connection.");
+    s=await response.json();
+  }catch{
+    if(!ME||pane!==$("#pane")||route!==location.hash)return;
+    document.getElementById("sync-box")?.remove();
+    pane.insertAdjacentHTML("afterbegin",`<div class="box" id="sync-box"><div class="bb" role="status">Sheet connection status is unavailable. <button class="btn" onclick="liveSync('${slug}')">Retry</button></div></div>`);
+    return;
+  }
+  if(pane!==$("#pane")||route!==location.hash)return;
   const old=document.getElementById("sync-box"); if(old)old.remove();
-  const box=document.createElement("div"); box.className="box"; box.id="sync-box"; box.style.marginBottom="14px";
+  let setup=sheetSetupNotice(slug);
+  if(setup&&setup.connected!==s.connected){sheetSetupNotice(slug,null);setup=null;}
+  const notice=setup?`<div role="status" style="margin-bottom:10px;line-height:1.5;${setup.connected?"":"color:var(--red)"}">${esc(setup.message)}</div>`:"";
+  const box=document.createElement("div"); box.className="box"; box.id="sync-box"; box.dataset.slug=slug; box.style.marginBottom="14px";
   box.innerHTML = s.connected
-    ? `<div class="bh">▦ Sheet working copy <span style="color:var(--mut);font-weight:400">· drafting stays in Sheets; accepted history starts in Forge</span></div><div class="bb">
-        <div style="font-size:12.5px;color:var(--mut);word-break:break-all;margin-bottom:10px">${s.source_mode==="addon"?"Private Google Sheet tab · connected through Forge for Sheets":esc(s.url)}</div>
-        ${s.forge_ahead?`<div class="chg" style="margin-bottom:10px"><b>Forge advanced after the last Sheet candidate.</b> The next check will merge independent work and block overlapping edits.</div>`:""}
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${s.source_mode==="addon"?`<button class="btn primary" disabled title="Open Extensions → Forge → Open candidate panel in the connected Sheet">Check from the Sheet add-on</button>`:`<button class="btn primary" onclick="syncPull('${slug}',true)">Check draft changes</button>`}
-          <button class="btn" onclick="syncOff('${slug}')">Detach</button></div>
-        <div id="sync-out" style="margin-top:10px"></div></div>`
-    : `<div class="bh">▦ Attach a Sheet working copy</div><div class="bb">
-        <div style="font-size:13px;color:var(--mut);margin-bottom:10px">Sheets keeps its collaboration and version history. Forge checks playable-object changes, validates and renders them, then lets you deliberately commit one candidate that every export and playtest can reproduce. For now, paste a published tab URL or use the Forge for Sheets add-on for a private Sheet.</div>
-        <div style="display:flex;gap:8px"><input id="sync-url" placeholder="https://docs.google.com/spreadsheets/…" style="flex:1;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit">
-        <button class="btn primary" onclick="syncConnect('${slug}')">Attach</button></div>
-        <div id="sync-out" style="margin-top:10px"></div></div>`;
+    ? `<div class="bh">Google Sheets connected</div><div class="bb">
+        ${notice}<p style="font-size:13px;color:var(--mut);margin:0 0 10px">Sheet edits reach this game only after you review and commit them.</p>
+        ${s.forge_ahead?`<div class="chg" style="margin-bottom:10px">This game changed since the last Sheet commit. Review again to include those changes and check for conflicts.</div>`:""}
+        ${s.source_mode==="addon"?`<p style="font-size:13px;margin:0">In the connected Sheet, open <b>Extensions → Forge → Open candidate panel</b> to review changes.</p>`:`<button class="btn primary" onclick="syncPull('${slug}',true)">Review Sheet changes</button>`}
+        <details style="margin-top:10px;font-size:12px"><summary style="cursor:pointer;color:var(--mut)">Connection details</summary><div style="padding-top:8px;overflow-wrap:anywhere">${s.source_mode==="addon"?"Private tab connected through the Forge for Sheets add-on.":esc(s.url)}<p>Disconnecting keeps the cards already committed in Forge and does not change the Sheet.</p><button class="btn" onclick="syncOff('${slug}')">Disconnect Sheet</button></div></details>
+        <div id="sync-out" role="status" aria-live="polite" style="margin-top:10px"></div></div>`
+    : `<details ${setup?"open":""}><summary class="bh" style="cursor:pointer">Connect Google Sheets</summary><div class="bb">
+        ${notice}<p style="font-size:13px;color:var(--mut);margin:0 0 10px">Connect a published tab, then review its card changes before committing them to this game.</p>
+        <label for="sync-url" style="display:block;font-size:12px;margin-bottom:5px">Published Google Sheet URL</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sync-url" type="url" value="${esc(setup?.url||"").replace(/\"/g,"&quot;")}" placeholder="https://docs.google.com/spreadsheets/…" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit">
+        <button class="btn primary" onclick="syncConnect('${slug}')">Connect Sheet</button></div>
+        <p style="font-size:12px;color:var(--mut);margin:10px 0 0">For a private Sheet, use the Forge for Sheets add-on from Google Sheets. The add-on needs a public HTTPS Forge address.</p>
+        <div id="sync-out" role="status" aria-live="polite" style="margin-top:10px"></div></div></details>`;
   pane.insertBefore(box, pane.firstChild);
 }
-async function syncConnect(slug){
-  const el=$("#sync-url"); const url=(el&&el.value||"").trim(); if(!url)return;
-  toast("Reading the working copy…");
-  const r=await fetch(`/api/games/${slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url})});
-  const d=await r.json().catch(()=>({}));
-  if(r.ok){ toast(`Working copy attached — ${d.cards} cards visible${d.identity_safe?"":" · add a permanent id column before renaming cards"}`,7000); liveSync(slug); }
-  else toast(d.error||"couldn't attach working copy");
+function sheetSetupNotice(slug,value){
+  const key=`forge:sheet-setup:${slug}`;
+  try{if(value===null)sessionStorage.removeItem(key);else if(value!==undefined)sessionStorage.setItem(key,JSON.stringify(value));else return JSON.parse(sessionStorage.getItem(key)||"null");}catch{}
+  return value||null;
 }
-async function syncOff(slug){ await fetch(`/api/games/${slug}/sync/sheet`,{method:"DELETE",headers:authHdr()}); toast("Sheet working copy detached"); liveSync(slug); }
+const SHEET_BUSY=new Set();
+function syncBusy(slug,busy){
+  if(busy)SHEET_BUSY.add(slug);else SHEET_BUSY.delete(slug);
+  const box=$("#sync-box");if(box?.dataset.slug===slug)box.querySelectorAll("button").forEach(button=>button.disabled=busy);
+}
+function syncError(message,slug,refresh=false){
+  const box=$("#sync-box"),out=box?.dataset.slug===slug?box.querySelector("#sync-out"):null;
+  if(out)out.innerHTML=`<div style="color:var(--red)">${esc(message)}</div>${refresh?`<button class="btn" onclick="liveSync('${slug}')" style="margin-top:8px">Refresh connection status</button>`:""}`;
+}
+async function syncConnect(slug){
+  if(SHEET_BUSY.has(slug)||$("#sync-box")?.dataset.slug!==slug)return;
+  const route=location.hash;
+  const el=$("#sync-url"),url=(el?.value||"").trim();
+  if(!url){syncError("Enter the published Google Sheet URL.",slug);el?.focus();return;}
+  syncBusy(slug,true);
+  try{
+    const r=await fetch(`/api/games/${slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url})}),d=await r.json().catch(()=>({}));
+    if(!r.ok){syncError(d.error||"Could not connect the Sheet. Check the URL and its sharing settings.",slug);return;}
+    if(d.connected!==true){syncError("Forge did not confirm the connection. Refresh its status before trying again.",slug,true);return;}
+    sheetSetupNotice(slug,{connected:true,message:`Sheet connected. ${d.cards} card${d.cards===1?"":"s"} read; review the changes before committing.${d.identity_safe?"":" Add a permanent id column before renaming cards in the Sheet."}`});
+    delete SHEET_PREVIEWS[slug];if(route===location.hash)await liveSync(slug);
+  }catch{syncError("Could not confirm the connection. Refresh its status before trying again.",slug,true);}
+  finally{syncBusy(slug,false);}
+}
+async function syncOff(slug){
+  if(SHEET_BUSY.has(slug)||$("#sync-box")?.dataset.slug!==slug)return;
+  const route=location.hash;syncBusy(slug,true);
+  try{
+    const r=await fetch(`/api/games/${slug}/sync/sheet`,{method:"DELETE",headers:authHdr()}),d=await r.json().catch(()=>({}));
+    if(!r.ok||d.connected!==false){syncError(d.error||"Could not confirm disconnection. Refresh its status before trying again.",slug,true);return;}
+    sheetSetupNotice(slug,null);delete SHEET_PREVIEWS[slug];if(route===location.hash){await liveSync(slug);toast("Sheet disconnected. Committed cards are unchanged.");}
+  }catch{syncError("Could not confirm disconnection. Refresh its status before trying again.",slug,true);}
+  finally{syncBusy(slug,false);}
+}
 const SHEET_PREVIEWS={};
 function syncVal(v,missing){ return missing?`<i style="color:var(--mut)">(missing)</i>`:`<code>${esc(JSON.stringify(v))}</code>`; }
 function syncConflict(c){
@@ -5411,35 +5451,42 @@ function syncCandidateCard(slug,item){
     </div></div>`;
 }
 async function syncPull(slug,dry){
-  const out=$("#sync-out"); if(out)out.innerHTML="<span style='color:var(--mut);font-size:13px'>Checking playable objects and validation…</span>";
+  if(SHEET_BUSY.has(slug)||$("#sync-box")?.dataset.slug!==slug)return;
   if(!dry&&!SHEET_PREVIEWS[slug]) return syncPull(slug,true);
+  const out=$("#sync-out");
   const p=SHEET_PREVIEWS[slug];
   const qs=dry?"?dry=1":"";
   const commitBody=dry?{}:{preview:p.preview,
     commit_message:($("#sheet-commit-message")?.value||"").trim(),
     contributors:($("#sheet-contributors")?.value||"").split(",").map(v=>v.trim()).filter(Boolean)};
+  if(out)out.innerHTML=`<span style="color:var(--mut);font-size:13px">${dry?"Reading Sheet changes and checking the cards…":"Committing the reviewed changes…"}</span>`;
+  syncBusy(slug,true);
+  try{
   const r=await fetch(`/api/games/${slug}/sync/pull${qs}`,{method:"POST",headers:authHdr(),body:JSON.stringify(commitBody)});
   const d=await r.json().catch(()=>({}));
   if(!r.ok){
     delete SHEET_PREVIEWS[slug];
     if(out)out.innerHTML=`<div class="chg" style="color:var(--red)"><b>${esc(d.error||"candidate check failed")}</b></div>`+
       ((d.conflicts||[]).map(syncConflict).join(""))+
-      (d.stale?`<button class="btn" onclick="syncPull('${slug}',true)" style="margin-top:8px">Check again</button>`:"");
+      `<button class="btn" onclick="syncPull('${slug}',true)" style="margin-top:8px">Review again</button>`;
     return;
   }
   const ch=d.changes||[];
   if(!dry){
     delete SHEET_PREVIEWS[slug];
-    if(d.saved){ toast(`Candidate committed as ${d.commit} — exports and playtests can now pin this exact version`); setTimeout(()=>location.reload(),1400); }
-    else { if(out)out.innerHTML="<span style='color:var(--mut);font-size:13px'>✓ No draft changes to build. Sheets remains the editing workspace.</span>"; toast("No draft changes to build"); }
+    if(d.saved){ sheetSetupNotice(slug,null);toast(`Sheet changes committed as ${esc(String(d.commit).slice(0,8))}.`); setTimeout(()=>location.reload(),1400); }
+    else if(d.saved===false){ if(out)out.innerHTML="<span style='color:var(--mut);font-size:13px'>No changes to commit. Forge already matches the reviewed Sheet.</span>"; }
+    else if(out)out.innerHTML=`<div style="color:var(--red)">Forge did not confirm the commit. Reload Cards to check the latest version before trying again.</div><button class="btn" onclick="location.reload()" style="margin-top:8px">Reload Cards</button>`;
     return;
   }
+  if(!d.preview?.head_sha||!d.preview?.source_hash){delete SHEET_PREVIEWS[slug];syncError("Could not verify the Sheet review. Review again before committing.",slug);return;}
+  sheetSetupNotice(slug,null);
   const conflicts=d.conflicts||[], pc=(d.printing_changes||[]).length;
   const warnings=(d.warnings||[]).map(w=>`<div style="font-size:12px;color:#8a5a00;margin-top:5px">⚠ ${esc(w)}</div>`).join("");
   if(conflicts.length){
     delete SHEET_PREVIEWS[slug];
     if(out)out.innerHTML=`<div class="chg" style="color:var(--red)"><b>${conflicts.length} conflict${conflicts.length===1?"":"s"} — no candidate can be committed.</b><br><span style="font-size:12px">Resolve each field in Forge or the Sheet, then check again.</span></div>`+
-      conflicts.map(syncConflict).join("")+warnings;
+      conflicts.map(syncConflict).join("")+warnings+`<button class="btn" onclick="syncPull('${slug}',true)" style="margin-top:8px">Review again</button>`;
     return;
   }
   SHEET_PREVIEWS[slug]={preview:d.preview,data:d};
@@ -5448,15 +5495,21 @@ async function syncPull(slug,dry){
     ? `<div style="font-size:12px;color:var(--grn);margin:7px 0">✓ Candidate passes game validation</div>`
     : `<div class="chg" style="color:var(--red);margin:7px 0"><b>Candidate fails validation</b>${validationLines.map(l=>`<div style="font-size:11px">${esc(l)}</div>`).join("")}</div>`;
   const count=d.counts||{}, cardPreviews=(d.candidate_cards||[]).slice(0,8).map(item=>syncCandidateCard(slug,item)).join("");
-  const more=(d.candidate_cards||[]).length>8?`<div style="font-size:12px;color:var(--mut)">+ ${(d.candidate_cards||[]).length-8} more affected cards in the semantic diff above</div>`:"";
+  const more=(d.candidate_cards||[]).length>8?`<div style="font-size:12px;color:var(--mut)">+ ${(d.candidate_cards||[]).length-8} more affected cards in the change list above</div>`:"";
   const hasChanges=ch.length||pc;
-  if(out)out.innerHTML=`<div style="font-size:13px;color:var(--mut);margin-bottom:7px">Compared with Forge <code>${esc((d.preview.head_sha||"").slice(0,8))}</code>. Sheets is already saved; these are the playable changes not yet promoted to Forge.</div>`+
+  if(out)out.innerHTML=`<div style="font-size:13px;color:var(--mut);margin-bottom:7px">Compared with game version <code>${esc(d.preview.head_sha.slice(0,8))}</code>. Review these changes before committing them to Forge.</div>`+
     (hasChanges?`<div class="chg"><b>${count.cards||0} affected card${count.cards===1?"":"s"}</b> · ${count.modified||0} modified · ${count.added||0} added · ${count.removed||0} removed · ${pc} printing change${pc===1?"":"s"}</div>`:`<div style='font-size:13px'>✓ No uncommitted game changes.</div>`)+
     (ch.length?ch.map(chgHtml).join(""):"")+warnings+validationHtml+cardPreviews+more+
     (hasChanges&&d.can_commit?`<div style="display:grid;gap:7px;margin-top:12px">
       <label style="font-size:12px;color:var(--mut)">Commit message<textarea id="sheet-commit-message" rows="2" placeholder="What is this candidate trying to change?" style="display:block;width:100%;box-sizing:border-box;margin-top:3px;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit;resize:vertical">${esc(d.summary||"")}</textarea></label>
       <label style="font-size:12px;color:var(--mut)">Other contributors <span style="font-weight:400">(comma separated; the person committing remains the verified submitter)</span><input id="sheet-contributors" placeholder="Names or Forge handles" style="display:block;width:100%;box-sizing:border-box;margin-top:3px;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit"></label>
-      <button class="btn primary" onclick="syncPull('${slug}',false)" style="justify-self:start">Commit this exact candidate</button></div>`:"");
+      <button class="btn primary" onclick="syncPull('${slug}',false)" style="justify-self:start">Commit reviewed changes</button></div>`:"");
+  }catch{
+    delete SHEET_PREVIEWS[slug];
+    if(out)out.innerHTML=dry
+      ? `<div style="color:var(--red)">Could not complete the Sheet review. Check your connection and try again.</div><button class="btn" onclick="syncPull('${slug}',true)" style="margin-top:8px">Review again</button>`
+      : `<div style="color:var(--red)">Could not confirm whether the changes were committed. Reload Cards to check the latest version before trying again.</div><button class="btn" onclick="location.reload()" style="margin-top:8px">Reload Cards</button>`;
+  }finally{syncBusy(slug,false);}
 }
 function cards(g, mode){
   if(!g.cards.length) return cardsEmpty(g);
@@ -5484,13 +5537,11 @@ function cards(g, mode){
 }
 function cardsEmpty(g){
   $("#pane").innerHTML=`<div class="card-system-empty">
-    <div class="badge">NO CARD SYSTEM YET</div>
-    <h2>Turn the first test into real cards</h2>
-    <p>Choose a physical size, the fields your rules need, and a few starter cards. Forge creates the card data, reusable front, shared back, trim, bleed, and print setup as one reviewed version.</p>
-    <div class="card-system-steps"><span><b>1</b> Choose a starting layout</span><span><b>2</b> Review the exact cards and back</span><span><b>3</b> Commit the complete system</span></div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="go('g/${g.slug}/design')">Build the first card system</button><button class="btn" onclick="go('g/${g.slug}/overview')">Back to the playable question</button></div>
-    <small>Already use Sheets, Excel, Dextrous, Component Studio, nanDECK, Squib, or SVG? Start from Design and bring the working copy back through a reviewed diff.</small>
+    <h2>No cards yet</h2>
+    <p>Choose a size and starting layout, add your first cards, then review them before saving.</p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="go('g/${g.slug}/design')">Build the first card system</button><a class="btn" href="#help/connectors">Import options</a></div>
   </div>`;
+  liveSync(g.slug);
 }
 const CARD_FACE_MODE={};
 function toggleCardFaces(slug){
@@ -5595,24 +5646,37 @@ function assetUpload(slug,existingEncoded=""){
 }
 /* ---------- exports: same data, every table ---------- */
 async function doExport(slug, fmt, label, pick=""){
-  if(!ME){_afterAuth=()=>doExport(slug,fmt,label);authOpen();return;}
+  if(!LIVE){prNote("Downloads need a running Forge host. In this offline copy, use Actions → Print cards for a browser printout.",true);return;}
+  if(!ME){_afterAuth=()=>doExport(slug,fmt,label,pick);authOpen();return;}
+  const request=async(url,options)=>{
+    let response;
+    try{response=await fetch(url,options);}catch{throw new Error("Forge could not be reached. Try the download again.");}
+    let data;
+    try{data=await response.json();}catch{throw new Error(`Forge returned an unreadable download response (HTTP ${response.status}). Try the download again.`);}
+    if(!data||typeof data!=="object"||Array.isArray(data))throw new Error("Forge returned an incomplete download response. Try the download again.");
+    if(!response.ok)throw new Error(typeof data.error==="string"?data.error:"The download could not be built. Try again.");
+    return{response,data};
+  };
   prNote(`Building ${label}…`);
-  const r = await fetch(`/api/games/${slug}/export/${fmt}`, { method:"POST", headers: authHdr() });
-  let d = await r.json();
-  if(!r.ok){ prNote(d.error||"export failed", true); return; }
-  while(r.status===202 && !["succeeded","failed"].includes(d.status)){
-    prNote(`Building ${label}… ${d.progress||0}% · attempt ${d.attempt||1}`);
-    await new Promise(resolve=>setTimeout(resolve,800));
-    const status=await fetch(d.status_url,{headers:authHdr()});d=await status.json();
-    if(!status.ok){prNote(d.error||"could not read export status",true);return;}
-  }
-  if(d.status==="failed"){prNote(d.error||"export failed",true);return;}
-  const output=d.output||d,url=pick?output.urls.find(candidate=>candidate.endsWith(pick)):output.urls[0];
-  if(!url){prNote(`${label} is not available for this game`,true);return;}
-  if(fmt==="data"&&output.ref)localStorage.setItem(`forge:data-base:${slug}`,output.ref);
-  prNote(`${label} ready — frozen at ${output.ref} · download started`);
-  const link=document.createElement("a");link.href=url;link.download="";link.style.display="none";
-  document.body.appendChild(link);link.click();link.remove();
+  try{
+    const initial=await request(`/api/games/${slug}/export/${fmt}`,{method:"POST",headers:authHdr()});
+    let d=initial.data;
+    while(initial.response.status===202 && !["succeeded","failed"].includes(d.status)){
+      if(typeof d.status_url!=="string"||!d.status_url)throw new Error("Forge did not return a download status link. Try the download again.");
+      prNote(`Building ${label}… ${d.progress||0}%`);
+      await new Promise(resolve=>setTimeout(resolve,800));
+      d=(await request(d.status_url,{headers:authHdr()})).data;
+    }
+    if(d.status==="failed")throw new Error(typeof d.error==="string"?d.error:"The download could not be built. Try again.");
+    const output=d.output||d;
+    if(!Array.isArray(output.urls))throw new Error("Forge did not return a downloadable file. Try the download again.");
+    const urls=output.urls.filter(candidate=>typeof candidate==="string"&&candidate),url=pick?urls.find(candidate=>candidate.endsWith(pick)):urls[0];
+    if(!url){prNote(`${label} is not available for this game`,true);return;}
+    if(fmt==="data"&&output.ref)localStorage.setItem(`forge:data-base:${slug}`,output.ref);
+    const link=document.createElement("a");link.href=url;link.download="";link.style.display="none";
+    document.body.appendChild(link);link.click();link.remove();
+    prNote(`${label} ready — frozen at ${output.ref} · download started`);
+  }catch(error){prNote(error.message||"The download could not be completed. Try again.",true);}
 }
 async function doPlay(slug){
   const target=window.open("", "_blank");
@@ -5890,20 +5954,33 @@ function confirmModal(msg, okLabel){
 /* ---------- export format chooser (replaces native prompt()) ---------- */
 function exportModal(slug){
   const game=G(slug);
+  const previousFocus=document.activeElement;
   const ov=document.createElement("div");
+  ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");ov.setAttribute("aria-labelledby","download-title");
   ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
   const box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.35)";
-  const opts=[...(game?.rulebook_pipeline?[["rulebook","Native rulebook package","Official generator outputs: PDF, annotated PDF, web, data, and source"]]:[]),["print","Print-ready package","A4 + Letter duplex PDFs, bleed PNGs, and a press PDF"],["ttpg","Staged Tabletop Playground package","Native object templates, local textures, exact decks, pieces, counters, and a saved table state"],["vtt","Staged VirtualTabletop game","Seats, zones, decks, counters, and exact card version"],["ttc","Tabletop Club pack","Open-source 3D tabletop"],["tts","Staged Tabletop Simulator build","Version-pinned decks, pieces, setup placement, snap points, and immutable textures"],["pnp","Forge PnP PDF","Generated from the current versioned faces, quantities, component assets, and PnP page template"]];
-  box.innerHTML=`<h3 style="margin:0 0 14px;font-size:17px;font-weight:600">Export ${esc(slug)}</h3>`+
-    opts.map(([fmt,label,hint])=>`<button type="button" class="btn" data-fmt="${esc(fmt)}" style="display:flex;flex-direction:column;align-items:flex-start;width:100%;margin-bottom:8px;padding:10px 14px;gap:2px"><b>${esc(label)}</b><span style="font-weight:400;color:var(--mut);font-size:12px">${esc(hint)}</span></button>`).join("")+
-    `<div style="text-align:right;margin-top:6px"><button class="btn" data-x>Cancel</button></div>`;
+  box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:480px;width:100%;max-height:85vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)";
+  const printOptions=[["print","Print-ready package","A4 and Letter PDFs, individual card images, and press files."],["pnp","Forge PnP PDF","Printable sheets using this game's saved PnP layout and quantities."]];
+  const tabletopOptions=[["ttpg","Tabletop Playground","Local textures and a saved table state. Import in the app."],["vtt","VirtualTabletop","A package with the saved cards, decks, and table setup."],["ttc","Tabletop Club","An asset pack to install in Tabletop Club."],["tts","Tabletop Simulator","A saved build. Hosted textures must be reachable from the app."]];
+  const sourceOptions=[["project","Portable source project","Saved cards, rules, designs, artwork, and version information."],...(game?.rulebook_pipeline?[["rulebook","Native rulebook package","PDF, web, data, and source from the configured rulebook generator."]]:[])];
+  const options=items=>items.map(([fmt,label,hint])=>`<button type="button" class="btn" data-fmt="${esc(fmt)}" style="display:flex;flex-direction:column;align-items:flex-start;text-align:left;white-space:normal;width:100%;margin-bottom:8px;padding:10px 14px;gap:2px"><b>${esc(label)}</b><span style="font-weight:400;color:var(--mut);font-size:12px">${esc(hint)}</span></button>`).join("");
+  box.innerHTML=`<h3 id="download-title" style="margin:0 0 6px;font-size:19px">Download ${esc(game?.title||slug)}</h3><p class="mut" style="font-size:13px;margin:0 0 16px">Uses the saved project version. Unsaved editor changes are not included.</p><h4 style="margin:12px 0 8px">Print</h4>${options(printOptions)}<details class="pub-disclosure"><summary>Virtual tabletops</summary><div style="padding:10px">${options(tabletopOptions)}<p class="mut" style="font-size:12px;margin:4px">Download, then import in the target app. This does not publish to an account.</p></div></details><details class="pub-disclosure"><summary>Source and rulebook files</summary><div style="padding:10px">${options(sourceOptions)}</div></details><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px"><a href="#help/connectors" data-help>Format guide</a><button class="btn" data-x>Cancel</button></div>`;
   ov.appendChild(box); document.body.appendChild(ov);
-  const close=()=>ov.remove();
+  const close=()=>{ov.remove();if(previousFocus?.isConnected)previousFocus.focus();};
   box.querySelector("[data-x]").onclick=close;
+  box.querySelector("[data-help]").onclick=close;
   ov.addEventListener("mousedown",e=>{if(e.target===ov)close();});
-  const labelOf={rulebook:"Native rulebook package",print:"Print-ready package",ttpg:"Tabletop Playground package",vtt:"VirtualTabletop game",ttc:"Tabletop Club pack",tts:"Staged TTS build",pnp:"Forge PnP PDF"};
+  ov.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){event.preventDefault();close();}
+    if(event.key==="Tab"){
+      const controls=[...box.querySelectorAll('button,a,summary')].filter(el=>el.getClientRects().length),first=controls[0],last=controls.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    }
+  });
+  const labelOf=Object.fromEntries([...printOptions,...tabletopOptions,...sourceOptions].map(([fmt,label])=>[fmt,label]));
   box.querySelectorAll("[data-fmt]").forEach(b=>b.onclick=()=>{const fmt=b.dataset.fmt;close();doExport(slug,fmt,labelOf[fmt]);});
+  box.querySelector("[data-fmt]").focus();
 }
 /* ================= NEW GAME: intent -> MVP -> optional components =================
  * The first durable object is a design brief, not a spreadsheet. A designer can
@@ -6103,10 +6180,10 @@ function newGameModal(){
     </div>
     <div id="ng-sheet-fields" style="display:none;border:1px solid var(--bd);background:var(--bg);border-radius:9px;padding:12px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:650;margin-bottom:3px">Use a Google Sheet as the working copy</div>
-      <div style="font-size:12px;color:var(--mut);margin-bottom:8px;line-height:1.45">Paste a published tab URL. Forge imports one reviewed snapshot, then shows future Sheet edits as uncommitted game changes. Private Sheets connect from the Forge for Sheets sidebar after the project is created.</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:8px;line-height:1.45">Paste a published tab URL to attach it. After creation, review the Sheet rows on Cards and save the candidate to import them. Later Sheet edits also need review.</div>
       <label style="display:block;font-size:12px;color:var(--mut)">Published Google Sheet URL
         <input id="ng-sheet" type="url" placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=0" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
-      <div style="font-size:11.5px;color:var(--mut);margin-top:7px">Private Sheet? Create the project, then open <b>Extensions → Forge → Open candidate panel</b> inside Google Sheets.</div>
+      <div style="font-size:11.5px;color:var(--mut);margin-top:7px">Private Sheet? Use the add-on with an existing game on a reachable HTTPS Forge host. <a href="#help/connectors" onclick="document.getElementById('ngModal')?.remove()">Setup guide</a></div>
     </div>
     <label style="display:block;margin-bottom:18px;font-size:13px;color:var(--mut)">License
       <select id="ng-license" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:#fff;font:inherit"><option value="proprietary">Private draft — no reuse permission</option><option value="CC-BY-4.0">CC BY 4.0 — remix with credit</option><option value="CC-BY-SA-4.0">CC BY-SA 4.0 — remix with credit, stay open</option><option value="CC0-1.0">CC0 — public domain dedication</option></select>
@@ -6157,21 +6234,26 @@ async function ngSubmit(close){
     const r=await fetch("/api/games",{method:"POST",headers:authHdr(),body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(r.status===201){
+      let sheetOutcome=null;
       if(mode==="sheet"){
         btn.textContent="Connecting sheet…";
         try{
           const sr=await fetch(`/api/games/${d.slug}/sync/sheet`,{method:"PUT",headers:authHdr(),body:JSON.stringify({url:sheetUrl})});
           const sd=await sr.json().catch(()=>({}));
-          if(sr.ok){
-            const pull=await fetch(`/api/games/${d.slug}/sync/pull`,{method:"POST",headers:authHdr()});
-            if(!pull.ok){const pd=await pull.json().catch(()=>({}));toast(`Sheet connected, but its first snapshot needs attention: ${esc(pd.error||pull.status)} — review it from Cards.`,9000);}
-          }
-          else toast(`'${esc(d.slug)}' created, but connecting the sheet failed: ${esc(sd.error||sr.status)} — connect it later from the game page.`,9000);
-        }catch(e){ toast(`'${esc(d.slug)}' created, but connecting the sheet failed — try again from the game page.`,9000); }
+          sheetOutcome=sr.ok&&sd.connected===true
+            ? {connected:true,message:"Game created and Sheet connected. Review Sheet changes below, then commit them to add the cards to this game."}
+            : {connected:false,url:sheetUrl,message:sr.ok?"Game created. Forge did not confirm the Sheet connection. Check its status below before trying again.":`Game created. The Sheet could not connect: ${sd.error||`request failed (${sr.status})`}. Check the URL and reconnect below.`};
+        }catch{
+          sheetOutcome={connected:false,url:sheetUrl,message:"Game created. The Sheet connection could not be confirmed. Check its status below before trying again."};
+        }
+        sheetSetupNotice(d.slug,sheetOutcome);
       }
       close();
-      const outcome=mode==="idea"?"First direction committed":mode==="csv"?`${d.cards} card${d.cards===1?"":"s"} imported as one commit`:"Game created and Sheet working copy connected";
-      toast(`<b>✓ ${esc(outcome)}</b><br>${mode==="idea"?"Now build only what the first test needs.":mode==="csv"?"Review the cards, choose a design, then invite a collaborator.":"Review the imported candidate on Cards; later Sheet edits stay drafts until you commit them."}`);
+      if(sheetOutcome)toast(esc(sheetOutcome.message),9000);
+      else{
+        const outcome=mode==="idea"?"First direction committed":`${d.cards} card${d.cards===1?"":"s"} imported as one commit`;
+        toast(`<b>✓ ${esc(outcome)}</b><br>${mode==="idea"?"Now build only what the first test needs.":"Review the cards, choose a design, then invite a collaborator."}`);
+      }
       const destination=d.url||`#/g/${d.slug}`;
       setTimeout(()=>{ location.href=`/?t=${Date.now()}${destination}${mode==="idea"?"":"/cards"}`; },1100); // reload -> hub rebakes with the new game
     } else if(r.status===401){

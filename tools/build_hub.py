@@ -15,6 +15,7 @@ from pathlib import Path
 import yaml
 
 from design_engines import design_engines_metadata, load_design_engines
+from creator_help import creator_help
 
 ROOT = Path(__file__).resolve().parent.parent
 GIT_ROOT = ROOT
@@ -651,7 +652,7 @@ def main():
     games = [] if "--shell" in args else [
         build_game(g) for g in discover_games(base, include_fixtures)
     ]
-    data = {"games": games, "jams": jams, "people": build_people(games, jams)}
+    data = {"games": games, "jams": jams, "people": build_people(games, jams), "help": creator_help(ROOT)}
     data_js = json.dumps(data).replace("</", "<\\/")
     tpl = (ROOT / "tools" / "hub_template.html").read_text()
     out_path.write_text(tpl.replace("__DATA__", data_js))
