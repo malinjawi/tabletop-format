@@ -130,6 +130,11 @@ check "trusted project ownership is restored during repository reindex" node too
 check "hosted renames and identity conflicts reconcile safely" node tools/test-hosted-project-reindex.mjs
 check "private artifact caches and stale game indexes fail closed" node tools/test-private-cache-and-stale-index.mjs
 check "Forgejo privacy and repository-bound identity reconciliation" node tools/test-store1-forgejo.mjs
+check "immutable release bytes survive cache loss and reject corruption" node tools/test-release-vault.mjs
+check "concurrent export requests join the winning immutable job" node tools/test-export-job-race.mjs
+check "legacy release receipts migrate without regeneration" node tools/test-release-vault-cli.mjs
+check "release-vault backup and restore preserve exact bytes" node tools/test-release-vault-snapshot.mjs
+check "production backups lock outages and recover partial stops" node tools/test-backup-guards.mjs
 check "editor-neutral SVG family round trip" node tools/test-svg-design.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "safe Squib card and layout working copy" node tools/test-squib.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint

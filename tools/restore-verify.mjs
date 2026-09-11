@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Verify a restored Forge installation from the user-facing boundary.
- * The source journey has already populated Store 1 (Forgejo) and Store 2
- * (PostgreSQL); Store 3 starts empty and must reproduce released bytes.
+ * The source journey has already populated Store 1 (Forgejo), Store 2
+ * (PostgreSQL), and the durable release vault. Store 3 starts empty; exact
+ * published bytes must come from the independently restored vault.
  */
 import { createHash } from "node:crypto";
 
@@ -10,6 +11,10 @@ const BASE=(process.argv[2]||"").replace(/\/$/,"");
 const EXPECTED_REPOSITORY_ORIGIN=String(process.env.FORGE_EXPECTED_REPOSITORY_ORIGIN||"").replace(/\/$/,"");
 if(!/^http:\/\/127\.0\.0\.1:\d+$/.test(BASE)){
   console.error("usage: node tools/restore-verify.mjs http://127.0.0.1:<disposable-port>");
+  process.exit(2);
+}
+if(process.env.FORGE_RESTORE_CACHE_WAS_EMPTY!=="1"){
+  console.error("restore verification requires the caller to prove Store 3 began empty");
   process.exit(2);
 }
 let checks=0;
@@ -92,12 +97,22 @@ assert(issues.length===1&&issues[0].status==="closed"&&issues[0].comment_count==
   "issue, discussion, and closure state survived");
 
 const releases=(await request("GET","/api/games/tidepool/releases")).data;
-assert(releases.length===1&&releases[0].tag==="v0.1"&&releases[0].rights?.publishable,
-  "rights-gated release metadata survived");
+assert(releases.length===1&&releases[0].tag==="v0.1"&&releases[0].rights?.publishable
+  &&releases[0].vault?.durable===true&&releases[0].vault?.format_version===2
+  &&releases[0].vault?.binding==="tag-manifest"
+  &&/^[a-f0-9]{64}$/.test(releases[0].vault?.manifest_sha256||"")
+  &&Number.isSafeInteger(releases[0].vault?.sealed_at),
+  "rights-gated native release and sealed publication binding survived",releases);
 const release=(await request("GET","/api/games/tidepool/releases/v0.1")).data;
 assert(release.repository_tag?.verified_now===true,"release tag re-verifies against restored Git truth");
-assert(release.build?.format==="forge-release-build"&&release.build?.public_origin,
-  "release retains the external origin and exporter identity needed for exact rebuilds",release.build);
+assert(release.build?.format==="forge-release-build"&&release.build?.public_origin
+  &&release.vault?.durable===true&&release.vault?.format_version===2
+  &&release.vault?.binding==="tag-manifest"
+  &&release.vault?.manifest_sha256===releases[0].vault.manifest_sha256
+  &&release.author==="alice"
+  &&release.title==="First cut"
+  &&release.downloads?.ttc?.startsWith("/cache/releases/tidepool/v0.1/"),
+  "release retains its sealed publisher metadata, build provenance, and tag-addressed vault",release);
 assert(release.print_deliveries?.length===1
   &&release.print_deliveries[0].status==="approved"
   &&release.print_deliveries[0].release.sha===release.sha
@@ -110,9 +125,10 @@ assert(release.print_deliveries?.length===1
 const verifyArtifact=async(name,label=name)=>{
   const expected=release.artifacts.find(item=>item.name===name&&item.status==="ready");
   assert(!!expected,`${label} remains declared in the frozen release`);
-  const result=await request("GET",`/cache/exports/tidepool/${release.sha}/${encodeURIComponent(name)}`,{rawResponse:true});
+  const artifactPath=name.split("/").map(encodeURIComponent).join("/");
+  const result=await request("GET",`/cache/releases/tidepool/v0.1/${artifactPath}`,{rawResponse:true});
   assert(result.response.ok&&result.response.headers.get("cache-control")==="public, no-cache, must-revalidate",
-    `${label} is rebuilt from an empty cache with visibility revalidation`);
+    `${label} is served from the restored vault with visibility revalidation`);
   const actual={bytes:Buffer.isBuffer(result.data)?result.data.length:-1,
     sha256:Buffer.isBuffer(result.data)?sha256(result.data):null};
   assert(Buffer.isBuffer(result.data)&&actual.bytes===expected.bytes&&actual.sha256===expected.sha256,
@@ -133,4 +149,4 @@ assert(meAlice.games.includes("tidepool")&&meBob.games.includes("tidepool-bob")
   &&meBob.starred.includes("tidepool"),"restored per-user views agree with ownership and social state",
   {alice:meAlice,bob:meBob});
 
-console.log(`\nRESTORE VERIFIED — ${checks} checks, exact released artifacts reproduced.`);
+console.log(`\nRESTORE VERIFIED — ${checks} checks, exact released artifacts recovered from the durable vault with Store 3 empty.`);

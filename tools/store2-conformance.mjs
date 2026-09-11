@@ -416,6 +416,197 @@ assert(rels[0].build_json === releaseBuild, "releasesFor preserves the frozen re
 const releaseByTag = await q.releaseByTag(db, slug, "v1.0");
 assert(releaseByTag.sha === "abc1234" && releaseByTag.build_json === releaseBuild,
   "releaseByTag resolves the pinned sha and build identity");
+assert(releaseByTag.vault_manifest_sha256 == null && releaseByTag.vault_format_version == null,
+  "legacy releases remain readable before a vault association is attached");
+const legacyVault = { game_slug: slug, release_tag: "v1.0", format_version: 1,
+  binding_kind: "db-receipt", manifest_sha256: "a".repeat(64), sealed_at: T + 10 };
+let forgedNativeBinding = false;
+try { await q.attachReleaseVault(db, { ...legacyVault, binding_kind: "tag-manifest" }); }
+catch (error) { forgedNativeBinding = error?.code === "FORGE_RELEASE_VAULT_INVALID"; }
+assert(forgedNativeBinding && (await q.releaseByTag(db, slug, "v1.0")).vault_manifest_sha256 == null,
+  "attachReleaseVault cannot upgrade a legacy release to native tag-manifest evidence");
+const attachedVault = await q.attachReleaseVault(db, legacyVault);
+assert(attachedVault.attached === true && attachedVault.manifest_sha256 === legacyVault.manifest_sha256
+  && attachedVault.binding_kind === "db-receipt",
+  "attachReleaseVault adds explicitly weaker database-receipt evidence to a legacy release");
+const attachedAgain = await q.attachReleaseVault(db, { ...legacyVault, sealed_at: T + 20 });
+assert(attachedAgain.attached === false && attachedAgain.sealed_at === attachedVault.sealed_at,
+  "attachReleaseVault is idempotent for the same immutable manifest");
+let vaultConflict = false;
+try { await q.attachReleaseVault(db, { ...legacyVault, manifest_sha256: "b".repeat(64) }); }
+catch (error) { vaultConflict = error?.code === "FORGE_RELEASE_VAULT_CONFLICT"; }
+assert(vaultConflict, "attachReleaseVault rejects a different manifest for the same release");
+let bindingConflict = false;
+try { await q.attachReleaseVault(db, { ...legacyVault, binding_kind: "tag-manifest" }); }
+catch (error) { bindingConflict = error?.code === "FORGE_RELEASE_VAULT_INVALID"; }
+assert(bindingConflict, "legacy vault attachment rejects native provenance even on an existing association");
+rels = await q.releasesFor(db, slug);
+assert(rels.find(row => row.tag === "v1.0")?.vault_manifest_sha256 === legacyVault.manifest_sha256
+  && Number((await q.releaseByTag(db, slug, "v1.0")).vault_format_version) === 1
+  && (await q.releaseByTag(db, slug, "v1.0")).vault_binding_kind === "db-receipt",
+  "release queries expose their vault manifest, version, binding provenance, and seal time");
+
+const atomicRelease = { game_slug: slug, tag: "v1.1", sha: "def5678", title: "Vault cut",
+  notes: "sealed", author_id: ana.id, tag_object_sha: "c".repeat(40), tag_annotated: true,
+  tag_protected: true, artifacts_json: '[{"name":"pnp.pdf"}]', rights_json: "{}",
+  build_json: releaseBuild };
+const atomicVault = { format_version: 1, manifest_sha256: "c".repeat(64), sealed_at: T + 30 };
+const atomicEvent = { id: newId("ev"), kind: "release", actor_id: ana.id };
+const published = await q.publishRelease(db, { release: atomicRelease, vault: atomicVault, event: atomicEvent });
+assert(published.published === true
+  && (await q.releaseByTag(db, slug, "v1.1")).vault_manifest_sha256 === atomicVault.manifest_sha256
+  && (await q.releaseByTag(db, slug, "v1.1")).vault_binding_kind === "tag-manifest"
+  && (await q.eventsByActor(db, ana.id, 20)).some(row => row.kind === "release" && row.target === "v1.1"),
+  "publishRelease atomically publishes release metadata, native tag binding, and activity event");
+const publishedAgain = await q.publishRelease(db, { release: atomicRelease, vault: atomicVault, event: atomicEvent });
+assert(publishedAgain.published === false,
+  "publishRelease accepts an exact retry without duplicating immutable state");
+let publishConflict = false;
+try { await q.publishRelease(db, { release: atomicRelease,
+  vault: { ...atomicVault, manifest_sha256: "d".repeat(64) }, event: atomicEvent }); }
+catch (error) { publishConflict = error?.code === "FORGE_RELEASE_VAULT_CONFLICT"; }
+assert(publishConflict, "publishRelease rejects an exact-tag retry with different vault evidence");
+
+const occupiedEvent = newId("ev");
+await q.recordEvent(db, { id: occupiedEvent, kind: "fork", actor_id: ana.id, game_slug: fork, target: slug });
+let atomicRollback = false;
+try { await q.publishRelease(db, {
+  release: { ...atomicRelease, tag: "v1.2", sha: "fed9876" },
+  vault: { ...atomicVault, manifest_sha256: "e".repeat(64) },
+  event: { id: occupiedEvent, kind: "release", actor_id: ana.id },
+}); } catch (error) { atomicRollback = error?.code === "FORGE_RELEASE_VAULT_CONFLICT"; }
+assert(atomicRollback && !(await q.releaseByTag(db, slug, "v1.2")),
+  "a release-event conflict rolls back both release and vault association");
+
+// Durable two-phase publication (027): vault evidence is journaled before the
+// protected tag, then the exact pending payload is finalized without HEAD or
+// exporter input. Every retry is immutable and every collision rolls back.
+const pendingTag = "v1.3";
+const pendingPublication = {
+  release: {
+    game_slug: slug, tag: pendingTag, sha: "1".repeat(40), title: "Crash-safe cut",
+    notes: "prepared from sealed bytes", author_id: ana.id,
+    artifacts_json: '[{"name":"print-ready.zip","sha256":"abc"}]',
+    rights_json: '{"redistributable":true}', build_json: releaseBuild,
+  },
+  vault: {
+    format_version: 1, binding_kind: "tag-manifest",
+    manifest_sha256: "2".repeat(64), sealed_at: T + 40,
+  },
+  event: { id: newId("ev"), kind: "release", actor_id: ana.id },
+  created_at: T + 41,
+};
+let invalidPendingDigest = false;
+try {
+  await q.prepareReleasePublication(db, {
+    ...pendingPublication,
+    release: { ...pendingPublication.release, tag: "v-invalid" },
+    vault: { ...pendingPublication.vault, manifest_sha256: "not-a-sha256" },
+  });
+} catch (error) { invalidPendingDigest = error?.code === "FORGE_RELEASE_PUBLICATION_INVALID"; }
+assert(invalidPendingDigest && !(await q.pendingReleasePublication(db, slug, "v-invalid")),
+  "pending publication rejects an invalid vault digest without writing state");
+const prepared = await q.prepareReleasePublication(db, pendingPublication);
+assert(prepared.prepared === true && prepared.source_sha === pendingPublication.release.sha
+  && prepared.vault_binding_kind === "tag-manifest",
+  "prepareReleasePublication durably records the exact native release payload");
+let pendingRow = await q.pendingReleasePublication(db, slug, pendingTag);
+assert(pendingRow?.event_id === pendingPublication.event.id
+  && pendingRow.artifacts_json === pendingPublication.release.artifacts_json,
+  "pendingReleasePublication returns only the unfinalized recovery record");
+assert(await q.releasePublicationEvent(db, slug, pendingTag) === null,
+  "releasePublicationEvent never exposes an event before publication is finalized");
+const preparedAgain = await q.prepareReleasePublication(db, pendingPublication);
+assert(preparedAgain.prepared === false && Number(preparedAgain.created_at) === pendingPublication.created_at,
+  "an exact pending-publication retry is idempotent");
+const duplicatePendingEventTag = "v1.3-duplicate-event";
+let duplicatePendingEvent = false;
+try {
+  await q.prepareReleasePublication(db, {
+    release: { ...pendingPublication.release, tag: duplicatePendingEventTag, sha: "9".repeat(40) },
+    vault: { ...pendingPublication.vault, manifest_sha256: "a".repeat(64), sealed_at: T + 42 },
+    event: { ...pendingPublication.event },
+    created_at: T + 43,
+  });
+} catch (error) { duplicatePendingEvent = error?.code === "FORGE_RELEASE_PUBLICATION_CONFLICT"; }
+assert(duplicatePendingEvent
+  && !(await q.pendingReleasePublication(db, slug, duplicatePendingEventTag)),
+  "one release event id cannot be reserved by two pending publications");
+let pendingConflict = false;
+try {
+  await q.prepareReleasePublication(db, {
+    ...pendingPublication,
+    vault: { ...pendingPublication.vault, manifest_sha256: "3".repeat(64) },
+  });
+} catch (error) { pendingConflict = error?.code === "FORGE_RELEASE_PUBLICATION_CONFLICT"; }
+assert(pendingConflict && (await q.pendingReleasePublication(db, slug, pendingTag))?.vault_manifest_sha256
+  === pendingPublication.vault.manifest_sha256,
+  "a prepared publication cannot be replaced by a different vault digest");
+const legacyPendingEvent = newId("ev");
+const legacyWriters = [
+  ["createRelease", () => q.createRelease(db, { ...pendingPublication.release, tag: pendingTag })],
+  ["attachReleaseVault", () => q.attachReleaseVault(db, { game_slug: slug, release_tag: pendingTag,
+    format_version: 1, binding_kind: "db-receipt", manifest_sha256: "8".repeat(64), sealed_at: T + 44 })],
+  ["publishRelease", () => q.publishRelease(db, { release: pendingPublication.release,
+    vault: { format_version: 1, manifest_sha256: "8".repeat(64), sealed_at: T + 44 },
+    event: { id: legacyPendingEvent, kind: "release", actor_id: ana.id } })],
+];
+for (const [name, write] of legacyWriters) {
+  let blocked = false;
+  try { await write(); }
+  catch (error) { blocked = error?.code === "FORGE_RELEASE_PUBLICATION_CONFLICT"; }
+  assert(blocked, `${name} cannot bypass an open publication journal`);
+}
+let legacyEventWasFree = true;
+try { await q.recordEvent(db, { id: legacyPendingEvent, kind: "fork", actor_id: ana.id,
+  game_slug: fork, target: "legacy-pending-writer-check" }); }
+catch { legacyEventWasFree = false; }
+assert(!(await q.releaseByTag(db, slug, pendingTag)) && legacyEventWasFree,
+  "blocked legacy writers leave the prepared release identity and event id unused");
+const tagEvidence = { game_slug: slug, tag: pendingTag, tag_object_sha: "4".repeat(40),
+  tag_annotated: true, tag_protected: true };
+const finalized = await q.finalizeReleasePublication(db, tagEvidence);
+const finalizedRelease = await q.releaseByTag(db, slug, pendingTag);
+assert(finalized.finalized === true && finalizedRelease.sha === pendingPublication.release.sha
+  && finalizedRelease.vault_manifest_sha256 === pendingPublication.vault.manifest_sha256
+  && finalizedRelease.vault_binding_kind === "tag-manifest"
+  && finalizedRelease.tag_object_sha === tagEvidence.tag_object_sha,
+  "finalizeReleasePublication atomically publishes the journaled release and protected tag evidence");
+pendingRow = await q.pendingReleasePublication(db, slug, pendingTag);
+assert(!pendingRow, "a finalized publication is no longer returned as pending");
+const publicationEvent = await q.releasePublicationEvent(db, slug, pendingTag);
+assert(publicationEvent?.id === pendingPublication.event.id
+  && publicationEvent.kind === pendingPublication.event.kind
+  && publicationEvent.actor_id === pendingPublication.event.actor_id
+  && publicationEvent.game_slug === slug && publicationEvent.target === pendingTag
+  && publicationEvent.created_at === pendingPublication.created_at
+  && Object.keys(publicationEvent).sort().join(",") === "actor_id,created_at,game_slug,id,kind,target",
+  "releasePublicationEvent returns the exact finalized journal event on both Store-2 drivers");
+const finalizedAgain = await q.finalizeReleasePublication(db, tagEvidence);
+assert(finalizedAgain.finalized === false,
+  "finalization retry verifies the immutable rows without duplicating them");
+let finalizationMismatch = false;
+try {
+  await q.finalizeReleasePublication(db, { ...tagEvidence, tag_object_sha: "5".repeat(40) });
+} catch (error) { finalizationMismatch = error?.code === "FORGE_RELEASE_PUBLICATION_CONFLICT"; }
+assert(finalizationMismatch, "finalization retry rejects different protected-tag evidence");
+
+const collidingEventId = newId("ev");
+await q.recordEvent(db, { id: collidingEventId, kind: "fork", actor_id: ana.id,
+  game_slug: fork, target: slug });
+const collisionTag = "v1.4";
+let prepareEventCollision = false;
+try {
+  await q.prepareReleasePublication(db, {
+    release: { ...pendingPublication.release, tag: collisionTag, sha: "6".repeat(40) },
+    vault: { ...pendingPublication.vault, manifest_sha256: "7".repeat(64), sealed_at: T + 50 },
+    event: { id: collidingEventId, kind: "release", actor_id: ana.id },
+    created_at: T + 51,
+  });
+} catch (error) { prepareEventCollision = error?.code === "FORGE_RELEASE_PUBLICATION_CONFLICT"; }
+assert(prepareEventCollision && !(await q.releaseByTag(db, slug, collisionTag))
+  && !(await q.pendingReleasePublication(db, slug, collisionTag)),
+  "an existing event id rejects publication before a tag can be created and leaves no pending record");
 const exportJobId = newId("job"), exportInput = digest(`${slug}\0abc1234\0data\0${3}`);
 await q.createExportJob(db, { id: exportJobId, game_slug: slug, ref: "abc1234", kind: "data",
   exporter_version: 3, input_hash: exportInput, created_by: ana.id, budget_json: "{}" });
@@ -498,3 +689,4 @@ await q.disconnectSource(db, slug, "sheet");
 assert(!(await q.sourceFor(db, slug, "sheet")), "disconnectSource removes the connector");
 
 console.log(`\nSTORE-2 CONFORMANCE GREEN — ${step} checks on the ${PG ? "POSTGRES" : "node:sqlite"} driver.`);
+if (PG) await db.end();

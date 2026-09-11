@@ -59,8 +59,19 @@ try {
     "Forgejo head returns the authoritative full commit ID");
   assert.equal(await store.resolveRef("demo", releasedAt.slice(0, 7)), releasedAt,
     "Forgejo expands a legacy abbreviated input before it can be persisted downstream");
-  const release = await store.createReleaseTag("demo", "v1.0", releasedAt,
-    "test release", "alice <alice@example.test>");
+  const tagFetch=globalThis.fetch;let createTagBody=null;
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"||input instanceof URL?input:input.url);
+    if(String(init.method||"GET").toUpperCase()==="POST"&&url.pathname.endsWith("/repos/alice/demo/tags"))
+      createTagBody=JSON.parse(String(init.body||"{}"));
+    return tagFetch(input,init);
+  };
+  let release;
+  try{release=await store.createReleaseTag("demo", "v1.0", releasedAt,
+    "test release", "alice <alice@example.test>");}
+  finally{globalThis.fetch=tagFetch;}
+  assert.deepEqual(Object.keys(createTagBody).sort(),["message","tag_name","target"],
+    "Forgejo's CreateTag API records its authenticated repository actor; Forge must not claim its publisher input controls the Git tagger");
   assert.match(release.target, /^[0-9a-f]{40}$/);
   assert.match(release.tagObject, /^[0-9a-f]{40}$/);
   assert.equal(await store.resolveRef("demo", "v1.0"), releasedAt,

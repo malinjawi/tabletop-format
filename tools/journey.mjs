@@ -13,7 +13,7 @@
  * Run via journey.sh (sets up scratch repo + LFS mock + server).
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:8420";
@@ -413,8 +413,11 @@ assert(rel.status === 201 && fullGitId(rel.data.sha) && String(rel.data.notes ||
   && rel.data.artifacts?.some(item => item.name === "forge-rights-receipt.json")
   && rel.data.build?.format === "forge-release-build"
   && rel.data.build?.public_origin === BASE
+  && rel.data.vault?.durable === true && rel.data.vault?.format_version === 2
+  && rel.data.vault?.binding === "tag-manifest"
+  && /^[0-9a-f]{64}$/.test(rel.data.vault?.manifest_sha256 || "")
   && rel.data.rights?.publishable && rel.data.rights?.source_sha === rel.data.sha,
-  "alice cuts v0.1 → required artifacts, protected tag, and a per-file rights receipt", rel.data);
+  "alice cuts v0.1 → required artifacts, durable bytes, protected tag, and a per-file rights receipt", rel.data);
 const actualTag = await releaseTag("tidepool", "v0.1");
 assert(actualTag.annotated && fullGitId(actualTag.object) && fullGitId(actualTag.target)
   && actualTag.target === rel.data.sha,
@@ -423,8 +426,9 @@ const relList = (await api("GET", "/api/games/tidepool/releases")).data;
 assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha
   && relList[0].tag_annotated && relList[0].tag_protected && relList[0].artifacts.length >= 6
   && relList[0].rights?.publishable && relList[0].rights?.file_count > 0
-  && relList[0].build?.public_origin === BASE,
-  "releases list shows the pinned version and its immutable receipt");
+  && relList[0].build?.public_origin === BASE
+  && relList[0].vault?.manifest_sha256 === rel.data.vault.manifest_sha256,
+  "releases list shows the pinned version, durable vault, and immutable receipt");
 const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
 assert(relDet.repository_tag.verified_now, "release detail re-verifies the protected annotated tag against Store 1");
 assert(relDet.rights?.publishable && relDet.rights.files.some(file => file.path === "assets/art/unclassified.png"),
@@ -480,9 +484,10 @@ if(process.env.FORGE_ALLOW_CACHE_LOSS_TEST==="1"){
   const cacheRoot=resolve(process.env.FORGE_TEST_CACHE_DIR||"");
   if(!cacheRoot||cacheRoot==="/")die("cache-loss test requires a narrow FORGE_TEST_CACHE_DIR");
   rmSync(join(cacheRoot,"exports","tidepool",rel.data.sha),{recursive:true,force:true});
-  const rebuilt=await api("GET",relDet.downloads.ttc);
-  assert(rebuilt.status===200&&rebuilt.headers.get("cache-control")==="public, no-cache, must-revalidate",
-    "losing derived Store 3 triggers an exact released-artifact rebuild from the pinned Git SHA");
+  const preserved=await api("GET",relDet.downloads.ttc);
+  assert(preserved.status===200&&preserved.headers.get("cache-control")==="public, no-cache, must-revalidate"
+    &&!existsSync(join(cacheRoot,"exports","tidepool",rel.data.sha,"tidepool-ttc.zip")),
+    "losing derived Store 3 still serves the exact released artifact directly from the durable vault");
 }
 
 const jamReleaseReady = await api("GET", `/api/games/${jamJoin.data.slug}/releases/preflight`, { token: A });

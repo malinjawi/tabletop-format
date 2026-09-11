@@ -46,6 +46,208 @@ function migrate(db) {
 
 export const newId = (prefix) => `${prefix}_${randomBytes(8).toString("hex")}`;
 
+function releaseVaultError(code, message) {
+  return Object.assign(new Error(message), { code });
+}
+
+function normalizedVault(vault, release, now = Date.now(), defaultBindingKind = "tag-manifest") {
+  const formatVersion = Number(vault?.format_version);
+  const bindingKind = String(vault?.binding_kind || defaultBindingKind);
+  const manifestSha256 = String(vault?.manifest_sha256 || "").toLowerCase();
+  if (!Number.isSafeInteger(formatVersion) || formatVersion < 1
+    || !["tag-manifest", "db-receipt"].includes(bindingKind)
+    || !/^[0-9a-f]{64}$/.test(manifestSha256))
+    throw releaseVaultError("FORGE_RELEASE_VAULT_INVALID", "invalid release vault association");
+  return { game_slug: release.game_slug, release_tag: release.tag,
+    format_version: formatVersion, binding_kind: bindingKind, manifest_sha256: manifestSha256,
+    sealed_at: Number.isSafeInteger(vault?.sealed_at) ? vault.sealed_at : now };
+}
+
+function normalizedLegacyVault(vault, release, now = Date.now()) {
+  if (vault?.binding_kind != null && vault.binding_kind !== "db-receipt")
+    throw releaseVaultError("FORGE_RELEASE_VAULT_INVALID",
+      "legacy release vault attachments must use database-receipt evidence");
+  return normalizedVault({ ...vault, binding_kind: "db-receipt" }, release, now, "db-receipt");
+}
+
+function sameRelease(row, release) {
+  const expected = {
+    sha: release.sha, title: release.title ?? null, notes: release.notes ?? null,
+    author_id: release.author_id ?? null, tag_object_sha: release.tag_object_sha ?? null,
+    tag_annotated: release.tag_annotated ? 1 : 0, tag_protected: release.tag_protected ? 1 : 0,
+    artifacts_json: release.artifacts_json ?? null, rights_json: release.rights_json ?? null,
+    build_json: release.build_json ?? null,
+  };
+  return !!row && Object.entries(expected).every(([key, value]) =>
+    key === "tag_annotated" || key === "tag_protected"
+      ? Number(row[key]) === value
+      : (row[key] ?? null) === value);
+}
+
+function sameVault(row, vault) {
+  return !!row && Number(row.format_version) === vault.format_version
+    && row.binding_kind === vault.binding_kind
+    && row.manifest_sha256 === vault.manifest_sha256;
+}
+
+function sameReleaseEvent(row, event, release) {
+  return !!row && row.kind === (event.kind || "release")
+    && (row.actor_id ?? null) === (event.actor_id ?? release.author_id ?? null)
+    && row.game_slug === release.game_slug && row.target === release.tag;
+}
+
+function releasePublicationError(code, message) {
+  return Object.assign(new Error(message), { code });
+}
+
+function rejectOpenPendingPublication(db, gameSlug, tag) {
+  const pending = db.prepare(
+    `SELECT 1 FROM pending_release_publications
+     WHERE game_slug = ? AND release_tag = ? AND finalized_at IS NULL`)
+    .get(gameSlug, tag);
+  if (pending) throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+    `release ${tag} already has a prepared publication`);
+}
+
+function requiredPublicationText(value, name, max = 512) {
+  if (typeof value !== "string" || !value.trim() || value.length > max)
+    throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID", `invalid ${name}`);
+  return value;
+}
+
+function optionalPublicationText(value, name, max = 100_000) {
+  if (value == null) return null;
+  if (typeof value !== "string" || value.length > max)
+    throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID", `invalid ${name}`);
+  return value;
+}
+
+function publicationJson(value, name) {
+  const text = optionalPublicationText(value, name, 5_000_000);
+  if (text != null) {
+    try { JSON.parse(text); }
+    catch { throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID", `invalid ${name}`); }
+  }
+  return text;
+}
+
+function publicationTimestamp(value, fallback, name) {
+  if (value == null) return fallback;
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0)
+    throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID", `invalid ${name}`);
+  return number;
+}
+
+function pendingPublicationIdentity(publication) {
+  const release = publication?.release || publication || {};
+  return {
+    game_slug: requiredPublicationText(release.game_slug ?? publication?.game_slug, "game slug", 256),
+    release_tag: requiredPublicationText(release.tag ?? publication?.release_tag ?? publication?.tag,
+      "release tag", 256),
+  };
+}
+
+function normalizedPendingPublication(publication, existing = null, now = Date.now()) {
+  const release = publication?.release || publication || {};
+  const vault = publication?.vault || publication || {};
+  const event = publication?.event || publication || {};
+  const identity = pendingPublicationIdentity(publication);
+  const sourceSha = requiredPublicationText(
+    release.sha ?? publication?.source_sha ?? publication?.sha, "source sha", 64).toLowerCase();
+  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(sourceSha))
+    throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID", "invalid source sha");
+  const formatVersion = Number(vault.format_version ?? publication?.vault_format_version);
+  const bindingKind = vault.binding_kind ?? publication?.vault_binding_kind ?? "tag-manifest";
+  const manifestSha256 = requiredPublicationText(
+    vault.manifest_sha256 ?? publication?.vault_manifest_sha256, "vault manifest digest", 64).toLowerCase();
+  if (!Number.isSafeInteger(formatVersion) || formatVersion < 1
+    || bindingKind !== "tag-manifest"
+    || !/^[0-9a-f]{64}$/.test(manifestSha256))
+    throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID", "invalid release vault evidence");
+  const createdAt = publicationTimestamp(publication?.created_at,
+    existing ? Number(existing.created_at) : now, "publication creation time");
+  const sealedAt = publicationTimestamp(vault.sealed_at ?? publication?.vault_sealed_at,
+    existing ? Number(existing.vault_sealed_at) : createdAt, "vault seal time");
+  const authorId = optionalPublicationText(release.author_id ?? publication?.author_id,
+    "release author", 256);
+  return {
+    ...identity,
+    source_sha: sourceSha,
+    title: optionalPublicationText(release.title ?? publication?.title, "release title", 2_000),
+    notes: optionalPublicationText(release.notes ?? publication?.notes, "release notes"),
+    author_id: authorId,
+    artifacts_json: publicationJson(release.artifacts_json ?? publication?.artifacts_json, "artifacts json"),
+    rights_json: publicationJson(release.rights_json ?? publication?.rights_json, "rights json"),
+    build_json: publicationJson(release.build_json ?? publication?.build_json, "build json"),
+    vault_format_version: formatVersion,
+    vault_binding_kind: bindingKind,
+    vault_manifest_sha256: manifestSha256,
+    vault_sealed_at: sealedAt,
+    event_id: requiredPublicationText(event.id ?? publication?.event_id, "release event id", 256),
+    event_kind: requiredPublicationText(event.kind ?? publication?.event_kind ?? "release",
+      "release event kind", 128),
+    event_actor_id: optionalPublicationText(
+      event.actor_id ?? publication?.event_actor_id ?? authorId, "release event actor", 256),
+    created_at: createdAt,
+  };
+}
+
+function samePendingPublication(row, pending) {
+  if (!row) return false;
+  const textFields = ["game_slug", "release_tag", "source_sha", "title", "notes", "author_id",
+    "artifacts_json", "rights_json", "build_json", "vault_binding_kind", "vault_manifest_sha256", "event_id",
+    "event_kind", "event_actor_id"];
+  return textFields.every(key => (row[key] ?? null) === (pending[key] ?? null))
+    && Number(row.vault_format_version) === pending.vault_format_version
+    && Number(row.vault_sealed_at) === pending.vault_sealed_at
+    && Number(row.created_at) === pending.created_at;
+}
+
+function normalizedTagPublicationEvidence(input) {
+  const gameSlug = requiredPublicationText(input?.game_slug, "game slug", 256);
+  const tag = requiredPublicationText(input?.tag ?? input?.release_tag, "release tag", 256);
+  const tagObjectSha = requiredPublicationText(input?.tag_object_sha, "tag object sha", 64).toLowerCase();
+  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(tagObjectSha)
+    || input?.tag_annotated !== true || input?.tag_protected !== true)
+    throw releasePublicationError("FORGE_RELEASE_PUBLICATION_INVALID",
+      "finalization requires an exact protected annotated tag");
+  return { game_slug: gameSlug, tag, tag_object_sha: tagObjectSha,
+    tag_annotated: true, tag_protected: true };
+}
+
+function finalizedPublicationParts(pending, tagEvidence) {
+  return {
+    release: {
+      game_slug: pending.game_slug, tag: pending.release_tag, sha: pending.source_sha,
+      title: pending.title, notes: pending.notes, author_id: pending.author_id,
+      tag_object_sha: tagEvidence.tag_object_sha, tag_annotated: true, tag_protected: true,
+      artifacts_json: pending.artifacts_json, rights_json: pending.rights_json,
+      build_json: pending.build_json,
+    },
+    vault: {
+      game_slug: pending.game_slug, release_tag: pending.release_tag,
+      format_version: Number(pending.vault_format_version),
+      binding_kind: pending.vault_binding_kind,
+      manifest_sha256: pending.vault_manifest_sha256, sealed_at: Number(pending.vault_sealed_at),
+    },
+    event: {
+      id: pending.event_id, kind: pending.event_kind, actor_id: pending.event_actor_id,
+      game_slug: pending.game_slug, target: pending.release_tag,
+    },
+  };
+}
+
+function sameFinalizedPublication(releaseRow, vaultRow, eventRow, pending, evidence) {
+  const parts = finalizedPublicationParts(pending, evidence);
+  return sameRelease(releaseRow, parts.release)
+    && Number(releaseRow?.created_at) === Number(pending.created_at)
+    && sameVault(vaultRow, parts.vault)
+    && Number(vaultRow?.sealed_at) === Number(pending.vault_sealed_at)
+    && sameReleaseEvent(eventRow, parts.event, parts.release)
+    && Number(eventRow?.created_at) === Number(pending.created_at);
+}
+
 function recordPolicyAcceptance(db, userId, acceptance, now) {
   const set = acceptance?.policy_set;
   if (!validPolicySet(set) || !acceptance?.id || !String(acceptance.application_build || "").trim())
@@ -452,19 +654,239 @@ export const q = {
     `INSERT INTO jam_audit_events (id, jam_id, actor_id, action, target, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
     .run(event.id, event.jam_id, event.actor_id ?? null, event.action, event.target ?? null, event.detail_json ?? null, Date.now()),
 
-  createRelease: (db, r) => db.prepare(
-    `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at,
-       tag_object_sha, tag_annotated, tag_protected, artifacts_json, rights_json, build_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(r.game_slug, r.tag, r.sha, r.title ?? null, r.notes ?? null, r.author_id ?? null, Date.now(),
-      r.tag_object_sha ?? null, r.tag_annotated ? 1 : 0, r.tag_protected ? 1 : 0,
-      r.artifacts_json ?? null, r.rights_json ?? null, r.build_json ?? null),
+  prepareReleasePublication: (db, publication) => {
+    const identity = pendingPublicationIdentity(publication);
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const existing = db.prepare(
+        `SELECT * FROM pending_release_publications
+         WHERE game_slug = ? AND release_tag = ?`).get(identity.game_slug, identity.release_tag);
+      const pending = normalizedPendingPublication(publication, existing);
+      if (existing) {
+        if (!samePendingPublication(existing, pending))
+          throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+            `release ${identity.release_tag} already has different pending publication evidence`);
+        if (existing.finalized_at == null
+          && db.prepare("SELECT 1 FROM events WHERE id = ?").get(pending.event_id))
+          throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+            `release event ${pending.event_id} is already recorded`);
+        db.exec("COMMIT");
+        return { prepared: false, ...existing };
+      }
+      if (db.prepare("SELECT 1 FROM releases WHERE game_slug = ? AND tag = ?")
+        .get(identity.game_slug, identity.release_tag))
+        throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+          `release ${identity.release_tag} is already published`);
+      if (db.prepare("SELECT 1 FROM events WHERE id = ?").get(pending.event_id))
+        throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+          `release event ${pending.event_id} is already recorded`);
+      const eventReservation = db.prepare(
+        "SELECT game_slug, release_tag FROM pending_release_publications WHERE event_id = ?")
+        .get(pending.event_id);
+      if (eventReservation)
+        throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+          `release event ${pending.event_id} is already reserved by another publication`);
+      db.prepare(
+        `INSERT INTO pending_release_publications
+           (game_slug, release_tag, source_sha, title, notes, author_id,
+            artifacts_json, rights_json, build_json, vault_format_version,
+            vault_binding_kind, vault_manifest_sha256, vault_sealed_at, event_id,
+            event_kind, event_actor_id, created_at, finalized_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`).run(
+          pending.game_slug, pending.release_tag, pending.source_sha, pending.title,
+          pending.notes, pending.author_id, pending.artifacts_json, pending.rights_json,
+          pending.build_json, pending.vault_format_version, pending.vault_binding_kind,
+          pending.vault_manifest_sha256, pending.vault_sealed_at, pending.event_id, pending.event_kind,
+          pending.event_actor_id, pending.created_at);
+      db.exec("COMMIT");
+      return { prepared: true, ...pending, finalized_at: null };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+  pendingReleasePublication: (db, slug, tag) => db.prepare(
+    `SELECT * FROM pending_release_publications
+     WHERE game_slug = ? AND release_tag = ? AND finalized_at IS NULL`).get(slug, tag),
+  releasePublicationEvent: (db, slug, tag) => db.prepare(
+    `SELECT e.id, e.kind, e.actor_id, e.game_slug, e.target, e.created_at
+     FROM pending_release_publications p
+     JOIN events e ON e.id = p.event_id
+     WHERE p.game_slug = ? AND p.release_tag = ? AND p.finalized_at IS NOT NULL`)
+    .get(slug, tag) ?? null,
+  finalizeReleasePublication: (db, input) => {
+    const evidence = normalizedTagPublicationEvidence(input);
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const pending = db.prepare(
+        `SELECT * FROM pending_release_publications
+         WHERE game_slug = ? AND release_tag = ?`).get(evidence.game_slug, evidence.tag);
+      if (!pending)
+        throw releasePublicationError("FORGE_RELEASE_PUBLICATION_NOT_FOUND",
+          `release ${evidence.tag} has no prepared publication`);
+      const releaseRow = db.prepare(
+        "SELECT * FROM releases WHERE game_slug = ? AND tag = ?")
+        .get(evidence.game_slug, evidence.tag);
+      const vaultRow = db.prepare(
+        "SELECT * FROM release_artifact_vaults WHERE game_slug = ? AND release_tag = ?")
+        .get(evidence.game_slug, evidence.tag);
+      const eventRow = db.prepare("SELECT * FROM events WHERE id = ?").get(pending.event_id);
+      if (pending.finalized_at != null) {
+        if (!sameFinalizedPublication(releaseRow, vaultRow, eventRow, pending, evidence))
+          throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+            `release ${evidence.tag} finalization evidence does not match`);
+        db.exec("COMMIT");
+        return { finalized: false, release: releaseRow, vault: vaultRow, pending };
+      }
+      if (releaseRow || vaultRow || eventRow)
+        throw releasePublicationError("FORGE_RELEASE_PUBLICATION_CONFLICT",
+          `release ${evidence.tag} collides with existing publication state`);
+      const parts = finalizedPublicationParts(pending, evidence);
+      db.prepare(
+        `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at,
+           tag_object_sha, tag_annotated, tag_protected, artifacts_json, rights_json, build_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)`).run(
+          parts.release.game_slug, parts.release.tag, parts.release.sha, parts.release.title,
+          parts.release.notes, parts.release.author_id, pending.created_at,
+          parts.release.tag_object_sha, parts.release.artifacts_json,
+          parts.release.rights_json, parts.release.build_json);
+      db.prepare(
+        `INSERT INTO release_artifact_vaults
+           (game_slug, release_tag, format_version, binding_kind, manifest_sha256, sealed_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(parts.vault.game_slug, parts.vault.release_tag,
+          parts.vault.format_version, parts.vault.binding_kind,
+          parts.vault.manifest_sha256, parts.vault.sealed_at);
+      db.prepare(
+        `INSERT INTO events (id, kind, actor_id, game_slug, target, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(parts.event.id, parts.event.kind,
+          parts.event.actor_id, parts.event.game_slug, parts.event.target, pending.created_at);
+      const finalizedAt = Date.now();
+      db.prepare(
+        `UPDATE pending_release_publications SET finalized_at = ?
+         WHERE game_slug = ? AND release_tag = ? AND finalized_at IS NULL`)
+        .run(finalizedAt, evidence.game_slug, evidence.tag);
+      db.exec("COMMIT");
+      return {
+        finalized: true,
+        release: { ...parts.release, created_at: Number(pending.created_at) },
+        vault: parts.vault,
+        pending: { ...pending, finalized_at: finalizedAt },
+      };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+  createRelease: (db, r) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      rejectOpenPendingPublication(db, r.game_slug, r.tag);
+      const result = db.prepare(
+        `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at,
+           tag_object_sha, tag_annotated, tag_protected, artifacts_json, rights_json, build_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(r.game_slug, r.tag, r.sha, r.title ?? null, r.notes ?? null, r.author_id ?? null, Date.now(),
+          r.tag_object_sha ?? null, r.tag_annotated ? 1 : 0, r.tag_protected ? 1 : 0,
+          r.artifacts_json ?? null, r.rights_json ?? null, r.build_json ?? null);
+      db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+  attachReleaseVault: (db, association) => {
+    const release = { game_slug: association.game_slug, tag: association.release_tag };
+    const vault = normalizedLegacyVault(association, release);
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      rejectOpenPendingPublication(db, release.game_slug, release.tag);
+      const existing = db.prepare(
+        "SELECT * FROM release_artifact_vaults WHERE game_slug = ? AND release_tag = ?")
+        .get(vault.game_slug, vault.release_tag);
+      if (existing) {
+        if (!sameVault(existing, vault))
+          throw releaseVaultError("FORGE_RELEASE_VAULT_CONFLICT",
+            `release ${vault.release_tag} already has a different vault manifest`);
+        db.exec("COMMIT");
+        return { attached: false, ...existing };
+      }
+      db.prepare(
+        `INSERT INTO release_artifact_vaults
+           (game_slug, release_tag, format_version, binding_kind, manifest_sha256, sealed_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(vault.game_slug, vault.release_tag,
+          vault.format_version, vault.binding_kind, vault.manifest_sha256, vault.sealed_at);
+      db.exec("COMMIT");
+      return { attached: true, ...vault };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
+  publishRelease: (db, publication) => {
+    const release = publication?.release || {};
+    const event = publication?.event || {};
+    if (!event.id) throw releaseVaultError("FORGE_RELEASE_VAULT_INVALID",
+      "release publication requires an event id");
+    const now = Date.now(), vault = normalizedVault(publication?.vault, release, now);
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      rejectOpenPendingPublication(db, release.game_slug, release.tag);
+      const existingRelease = db.prepare(
+        "SELECT * FROM releases WHERE game_slug = ? AND tag = ?").get(release.game_slug, release.tag);
+      if (existingRelease) {
+        const existingVault = db.prepare(
+          "SELECT * FROM release_artifact_vaults WHERE game_slug = ? AND release_tag = ?")
+          .get(release.game_slug, release.tag);
+        const existingEvent = db.prepare("SELECT * FROM events WHERE id = ?").get(event.id);
+        if (!sameRelease(existingRelease, release) || !sameVault(existingVault, vault)
+          || !sameReleaseEvent(existingEvent, event, release))
+          throw releaseVaultError("FORGE_RELEASE_VAULT_CONFLICT",
+            `release ${release.tag} is already published with different immutable evidence`);
+        db.exec("COMMIT");
+        return { published: false, release: existingRelease, vault: existingVault };
+      }
+      if (db.prepare("SELECT 1 FROM events WHERE id = ?").get(event.id))
+        throw releaseVaultError("FORGE_RELEASE_VAULT_CONFLICT", "release event id is already in use");
+      db.prepare(
+        `INSERT INTO releases (game_slug, tag, sha, title, notes, author_id, created_at,
+           tag_object_sha, tag_annotated, tag_protected, artifacts_json, rights_json, build_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          release.game_slug, release.tag, release.sha, release.title ?? null, release.notes ?? null,
+          release.author_id ?? null, now, release.tag_object_sha ?? null,
+          release.tag_annotated ? 1 : 0, release.tag_protected ? 1 : 0,
+          release.artifacts_json ?? null, release.rights_json ?? null, release.build_json ?? null);
+      db.prepare(
+        `INSERT INTO release_artifact_vaults
+           (game_slug, release_tag, format_version, binding_kind, manifest_sha256, sealed_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(vault.game_slug, vault.release_tag,
+          vault.format_version, vault.binding_kind, vault.manifest_sha256, vault.sealed_at);
+      db.prepare(
+        `INSERT INTO events (id, kind, actor_id, game_slug, target, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(event.id, event.kind || "release",
+          event.actor_id ?? release.author_id ?? null, release.game_slug, release.tag, now);
+      db.exec("COMMIT");
+      return { published: true, release: { ...release, created_at: now }, vault };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  },
   releasesFor: (db, slug) => db.prepare(
     `SELECT rl.tag, rl.sha, rl.title, rl.created_at, rl.tag_object_sha,
-            rl.tag_annotated, rl.tag_protected, rl.artifacts_json, rl.rights_json, rl.build_json, u.handle AS author_handle
-     FROM releases rl LEFT JOIN users u ON u.id = rl.author_id WHERE rl.game_slug = ? ORDER BY rl.created_at DESC`).all(slug),
+            rl.tag_annotated, rl.tag_protected, rl.artifacts_json, rl.rights_json, rl.build_json,
+            v.format_version AS vault_format_version, v.binding_kind AS vault_binding_kind,
+            v.manifest_sha256 AS vault_manifest_sha256,
+            v.sealed_at AS vault_sealed_at, u.handle AS author_handle
+     FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
+     LEFT JOIN release_artifact_vaults v ON v.game_slug = rl.game_slug AND v.release_tag = rl.tag
+     WHERE rl.game_slug = ? ORDER BY rl.created_at DESC`).all(slug),
   releaseByTag: (db, slug, tag) => db.prepare(
-    `SELECT rl.*, u.handle AS author_handle FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
+    `SELECT rl.*, v.format_version AS vault_format_version, v.binding_kind AS vault_binding_kind,
+            v.manifest_sha256 AS vault_manifest_sha256,
+            v.sealed_at AS vault_sealed_at, u.handle AS author_handle
+     FROM releases rl LEFT JOIN users u ON u.id = rl.author_id
+     LEFT JOIN release_artifact_vaults v ON v.game_slug = rl.game_slug AND v.release_tag = rl.tag
      WHERE rl.game_slug = ? AND rl.tag = ?`).get(slug, tag),
 
   createPrintDelivery: (db, d) => db.prepare(

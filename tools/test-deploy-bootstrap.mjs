@@ -21,6 +21,7 @@ try {
     "--gateway-image", `registry.forge.test/platform@sha256:${digest("a")}`,
     "--r2-account-id", "b".repeat(32), "--r2-bucket", "forge-pilot-lfs",
     "--r2-access-key-file", access, "--r2-secret-key-file", secret,
+    "--release-vault-volume", "forge-release-vault-pilot",
     "--backup-destination", "/mnt/forge-pilot-backups", "--env", env, "--secret-dir", secrets];
   const run = extra => spawnSync(process.execPath, [...args, ...(extra || [])], { cwd: root, encoding: "utf8" });
   const created = run();
@@ -38,6 +39,7 @@ try {
   });
   assert.equal(new Set(values).size, values.length);
   assert.equal(readFileSync(join(secrets, "forge-token"), "utf8"), "");
+  assert.match(readFileSync(env, "utf8"), /^FORGE_RELEASE_VAULT_VOLUME="forge-release-vault-pilot"$/m);
   const preflight = spawnSync(process.execPath, ["deploy/preflight.mjs", "--env", env, "--first-boot", "--test-no-image-inspect"],
     { cwd: root, encoding: "utf8" });
   assert.equal(preflight.status, 0, preflight.stderr || preflight.stdout);

@@ -3,7 +3,8 @@
  * server.mjs — the platform backend (Block G), now a real GATEWAY.
  * Usage: node server.mjs [--port 8420] [--games <dir>] [--readonly]
  * Env: STORE1 (local|forgejo) · LFS_URL (local asset mode) · DB_PATH (Store 2)
- *      CACHE_DIR (Store 3) · FORGE_URL/FORGE_TOKEN (forgejo backend)
+ *      CACHE_DIR (Store 3) · RELEASE_VAULT_DIR (durable published bytes)
+ *      FORGE_URL/FORGE_TOKEN (forgejo backend)
  *      FORGE_PUBLIC_ORIGIN (absolute public URL embedded in TTS saves)
  *      VTT_ORIGIN (local/self-hosted VirtualTabletop.io; default localhost:8272)
  *
@@ -18,16 +19,19 @@
  */
 import { execFile, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync, statSync, lstatSync, mkdirSync, mkdtempSync, rmSync, readdirSync, renameSync, realpathSync } from "node:fs";
-import { join, dirname, resolve, relative, sep } from "node:path";
+import { basename, join, dirname, resolve, relative, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 import yaml from "js-yaml";
 import YAML from "yaml";
 import { createGateway, readBody } from "./platform/gateway.mjs";
+import { createReleaseVault, isReleaseVaultVersionSupported,
+  RELEASE_VAULT_NATIVE_VERSION } from "./platform/release-vault.mjs";
+import { createOrJoinExportJob } from "./platform/export-job-race.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { jamQualify } from "./tools/lib/jamcheck.mjs";
 import { csvToCards, normalizeSheetUrl } from "./tools/lib/cardcsv.mjs";
@@ -129,6 +133,25 @@ const MAX_PROJECT_BYTES = 128 * 1024 * 1024;
 const MAX_NANDECK_BYTES = 2 * 1024 * 1024;
 const ADAPTER_CATALOG = JSON.parse(readFileSync(join(ROOT, "integrations", "adapters", "catalog.json"), "utf8"));
 const PRINT_TARGET_REGISTRY = JSON.parse(readFileSync(join(ROOT, "production", "print-targets.json"), "utf8"));
+const canonicalFuturePath = input => {
+  let existing=resolve(input);const suffix=[];
+  while(!existsSync(existing)){
+    const parent=dirname(existing);
+    if(parent===existing)throw new Error(`cannot resolve storage path ${input}`);
+    suffix.unshift(basename(existing));existing=parent;
+  }
+  return join(realpathSync(existing),...suffix);
+};
+const RELEASE_VAULT_DIR = canonicalFuturePath(process.env.RELEASE_VAULT_DIR ?? join(ROOT, "data", "release-vault"));
+const CANONICAL_CACHE_DIR = canonicalFuturePath(cache.CACHE_DIR);
+const pathContains = (parent, candidate) => {
+  const rel = relative(resolve(parent), resolve(candidate));
+  return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !rel.startsWith("/"));
+};
+if (pathContains(CANONICAL_CACHE_DIR, RELEASE_VAULT_DIR) || pathContains(RELEASE_VAULT_DIR, CANONICAL_CACHE_DIR))
+  throw new Error("RELEASE_VAULT_DIR and CACHE_DIR must be separate, non-overlapping stores");
+const releaseVault = createReleaseVault({ root: RELEASE_VAULT_DIR });
+releaseVault.initialize();
 
 /* ---------- stores ---------- */
 // Store 2 — driver behind the same q surface: node:sqlite (dev) or Postgres (prod)
@@ -490,7 +513,7 @@ gw.use(async (ctx) => {
   const p = ctx.url.pathname.split("/").filter(Boolean);
   let slug = null;
   if (p[0] === "api" && p[1] === "games" && p.length >= 3) slug = decodeURIComponent(p[2]);
-  else if (p[0] === "cache" && ["renders", "exports"].includes(p[1]) && p.length >= 3) slug = decodeURIComponent(p[2]);
+  else if (p[0] === "cache" && ["renders", "exports", "releases"].includes(p[1]) && p.length >= 3) slug = decodeURIComponent(p[2]);
   else if (p[0] === "edit" && p.length >= 2) slug = decodeURIComponent(p[1]);
   else if (p[0] === "api" && p[1] === "projects" && p.length >= 4) {
     const row = await q.gameByProject(db, decodeURIComponent(p[2]), decodeURIComponent(p[3])); slug = row?.slug || null;
@@ -834,6 +857,7 @@ function safeArtifactPath(file){
 }
 const validArtifactReceipt=(item,file)=>item?.status==="ready"&&item.name===file
   &&Number.isSafeInteger(item.bytes)&&item.bytes>=0&&/^[0-9a-f]{64}$/i.test(item.sha256||"");
+const TAG_RE = /^v[0-9][0-9A-Za-z._-]{0,31}$/;
 const exportInputHash=(slug,ref,kind,version)=>createHash("sha256")
   .update(`${slug}\0${ref}\0${kind}\0${version}`).digest("hex");
 function parseExportJobEvidence(job,slug,ref,file){
@@ -871,7 +895,21 @@ async function releaseArtifactEvidence(slug,ref,file){
   if(matches.some(match=>match.expected.bytes!==matches[0].expected.bytes
     ||match.expected.sha256!==matches[0].expected.sha256))
     return {error:"frozen releases disagree about the bytes at this exact artifact URL"};
-  return matches[0];
+  // Once a release has durable vault evidence, it is the authority for this
+  // exact URL. Legacy cache-backed releases remain readable during migration.
+  return matches.find(match=>match.release.vault_manifest_sha256)||matches[0];
+}
+function readVaultedReleaseArtifact(slug,release,expected,file){
+  if(!isReleaseVaultVersionSupported(Number(release.vault_format_version)))
+    throw Object.assign(new Error("the release uses an unsupported vault format"),{code:"VAULT_FORMAT"});
+  const preserved=releaseVault.readArtifact({slug,tag:release.tag,sourceSha:release.sha,name:file});
+  if(preserved.manifest.version!==Number(release.vault_format_version))
+    throw Object.assign(new Error("the database and vault format versions disagree"),{code:"VAULT_FORMAT"});
+  if(preserved.manifestSha256!==String(release.vault_manifest_sha256).toLowerCase())
+    throw Object.assign(new Error("the database and vault manifest digests disagree"),{code:"VAULT_BINDING"});
+  if(preserved.receipt.bytes!==expected.bytes||preserved.receipt.sha256!==expected.sha256)
+    throw Object.assign(new Error("the database and vault artifact receipts disagree"),{code:"VAULT_RECEIPT"});
+  return preserved.bytes;
 }
 async function exportJobArtifactEvidence(slug,ref,file){
   const matches=(await q.succeededExportJobsForRef(db,slug,ref))
@@ -906,7 +944,22 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
     return ctx.send(404,{error:"private hosted tabletop artifact is unavailable; use a self-contained package"});
   const fp = cache.pathOf(cache.exportKey(slug, ref, file));
   const releaseEvidence=await releaseArtifactEvidence(slug,ref,file);
-  if(releaseEvidence?.error)return ctx.send(503,{error:releaseEvidence.error});
+  if(releaseEvidence?.error){ctx.setHeader("cache-control","private, no-store");
+    return ctx.send(503,{error:releaseEvidence.error});}
+  if(releaseEvidence?.release?.vault_manifest_sha256){
+    try{
+      const {release,expected}=releaseEvidence;
+      await requireNativeReleaseTagBinding(slug,release);
+      const bytes=readVaultedReleaseArtifact(slug,release,expected,file);
+      return ctx.sendRaw(200,bytes,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
+        "cache-control":await projectCacheControl(slug)});
+    }catch(error){
+      console.error(`Release vault verification failed for ${slug}/${releaseEvidence.release.tag}/${file}: ${error.code||error.message}`);
+      ctx.setHeader("cache-control","private, no-store");
+      return ctx.send(503,{error:"frozen release vault integrity verification failed",
+        integrity_code:String(error.code||"VAULT_VERIFY_FAILED").slice(0,80)});
+    }
+  }
   let expected=releaseEvidence?.expected||null;
   if(releaseEvidence&&!artifactMatchesReceipt(fp,expected)) {
     // Store 3 is derived. Rebuild a missing or corrupt published artifact only
@@ -983,6 +1036,38 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
   ctx.sendRaw(200, bytes, { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
     "cache-control": await projectCacheControl(slug) });
 }, "frozen export artifact (sha or release tag)");
+
+gw.route("GET", "/cache/releases/:slug/:tag/*", async (ctx) => {
+  const slug=requireGame(ctx);if(!slug)return;
+  const {tag}=ctx.params,file=ctx.params["*"];
+  if(!TAG_RE.test(tag)||!safeArtifactPath(file))return ctx.send(404,{error:"bad release artifact path"});
+  const release=await q.releaseByTag(db,slug,tag);
+  if(!release)return ctx.send(404,{error:"no such release"});
+  const project=await q.gameBySlug(db,slug);
+  if(project?.visibility!=="public"&&privateDigitalArtifactBlocked(slug,file))
+    return ctx.send(404,{error:"private hosted tabletop artifact is unavailable; use a self-contained package"});
+  let artifacts;
+  try{artifacts=release.artifacts_json?JSON.parse(release.artifacts_json):[];}
+  catch{return ctx.send(503,{error:"frozen release artifact receipt is unreadable"});}
+  if(!Array.isArray(artifacts))return ctx.send(503,{error:"frozen release artifact receipt is invalid"});
+  const matches=artifacts.filter(item=>item?.status==="ready"&&item?.name===file);
+  if(!matches.length)return ctx.send(404,{error:"artifact is not part of this release"});
+  if(matches.length!==1||!validArtifactReceipt(matches[0],file))
+    return ctx.send(503,{error:"frozen release artifact receipt is invalid"});
+  if(!release.vault_manifest_sha256)
+    return ctx.send(404,{error:"this legacy release has no tag-addressed byte vault; use its exact SHA download"});
+  try{
+    await requireNativeReleaseTagBinding(slug,release);
+    const bytes=readVaultedReleaseArtifact(slug,release,matches[0],file);
+    return ctx.sendRaw(200,bytes,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
+      "cache-control":await projectCacheControl(slug)});
+  }catch(error){
+    console.error(`Release vault verification failed for ${slug}/${tag}/${file}: ${error.code||error.message}`);
+    ctx.setHeader("cache-control","private, no-store");
+    return ctx.send(503,{error:"frozen release vault integrity verification failed",
+      integrity_code:String(error.code||"VAULT_VERIFY_FAILED").slice(0,80)});
+  }
+},"tag-addressed immutable release artifact from the durable vault");
 
 /* ---------- routes: Store 2 — identity & social ---------- */
 function setSessionCookie(ctx, token, maxAge = Math.floor(SESSION_TTL / 1000)) {
@@ -1300,17 +1385,23 @@ gw.route("GET", "/api/games/:slug/ui", async (ctx) => {
     // the cached repository payload immutable: cutting a release does not
     // create a game-source commit and therefore does not change its cache key.
     const game = await uiGame(slug);
-    const releases = (await q.releasesFor(db, slug)).slice().reverse().map(release => ({
-      tag: release.tag,
-      sha: release.sha,
-      title: release.title || "",
-      notes: release.notes || "",
-      date: new Date(Number(release.created_at)).toISOString().slice(0, 10),
-      author: release.author_handle || "",
+    const releaseMetadata=await Promise.all((await q.releasesFor(db,slug))
+      .slice().reverse().map(release=>verifiedReleasePublication(slug,release,{verifyTag:true})));
+    const releases = releaseMetadata.map(metadata => ({
+      tag: metadata.row.tag,
+      sha: metadata.row.sha,
+      title: metadata.row.title || "",
+      notes: metadata.row.notes || "",
+      date: new Date(Number(metadata.row.created_at)).toISOString().slice(0, 10),
+      author: metadata.authorName,
     }));
     ctx.send(200, { ...game, releases, repository: repositoryLinks(game) });
   }
-  catch (error) { ctx.send(500, { error: "could not load this project view", detail: error.message }); }
+  catch (error) {
+    if(String(error?.code||"").startsWith("RELEASE_")||String(error?.code||"").startsWith("VAULT_"))
+      return sendReleaseMetadataFailure(ctx,error,slug,"project-view");
+    ctx.send(500, { error: "could not load this project view", detail: error.message });
+  }
 }, "lazy full project view, cached by exact repository commit");
 gw.route("GET", "/api/projects/:namespace/:slug", async (ctx) => {
   const game = await q.gameByProject(db, ctx.params.namespace, ctx.params.slug);
@@ -1347,7 +1438,12 @@ async function resolveForkPoint(src, requestedRef) {
     if (!sourceYaml) throw Object.assign(new Error("the latest source version is unavailable"), { code: 422 });
     return { sha, label: "latest working version", sourceYaml: sourceYaml.toString() };
   }
-  const release = await q.releaseByTag(db, src, requested);
+  let release = await q.releaseByTag(db, src, requested);
+  if(release){
+    try{release=(await verifiedReleasePublication(src,release,{verifyTag:true})).row;}
+    catch(cause){throw Object.assign(new Error("the requested release failed immutable publication verification"),
+      {code:503,integrity_code:String(cause?.code||"RELEASE_METADATA_VERIFY_FAILED"),cause});}
+  }
   const candidate = release?.sha ?? requested;
   // Fork refs are deliberately narrower than general git refs: a release tag
   // is resolved server-side and an explicit version must be a commit id. This
@@ -1444,7 +1540,8 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
       project_id: f.project_id, forked_from: src, source_ref: f.source_ref,
       source_label: f.source_label, commit: f.sha,
       url: `/#${publicProjectPath({ namespace: f.namespace, slug: f.repo_slug })}` });
-  } catch (e) { ctx.send(e.code ?? 500, { error: e.message,
+  } catch (e) { if(e.integrity_code)ctx.setHeader("cache-control","private, no-store");ctx.send(e.code ?? 500, { error: e.message,
+      ...(e.integrity_code?{integrity_code:e.integrity_code}:{}),
       ...(e.existing ? { existing: e.existing, url: `/#/g/${e.existing}` } : {}) }); }
 }, "create an independent edition from an exact version: copy → attribution → commit → indexed lineage");
 gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
@@ -3239,15 +3336,51 @@ const exportJobView = (job,{privateProject=false}={}) => ({ id: job.id, game: jo
     detail:"Tabletop Simulator cannot authenticate Forge's private texture URLs."}}:{}),
   created_at: job.created_at, started_at: job.started_at, finished_at: job.finished_at,
   status_url: `/api/export-jobs/${job.id}` });
+const exportWinnerDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function waitForWinningExportJob(job,slug,sha,kind){
+  const deadline=Date.now()+cache.EXPORT_BUDGET.wall_time_ms+5_000;
+  while(Date.now()<deadline){
+    const local=activeExportJobs.get(job.id);
+    if(local)return local;
+    const current=await q.exportJobById(db,job.id);
+    if(!current)throw Object.assign(new Error("the winning export job disappeared"),
+      {status:503,code:"EXPORT_JOB_WINNER_MISSING"});
+    if(current.status==="succeeded"){
+      if(!cache.exportReady(slug,sha,kind))
+        throw Object.assign(new Error("the winning export job completed without readable exact artifacts"),
+          {status:503,code:"EXPORT_JOB_WINNER_ARTIFACTS"});
+      try{return {...JSON.parse(current.output_json),cached:true};}
+      catch{throw Object.assign(new Error("the winning export job has an unreadable output receipt"),
+        {status:503,code:"EXPORT_JOB_WINNER_RECEIPT"});}
+    }
+    if(current.status==="failed")throw Object.assign(
+      new Error(current.error||"the winning export job failed"),{status:422,code:"EXPORT_JOB_WINNER_FAILED"});
+    if(!["queued","running"].includes(current.status))
+      throw Object.assign(new Error(`the winning export job entered unsupported state '${current.status}'`),
+        {status:503,code:"EXPORT_JOB_WINNER_STATE"});
+    await exportWinnerDelay(75);
+  }
+  throw Object.assign(new Error("timed out waiting for the winning export job"),
+    {status:503,code:"EXPORT_JOB_WINNER_TIMEOUT"});
+}
 async function queueExportJob({ slug, sha, kind, user = null, allowNetwork = false, buildPdf = true,
   publicOrigin = PUBLIC_ORIGIN }) {
   const version = cache.exporterVersion(kind);
-  let job = await q.exportJobByKey(db, slug, sha, kind, version);
-  if (!job) {
-    const id = newId("job"), inputHash = createHash("sha256").update(`${slug}\0${sha}\0${kind}\0${version}`).digest("hex");
-    await q.createExportJob(db, { id, game_slug: slug, ref: sha, kind, exporter_version: version,
-      input_hash: inputHash, created_by: user?.id ?? null, budget_json: JSON.stringify(cache.EXPORT_BUDGET) });
-    job = await q.exportJobById(db, id);
+  const id=newId("job"),inputHash=createHash("sha256")
+    .update(`${slug}\0${sha}\0${kind}\0${version}`).digest("hex");
+  const candidate={id,game_slug:slug,ref:sha,kind,exporter_version:version,input_hash:inputHash,
+    created_by:user?.id??null,budget_json:JSON.stringify(cache.EXPORT_BUDGET)};
+  const selected=await createOrJoinExportJob({
+    find:()=>q.exportJobByKey(db,slug,sha,kind,version),
+    create:value=>q.createExportJob(db,value),load:value=>q.exportJobById(db,value),candidate});
+  let job=selected.job;
+  if(selected.raced){
+    const promise=waitForWinningExportJob(job,slug,sha,kind);
+    // Non-waiting HTTP callers receive the winning job immediately. Keep a
+    // rejected cross-worker watcher from becoming an unhandled rejection;
+    // wait=1 and release callers still observe the original promise failure.
+    promise.catch(()=>{});
+    return {job,promise};
   }
   if (job.status === "succeeded" && cache.exportReady(slug,sha,kind)) return { job,
     promise: Promise.resolve({ ...JSON.parse(job.output_json), cached: true }) };
@@ -4497,7 +4630,6 @@ gw.route("POST", "/api/games/:slug/sync/pull", async (ctx) => {
 }, "Sheet working copy → semantic/visual candidate → optimistic, validated commit (?dry=1 checks)");
 
 /* ---------- routes: releases (citable, immutable versions) ---------- */
-const TAG_RE = /^v[0-9][0-9A-Za-z._-]{0,31}$/;
 async function releasePreflight(slug, user) {
   const sha = await store.headSha(slug);
   const source = await store.materialize(slug, sha);
@@ -4611,16 +4743,204 @@ function printDeliveryReceipt(row) {
       boundary: "Forge binds the creator's printer record to immutable release bytes; the named printer or an independent prepress service must verify the evidence." },
   };
 }
+const releaseVaultSummary = release => release?.vault_manifest_sha256 ? {
+  format_version: Number(release.vault_format_version),
+  manifest_sha256: release.vault_manifest_sha256,
+  sealed_at: Number(release.vault_sealed_at),
+  binding: release.vault_binding_kind || "db-receipt",
+  durable: true,
+} : null;
+const releaseVaultTagMarker = manifestSha256 => `Forge artifact vault: sha256:${manifestSha256}`;
+const releaseTagMessage = ({ slug, tag, sha, title, notes, manifestSha256 }) =>
+  `${title || tag}\n\n${notes || "- (initial release)"}\n\nForge project: ${slug}\nExact source: ${sha}\n${releaseVaultTagMarker(manifestSha256)}`;
+const sameReleaseTagMessage=(actual,expected)=>String(actual||"").trimEnd()===String(expected).trimEnd();
+const nativeTagManifestBinding=release=>release?.vault_binding_kind==="tag-manifest";
+function nativeReleaseTagStatus(release,liveTag){
+  const required=nativeTagManifestBinding(release);
+  if(!required)return {required:false,ok:true};
+  const marker=releaseVaultTagMarker(String(release.vault_manifest_sha256||"").toLowerCase());
+  const recordedTagObject=String(release.tag_object_sha||"").toLowerCase();
+  const liveTagObject=String(liveTag?.tagObject||"").toLowerCase();
+  const ok=/^[0-9a-f]{40}$/.test(String(release.sha||""))
+    &&/^[0-9a-f]{40}$/.test(recordedTagObject)&&/^[0-9a-f]{40}$/.test(liveTagObject)
+    &&/^[0-9a-f]{64}$/.test(String(release.vault_manifest_sha256||""))
+    &&!!release.tag_annotated&&!!release.tag_protected&&!!liveTag?.annotated&&!!liveTag.protected
+    &&liveTag.target===release.sha
+    &&liveTagObject===recordedTagObject
+    &&String(liveTag.message||"").includes(marker);
+  return {required:true,ok,marker};
+}
+async function requireNativeReleaseTagBinding(slug,release){
+  if(!nativeTagManifestBinding(release))return null;
+  let liveTag;
+  try{liveTag=await store.releaseTagInfo(slug,release.tag);}
+  catch(error){throw Object.assign(new Error("the protected repository tag could not be verified"),
+    {code:"RELEASE_TAG_UNAVAILABLE",cause:error});}
+  if(!nativeReleaseTagStatus(release,liveTag).ok)
+    throw Object.assign(new Error("the protected repository tag no longer matches the frozen release"),
+      {code:"RELEASE_TAG_BINDING"});
+  return liveTag;
+}
+async function refreshedReleaseAuthority(ctx,slug,expectedUserId){
+  const current=await authedUser(ctx);
+  if(!current||current.id!==expectedUserId)return null;
+  return await canAdmin(current,slug,{releases:true})?current:null;
+}
+async function ensureProtectedReleaseTag({slug,tag,sha,message,tagAuthor}){
+  let repositoryTag;
+  // Local Store 1 can use the sealed publisher as the tag author. Forgejo's
+  // CreateTag API chooses its authenticated repository actor, so integrity
+  // never claims publisher === Git tagger; it verifies object/target/message.
+  try{repositoryTag=await store.createReleaseTag(slug,tag,sha,message,tagAuthor);}
+  catch(error){
+    // Retrying after a process stop is safe only when the existing repository
+    // tag proves the exact source and exact immutable artifact manifest.
+    let existing=null;
+    try{existing=await store.releaseTagInfo(slug,tag);}catch{}
+    if(!existing||!existing.annotated||!existing.protected||existing.target!==sha
+      ||!sameReleaseTagMessage(existing.message,message))
+      throw Object.assign(new Error(`repository tag could not be created: ${error.message}`),
+        {status:409,code:"RELEASE_TAG_CONFLICT"});
+    repositoryTag=existing;
+  }
+  const verified=await store.releaseTagInfo(slug,tag);
+  if(!verified?.annotated||!verified.protected||verified.target!==sha
+    ||!sameReleaseTagMessage(verified.message,message))
+    throw Object.assign(new Error("repository tag verification failed"),
+      {status:500,code:"RELEASE_TAG_VERIFY_FAILED"});
+  return verified;
+}
+function pendingReleasePayload(slug,tag,pending){
+  if(pending.vault_binding_kind!=="tag-manifest"
+    ||!isReleaseVaultVersionSupported(Number(pending.vault_format_version)))
+    throw Object.assign(new Error("pending release uses unsupported vault evidence"),
+      {code:"RELEASE_PENDING_VAULT"});
+  let artifacts,rights,build;
+  try{
+    artifacts=pending.artifacts_json?JSON.parse(pending.artifacts_json):[];
+    rights=pending.rights_json?JSON.parse(pending.rights_json):null;
+    build=pending.build_json?JSON.parse(pending.build_json):null;
+  }catch{
+    throw Object.assign(new Error("pending release evidence is unreadable"),
+      {code:"RELEASE_PENDING_CORRUPT"});
+  }
+  if(!Array.isArray(artifacts))
+    throw Object.assign(new Error("pending release artifact receipt is invalid"),
+      {code:"RELEASE_PENDING_CORRUPT"});
+  const ready=artifacts.filter(item=>item?.status==="ready");
+  if(!ready.length||ready.some(item=>!validArtifactReceipt(item,item.name)))
+    throw Object.assign(new Error("pending release artifact receipt is invalid"),
+      {code:"RELEASE_PENDING_CORRUPT"});
+  const preserved=releaseVault.readRelease({slug,tag,sourceSha:pending.source_sha});
+  if(preserved.manifest.version!==Number(pending.vault_format_version)
+    ||preserved.manifestSha256!==pending.vault_manifest_sha256)
+    throw Object.assign(new Error("pending release and vault manifest disagree"),
+      {code:"RELEASE_PENDING_VAULT"});
+  const compact=items=>items.map(item=>({name:item.name,bytes:item.bytes,sha256:item.sha256}))
+    .sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0);
+  if(JSON.stringify(compact(ready))!==JSON.stringify(compact(preserved.manifest.artifacts)))
+    throw Object.assign(new Error("pending release and vault artifact receipts disagree"),
+      {code:"RELEASE_PENDING_VAULT"});
+  let publisher=null;
+  if(preserved.manifest.version===RELEASE_VAULT_NATIVE_VERSION){
+    const publication=preserved.manifest.publication,release=publication.release,event=publication.event;
+    if(Number(pending.created_at)!==publication.created_at
+      ||Number(pending.vault_sealed_at)!==publication.sealed_at
+      ||(pending.title??null)!==(release.title??null)||(pending.notes??null)!==(release.notes??null)
+      ||(pending.author_id??null)!==(release.author_id??null)
+      ||(pending.event_id??null)!==(event.id??null)||(pending.event_kind??null)!==(event.kind??null)
+      ||(pending.event_actor_id??null)!==(event.actor_id??null)
+      ||!isDeepStrictEqual(artifacts,release.artifacts)
+      ||!isDeepStrictEqual(rights,release.rights)||!isDeepStrictEqual(build,release.build))
+      throw Object.assign(new Error("pending release metadata does not match its recoverable vault manifest"),
+        {code:"RELEASE_PENDING_VAULT"});
+    publisher=publication.publisher;
+  }
+  return {artifacts,rights,build,preserved,publisher};
+}
+function pendingPublicationFromNativeManifest(slug,tag,preserved){
+  const manifest=preserved?.manifest;
+  if(manifest?.version!==RELEASE_VAULT_NATIVE_VERSION||!manifest.publication)
+    throw Object.assign(new Error("sealed release evidence cannot reconstruct a native publication"),
+      {code:"RELEASE_ORPHAN_UNRECOVERABLE"});
+  const publication=manifest.publication,release=publication.release,event=publication.event;
+  return {release:{game_slug:slug,tag,sha:manifest.release.source_sha,title:release.title,
+    notes:release.notes,author_id:release.author_id,artifacts_json:JSON.stringify(release.artifacts),
+    rights_json:release.rights==null?null:JSON.stringify(release.rights),
+    build_json:release.build==null?null:JSON.stringify(release.build)},
+    vault:{format_version:manifest.version,binding_kind:"tag-manifest",
+      manifest_sha256:preserved.manifestSha256,sealed_at:publication.sealed_at},
+    event:{id:event.id,kind:event.kind,actor_id:event.actor_id},created_at:publication.created_at};
+}
+const releaseMetadataFailure=(message,code="RELEASE_METADATA_BINDING")=>Object.assign(new Error(message),{code});
+function releaseMetadataJson(row){
+  let artifacts,rights,build;
+  try{
+    artifacts=row.artifacts_json?JSON.parse(row.artifacts_json):[];
+    rights=row.rights_json?JSON.parse(row.rights_json):null;
+    build=row.build_json?JSON.parse(row.build_json):null;
+  }catch{throw releaseMetadataFailure("release metadata JSON is unreadable","RELEASE_METADATA_CORRUPT");}
+  if(!Array.isArray(artifacts))throw releaseMetadataFailure(
+    "release artifact metadata is invalid","RELEASE_METADATA_CORRUPT");
+  return {artifacts,rights,build};
+}
+async function verifiedReleasePublication(slug,summary,{verifyTag=false}={}){
+  const row=Object.hasOwn(summary||{},"author_id")?summary:await q.releaseByTag(db,slug,summary?.tag);
+  if(!row)throw releaseMetadataFailure("release metadata disappeared","RELEASE_METADATA_MISSING");
+  const decoded=releaseMetadataJson(row);
+  if(!nativeTagManifestBinding(row))return {row,...decoded,authorName:row.author_handle||"",native:false};
+  const format=Number(row.vault_format_version);
+  if(!isReleaseVaultVersionSupported(format))throw releaseMetadataFailure(
+    "release metadata uses an unsupported vault format","RELEASE_METADATA_FORMAT");
+  const liveTag=verifyTag?await requireNativeReleaseTagBinding(slug,row):null;
+  // V1 native rows predate recoverable publication metadata. They remain
+  // readable, while every new v2 row is checked against its sealed envelope.
+  if(format!==RELEASE_VAULT_NATIVE_VERSION)
+    return {row,...decoded,authorName:row.author_handle||"",native:false,liveTag};
+  let preserved;
+  try{preserved=releaseVault.readManifest({slug,tag:row.tag,sourceSha:row.sha});}
+  catch(error){throw releaseMetadataFailure(`sealed publication manifest is unavailable: ${error.message}`,
+    String(error.code||"RELEASE_METADATA_VAULT"));}
+  if(preserved.manifest.version!==format
+    ||preserved.manifestSha256!==String(row.vault_manifest_sha256||"").toLowerCase())
+    throw releaseMetadataFailure("database vault evidence does not match the sealed publication");
+  const publication=preserved.manifest.publication,sealed=publication.release,event=publication.event;
+  if(Number(row.created_at)!==publication.created_at||Number(row.vault_sealed_at)!==publication.sealed_at
+    ||(row.title??null)!==(sealed.title??null)||(row.notes??null)!==(sealed.notes??null)
+    ||(row.author_id??null)!==(sealed.author_id??null)
+    ||!isDeepStrictEqual(decoded.artifacts,sealed.artifacts)
+    ||!isDeepStrictEqual(decoded.rights,sealed.rights)||!isDeepStrictEqual(decoded.build,sealed.build))
+    throw releaseMetadataFailure("database release metadata does not match the sealed publication");
+  if(event.kind!=="release"||event.actor_id!==sealed.author_id)
+    throw releaseMetadataFailure("sealed release event metadata is invalid");
+  const storedEvent=await q.releasePublicationEvent(db,slug,row.tag);
+  if(!storedEvent||storedEvent.id!==event.id||storedEvent.kind!==event.kind
+    ||(storedEvent.actor_id??null)!==(event.actor_id??null)||storedEvent.game_slug!==slug
+    ||storedEvent.target!==row.tag||Number(storedEvent.created_at)!==publication.created_at)
+    throw releaseMetadataFailure("database release event does not match the sealed publication");
+  return {row,artifacts:sealed.artifacts,rights:sealed.rights,build:sealed.build,
+    authorName:publication.publisher.name,native:true,preserved,liveTag};
+}
+function sendReleaseMetadataFailure(ctx,error,slug,tag){
+  console.error(`Release metadata verification failed for ${slug}/${tag}: ${error.code||error.message}`);
+  ctx.setHeader("cache-control","private, no-store");
+  return ctx.send(503,{error:"frozen release metadata integrity verification failed",
+    integrity_code:String(error.code||"RELEASE_METADATA_VERIFY_FAILED").slice(0,80)});
+}
 gw.route("GET", "/api/games/:slug/releases", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const releases = await q.releasesFor(db, slug);
   const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
-  ctx.send(200, await Promise.all(releases.map(async r => {
-    const rights = r.rights_json ? JSON.parse(r.rights_json) : null;
-    const build = r.build_json ? JSON.parse(r.build_json) : null;
-    const artifacts=(r.artifacts_json ? JSON.parse(r.artifacts_json) : [])
+  let verified;
+  try{verified=await Promise.all(releases.map(r=>verifiedReleasePublication(slug,r,{verifyTag:true})));}
+  catch(error){return sendReleaseMetadataFailure(ctx,error,slug,"list");}
+  ctx.send(200, await Promise.all(verified.map(async metadata => {
+    const r=metadata.row,rights=metadata.rights,build=metadata.build;
+    const artifacts=metadata.artifacts
       .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
-    return { ...r, rights_json: undefined, build_json: undefined, build,
+    return {tag:r.tag,sha:r.sha,title:r.title,created_at:r.created_at,
+      tag_object_sha:r.tag_object_sha,author_handle:metadata.authorName,build,
+      vault:releaseVaultSummary(r),
       tag_annotated: !!r.tag_annotated, tag_protected: !!r.tag_protected,
       artifacts,
       print_deliveries: (await q.printDeliveriesForRelease(db, slug, r.tag)).map(printDeliveryReceipt),
@@ -4642,10 +4962,27 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const r = await q.releaseByTag(db, slug, ctx.params.tag);
   if (!r) return ctx.send(404, { error: "no such release" });
-  const base = `/cache/exports/${slug}/${r.sha}`;
-  const liveTag = await store.releaseTagInfo(slug, r.tag);
+  let metadata;
+  try{metadata=await verifiedReleasePublication(slug,r,{verifyTag:true});}
+  catch(error){return sendReleaseMetadataFailure(ctx,error,slug,r.tag);}
+  const vault=releaseVaultSummary(r);
+  const base = vault ? `/cache/releases/${slug}/${encodeURIComponent(r.tag)}` : `/cache/exports/${slug}/${r.sha}`;
+  let liveTag=metadata.liveTag;
+  try{if(!liveTag)liveTag=await store.releaseTagInfo(slug,r.tag);}
+  catch(error){
+    if(nativeTagManifestBinding(r)){ctx.setHeader("cache-control","private, no-store");
+      return ctx.send(503,{error:"the protected repository tag could not be verified",
+        integrity_code:"RELEASE_TAG_UNAVAILABLE"});}
+    throw error;
+  }
+  const nativeTagStatus=nativeReleaseTagStatus(r,liveTag);
+  if(nativeTagStatus.required&&!nativeTagStatus.ok){
+    ctx.setHeader("cache-control","private, no-store");
+    return ctx.send(503,{error:"the protected repository tag no longer matches the frozen release",
+      integrity_code:"RELEASE_TAG_BINDING"});
+  }
   const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
-  const artifacts = (r.artifacts_json ? JSON.parse(r.artifacts_json) : [])
+  const artifacts = metadata.artifacts
     .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
   const ready = new Set(artifacts.filter(a => a.status === "ready").map(a => a.name));
   const downloads = {};
@@ -4667,12 +5004,16 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
     downloads.component_sheets = componentSheets;
     downloads.setup_maps = setupMaps;
   }
-  ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes, author: r.author_handle, created_at: r.created_at,
+  const vaultMarker=vault?releaseVaultTagMarker(vault.manifest_sha256):null;
+  const tagObjectMatches=!r.tag_object_sha
+    ||String(liveTag?.tagObject||"").toLowerCase()===String(r.tag_object_sha).toLowerCase();
+  ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes,
+    author: metadata.authorName, created_at: r.created_at,
     repository_tag: { object_sha: r.tag_object_sha, annotated: !!r.tag_annotated,
       protected: !!r.tag_protected, verified_now: !!liveTag && liveTag.annotated && liveTag.protected
-        && liveTag.target === r.sha },
-    artifacts, rights: r.rights_json ? JSON.parse(r.rights_json) : null,
-    build: r.build_json ? JSON.parse(r.build_json) : null, downloads,
+        && liveTag.target === r.sha && tagObjectMatches
+        && (!vaultMarker||String(liveTag.message||"").includes(vaultMarker)) },
+    artifacts, rights: metadata.rights, build: metadata.build, vault, downloads,
     print_deliveries: (await q.printDeliveriesForRelease(db, slug, r.tag)).map(printDeliveryReceipt) });
 }, "release detail + frozen (immutable) export URLs pinned to the exact sha");
 gw.route("GET", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) => {
@@ -4694,6 +5035,10 @@ gw.route("POST", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) 
     return ctx.send(403, { error: "only the game's owner can record a printer delivery for a release" });
   const release = await q.releaseByTag(db, slug, ctx.params.tag);
   if (!release) return ctx.send(404, { error: "no such release" });
+  let releaseMetadata;
+  try{
+    releaseMetadata=await verifiedReleasePublication(slug,release,{verifyTag:true});
+  }catch(error){return sendReleaseMetadataFailure(ctx,error,slug,release.tag);}
   const body = await json(ctx, 32 * 1024);
   let artifactName, printerName, jobReference, submissionUrl, submissionHash, note;
   try {
@@ -4706,7 +5051,7 @@ gw.route("POST", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) 
   } catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
   if (submissionUrl && !submissionHash)
     return ctx.send(422, { error: "a submission evidence URL also requires its SHA-256 digest" });
-  const artifacts = release.artifacts_json ? JSON.parse(release.artifacts_json) : [];
+  const artifacts = releaseMetadata.artifacts;
   const artifact = artifacts.find(item => item.status === "ready" && item.name === artifactName);
   if (!artifact) return ctx.send(422, { error: "artifact is not part of this frozen release receipt" });
   if (!printableReleaseArtifact(artifact.name))
@@ -4761,7 +5106,95 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release; fork a public sandbox into an owned edition before releasing" });
   const { tag, title, base_ref: suppliedBaseRef } = await json(ctx);
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must start with v and a number, for example v1.0" });
+  let releaseTitle;
+  try {
+    if (title != null && typeof title !== "string")
+      throw Object.assign(new Error("release title must be text"), { status: 422 });
+    releaseTitle = optionalText(title, "release title", 160);
+  } catch (error) { return ctx.send(error.status || 422, { error: error.message, written: false }); }
   if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
+  let pending=await q.pendingReleasePublication(db,slug,tag);
+  if(!pending){
+    let orphan=null;
+    try{orphan=releaseVault.readRelease({slug,tag});}
+    catch(error){
+      if(error?.code!=="VAULT_MISSING"){
+        console.error(`Sealed release recovery lookup failed for ${slug}/${tag}: ${error.code||error.message}`);
+        ctx.setHeader("cache-control","private, no-store");
+        return ctx.send(503,{error:"sealed release evidence exists but could not be verified",
+          integrity_code:String(error.code||"RELEASE_ORPHAN_VERIFY_FAILED").slice(0,80),written:false});
+      }
+    }
+    if(orphan){
+      if(orphan.manifest.version!==RELEASE_VAULT_NATIVE_VERSION){
+        ctx.setHeader("cache-control","private, no-store");
+        return ctx.send(503,{error:"this interrupted legacy release predates automatic recovery; operator reconciliation is required",
+          integrity_code:"RELEASE_ORPHAN_UNRECOVERABLE",written:false});
+      }
+      let recovered;
+      try{recovered=pendingPublicationFromNativeManifest(slug,tag,orphan);}
+      catch(error){
+        ctx.setHeader("cache-control","private, no-store");
+        return ctx.send(503,{error:"sealed release evidence cannot reconstruct the interrupted publication",
+          integrity_code:String(error.code||"RELEASE_ORPHAN_UNRECOVERABLE").slice(0,80),written:false});
+      }
+      if(recovered.release.author_id!==u.id)
+        return ctx.send(409,{error:"this sealed interrupted release belongs to a different publisher and cannot be adopted by this session",
+          integrity_code:"RELEASE_ORPHAN_ACTOR_CONFLICT",written:false});
+      if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+        return ctx.send(403,{error:"release authority changed before the interrupted publication could be prepared",
+          written:false});
+      try{await q.prepareReleasePublication(db,recovered);}
+      catch(error){
+        return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+          {error:"sealed release evidence could not be restored to the publication journal",
+            integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+      }
+      pending=await q.pendingReleasePublication(db,slug,tag);
+      if(!pending)return ctx.send(503,{error:"the restored publication journal could not be read",
+        integrity_code:"RELEASE_PENDING_NOT_FOUND",written:false});
+    }
+  }
+  if(pending){
+    let payload;
+    try{payload=pendingReleasePayload(slug,tag,pending);}
+    catch(error){
+      console.error(`Pending release recovery failed for ${slug}/${tag}: ${error.code||error.message}`);
+      return ctx.send(503,{error:"the interrupted release could not be verified from its sealed bytes",
+        integrity_code:String(error.code||"RELEASE_PENDING_VERIFY_FAILED").slice(0,80),written:false});
+    }
+    let publisher=payload.publisher;
+    if(!publisher){
+      const author=await q.userById(db,pending.author_id);
+      if(!author?.handle||!author?.email)
+        return ctx.send(503,{error:"the interrupted release author record is unavailable",written:false});
+      publisher={name:author.handle,email:author.email};
+    }
+    const message=releaseTagMessage({slug,tag,sha:pending.source_sha,title:pending.title,
+      notes:pending.notes,manifestSha256:pending.vault_manifest_sha256});
+    if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+      return ctx.send(403,{error:"release authority changed before the protected tag could be created",
+        publication_pending:true});
+    let repositoryTag;
+    try{repositoryTag=await ensureProtectedReleaseTag({slug,tag,sha:pending.source_sha,message,
+      tagAuthor:`${publisher.name} <${publisher.email}>`});}
+    catch(error){return ctx.send(error.status||500,{error:error.message,
+      integrity_code:String(error.code||"RELEASE_TAG_FAILED").slice(0,80),written:false});}
+    let publication;
+    try{
+      publication=await q.finalizeReleasePublication(db,{game_slug:slug,tag,
+        tag_object_sha:repositoryTag.tagObject,tag_annotated:true,tag_protected:true});
+    }catch(error){
+      return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+        {error:"the interrupted release could not be finalized from its preserved evidence",
+          integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+    }
+    return ctx.send(201,{tag,sha:pending.source_sha,title:pending.title,notes:pending.notes,
+      repository_tag:repositoryTag,artifacts:payload.artifacts,rights:payload.rights,build:payload.build,
+      vault:{format_version:Number(publication.vault.format_version),
+        manifest_sha256:publication.vault.manifest_sha256,sealed_at:Number(publication.vault.sealed_at),
+        binding:publication.vault.binding_kind,durable:true},resumed_pending:true});
+  }
   const baseRef = String(suppliedBaseRef || "").trim();
   const currentRef = await store.headSha(slug);
   if (baseRef && baseRef !== currentRef)
@@ -4817,18 +5250,58 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const build = { format: "forge-release-build", version: 1, public_origin: PUBLIC_ORIGIN,
     build_id: process.env.FORGE_BUILD_ID || null, exporters: { ...cache.EXPORTER_VERSIONS },
     required_exports: requiredExports, components: preflight.components };
-  const tagMessage = `${title?.trim() || tag}\n\n${notes}\n\nForge project: ${slug}\nExact source: ${sha}`;
+  const publicationTime=Date.now();
+  const eventId=`ev_release_${createHash("sha256").update(`${slug}\0${tag}`).digest("hex").slice(0,32)}`;
+  const publicationEnvelope={created_at:publicationTime,sealed_at:publicationTime,
+    release:{artifacts,author_id:u.id,build,notes,rights,title:releaseTitle},
+    event:{id:eventId,kind:"release",actor_id:u.id},publisher:{name:u.handle,email:u.email}};
+  let vaultSeal;
+  try{
+    vaultSeal=releaseVault.publishNativeRelease({slug,tag,sourceSha:sha,sourceDir:exportDir,
+      artifacts:artifacts.filter(item=>item.status==="ready"),publication:publicationEnvelope});
+  }catch(error){
+    return ctx.send(error?.code==="VAULT_CONFLICT"?409:500,
+      {error:"release bytes and recoverable publication evidence could not be sealed in the durable vault; no tag or release was created",
+        integrity_code:String(error.code||"VAULT_SEAL_FAILED").slice(0,80)});
+  }
+  const tagMessage=releaseTagMessage({slug,tag,sha,title:releaseTitle,notes,
+    manifestSha256:vaultSeal.manifestSha256});
+  const releaseRecord={game_slug:slug,tag,sha,title:releaseTitle,notes,author_id:u.id,
+    artifacts_json:JSON.stringify(artifacts),rights_json:JSON.stringify(rights),build_json:JSON.stringify(build)};
+  if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+    return ctx.send(403,{error:"release authority changed before the sealed publication could be prepared",
+      sealed:true,publication_pending:false});
+  try{
+    await q.prepareReleasePublication(db,{release:releaseRecord,
+      vault:{format_version:RELEASE_VAULT_NATIVE_VERSION,binding_kind:"tag-manifest",
+        manifest_sha256:vaultSeal.manifestSha256,sealed_at:publicationTime},
+      event:{id:eventId,kind:"release",actor_id:u.id},created_at:publicationTime});
+  }catch(error){
+    return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+      {error:"sealed release evidence could not be prepared for repository publication",
+        integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+  }
+  if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+    return ctx.send(403,{error:"release authority changed before the protected tag could be created",
+      sealed:true,publication_pending:true});
   let repositoryTag;
-  try { repositoryTag = await store.createReleaseTag(slug, tag, sha, tagMessage, `${u.handle} <${u.email}>`); }
-  catch (error) { return ctx.send(409, { error: "repository tag could not be created; release was not published", detail: error.message }); }
-  if (!repositoryTag.annotated || !repositoryTag.protected || repositoryTag.target !== sha)
-    return ctx.send(500, { error: "repository tag verification failed; release record was not published" });
-  await q.createRelease(db, { game_slug: slug, tag, sha, title: title?.trim() || null, notes, author_id: u.id,
-    tag_object_sha: repositoryTag.tagObject, tag_annotated: true, tag_protected: true,
-    artifacts_json: JSON.stringify(artifacts), rights_json: JSON.stringify(rights), build_json: JSON.stringify(build) });
-  await q.recordEvent(db, { id: newId("ev"), kind: "release", actor_id: u.id, game_slug: slug, target: tag });
-  ctx.send(201, { tag, sha, notes, repository_tag: repositoryTag, artifacts, rights, build });
-}, "cut a release atomically: required exports → annotated protected Git tag → immutable receipt");
+  try{repositoryTag=await ensureProtectedReleaseTag({slug,tag,sha,message:tagMessage,
+    tagAuthor:`${publicationEnvelope.publisher.name} <${publicationEnvelope.publisher.email}>`});}
+  catch(error){return ctx.send(error.status||500,{error:error.message,
+    integrity_code:String(error.code||"RELEASE_TAG_FAILED").slice(0,80),written:false});}
+  let publication;
+  try{
+    publication=await q.finalizeReleasePublication(db,{game_slug:slug,tag,
+      tag_object_sha:repositoryTag.tagObject,tag_annotated:true,tag_protected:true});
+  }catch(error){
+    return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+      {error:"the protected release tag exists, but its prepared evidence could not be finalized",
+        integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+  }
+  const vault={format_version:RELEASE_VAULT_NATIVE_VERSION,manifest_sha256:vaultSeal.manifestSha256,
+    sealed_at:Number(publication.vault.sealed_at),binding:publication.vault.binding_kind,durable:true};
+  ctx.send(201, { tag, sha, notes, repository_tag: repositoryTag, artifacts, rights, build, vault });
+}, "cut a crash-recoverable release: exports → durable byte vault → Store-2 journal → protected Git tag → finalized evidence");
 
 /* ---------- routes: discovery + activity feed ---------- */
 gw.route("GET", "/api/discover", async (ctx) => {
@@ -4966,6 +5439,10 @@ gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
   if (!releaseTag) return ctx.send(422, { error: "submit an immutable Forge release tag, not mutable project HEAD" });
   const release = await q.releaseByTag(db, game, String(releaseTag));
   if (!release) return ctx.send(422, { error: `release '${releaseTag}' does not exist on this game` });
+  let releaseMetadata;
+  try{
+    releaseMetadata=await verifiedReleasePublication(game,release,{verifyTag:true});
+  }catch(error){return sendReleaseMetadataFailure(ctx,error,game,release.tag);}
   const res = await qualifyJamGame(j, game, release.sha);
   if (!res.qualified) return ctx.send(422, { error: "entry does not qualify", reasons: res.reasons });
   const handles = [...new Set([u.handle, ...(Array.isArray(team) ? team : [])]
@@ -4975,7 +5452,8 @@ gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
   const receipt = { format: "forge-jam-submission", version: 1, jam: j.id, definition_sha256: definitionHash,
     game, release: { tag: release.tag, sha: release.sha }, submitted_by: u.handle, team: handles,
     submitted_at: submittedAt, eligibility: res,
-    rights: release.rights_json ? { sha256: createHash("sha256").update(release.rights_json).digest("hex") } : null };
+    rights: releaseMetadata.rights ? { sha256:createHash("sha256")
+      .update(JSON.stringify(releaseMetadata.rights)).digest("hex") } : null };
   receipt.sha256 = createHash("sha256").update(JSON.stringify(receipt)).digest("hex");
   const receiptJson = JSON.stringify(receipt);
   await q.enterJam(db, { jam_id: j.id, game_slug: game, user_id: u.id, qualified: 1, state: "submitted",

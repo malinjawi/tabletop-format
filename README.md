@@ -258,6 +258,23 @@ in the browser, and allows one append-only approved or rejected decision. The
 downloadable receipt always identifies this as creator-recorded evidence—not
 printer identity verification or independent certification.
 
+Published bytes are sealed before the protected Git tag is created into a
+separate content-addressed release vault; they are never served from the
+disposable render cache once sealed. Release downloads are tag-addressed, so
+two releases made from the same source commit can retain different, independently
+verified output bytes. Native v2 manifests also seal the release title, notes,
+publisher credit, rights, build recipe, artifact report, activity event, and
+timestamps. That envelope lets Forge resume a crash immediately after sealing
+without consulting a newer project HEAD or exporter. `publisher` is the human
+Forge identity receiving credit; Forgejo may record its authenticated repository
+actor as the Git tagger, so Forge binds the live tag object, target, protection,
+message, and manifest marker without claiming those identities are the same.
+Missing, mixed, or corrupt evidence fails closed instead of silently running a
+newer exporter. `npm run release:vault -- audit --vault-dir …`
+checks the store, while `migrate` dry-runs receipt-verified preservation of a
+legacy release before `--apply`. The filesystem driver is application-enforced
+append-only—not storage-provider WORM—and its dedicated backup remains required.
+
 ### Component production studio
 
 `components/tokens.json` is the stable inventory for non-card pieces and

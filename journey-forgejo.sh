@@ -89,6 +89,7 @@ else
   STORE1=forgejo FORGE_URL="$FORGE_URL" FORGE_TOKEN="$FORGE_TOKEN" FORGE_BASIC="$FORGE_BASIC" \
     DB="${DB:-}" PG_URL="${PG_URL:-}" \
     DB_PATH="$SCRATCH/platform.db" CACHE_DIR="$SCRATCH/cache" FARM_DIR="$SCRATCH/farm" \
+    RELEASE_VAULT_DIR="${FORGE_TEST_RELEASE_VAULT_DIR:-$SCRATCH/release-vault}" \
     FORGE_NOW="2026-09-10T12:00:00Z" node server.mjs --port $SPORT > "$SCRATCH/server.log" 2>&1 &
   SPID=$!
   gateway_url="http://localhost:$SPORT"

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,10 +12,13 @@ import { deterministicZip, readZip } from "./lib/deterministic-zip.mjs";
 import { loadDesignEngines } from "./lib/design-engines.mjs";
 import { csvToTable, tableToCsv } from "./lib/interchange-table.mjs";
 import yaml from "js-yaml";
+import { createReleaseVault } from "../platform/release-vault.mjs";
+import { openDb, q } from "../platform/db.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const temp = mkdtempSync(join(tmpdir(), "forge-project-server-test-"));
-const games = join(temp, "games"), dbPath = join(temp, "platform.db"), cacheDir = join(temp, "cache");
+const temp = mkdtempSync(join(realpathSync(tmpdir()), "forge-project-server-test-"));
+const games = join(temp, "games"), dbPath = join(temp, "platform.db"), cacheDir = join(temp, "cache"),
+  vaultDir = join(temp, "release-vault");
 const port = 36000 + Math.floor(Math.random() * 2000), origin = `http://127.0.0.1:${port}`;
 let server, serverLog = "";
 const git = args => {
@@ -43,6 +47,7 @@ try {
   git(["add", "."]); git(["commit", "-qm", "fixture"]);
   server = spawn(process.execPath, [join(ROOT, "server.mjs"), "--port", String(port), "--games", games], {
     cwd: ROOT, env: { ...process.env, LOCAL_STORE_ROOT: temp, DB_PATH: dbPath, CACHE_DIR: cacheDir,
+      RELEASE_VAULT_DIR: vaultDir,
       FORGE_HUB_PATH: join(ROOT, "hub.html"), FORGE_PUBLIC_ORIGIN: origin }, stdio: ["ignore", "pipe", "pipe"],
   });
   server.stdout.on("data", chunk => { serverLog += chunk; }); server.stderr.on("data", chunk => { serverLog += chunk; });
@@ -51,6 +56,9 @@ try {
     await new Promise(resolveWait => setTimeout(resolveWait, 100));
     if (i === 79) throw new Error(`server did not start\n${serverLog}`);
   }
+  for(const directory of ["blobs","blobs/sha256","manifests","staging"])
+    assert.equal(existsSync(join(vaultDir,directory)),true,
+      `gateway startup initializes the external vault ${directory} directory before any release`);
   const owner = await api("/api/auth/register", { method: "POST", json: { handle: "project-owner", email: "owner@example.invalid", password: "password123" } });
   const outsider = await api("/api/auth/register", { method: "POST", json: { handle: "project-editor", email: "editor@example.invalid", password: "password123" } });
   const db = new DatabaseSync(dbPath);
@@ -603,43 +611,243 @@ w.save(p)
   git(["commit", "-qm", "fixture: restore releaseable components"]);
   const finalComponentReady = await api("/api/games/ember/releases/preflight", { token: owner.token });
   assert(finalComponentReady.ready && finalComponentReady.components.ready && finalComponentReady.components.required);
+  const malformedTitleEffects = releaseSideEffects();
+  const malformedTitleResponse = await fetch(`${origin}/api/games/ember/releases`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ tag: "v0.7-invalid", title: { not: "text" }, base_ref: finalComponentReady.ref }),
+  });
+  assert.equal(malformedTitleResponse.status, 422);
+  assert.equal((await malformedTitleResponse.json()).written, false);
+  assert.deepEqual(releaseSideEffects(), malformedTitleEffects,
+    "malformed release metadata cannot start exports or publish database evidence");
+  assert.equal(existsSync(join(vaultDir, "manifests", "ember", "v0.7-invalid.json")), false,
+    "malformed release metadata cannot leave a durable orphan seal");
   const componentRelease = await api("/api/games/ember/releases", { method: "POST", token: owner.token,
     json: { tag: "v0.7", title: "Component production", base_ref: finalComponentReady.ref } });
   assert(componentRelease.build.required_exports.includes("components"));
+  assert.equal(componentRelease.vault.format_version, 2);
+  assert.equal(componentRelease.vault.durable, true);
+  assert.equal(componentRelease.vault.binding, "tag-manifest");
+  assert.match(componentRelease.vault.manifest_sha256, /^[0-9a-f]{64}$/);
+  const componentVaultEvidence=createReleaseVault({root:vaultDir}).readRelease({slug:"ember",tag:"v0.7",
+    sourceSha:componentRelease.sha});
+  assert.equal(componentVaultEvidence.manifest.version,2);
+  assert.equal(componentVaultEvidence.manifest.publication.release.title,"Component production");
+  assert.equal(componentVaultEvidence.manifest.publication.release.author_id,owner.user.id);
+  assert.deepEqual(componentVaultEvidence.manifest.publication.release.artifacts,componentRelease.artifacts);
+  assert.deepEqual(componentVaultEvidence.manifest.publication.release.rights,componentRelease.rights);
+  assert.deepEqual(componentVaultEvidence.manifest.publication.release.build,componentRelease.build);
+  assert.deepEqual(componentVaultEvidence.manifest.publication.publisher,
+    {name:"project-owner",email:"owner@example.invalid"});
+  assert.equal(componentVaultEvidence.manifest.publication.event.actor_id,owner.user.id);
+  assert.equal(componentVaultEvidence.manifest.publication.event.kind,"release");
   assert(componentRelease.artifacts.some(item => item.status === "ready" && item.name === "ember-components-v7.zip"));
   assert(componentRelease.artifacts.some(item => item.status === "ready" && item.name === "setup-maps/first-table.svg"));
   const componentReleaseDetail = await api("/api/games/ember/releases/v0.7", { token: owner.token });
+  assert.deepEqual(componentReleaseDetail.vault, componentRelease.vault,
+    "release detail exposes the same durable byte-vault receipt returned at publication");
+  assert.equal(componentReleaseDetail.repository_tag.verified_now, true,
+    "the protected annotated tag still proves the exact vault manifest digest");
   assert.match(componentReleaseDetail.downloads.components, /ember-components-v7\.zip$/);
   assert.deepEqual(componentReleaseDetail.downloads.setup_maps,
     [{ file: "setup-maps/first-table.svg",
-      url: `/cache/exports/ember/${componentRelease.sha}/setup-maps/first-table.svg` }]);
+      url: "/cache/releases/ember/v0.7/setup-maps/first-table.svg" }]);
   assert(componentReleaseDetail.downloads.component_sheets.length >= 2);
   const releasedComponentArchive = readZip(Buffer.from(await (await fetch(
     `${origin}${componentReleaseDetail.downloads.components}`)).arrayBuffer()));
   const releasedSetupUrl = componentReleaseDetail.downloads.setup_maps[0].url;
   const releasedSetupMap = Buffer.from(await (await fetch(`${origin}${releasedSetupUrl}`)).arrayBuffer());
   assert.deepEqual(releasedSetupMap, releasedComponentArchive.get("setup-maps/first-table.svg"));
-  writeFileSync(join(cacheDir, "exports", "ember", componentRelease.sha, "setup-maps", "first-table.svg"),
-    Buffer.from("corrupt released component map"));
+
+  // Native release reads fail closed if the live repository tag is replaced,
+  // even when the replacement still resolves to the same source commit.
+  const originalComponentTagObject=componentRelease.repository_tag.tagObject;
+  git(["update-ref","refs/tags/forge/ember/v0.7",componentRelease.sha]);
+  const replacedTagDetail=await fetch(`${origin}/api/games/ember/releases/v0.7`,{
+    headers:{authorization:`Bearer ${owner.token}`}});
+  assert.equal(replacedTagDetail.status,503);
+  assert.match(replacedTagDetail.headers.get("cache-control")||"",/no-store/);
+  assert.equal((await replacedTagDetail.json()).integrity_code,"RELEASE_TAG_BINDING");
+  const replacedTagDownload=await fetch(`${origin}${releasedSetupUrl}`);
+  assert.equal(replacedTagDownload.status,503);
+  assert.match(replacedTagDownload.headers.get("cache-control")||"",/no-store/);
+  assert.equal((await replacedTagDownload.json()).integrity_code,"RELEASE_TAG_BINDING");
+  const replacedTagFork=await fetch(`${origin}/api/games/ember/fork`,{method:"POST",
+    headers:{authorization:`Bearer ${outsider.token}`,"content-type":"application/json"},
+    body:JSON.stringify({ref:"v0.7"})});
+  assert.equal(replacedTagFork.status,503,
+    "forking by a release name fails closed when its protected tag object no longer matches");
+  assert.match(replacedTagFork.headers.get("cache-control")||"",/no-store/);
+  assert.equal((await replacedTagFork.json()).integrity_code,"RELEASE_TAG_BINDING");
+  git(["update-ref","refs/tags/forge/ember/v0.7",originalComponentTagObject]);
+  assert.equal((await api("/api/games/ember/releases/v0.7",{token:owner.token}))
+    .repository_tag.verified_now,true);
+
+  // A release is identified by its tag, not merely its source commit. Two
+  // publishing runs at the same Git SHA can legitimately freeze different
+  // exporter bytes, and both must remain independently downloadable.
+  const alternateTag = "v0.8-same-source", alternateDir = join(temp, "alternate-release");
+  cpSync(join(cacheDir, "exports", "ember", componentRelease.sha), alternateDir, { recursive: true });
+  const alternateSetupMap = Buffer.concat([releasedSetupMap, Buffer.from("\n<!-- alternate exporter evidence -->\n")]);
+  writeFileSync(join(alternateDir, "setup-maps", "first-table.svg"), alternateSetupMap);
+  const alternateArtifacts = componentRelease.artifacts.map(item => item.status === "ready"
+    && item.name === "setup-maps/first-table.svg"
+    ? { ...item, bytes: alternateSetupMap.length,
+      sha256: createHash("sha256").update(alternateSetupMap).digest("hex") }
+    : item);
+  const alternateSeal = createReleaseVault({ root: vaultDir }).publishRelease({ slug: "ember", tag: alternateTag,
+    sourceSha: componentRelease.sha, sourceDir: alternateDir,
+    artifacts: alternateArtifacts.filter(item => item.status === "ready") });
+  const alternateMarker = `Forge artifact vault: sha256:${alternateSeal.manifestSha256}`;
+  const alternateDb = openDb(dbPath);
+  const firstReleaseRow = q.releaseByTag(alternateDb, "ember", "v0.7");
+  const alternateTitle = "Alternate exporter", alternateNotes = firstReleaseRow.notes;
+  const alternateEventId = "ev_interrupted_same_source_release";
+  q.prepareReleasePublication(alternateDb, {
+    release: { game_slug: "ember", tag: alternateTag, sha: componentRelease.sha,
+      title: alternateTitle, notes: alternateNotes, author_id: firstReleaseRow.author_id,
+      artifacts_json: JSON.stringify(alternateArtifacts), rights_json: firstReleaseRow.rights_json,
+      build_json: firstReleaseRow.build_json },
+    vault: { format_version: 1, binding_kind: "tag-manifest",
+      manifest_sha256: alternateSeal.manifestSha256 },
+    event: { id: alternateEventId, kind: "release", actor_id: firstReleaseRow.author_id },
+  });
+  alternateDb.close();
+  const alternateMessage = `${alternateTitle}\n\n${alternateNotes}\n\nForge project: ember\nExact source: ${componentRelease.sha}\n${alternateMarker}`;
+  git(["tag", "-a", `forge/ember/${alternateTag}`, componentRelease.sha, "-m", alternateMessage]);
+  writeFileSync(join(games, "ember", "recovery-after-tag.txt"), "new source must not replace a pending release\n");
+  git(["add", "games/ember/recovery-after-tag.txt"]); git(["commit", "-qm", "fixture: advance head after interrupted release"]);
+  const advancedHead = spawnSync("git", ["rev-parse", "HEAD"], { cwd: temp, encoding: "utf8" }).stdout.trim();
+  assert.notEqual(advancedHead, componentRelease.sha);
+  const jobsBeforeResume = releaseSideEffects().jobs;
+  const resumedRelease = await api("/api/games/ember/releases", { method: "POST", token: owner.token,
+    json: { tag: alternateTag, title: "must not replace prepared title", base_ref: advancedHead } });
+  assert.equal(resumedRelease.resumed_pending, true);
+  assert.equal(resumedRelease.sha, componentRelease.sha,
+    "an interrupted publication resumes its prepared source instead of a newer project head");
+  assert.equal(resumedRelease.title, alternateTitle);
+  assert.equal(resumedRelease.vault.manifest_sha256, alternateSeal.manifestSha256);
+  assert.equal(resumedRelease.vault.binding, "tag-manifest");
+  assert.equal(releaseSideEffects().jobs, jobsBeforeResume,
+    "resuming a sealed publication does not invoke current exporters");
+  const alternateReleaseDetail = await api(`/api/games/ember/releases/${alternateTag}`, { token: owner.token });
+  const alternateSetupUrl = alternateReleaseDetail.downloads.setup_maps[0].url;
+  assert.equal(alternateSetupUrl, `/cache/releases/ember/${alternateTag}/setup-maps/first-table.svg`);
+  assert.deepEqual(Buffer.from(await (await fetch(`${origin}${alternateSetupUrl}`)).arrayBuffer()), alternateSetupMap);
+  assert.deepEqual(Buffer.from(await (await fetch(`${origin}${releasedSetupUrl}`)).arrayBuffer()), releasedSetupMap,
+    "tag-addressed release URLs preserve distinct bytes for two releases made from the same source SHA");
+
+  // Simulate a process crash immediately after v2 vault seal: there is no
+  // pending DB row and no tag. A retry after HEAD changes must recover only
+  // from the exact sealed publication and must not call today's exporters.
+  const orphanTag="v0.9-vault-only",orphanTime=Date.now()-1_000;
+  const orphanTitle="Vault-only interrupted release";
+  const orphanPublication={created_at:orphanTime,sealed_at:orphanTime,
+    release:{artifacts:alternateArtifacts,author_id:firstReleaseRow.author_id,
+      build:JSON.parse(firstReleaseRow.build_json),notes:alternateNotes,
+      rights:JSON.parse(firstReleaseRow.rights_json),title:orphanTitle},
+    event:{actor_id:firstReleaseRow.author_id,id:"ev_vault_only_interrupted_release",kind:"release"},
+    publisher:{name:"project-owner",email:"owner@example.invalid"}};
+  const orphanSeal=createReleaseVault({root:vaultDir}).publishNativeRelease({slug:"ember",tag:orphanTag,
+    sourceSha:componentRelease.sha,sourceDir:alternateDir,
+    artifacts:alternateArtifacts.filter(item=>item.status==="ready"),publication:orphanPublication});
+  const orphanDb=openDb(dbPath);
+  assert.equal(q.pendingReleasePublication(orphanDb,"ember",orphanTag),undefined);
+  assert.equal(q.releaseByTag(orphanDb,"ember",orphanTag),undefined);
+  orphanDb.close();
+  assert.notEqual(spawnSync("git",["show-ref","--verify","--quiet",`refs/tags/forge/ember/${orphanTag}`],
+    {cwd:temp}).status,0);
+  const jobsBeforeOrphanResume=releaseSideEffects().jobs;
+  const orphanResume=await api("/api/games/ember/releases",{method:"POST",token:owner.token,
+    json:{tag:orphanTag,title:"must not replace sealed metadata",base_ref:advancedHead}});
+  assert.equal(orphanResume.resumed_pending,true);
+  assert.equal(orphanResume.sha,componentRelease.sha);
+  assert.equal(orphanResume.title,orphanTitle);
+  assert.equal(orphanResume.vault.format_version,2);
+  assert.equal(orphanResume.vault.manifest_sha256,orphanSeal.manifestSha256);
+  assert.equal(orphanResume.vault.sealed_at,orphanTime);
+  assert.equal(releaseSideEffects().jobs,jobsBeforeOrphanResume,
+    "a v2 vault-only crash recovery consults neither current HEAD nor current exporters");
+  const orphanDetail=await api(`/api/games/ember/releases/${orphanTag}`,{token:owner.token});
+  assert.equal(orphanDetail.repository_tag.verified_now,true);
+  assert.deepEqual(Buffer.from(await (await fetch(
+    `${origin}${orphanDetail.downloads.setup_maps[0].url}`)).arrayBuffer()),alternateSetupMap);
+  const ambiguousShaResponse = await fetch(`${origin}/cache/exports/ember/${componentRelease.sha}/setup-maps/first-table.svg`);
+  assert.equal(ambiguousShaResponse.status, 503,
+    "the legacy SHA-only URL fails closed when two release receipts at that SHA disagree");
+
+  const releaseRows = await api("/api/games/ember/releases", { token: owner.token });
+  assert.deepEqual(releaseRows.find(item => item.tag === "v0.7").vault, componentRelease.vault);
+  const jobsBeforeVaultRead = releaseSideEffects().jobs;
+  rmSync(join(cacheDir, "exports", "ember", componentRelease.sha), { recursive: true, force: true });
   const releaseDb = new DatabaseSync(dbPath);
   const originalBuildJson = releaseDb.prepare("SELECT build_json FROM releases WHERE game_slug = 'ember' AND tag = 'v0.7'").get().build_json;
   const unavailableBuild = JSON.parse(originalBuildJson); unavailableBuild.exporters.components = 6;
   releaseDb.prepare("UPDATE releases SET build_json = ? WHERE game_slug = 'ember' AND tag = 'v0.7'")
     .run(JSON.stringify(unavailableBuild));
   releaseDb.close();
-  const unavailableRecovery = await fetch(`${origin}${releasedSetupUrl}`);
-  assert.equal(unavailableRecovery.status, 503);
-  assert.match((await unavailableRecovery.json()).error, /historical component exporter is unavailable/,
-    "Forge fails explicitly instead of pretending a current exporter can recreate historical component bytes");
+  for(const path of ["/api/games/ember/releases","/api/games/ember/releases/v0.7","/api/games/ember/ui"]){
+    const response=await fetch(`${origin}${path}`,{headers:{authorization:`Bearer ${owner.token}`}});
+    assert.equal(response.status,503,`${path} must fail closed for a mixed DB/vault restore`);
+    assert.match(response.headers.get("cache-control")||"",/no-store/);
+    assert.equal((await response.json()).integrity_code,"RELEASE_METADATA_BINDING");
+  }
+  const corruptMetadataDelivery=await fetch(`${origin}/api/games/ember/releases/v0.7/print-deliveries`,{
+    method:"POST",headers:{authorization:`Bearer ${owner.token}`,"content-type":"application/json"},
+    body:JSON.stringify({artifact_name:"pnp.pdf",printer_name:"Integrity test printer",
+      job_reference:"must-not-write"})});
+  assert.equal(corruptMetadataDelivery.status,503,
+    "printer handoff cannot consume mutable artifact metadata that disagrees with v2 evidence");
+  assert.equal((await corruptMetadataDelivery.json()).integrity_code,"RELEASE_METADATA_BINDING");
+  const preservedResponse = await fetch(`${origin}${releasedSetupUrl}`);
+  const preservedSetupMap = Buffer.from(await preservedResponse.arrayBuffer());
+  assert.equal(preservedResponse.status, 200);
+  assert.deepEqual(preservedSetupMap, releasedSetupMap,
+    "a released setup map survives cache loss and an unavailable historical exporter byte-for-byte");
+  assert.equal(releaseSideEffects().jobs, jobsBeforeVaultRead,
+    "serving a vaulted release never starts a regeneration job");
+  assert.equal(existsSync(join(cacheDir, "exports", "ember", componentRelease.sha, "setup-maps", "first-table.svg")), false,
+    "a vaulted download does not silently repopulate mutable Store 3");
   const restoreReleaseDb = new DatabaseSync(dbPath);
   restoreReleaseDb.prepare("UPDATE releases SET build_json = ? WHERE game_slug = 'ember' AND tag = 'v0.7'")
     .run(originalBuildJson);
   restoreReleaseDb.close();
-  const recoveredSetupResponse = await fetch(`${origin}${releasedSetupUrl}`);
-  const recoveredSetupMap = Buffer.from(await recoveredSetupResponse.arrayBuffer());
-  assert.equal(recoveredSetupResponse.status, 200);
-  assert.deepEqual(recoveredSetupMap, releasedSetupMap,
-    "a missing or corrupt frozen setup map regenerates byte-for-byte from its exact source and receipt");
+  assert.equal((await api("/api/games/ember/releases/v0.7",{token:owner.token})).build.exporters.components,
+    JSON.parse(originalBuildJson).exporters.components);
+  const eventDb=new DatabaseSync(dbPath);
+  const releaseEventId=eventDb.prepare(
+    "SELECT event_id FROM pending_release_publications WHERE game_slug = 'ember' AND release_tag = 'v0.7'"
+  ).get().event_id;
+  eventDb.prepare("UPDATE events SET kind = 'release-corrupt' WHERE id = ?").run(releaseEventId);
+  eventDb.close();
+  const corruptEventDetail=await fetch(`${origin}/api/games/ember/releases/v0.7`,{
+    headers:{authorization:`Bearer ${owner.token}`}});
+  assert.equal(corruptEventDetail.status,503);
+  assert.equal((await corruptEventDetail.json()).integrity_code,"RELEASE_METADATA_BINDING");
+  assert.equal((await fetch(`${origin}${releasedSetupUrl}`)).status,200,
+    "an exact-byte download may remain available when only non-byte event metadata is corrupt");
+  const restoreEventDb=new DatabaseSync(dbPath);
+  restoreEventDb.prepare("UPDATE events SET kind = 'release' WHERE id = ?").run(releaseEventId);
+  restoreEventDb.close();
+  assert.equal((await api("/api/games/ember/releases/v0.7",{token:owner.token}))
+    .repository_tag.verified_now,true);
+  const setupReceipt = componentRelease.artifacts.find(item => item.status === "ready"
+    && item.name === "setup-maps/first-table.svg");
+  const setupBlobPath = join(vaultDir, "blobs", "sha256", setupReceipt.sha256.slice(0, 2), setupReceipt.sha256);
+  const originalVaultBlob = readFileSync(setupBlobPath);
+  writeFileSync(setupBlobPath, Buffer.from("corrupt immutable release blob"));
+  const corruptVaultResponse = await fetch(`${origin}${releasedSetupUrl}`);
+  assert.equal(corruptVaultResponse.status, 503);
+  assert.match(corruptVaultResponse.headers.get("cache-control") || "", /no-store/);
+  assert.match((await corruptVaultResponse.json()).error, /vault integrity verification failed/);
+  assert.deepEqual(readFileSync(setupBlobPath), Buffer.from("corrupt immutable release blob"),
+    "the gateway fails closed and never repairs or overwrites corrupted vault evidence");
+  assert.equal(releaseSideEffects().jobs, jobsBeforeVaultRead,
+    "vault corruption never falls back to a current exporter");
+  writeFileSync(setupBlobPath, originalVaultBlob);
+  const restoredVaultResponse = await fetch(`${origin}${releasedSetupUrl}`);
+  assert.equal(restoredVaultResponse.status, 200);
+  assert.deepEqual(Buffer.from(await restoredVaultResponse.arrayBuffer()), releasedSetupMap);
 
   const nandeckExport = await api("/api/games/ember/export/nandeck?wait=1", { method: "POST", token: owner.token });
   assert.match(nandeckExport.urls[0], /ember-nandeck-v1\.zip$/);

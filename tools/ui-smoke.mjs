@@ -53,6 +53,7 @@ let logs = "";
 const server = spawn(process.execPath, [join(ROOT, "server.mjs"), "--port", String(port), "--games", gamesRoot], {
   cwd: ROOT,
   env: { ...process.env, DB_PATH: join(scratch, "platform.db"), CACHE_DIR: join(scratch, "cache"),
+    RELEASE_VAULT_DIR: join(scratch, "release-vault"),
     FARM_DIR: join(scratch, "farm"), FORGE_HUB_PATH: join(scratch, "hub.html"),
     LOCAL_STORE_ROOT: storeRoot, FORGE_PUBLIC_ORIGIN: origin, FORGE_REGISTRATION_MODE: "open", FORGE_RATE_MAX: "1000",
     FORGE_INCLUDE_TEST_FIXTURES: "1" },

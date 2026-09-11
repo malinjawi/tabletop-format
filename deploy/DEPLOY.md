@@ -2,7 +2,12 @@
 
 Forge launches behind HTTPS as three digest-pinned services: the immutable
 gateway image, Forgejo (repository truth), and Postgres (identity/conversation
-state). R2 holds LFS objects. The host proxy is the only public ingress;
+state). R2 holds LFS objects. A dedicated `release-vault-data` filesystem volume
+holds exact published artifact bytes outside the regenerable Store-3 cache. The
+volume is pre-created and external to the Compose project, so even
+`docker compose down -v` cannot remove it. Only an explicit Docker-volume
+deletion can destroy it; never do that without a verified off-host backup.
+The host proxy is the only public ingress;
 Compose binds the gateway to loopback by default and does not expose Postgres.
 Forgejo is configured to force every new repository private. Forge promotes
 source visibility only after its rights index authorizes the public project;
@@ -77,7 +82,8 @@ Before promotion, pass the built image's immutable local image ID (or registry
 digest) as `FORGE_GATEWAY_TEST_IMAGE` to the strict launch gate. The recovery
 drill rejects an image whose OCI revision is not the candidate `HEAD`, boots it
 read-only against restored Forgejo/PostgreSQL stores, and verifies that it can
-regenerate every frozen release artifact from an empty cache. Set
+serve and verify every frozen release artifact from the independently restored
+release vault while the disposable render cache remains empty. Set
 `REQUIRE_GATEWAY_IMAGE_DRILL=1` to make that evidence mandatory.
 
 ## 2. Create configuration and secrets
@@ -101,8 +107,13 @@ node deploy/bootstrap.mjs \
   --r2-bucket forge-lfs \
   --r2-access-key-file /secure/input/r2-access-key \
   --r2-secret-key-file /secure/input/r2-secret-key \
+  --release-vault-volume forge-release-vault-production \
   --backup-destination /encrypted/off-host/forge-backups
 
+set -a
+. deploy/.env
+set +a
+docker volume create "$FORGE_RELEASE_VAULT_VOLUME"
 node deploy/preflight.mjs --env deploy/.env --first-boot
 ```
 
@@ -156,6 +167,16 @@ PostgreSQL; there is no reusable cohort code in `.env`. Neither `.env` nor
 `FORGE_SECRET_DIR` may be an absolute path when secrets are mounted from an
 encrypted host volume; relative paths resolve from `deploy/`, exactly as Compose
 does.
+
+Pre-create the release vault named in `.env` exactly once. Compose treats it as
+external and will refuse to invent or delete it:
+
+```sh
+set -a
+. ./.env
+set +a
+docker volume create "$FORGE_RELEASE_VAULT_VOLUME"
+```
 
 ## 3. First boot and scoped Forgejo service account
 
@@ -412,8 +433,8 @@ from the exact deployed candidate.
 ## 7. Backup and restore drill
 
 Forgejo's supported consistency model for PostgreSQL plus S3-compatible object
-storage requires a short write outage. Do not take three independent live
-copies and call them one backup. Announce a maintenance window, then run:
+storage requires a short write outage. Do not take separate live copies of the
+durable stores and call them one backup. Announce a maintenance window, then run:
 
 ```sh
 cd deploy
@@ -423,12 +444,26 @@ set +a
 FORGE_BACKUP_ACK_DOWNTIME=1 ./backup.sh "$FORGE_BACKUP_DESTINATION"
 ```
 
-The script stops the gateway and Forgejo, snapshots every object in the
-dedicated R2 LFS bucket, creates a Forgejo repository archive, makes independent
-custom-format dumps of both PostgreSQL databases, and validates every layer. It
-records object/file hashes and exact image IDs, then restarts the services even
-if backup fails. Copy the completed directory to encrypted storage away from
-the host.
+The script takes a fail-closed lock for the Compose project, then stops the
+gateway and Forgejo, semantically audits and snapshots every regular file
+in the dedicated release-artifact vault, snapshots every object in the dedicated
+R2 LFS bucket, creates a Forgejo repository archive, makes independent
+custom-format dumps of both PostgreSQL databases, and validates every layer.
+Vault symlinks and non-regular files fail the backup. It records object/file
+hashes and exact image IDs, then attempts to restart the services even if backup
+fails and reports a restart failure for operator intervention. A second backup
+cannot begin while the first owns the write outage. If the process is killed in
+a way that bypasses traps, inspect the exact lock path and recorded PID printed
+by the next attempt; remove that one lock only after proving the process is gone.
+Copy the completed directory to encrypted storage away from the host.
+
+Current qualification boundary: these checks validate each durable store, but
+do not yet reconcile every finalized and interrupted Store-2 publication against
+the complete vault inventory in one report. Keep public deployment blocked until
+that all-release reconciliation is automated and passes on both backup and
+restore. The recovery-critical Forgejo keys listed in `RESTORE-DRILL.md` also
+remain a separately protected encrypted backup input; the backup script does not
+copy secret values into its artifact.
 
 Do not treat `forgejo dump` as a backup of remote object storage. Forgejo's
 [official backup guidance](https://forgejo.org/docs/latest/admin/upgrade/#backup)
@@ -439,8 +474,11 @@ automatic object-versioning safety net, so `object-store/` in this backup is the
 recoverable LFS copy; bucket-scoped credentials and an R2 bucket lock reduce
 accidental deletion risk but are not a backup. Follow
 [`RESTORE-DRILL.md`](RESTORE-DRILL.md) to restore into a separate project,
-database volumes, ports, and LFS bucket. Store-3 render/export cache and the
-generated hub are derived and deliberately excluded.
+database volumes, ports, LFS bucket, and empty release-vault volume. Store-3
+render/export cache, the Forgejo checkout farm, and the generated hub are derived
+and deliberately excluded. Unlike Store 3, `release-vault/` is recovery-critical:
+it contains published bytes that must remain available even when their historical
+exporter is no longer present.
 
 ## 8. Operational stop conditions
 
