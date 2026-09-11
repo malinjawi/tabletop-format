@@ -4,7 +4,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer } from "node:net";
 import { DatabaseSync } from "node:sqlite";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { openDb, q } from "../platform/db.mjs";
@@ -19,6 +19,19 @@ const games = join(temp, "examples");
 const dbPath = join(temp, "platform.db");
 const cacheDir = join(temp, "cache");
 const hubPath = join(temp, "hub.html");
+const browserTrace = join(temp, "browser-calls.log"), customChrome = join(temp, "custom chrome");
+const actualChrome = process.env.CHROME_PATH || process.env.FMT_CHROME_BIN || [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser",
+].find(existsSync);
+assert.ok(actualChrome, "Install Chrome/Chromium or set CHROME_PATH");
+const shellQuote = value => `'${String(value).replaceAll("'", "'\\''")}'`;
+// An actual browser behind a nonstandard path proves that both direct renders
+// and isolated export workers preserve the developer's browser selection.
+writeFileSync(customChrome, `#!/bin/sh\nprintf '%s\\n' browser >> ${shellQuote(browserTrace)}\nexec ${shellQuote(actualChrome)} "$@"\n`);
+chmodSync(customChrome, 0o755);
+const browserCalls = () => existsSync(browserTrace) ? readFileSync(browserTrace, "utf8").trim().split("\n").length : 0;
 const json = (path, value) => {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
@@ -179,6 +192,7 @@ const server = spawn(process.execPath, [join(ROOT, "server.mjs"), "--port", Stri
   cwd: ROOT,
   env: { ...process.env, NODE_ENV: "development", STORE1: "local", LOCAL_STORE_ROOT: temp,
     DB_PATH: dbPath, CACHE_DIR: cacheDir, FORGE_HUB_PATH: hubPath,
+    CHROME_PATH: customChrome,
     FORGE_INCLUDE_TEST_FIXTURES: "0", FORGE_PUBLIC_ORIGIN: "https://forge.example" },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -243,8 +257,11 @@ try {
   const privateTts=await post("/api/games/private-cache/export/tts?wait=1",auth);
   assert.equal(privateTts.response.status,422,"private TTS fails before creating a hosted export");
   assert.equal(privateTts.body.code,"private_tts_hosting_unsupported");
+  const beforeWorkerBrowser = browserCalls();
+  assert.ok(beforeWorkerBrowser > 0, "Direct card rendering uses CHROME_PATH even when its executable has a nonstandard name and spaces");
   const privateVtt=await post("/api/games/private-cache/export/vtt?wait=1",auth);
   assert.equal(privateVtt.response.status,200,JSON.stringify(privateVtt.body));
+  assert.ok(browserCalls() > beforeWorkerBrowser, "The isolated export worker retains CHROME_PATH for its own rendering");
   assert.deepEqual(privateVtt.body.urls,[`/cache/exports/private-cache/${fullRef}/table-v3.vtt`],
     "private VTT advertises only its self-contained package");
   const vttPackage=await get(privateVtt.body.urls[0],auth),vttEntries=readZip(vttPackage.body);

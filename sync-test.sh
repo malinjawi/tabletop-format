@@ -4,7 +4,7 @@
 set -e
 REPO="$(cd "$(dirname "$0")" && pwd)"
 SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
-tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='beta-site' \
+tar -C "$REPO" --exclude='.git' --exclude='node_modules' --exclude='beta-site' --exclude='data' \
     --exclude='examples/*/exports' -cf - . | tar -C "$SCRATCH" -xf -
 cd "$SCRATCH"
 export GIT_AUTHOR_NAME=t GIT_COMMITTER_NAME=t GIT_AUTHOR_EMAIL=t@x GIT_COMMITTER_EMAIL=t@x

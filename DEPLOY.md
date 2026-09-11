@@ -1,63 +1,13 @@
-# Deploying the beta
+# Deploy Forge
 
-Two tiers. Tier 1 is enough to launch; Tier 2 adds the live write-path playground.
+Use the maintained [production deployment runbook](deploy/DEPLOY.md) and
+[backup/restore procedure](deploy/RESTORE-DRILL.md). For local development,
+use [Development setup](docs/DEVELOPMENT.md).
 
-## Tier 1 — static beta on GitHub Pages (free, ~10 minutes, no server)
+The earlier static/communal beta instructions at this path are retired. They
+included nightly data resets and do not describe the current durable product.
+Do not use them for a team workspace or persistent game data. Git history retains
+them as historical context.
 
-What visitors get: the landing page, the full hub (all tabs, real data), two
-in-browser card editors, and downloadable PnP PDFs / TTS mods. Everything
-interactive except server-side saves.
-
-```bash
-./build_beta.sh                      # assembles beta-site/
-# replace malinjawi/tabletop-format in beta-site/index.html with your real repo URL
-
-git checkout --orphan gh-pages
-git rm -rf . && cp -r beta-site/* . && rm -rf beta-site
-git add -A && git commit -m "beta site"
-git push origin gh-pages
-# GitHub repo → Settings → Pages → deploy from gh-pages branch
-```
-
-Or Cloudflare Pages: create project → direct upload → drop the `beta-site/`
-folder. Done. (Cloudflare also gives you a free custom domain + analytics.)
-
-## Tier 2 — live playground on a VPS (~€5/mo, ~30 minutes)
-
-What visitors get additionally: the REST API and the magic trick — edit cards,
-PUT, and watch a git commit appear with an auto-written message. Run it as a
-communal sandbox that resets nightly.
-
-```bash
-# on a fresh Hetzner/any VPS with Docker:
-git clone <your-repo> && cd <your-repo>
-docker build -t forge-beta .
-docker run -d --name forge-beta --restart unless-stopped -p 127.0.0.1:8420:8420 forge-beta
-
-# nightly reset (communal sandbox wipes to baseline):
-echo '5 4 * * * root docker rm -f forge-beta && docker run -d --name forge-beta --restart unless-stopped -p 127.0.0.1:8420:8420 forge-beta' > /etc/cron.d/forge-reset
-
-# TLS + domain via Caddy (auto-HTTPS):
-apt install -y caddy
-printf 'beta.yourdomain.tld {\n  reverse_proxy 127.0.0.1:8420\n}\n' > /etc/caddy/Caddyfile
-systemctl reload caddy
-```
-
-Built-in guards: 120 req/min/IP rate limit, 1MB body cap, `--readonly` flag
-for showcase mode, all writes validated with rollback on failure.
-
-## Beta copy suggestions
-
-- Banner on the playground: "Communal sandbox — resets nightly at 04:05 UTC.
-  Clone the repo to keep your work."
-- Link the repo everywhere. The pitch is portability; prove it constantly.
-
-## Launch checklist
-
-1. Name chosen, `malinjawi/tabletop-format` links replaced (grep for it)
-2. Repo pushed public (bundle → `git clone tabletop-format.bundle`)
-3. `./e2e.sh` green on your machine
-4. Tier 1 live → smoke-test on phone + desktop
-5. (Optional) Tier 2 live → PUT round-trip test from DEPLOY steps
-6. Post devlog #1 with the beta URL — the outreach kit's "try it" links now
-   point at a real thing
+Publishing a qualified image does not deploy a host. Complete the runbook’s
+engineering and operator gates before exposing a shared service.

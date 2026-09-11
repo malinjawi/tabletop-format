@@ -290,8 +290,12 @@ function sourceBundle(gameDir, loaded, dependencies) {
 }
 
 function chromeExecutable() {
+  const configured = process.env.CHROME_PATH || process.env.FORGE_CHROME || process.env.FMT_CHROME_BIN;
+  if (configured) {
+    if (!existsSync(configured)) throw new Error(`Configured Chrome/Chromium executable does not exist: ${configured}`);
+    return configured;
+  }
   const candidates = [
-    process.env.FORGE_CHROME,
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
     "/usr/bin/google-chrome",
@@ -299,7 +303,7 @@ function chromeExecutable() {
     "/usr/bin/chromium-browser",
   ].filter(Boolean);
   const found = candidates.find(existsSync);
-  if (!found) throw new Error("Chrome or Chromium is required to build the designed rulebook PDF");
+  if (!found) throw new Error("Chrome or Chromium is required to build the designed rulebook PDF; set CHROME_PATH");
   return found;
 }
 

@@ -18,7 +18,7 @@ tar -C "$REPO" \
   --exclude='./node_modules' \
   --exclude='./tmp' \
   --exclude='./output' \
-  --exclude='./data/cache' \
+  --exclude='./data' \
   --exclude='./examples/*/exports' \
   --exclude='./examples/_fixtures' \
   --exclude='./beta-site' \

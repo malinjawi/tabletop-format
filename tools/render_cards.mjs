@@ -10,7 +10,8 @@
  * 300dpi. PnP, TTC, TTS, releases, and the derived cache all consume these
  * PNGs, so there is no second implementation of layout.yaml to drift.
  *
- * Set FMT_CHROME_BIN when Chrome/Chromium is not in a common location.
+ * Set CHROME_PATH when Chrome/Chromium is not in a common location.
+ * FMT_CHROME_BIN remains a supported legacy export override.
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -56,8 +57,12 @@ function commandPath(name) {
 }
 
 function findChrome() {
+  const configured = process.env.CHROME_PATH || process.env.FMT_CHROME_BIN;
+  if (configured) {
+    if (!existsSync(configured)) throw new Error(`Configured Chrome/Chromium executable does not exist: ${configured}`);
+    return configured;
+  }
   const candidates = [
-    process.env.FMT_CHROME_BIN,
     commandPath("chromium"),
     commandPath("chromium-browser"),
     commandPath("google-chrome"),
@@ -72,7 +77,7 @@ function findChrome() {
   const found = candidates.find(existsSync);
   if (found) return found;
   throw new Error(
-    "Chrome/Chromium was not found. Install Chrome or set FMT_CHROME_BIN to its executable.",
+    "Chrome/Chromium was not found. Install Chrome or set CHROME_PATH to its executable.",
   );
 }
 

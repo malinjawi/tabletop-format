@@ -4,6 +4,11 @@ import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = resolve(import.meta.dirname, ".."), venv = join(root, ".venv");
+const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
+if (nodeMajor !== 24 || nodeMinor < 20) {
+  console.error("Forge development uses Node 24.20.0 (.nvmrc). Select that version before installing dependencies.");
+  process.exit(1);
+}
 const python = process.env.FORGE_BOOTSTRAP_PYTHON || "python3";
 const venvPython = process.platform === "win32" ? join(venv, "Scripts", "python.exe") : join(venv, "bin", "python");
 const run = (command, args) => {

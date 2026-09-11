@@ -1,12 +1,14 @@
 # Forge project handoff
 
+**New developers: start with [Development setup](DEVELOPMENT.md) and the [five-person team handoff](DEVELOPER-HANDOFF.md).** This longer document preserves decisions and history. The team guide and current protected-main qualification supersede machine-specific or historical checkpoint notes below.
+
 The latest creator-interface cleanup is documented in the [September 11 UX review](FORGE-UX-REVIEW-2026-09-11.md). It simplifies navigation and Design, adds bundled creator/connector help, and fixes truthful Sheets setup and selected downloads through sign-in. Check the current commit and its qualification run before treating a published image as current.
 
 Reconciled on **2026-09-11**. This is a continuation guide, not a production qualification. It combines prior project records, current source, local Git/runtime inspection, and GitHub evidence. See [the retrospective](FORGE-RETROSPECTIVE-2026-09-11.md) for the current assessment and verification rules. Machine-specific paths and backup details are preserved in the local workspace, outside the public repository.
 
 ## 1. Start here
 
-**Continue from the latest protected `github/main`.** The six-commit application baseline through **d7bc4bad7a4709e58399d6d60f81404706d9797b** was merged in [PR #2](https://github.com/malinjawi/tabletop-format/pull/2) as **8aa6cf12d33672737d5122698da8f02b5c8098e0**. Its [main qualification and image publication](https://github.com/malinjawi/tabletop-format/actions/runs/34582258008) succeeded. The subsequent preview repair and launch regression coverage are tracked in [PR #3](https://github.com/malinjawi/tabletop-format/pull/3); use that PR and Git for their exact current state.
+**Continue from the latest protected `main`.** The original workspace names its GitHub remote `github`; a normal clone uses `origin`. PRs [#2](https://github.com/malinjawi/tabletop-format/pull/2), [#3](https://github.com/malinjawi/tabletop-format/pull/3), and [#4](https://github.com/malinjawi/tabletop-format/pull/4) merged the authoring/durability work, preview repair, and creator UX cleanup. The developer handoff records the qualified `e2f0618` baseline beneath the onboarding work. Use [current main runs](https://github.com/malinjawi/tabletop-format/actions/workflows/quality.yml) for the latest source/image identity.
 
 The user's development direction is **“ignore the beta host now just make the software work and make it work well.”** On September 11 they also requested pushing and merging every open PR and preventing the missing-preview-assets failure at launch. Real-host deployment and speculative feature expansion remain outside this request.
 
@@ -149,13 +151,13 @@ Backups require coordinated Git/Forgejo, platform and Forgejo databases, LFS/obj
 
 During initial handoff inspection, historical ports 4897 and 4901 were stopped and an older application answered on 4898. During the retrospective the latest application was relaunched on **http://localhost:4901/** using a separate persistent copy of the preserved preview data. The legacy instance and its dirty game data were left intact.
 
-The current preview is loopback-only and deliberately enables internal fixtures; do not copy these settings to a public deployment. Its application commit is d7bc4ba; the separate game-store commit at preservation was e151d05. A successful health response alone does not identify the application revision.
+That preserved preview is loopback-only and deliberately enables internal fixtures; do not copy these settings into ordinary onboarding or public deployment. Its current process and application commit live in the private local context record. The separate game-store commit at preservation was e151d05. New developers use `npm run dev` with their own Ember-only workspace. A successful health response alone does not identify the application revision.
 
 Use explicit LOCAL_STORE_ROOT, DB_PATH, CACHE_DIR, FARM_DIR, FORGE_HUB_PATH, RELEASE_VAULT_DIR and FORGE_PUBLIC_ORIGIN values when starting a local preview. Keep cache and vault separate, use a durable state directory, and verify the real browser route. Exact machine paths, process/log information and the recovered startup recipe are kept in the local workspace's private context document.
 
 ### Toolchain and checks
 
-Use the [CI-qualified toolchain](../.github/workflows/quality.yml): Node 24.20.0 and Python 3.11. package.json's Node >=20 declaration is too broad for the local node:sqlite backend. The original development worktree shares node_modules and .venv by symlink with its archive checkout; inspect those paths before removing legacy directories.
+Use the [CI-qualified toolchain](../.github/workflows/quality.yml): Node 24.20.0 and Python 3.11, with the corrected package requirement and `.nvmrc`. Follow [Development setup](DEVELOPMENT.md) for a fresh install. Historically the founder worktree shared node_modules and .venv with an archive; that is not a required or recommended setup for new developers.
 
 From the current development checkout:
 
@@ -183,7 +185,7 @@ Do not run destructive cleanup/reset scripts or the old root DEPLOY.md's nightly
 1. Recheck branch/status and this handoff, then inspect or restore the latest local runtime using its existing data locations. Verify the actual application build, not just an HTTP 200. Keep legacy data and archived work intact.
 2. Walk one complete newcomer workflow in the browser: new/imported game → edit → actual proof → review → commit/proposal → merge → exact release → playtest/second version. Include a contributor without write access and narrow-screen use. Select the next concrete failure from that journey; do not assume every item from an older audit is still missing.
 3. Continue the known software backlog: efficient large-PDF delivery/streaming; onboarding and editor clarity; and complete publication/recovery reconciliation described below. These are remaining work, not features implemented by this handoff.
-4. Preserve focused milestones, appropriate regression tests, and browser evidence. The six application commits and current project records are pushed in [PR #2](https://github.com/malinjawi/tabletop-format/pull/2). Its latest protected checks and merge record identify the source publication state; a resulting main image has its own revision/digest. Do not attach the old beta image to newer code.
+4. Preserve focused milestones, appropriate regression tests, and browser evidence. Current main and its qualification run identify source publication state; each resulting main image has its own revision/digest. Do not attach an older image's qualification to newer code.
 
 ### Concrete release-integrity gap
 
@@ -203,8 +205,8 @@ This is unfinished engineering, not merely missing operator credentials. The pre
 
 ## 9. Documentation and history traps
 
-- README's 186/96 counts, CONTRIBUTING's early counts, and September 1–3 readiness reports predate current HEAD. Use their procedures with care; never label their old hashes/images as current.
-- Root DEPLOY.md describes an obsolete static/communal beta, including a resetting container. Use deploy/DEPLOY.md and deploy/RESTORE-DRILL.md.
+- September 1–3 readiness reports and old README/CONTRIBUTING revisions predate current HEAD. Never label their old hashes/images as current.
+- Root DEPLOY.md now redirects to deploy/DEPLOY.md and deploy/RESTORE-DRILL.md. Historical revisions describe a resetting communal sandbox; those instructions must not be used for persistent team data.
 - HONEST-AUDIT.md mixes early missing features with subsequent fixes. It is an audit history, not a ready-made current backlog.
 - Some adapter and pilot text describes rebuilding all release files from a cache or a “three-store restore.” Current durable-vault publication supersedes that model.
 - db.mjs's introductory “people and conversation only” comment is older than its durable publication/journal tables. Store 2 is not wholly rebuildable.

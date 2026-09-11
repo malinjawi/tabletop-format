@@ -8,8 +8,18 @@ const pass = (name, detail) => rows.push({ ok: true, name, detail });
 const fail = (name, detail) => rows.push({ ok: false, name, detail });
 const command = (name, args = [], options = {}) => spawnSync(name, args, { cwd: root, encoding: "utf8", ...options });
 
-const nodeMajor = Number(process.versions.node.split(".")[0]);
-nodeMajor >= 20 ? pass("Node", process.version) : fail("Node", `${process.version}; Forge needs Node 20+`);
+const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
+nodeMajor === 24 && nodeMinor >= 20
+  ? pass("Node", `${process.version}; supported Node >=24.20.0 <25 (CI uses 24.20.0)`)
+  : fail("Node", `${process.version}; Forge requires Node >=24.20.0 <25. Use the .nvmrc version (24.20.0).`);
+try {
+  const { DatabaseSync } = await import("node:sqlite");
+  const database = new DatabaseSync(":memory:");
+  try {
+    if (database.prepare("SELECT 1 AS ready").get().ready !== 1) throw new Error("SQLite query failed");
+    pass("Local SQLite", "node:sqlite opens and queries an in-memory database");
+  } finally { database.close(); }
+} catch (error) { fail("Local SQLite", `node:sqlite is unavailable: ${error.message}`); }
 existsSync(join(root, "package-lock.json")) ? pass("npm lockfile", "package-lock.json present") : fail("npm lockfile", "missing; run npm install --package-lock-only");
 for (const dependency of ["ajv", "js-yaml", "yaml", "playwright-core"]) {
   try { await import(dependency); pass(`npm:${dependency}`, "installed"); }
@@ -24,8 +34,14 @@ git.status === 0 ? pass("Git", git.stdout.trim()) : fail("Git", "not found");
 const chromeCandidates = process.platform === "darwin"
   ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"]
   : ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
-const chrome = process.env.CHROME_PATH || chromeCandidates.find(existsSync);
-chrome ? pass("Chromium renderer", chrome) : fail("Chromium renderer", "set CHROME_PATH or install Chrome/Chromium");
+const chrome = process.env.CHROME_PATH || process.env.FMT_CHROME_BIN || chromeCandidates.find(existsSync);
+if (chrome) {
+  const result = command(chrome, ["--version"], { timeout: 10_000 });
+  const version = String(result.stdout || result.stderr || "").trim();
+  result.status === 0 && /Chrom(?:e|ium)|Microsoft Edge/i.test(version)
+    ? pass("Chromium renderer", `${version} (${chrome})`)
+    : fail("Chromium renderer", `${chrome}: ${result.error?.message || version || "executable did not identify itself as Chrome/Chromium"}. Set CHROME_PATH to a working browser executable.`);
+} else fail("Chromium renderer", "set CHROME_PATH or install Chrome/Chromium");
 const nandeck = process.env.NANDECK_PATH;
 pass("nanDECK adapter", nandeck ? `external app declared at ${nandeck}` : "script import/export ready; external app optional and not run by Forge");
 const squib = command("ruby", ["-e", "begin; require 'squib'; print Squib::VERSION; rescue LoadError; exit 3; end"]);

@@ -44,6 +44,7 @@ run "toolchain" npm run doctor
 run "production dependency audit" npm audit --omit=dev
 run "Python dependency integrity" "${FORGE_PYTHON:-$ROOT/.venv/bin/python}" -m pip check
 run "static types" npm run typecheck
+run "isolated developer workspace startup and persistence" npm run test:dev
 run "adapter contracts" node tools/check-adapters.mjs
 run "default-deny internal fixture discovery" npm run test:fixture-discovery
 run "print-ready output contracts" npm run test:print-ready
