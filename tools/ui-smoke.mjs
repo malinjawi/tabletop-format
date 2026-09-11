@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /** Launch-level browser smoke: lazy shell, topics, narrow layouts, and touch size. */
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { chromium } from "playwright-core";
 import { DatabaseSync } from "node:sqlite";
@@ -92,6 +93,44 @@ try {
     "catalog ignores stale index rows whose repositories no longer exist");
 
   browser = await chromium.launch({ executablePath: chrome, headless: true });
+
+  // A downloaded hub has no Forge API behind it. Prove that component art is
+  // embedded and the exact setup remains playable from file:// instead of
+  // emitting a broken live-only /api/games URL.
+  const staticGames = join(scratch, "static-games"), staticGame = join(staticGames, "static-components");
+  mkdirSync(join(staticGame, "components"), { recursive: true });
+  mkdirSync(join(staticGame, "templates"), { recursive: true });
+  mkdirSync(join(staticGame, "setups"), { recursive: true });
+  mkdirSync(join(staticGame, "assets"), { recursive: true });
+  writeFileSync(join(staticGame, "game.yaml"), "title: Static components\nlicense: CC0-1.0\nplayers:\n  min: 1\n  max: 2\n");
+  writeFileSync(join(staticGame, "components", "cards.json"), "[]\n");
+  writeFileSync(join(staticGame, "components", "printings.json"), "[]\n");
+  writeFileSync(join(staticGame, "components", "tokens.json"), JSON.stringify([{ id:"board", name:"Offline board", kind:"board", art:"assets/board.png" }], null, 2));
+  writeFileSync(join(staticGame, "templates", "component-design.json"), JSON.stringify({ version:1,
+    families:[{ id:"board", label:"Board", match:{kinds:["board"]}, shape:"rectangle",
+      size_mm:{width:120,height:80}, style:{fill:"#24313a",border:"#f0b44d",border_mm:1,text:"#fff",font_family:"Arial",font_size_pt:8},
+      regions:[{id:"art",type:"image",source:"art",x:0,y:0,w:100,h:100,align:"center"}] }],
+    production:{bleed_mm:2,safe_mm:3,sheet:{page:"A4",margin_mm:8,gap_mm:3},large_piece_overlap_mm:8} }, null, 2));
+  writeFileSync(join(staticGame, "setups", "table.json"), JSON.stringify({ schema_version:1,id:"table",name:"Offline table",
+    board:{width:1600,height:1000,background:"assets/board.png"},seats:[{id:"p1",name:"Player 1",position:{x:120,y:500}}],
+    zones:[{id:"play",name:"Play area",kind:"play",position:{x:200,y:100},size:{width:1200,height:800}}],stacks:[],
+    pieces:[{id:"board-piece",component_id:"board",position:{x:800,y:500}}],counters:[],instructions:["Place the board."] }, null, 2));
+  writeFileSync(join(staticGame, "assets", "board.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"));
+  const staticHub = join(scratch, "static-components.html");
+  const staticBuild = spawnSync(PYTHON, [join(ROOT, "tools", "build_hub.py"), "--games", staticGames, "-o", staticHub], { cwd:ROOT, encoding:"utf8" });
+  assert(staticBuild.status===0,"a self-contained component hub builds",staticBuild.stderr||staticBuild.stdout);
+  const staticPage = await browser.newPage({ viewport:{width:900,height:800} });
+  await staticPage.goto(`${pathToFileURL(staticHub).href}#/g/community/static-components/play`,{waitUntil:"domcontentloaded"});
+  await staticPage.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const staticTable=staticPage.getByRole("region",{name:"Offline table versioned tabletop",exact:true});
+  await staticTable.waitFor();
+  const staticArt=await staticTable.locator('image[data-component-embedded-art="true"]').getAttribute("href");
+  const staticStageStyle=await staticTable.locator("[data-play-component-stage]").getAttribute("style");
+  assert(staticArt?.startsWith("data:image/png;base64,")
+    &&staticStageStyle?.includes("data:image/png;base64,")
+    &&await staticTable.locator('image[href^="/api/games/"]').count()===0,
+    "an offline hub embeds component and board artwork and emits no unavailable live API URL");
+  await staticPage.close();
 
   // Exercise the Google-hosted sidebar as a user sees it. Apps Script itself is
   // covered by sheets-addon-check.mjs; this browser mock verifies the client
@@ -795,6 +834,16 @@ w.save(p)
   await page.locator(".component-studio-list button").filter({hasText:"Run marker"}).click();
   assert(await page.locator(".component-studio-inspector input[type=color]").first().inputValue()==="#173b57",
     "editing the independent family no longer changes the original shared token style");
+  await page.getByLabel("Stage this piece in setup").check();
+  await page.getByLabel("Setup quantity").fill("3");
+  await page.getByLabel("Setup face").selectOption("back");
+  await page.getByLabel("Setup X").fill("520");
+  await page.getByLabel("Setup Y").fill("410");
+  await page.getByLabel("Setup rotation").fill("25");
+  assert(await page.getByLabel("Setup face").inputValue()==="back"
+    &&await page.getByLabel("Setup quantity").inputValue()==="3"
+    &&await page.getByLabel("Setup rotation").inputValue()==="25",
+    "the authored table keeps a two-sided piece's quantity, face, position, and rotation as setup data");
   await page.locator(".component-studio-list button").filter({hasText:"Prototype board"}).click();
   await page.getByLabel("Stage this piece in setup").check();
   const setupMap=page.getByLabel("System Gateway starter duel component setup map");
@@ -814,10 +863,14 @@ w.save(p)
   await page.getByRole("button",{name:"← Card design",exact:true}).click();
   await page.getByRole("button",{name:"Open pieces",exact:true}).click();
   await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  await page.locator("#modal").click({position:{x:4,y:4}});
   assert(await page.evaluate(()=>COMPONENT_EDIT.pieces.length)===0
     &&await page.getByRole("button",{name:"Restore draft",exact:true}).isVisible()
     &&await page.getByRole("button",{name:"Discard draft",exact:true}).isVisible(),
     "returning after in-app navigation offers Restore and Discard without silently applying component work");
+  assert(await page.evaluate(()=>!!COMPONENT_DRAFT_OFFER&&!COMPONENT_EDIT._draftReady)
+    &&await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).isVisible(),
+    "clicking the modal backdrop cannot dismiss an unresolved Piece Studio recovery choice");
   await page.getByRole("button",{name:"Restore draft",exact:true}).click();
   assert(await page.locator(".component-studio-list button").filter({hasText:"Alert marker"}).isVisible()
     &&await page.getByText(/browser recovery on/).isVisible(),
@@ -924,12 +977,124 @@ w.save(p)
   assert((await familySvgCommitResponse).ok(),
     "piece studio commits the reviewed external family edit through the browser");
   await page.getByRole("heading",{name:/Pieces — Netrunner/}).waitFor({timeout:15_000});
+
+  // The same exact component and setup sources must become a useful browser
+  // table without mutating Git. Keep the existing card sandbox below it.
+  const componentPlayMutations=[];
+  const watchComponentPlay=request=>{
+    const url=new URL(request.url());
+    if(url.pathname.includes("/api/games/netrunner-sg/")&&!['GET','HEAD','OPTIONS'].includes(request.method()))
+      componentPlayMutations.push(`${request.method()} ${url.pathname}`);
+  };
+  page.on("request",watchComponentPlay);
+  await page.goto(`${origin}/#/g/community/netrunner-sg/play`,{waitUntil:"domcontentloaded"});
+  await page.getByText("Versioned table setup",{exact:true}).waitFor();
+  const componentPlayRef=await page.evaluate(()=>window._ps?.sourceRef||"");
+  const setupChoice=await page.locator(".play-setup-choice").innerText();
+  assert(/^[0-9a-f]{40}$/i.test(componentPlayRef)
+    &&setupChoice.includes("System Gateway starter duel")
+    &&setupChoice.includes("2 seats")&&setupChoice.includes("12 zones")
+    &&setupChoice.includes("4 staged pieces")&&setupChoice.includes("8 counters")
+    &&setupChoice.includes("4 setup steps"),
+    "Play previews the complete authored setup and exact version before starting",`${componentPlayRef} ${setupChoice}`);
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const componentTable=page.getByRole("region",{name:"System Gateway starter duel versioned tabletop",exact:true});
+  await componentTable.waitFor();
+  const componentRuntime=await page.evaluate(()=>({
+    ref:window._ps?.playtestRef,
+    setup:window._ps?.setup?.name,
+    pieces:window._ps?.setup?.pieces,
+    counters:window._ps?.setup?.counters?.map(counter=>({id:counter.id,value:counter.value,minimum:counter.minimum})),
+    cards:{hand:window._ps?.hand?.length,board:window._ps?.board?.length},
+  }));
+  assert(componentRuntime.ref===componentPlayRef&&componentRuntime.setup==="System Gateway starter duel"
+    &&componentRuntime.pieces.length===2
+    &&componentRuntime.pieces.some(piece=>piece.component_id==="new_token"&&piece.quantity===3&&piece.face==="back"&&piece.rotation===25&&piece.position.x===520&&piece.position.y===410)
+    &&componentRuntime.pieces.some(piece=>piece.component_id==="new_board")
+    &&componentRuntime.counters.length===8&&componentRuntime.cards.hand===7&&componentRuntime.cards.board===0,
+    "starting clones pieces, authored values, counters, and the unchanged card sandbox into one ephemeral exact-version session",JSON.stringify(componentRuntime));
+  assert(await componentTable.locator("[data-play-zone]").count()===12
+    &&await componentTable.locator("[data-play-seat]").count()===2
+    &&await componentTable.locator("[data-play-piece]").count()===2
+    &&await componentTable.locator("[data-play-counter]").count()===8
+    &&await componentTable.locator(".play-instructions li").count()===4,
+    "the versioned tabletop visibly renders zones, seats, non-card pieces, counters, and setup instructions");
+  const hostileName='Quoted " name data-component-injected="true';
+  await page.evaluate(name=>{window._ps.setup.zones[0].name=name;window._ps.setup.seats[0].name=name;window._ps.setup.counters[0].name=name;renderPlay();},hostileName);
+  assert(await componentTable.locator("[data-component-injected]").count()===0
+    &&await componentTable.locator("[data-play-zone]").first().getAttribute("aria-label")===`${hostileName} zone`
+    &&await componentTable.locator("[data-play-seat]").first().getAttribute("aria-label")===`${hostileName} seat`,
+    "community-authored setup names stay text inside attributes and cannot inject browser behavior");
+  await page.evaluate(()=>playResetSetup());
+  const boardArtHref=await componentTable.locator('[data-play-piece="new_board-piece"] image[data-component-repository-art="true"]').getAttribute("href");
+  assert(boardArtHref===`/api/games/netrunner-sg/assets/components/new_board-front.png?ref=${componentPlayRef}`,
+    "browser component art resolves only through the same-origin repository endpoint at the full exact ref",boardArtHref||"no art href");
+  const runPiece=componentTable.locator('[data-play-piece="new_token-piece"]');
+  await runPiece.focus();
+  const beforeNudge=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  await runPiece.press("ArrowRight");
+  const afterNudge=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  assert(afterNudge.x===beforeNudge.x+5&&afterNudge.y===beforeNudge.y
+    &&await componentTable.locator('[data-play-piece="new_token-piece"]:focus').count()===1,
+    "a focused component nudges by keyboard and keeps a usable focus target",JSON.stringify({beforeNudge,afterNudge}));
+  const beforeDrag=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  const runBox=await componentTable.locator('[data-play-piece="new_token-piece"]').boundingBox(),stageBox=await componentTable.locator("[data-play-component-stage]").boundingBox();
+  await page.mouse.move(runBox.x+runBox.width/2,runBox.y+runBox.height/2);
+  await page.mouse.down();
+  await page.mouse.move(Math.min(stageBox.x+stageBox.width-12,runBox.x+runBox.width/2+70),Math.min(stageBox.y+stageBox.height-12,runBox.y+runBox.height/2+36),{steps:4});
+  await page.mouse.up();
+  const afterDrag=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  assert(afterDrag.x!==beforeDrag.x||afterDrag.y!==beforeDrag.y,
+    "a pointer drag moves only the ephemeral component placement",JSON.stringify({beforeDrag,afterDrag}));
+  await componentTable.getByRole("button",{name:"Flip Run marker",exact:true}).click();
+  assert((await page.evaluate(()=>window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").face))==="front"
+    &&(await componentTable.locator('[data-play-piece="new_token-piece"]').getAttribute("aria-label")).includes("front face"),
+    "Flip is available for an authored back and switches the temporary face");
+  await componentTable.locator('[data-play-piece="new_board-piece"]').click();
+  assert(await componentTable.getByRole("button",{name:/^Flip /}).count()===0,
+    "one-sided pieces never expose a fake flip action");
+  const corpAgenda=componentTable.locator('[data-play-counter="corp-agenda"]');
+  assert(await corpAgenda.getByRole("button",{name:"Decrease Corp agenda points",exact:true}).isDisabled(),
+    "counter controls stop at the authored minimum");
+  await corpAgenda.getByRole("button",{name:"Increase Corp agenda points",exact:true}).click();
+  assert(await corpAgenda.getByLabel("Corp agenda points value",{exact:true}).textContent()==="1",
+    "counter controls update the temporary setup within their bounds");
+  await componentTable.getByRole("button",{name:"Reset setup",exact:true}).click();
+  const resetRuntime=await page.evaluate(()=>({piece:window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece"),counter:window._ps.setup.counters.find(counter=>counter.id==="corp-agenda")}));
+  assert(resetRuntime.piece.position.x===520&&resetRuntime.piece.position.y===410&&resetRuntime.piece.face==="back"
+    &&resetRuntime.counter.value===0,
+    "Reset setup restores authored placement, face, and counter values without resetting the card session",JSON.stringify(resetRuntime));
+  await page.setViewportSize({width:390,height:844});
+  const componentPlayMobile=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,
+    stage:document.querySelector("[data-play-component-stage]")?.getBoundingClientRect().width,
+    touch:[...document.querySelectorAll(".play-component-actions button,.play-piece,.play-counter-controls button")].map(control=>({label:control.getAttribute("aria-label")||control.textContent.trim(),width:control.getBoundingClientRect().width,height:control.getBoundingClientRect().height}))}));
+  assert(componentPlayMobile.scroll<=componentPlayMobile.viewport&&componentPlayMobile.stage<=componentPlayMobile.viewport,
+    "390px component play has no horizontal overflow",JSON.stringify(componentPlayMobile));
+  assert(componentPlayMobile.touch.every(control=>control.width>=44&&control.height>=44),
+    "component play movement, reset, flip, and counters keep 44px touch targets",JSON.stringify(componentPlayMobile.touch));
+  await page.setViewportSize({width:1280,height:900});
+  const refAfterComponentPlay=await page.evaluate(async()=>await (await fetch("/api/games/netrunner-sg/ui")).json().then(game=>game.source_ref));
+  page.off("request",watchComponentPlay);
+  assert(refAfterComponentPlay===componentPlayRef&&componentPlayMutations.length===0,
+    "browser tabletop interactions are ephemeral and send no repository mutation",JSON.stringify({componentPlayRef,refAfterComponentPlay,componentPlayMutations}));
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/play`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const cardOnlyPlay=await page.evaluate(()=>({hand:window._ps.hand.length,cards:window._ps.g.cards.length,setups:window._ps.g.setups?.length||0,pieces:window._ps.g.tokens?.length||0}));
+  assert(await page.locator(".play-component-shell").count()===0
+    &&await page.getByText("Table (click a card to discard)",{exact:true}).isVisible()
+    &&cardOnlyPlay.hand===Math.min(7,cardOnlyPlay.cards)&&cardOnlyPlay.setups===0&&cardOnlyPlay.pieces===0,
+    "a game without setup pieces keeps the existing card-only play experience",JSON.stringify(cardOnlyPlay));
+
+  await page.goto(`${origin}/#/g/community/netrunner-sg/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces"}).click();
+  await page.getByRole("heading",{name:/Pieces — Netrunner/}).waitFor({timeout:15_000});
   const componentDownloadPromise=page.waitForEvent("download");
   await page.getByRole("button",{name:"Build cut sheets"}).click();
   const componentDownload=await componentDownloadPromise;
   const componentKit=readZip(readFileSync(await componentDownload.path()));
   const componentManifest=JSON.parse(componentKit.get("manifest.json"));
-  assert(/netrunner-sg-components-v6\.zip$/.test(componentDownload.suggestedFilename())
+  assert(/netrunner-sg-components-v7\.zip$/.test(componentDownload.suggestedFilename())
     && componentKit.has("faces/new_token-back.svg")
     && componentKit.has("cut-sheets/01-letter-back.svg")
     && componentKit.has("large-pieces/new_board-01-front-r1c2-letter.svg")
@@ -968,8 +1133,9 @@ w.save(p)
   await page.locator("details.more-tabs .repo-menu a").filter({hasText:"Releases"}).click();
   await page.getByText(/^Release readiness/).waitFor();
   assert(await page.getByText("READY", { exact:true }).isVisible()
-    && await page.getByRole("button", { name:"Cut this exact release" }).isVisible(),
-    "the owner sees a preflighted exact version before starting an expensive release build");
+    && await page.getByRole("button", { name:"Cut this exact release" }).isVisible()
+    && await page.locator('[data-release-check="components"]').count()===0,
+    "a card-only game keeps the existing concise release path without a phantom component requirement");
 
   // An old/API/imported asset can still arrive without rights. The release UI
   // must name it, withhold the release action, and provide the repair path.
@@ -1008,6 +1174,8 @@ w.save(p)
     "release creation pins the exact version shown by readiness instead of silently following a newer HEAD",
     JSON.stringify({displayed:displayedReleaseRef,sent:releaseRequest.base_ref||null}));
   await page.getByRole("button",{name:"Record exact handoff"}).waitFor({timeout:90_000});
+  assert(await page.locator('[data-release-component-downloads]').count()===0,
+    "a card-only release does not invent or duplicate component downloads");
   await page.getByRole("button",{name:"Record exact handoff"}).click();
   await page.getByLabel("Printer or manufacturer").fill("Example Print House");
   await page.getByLabel("Job / quote reference").fill("UI-JOB-42");
@@ -1461,6 +1629,87 @@ w.save(p)
     &&Object.values(committedBuild.printings).reduce((sum,count)=>sum+count,0)===3,
     "the committed portable deck document reconciles gameplay counts with manufacturing quantities");
   await page.waitForTimeout(900);
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/play`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).waitFor();
+  const firstPlayRef=await page.evaluate(()=>window._ps?.sourceRef||"");
+  assert(/^[0-9a-f]{40}$/i.test(firstPlayRef)
+    &&(await page.getByText("Version ready to test:",{exact:false}).innerText()).includes(firstPlayRef),
+    "Play opens with the full immutable game version visible before the table starts",firstPlayRef);
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const pinnedPlayState=await page.evaluate(()=>({ref:window._ps?.playtestRef,deck:window._ps?.playtestDeck}));
+  assert(pinnedPlayState.ref===firstPlayRef&&pinnedPlayState.deck?.id==="first-exact-playtest",
+    "starting the table freezes the exact version and selected playable build in the session",JSON.stringify(pinnedPlayState));
+
+  // Advance HEAD after the table starts. The recorder must keep the older
+  // version that was actually tested while the server appends the report to
+  // the newer project history.
+  const advancedDuringPlay=await page.evaluate(async()=>{
+    const sourceResponse=await fetch(`/api/games/wizard-ui-smoke/artifact?path=${encodeURIComponent("rules/rules.md")}`),source=await sourceResponse.json();
+    const content=`${String(source.content||"").trimEnd()}\n\n## Advanced during a live table\nThe active playtest must remain pinned to the version from before this line.\n`;
+    const response=await fetch("/api/games/wizard-ui-smoke/artifact",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({path:"rules/rules.md",content,base_ref:source.ref})});
+    return {sourceRef:source.ref,status:response.status,body:await response.json()};
+  });
+  assert(advancedDuringPlay.sourceRef===firstPlayRef&&advancedDuringPlay.status===200&&advancedDuringPlay.body.saved
+    &&advancedDuringPlay.body.commit!==firstPlayRef,
+    "the game can advance after a table begins without changing what that table tested",JSON.stringify(advancedDuringPlay));
+
+  await page.getByRole("button",{name:/Log playtest$/}).click();
+  const firstRecorder=page.getByRole("dialog",{name:"Log this playtest",exact:true});
+  await firstRecorder.waitFor();
+  const firstRecorderPin=await firstRecorder.locator("[data-playtest-recorder-pin]").innerText();
+  assert(firstRecorderPin.includes(firstPlayRef)&&firstRecorderPin.includes("First exact playtest")
+    &&firstRecorderPin.includes("first-exact-playtest"),
+    "the recorder shows the full frozen version and selected build before submission",firstRecorderPin);
+  await firstRecorder.getByLabel("How did it go?",{exact:true}).fill("The exact build felt quick and readable.");
+  await firstRecorder.getByLabel("Your result",{exact:true}).selectOption("win");
+  await firstRecorder.getByLabel("Minutes",{exact:true}).fill("18");
+  await firstRecorder.getByLabel("Card to flag",{exact:true}).selectOption("strike");
+  await firstRecorder.getByLabel("Observation tag",{exact:true}).selectOption("fun");
+  await firstRecorder.getByLabel("Card observation",{exact:true}).fill("Strike made the opening decision clear.");
+  const firstPlaytestResponse=page.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/playtests"));
+  await firstRecorder.getByRole("button",{name:"Log playtest",exact:true}).click();
+  const firstPlaytestHttp=await firstPlaytestResponse,firstPlaytestRequest=firstPlaytestHttp.request().postDataJSON(),firstPlaytestBody=await firstPlaytestHttp.json();
+  assert(firstPlaytestHttp.status()===201&&firstPlaytestRequest.version_ref===firstPlayRef
+    &&firstPlaytestRequest.id===undefined&&firstPlaytestRequest.players?.[0]?.name==="onboarding-smoke"
+    &&typeof firstPlaytestRequest.players[0].name==="string"
+    &&firstPlaytestRequest.players[0].deck_id==="first-exact-playtest"
+    &&firstPlaytestBody.pinned===firstPlayRef&&firstPlaytestBody.session?.notes==="The exact build felt quick and readable.",
+    "the real recorder sends a handle, build, notes, and original exact ref without inventing a replaceable ID",
+    JSON.stringify({request:firstPlaytestRequest,response:firstPlaytestBody}));
+  await page.waitForURL(/\/playtests$/,{timeout:20_000});
+  const firstSession=page.locator(`[data-playtest-session="${firstPlaytestBody.id}"]`);
+  await firstSession.waitFor();
+  const firstSessionText=await firstSession.innerText();
+  assert(firstSessionText.includes(firstPlayRef)&&firstSessionText.includes("onboarding-smoke")
+    &&firstSessionText.includes("First exact playtest")&&firstSessionText.includes("first-exact-playtest")
+    &&firstSessionText.includes("win")&&firstSessionText.includes("The exact build felt quick and readable.")
+    &&firstSessionText.includes("Strike")&&firstSessionText.includes("Strike made the opening decision clear."),
+    "saving immediately opens a human-readable session with version, player, build, result, notes, and card observation",firstSessionText);
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/play`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const secondPlayRef=await page.evaluate(()=>window._ps?.playtestRef||"");
+  await page.getByRole("button",{name:/Log playtest$/}).click();
+  const secondRecorder=page.getByRole("dialog",{name:"Log this playtest",exact:true});
+  await secondRecorder.getByLabel("How did it go?",{exact:true}).fill("Second session on the same day stayed independent.");
+  await secondRecorder.getByLabel("Your result",{exact:true}).selectOption("loss");
+  await secondRecorder.getByLabel("Minutes",{exact:true}).fill("11");
+  const secondPlaytestResponse=page.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/playtests"));
+  await secondRecorder.getByRole("button",{name:"Log playtest",exact:true}).click();
+  const secondPlaytestHttp=await secondPlaytestResponse,secondPlaytestBody=await secondPlaytestHttp.json();
+  assert(secondPlaytestHttp.status()===201&&secondPlaytestBody.id!==firstPlaytestBody.id
+    &&secondPlaytestBody.session?.date===firstPlaytestBody.session?.date&&secondPlaytestBody.pinned===secondPlayRef,
+    "a second same-day UI session receives a different stable record instead of replacing the first",JSON.stringify(secondPlaytestBody));
+  await page.waitForURL(/\/playtests$/,{timeout:20_000});
+  await page.locator(`[data-playtest-session="${secondPlaytestBody.id}"]`).waitFor();
+  const playtestFiles=readdirSync(join(gamesRoot,"wizard-ui-smoke","playtests")).filter(file=>file.endsWith(".json"));
+  assert(await page.locator("[data-playtest-session]").count()===2&&playtestFiles.length===2
+    &&playtestFiles.includes(`${firstPlaytestBody.id}.json`)&&playtestFiles.includes(`${secondPlaytestBody.id}.json`),
+    "both same-day sessions remain visible and exist as separate version-controlled files",JSON.stringify(playtestFiles));
+
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"Plan exact print run",exact:false}).click();
   await page.getByRole("heading",{name:"Choose exactly what Forge will manufacture",exact:true}).waitFor();
@@ -1522,6 +1771,46 @@ w.save(p)
     &&/crop_mark_sides: fronts/.test(printProfile)
     &&/sleeve_profile: japanese-62x89/.test(printProfile),
     "the committed profile preserves preset, selection, fronts-only, gutter, and sleeve intent");
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/releases`,{waitUntil:"domcontentloaded"});
+  await page.getByText(/^Release readiness/).waitFor();
+  const componentReadiness=page.locator('[data-release-check="components"]');
+  assert(await componentReadiness.isVisible()
+    &&(await componentReadiness.innerText()).includes("1 piece type")
+    &&(await componentReadiness.innerText()).includes("1 setup map")
+    &&(await page.locator('[data-release-component-explainer]').innerText()).includes("Tokens, counters, tiles, boards, dials, and setup maps")
+    &&await page.getByRole("button",{name:/Cut this exact release$/}).isVisible(),
+    "release readiness treats the exact printable piece and playable table as required production, not optional attachments",
+    await componentReadiness.innerText());
+  const componentReleaseRef=await page.evaluate(async()=>{
+    const response=await fetch("/api/games/wizard-ui-smoke/releases/preflight");return(await response.json()).ref;
+  });
+  // The focused server suite cuts and recovers real component releases. Keep
+  // this browser assertion scoped to presenting that canonical frozen-artifact
+  // contract; a second all-format release makes the UI suite needlessly slow.
+  await page.route("**/api/games/wizard-ui-smoke/releases",route=>{
+    if(route.request().method()!=="GET")return route.continue();
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify([{
+      tag:"v0.1",sha:componentReleaseRef,title:"First playable component kit",author_handle:"onboarding-smoke",
+      artifacts:[
+        {status:"ready",name:"wizard-ui-smoke-components-v7.zip"},
+        {status:"ready",name:"setup-maps/table.svg"},
+        {status:"ready",name:"forge-project-v2.zip"},
+      ],print_deliveries:[],
+    }])});
+  });
+  await page.evaluate(()=>liveReleases(G("wizard-ui-smoke")));
+  const componentKitLink=page.getByRole("link",{name:/Component kit$/}),setupMapLink=page.getByRole("link",{name:/Setup map · Table$/});
+  await componentKitLink.waitFor();
+  await setupMapLink.waitFor();
+  const componentReleaseLinks=await page.locator('[data-release-component-downloads] a').evaluateAll(links=>links.map(link=>({label:link.textContent.trim(),href:link.getAttribute("href")})));
+  assert(await componentKitLink.count()===1&&await setupMapLink.count()===1
+    &&componentReleaseLinks.some(link=>/wizard-ui-smoke-components-v7\.zip$/.test(link.href))
+    &&componentReleaseLinks.some(link=>/setup-maps\/table\.svg$/.test(link.href))
+    &&new Set(componentReleaseLinks.map(link=>link.href)).size===componentReleaseLinks.length,
+    "the frozen release shows one component kit and one human-named setup map without duplicate artifact links",
+    JSON.stringify(componentReleaseLinks));
+  await page.unroute("**/api/games/wizard-ui-smoke/releases");
 
   const sourceAfter={head:sourceGit(["rev-parse","HEAD"]),status:sourceGit(["status","--porcelain"])};
   assert(sourceAfter.head===sourceBefore.head && sourceAfter.status===sourceBefore.status,

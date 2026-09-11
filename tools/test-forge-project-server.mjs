@@ -59,6 +59,28 @@ try {
 
   const savedBuilds = await api("/api/games/ember/decks", { token: owner.token });
   assert.equal(savedBuilds.access.can_write, true);
+  const openedProject = await api("/api/games/ember/ui", { token: owner.token });
+  assert.match(openedProject.source_ref, /^[0-9a-f]{40}$/,
+    "the UI project snapshot exposes the exact immutable version it rendered");
+  assert.equal(openedProject.source_ref, savedBuilds.ref,
+    "the UI source ref and authoring workspace describe the same project head");
+  const openedArtUrl = openedProject.printings.find(printing => printing.art_data)?.art_data;
+  assert.match(openedArtUrl || "", new RegExp(`[?&]ref=${openedProject.source_ref}(?:&|$)`),
+    "live artwork in the project snapshot is addressed at that same exact ref");
+  const openedArtBytes = Buffer.from(await (await fetch(`${origin}${openedArtUrl}`)).arrayBuffer());
+  assert(openedArtBytes.length > 0);
+  const openedNetrunner = await api("/api/games/netrunner-sg/ui", { token: owner.token });
+  const largeBinaryRel = "source-faces/p_zahya_sadeghi_versatile_smuggler_sg.png";
+  const largeBinarySource = readFileSync(join(games, "netrunner-sg", "assets", largeBinaryRel));
+  assert(largeBinarySource.length > 1024 * 1024,
+    "the exact-asset regression fixture must remain larger than Node's default child-process buffer");
+  const largeBinaryResponse = await fetch(`${origin}/api/games/netrunner-sg/assets/${largeBinaryRel}?ref=${openedNetrunner.source_ref}`, {
+    headers: { authorization: `Bearer ${owner.token}` },
+  });
+  assert.equal(largeBinaryResponse.status, 200,
+    "an exact snapshot serves a valid repository asset larger than 1 MiB");
+  assert.deepEqual(Buffer.from(await largeBinaryResponse.arrayBuffer()), largeBinarySource,
+    "exact snapshot assets preserve every binary byte instead of passing through UTF-8 text");
   assert(savedBuilds.decks.some(deck => deck.id === "burn-rush" && deck._legal),
     "the build workspace reports committed format legality");
   assert(savedBuilds.printings.some(printing => printing.id === "p_kindling_promo"),
@@ -108,6 +130,115 @@ try {
   });
   assert.equal(duplicateBuildResponse.status, 409,
     "creating a build cannot silently overwrite an existing stable deck ID");
+
+  const invalidPlaytest = await fetch(`${origin}/api/games/ember/playtests`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ players: [{ name: owner.user }] }),
+  });
+  assert.equal(invalidPlaytest.status, 422,
+    "a browser cannot accidentally persist an account object as a playtester name");
+  assert.equal((await invalidPlaytest.json()).written, false);
+
+  assert.notEqual(exactBuildCommit.commit, openedProject.source_ref,
+    "the project advanced after the play surface captured its tested version");
+  assert.deepEqual(Buffer.from(await (await fetch(`${origin}${openedArtUrl}`)).arrayBuffer()), openedArtBytes,
+    "an exact artwork URL still serves the snapshot bytes after project HEAD advances");
+  const exactPlaytest = await api("/api/games/ember/playtests", {
+    method: "POST", token: owner.token, json: {
+      id: "exact-ref-playtest", date: "2026-09-11", version_ref: openedProject.source_ref,
+      location: "in-person", duration_minutes: 42, notes: "The original build stayed on the table.",
+      players: [{ name: " project-owner ", deck_id: "burn-rush", result: "WIN" }],
+    },
+  });
+  assert.equal(exactPlaytest.pinned, openedProject.source_ref,
+    "submitting after HEAD advances still pins the exact version that was played");
+  assert.match(exactPlaytest.commit, /^[0-9a-f]{40}$/);
+  assert.equal(exactPlaytest.path, "playtests/exact-ref-playtest.json");
+  const exactSession = JSON.parse(readFileSync(join(games, "ember", exactPlaytest.path), "utf8"));
+  assert.equal(exactSession.version_ref, openedProject.source_ref);
+  assert.equal(exactSession.notes, "The original build stayed on the table.");
+  assert.deepEqual(exactSession.players, [{ name: "project-owner", deck_id: "burn-rush", result: "win" }],
+    "the committed record keeps tester credit, selected build, and normalized result");
+
+  const beforeDuplicatePlaytest = (await api("/api/games/ember/ui", { token: owner.token })).source_ref;
+  const duplicatePlaytest = await fetch(`${origin}/api/games/ember/playtests`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ id: "exact-ref-playtest", version_ref: openedProject.source_ref,
+      notes: "This must never replace the first session.", players: [{ name: "project-owner" }] }),
+  });
+  const duplicatePlaytestBody = await duplicatePlaytest.json();
+  assert.equal(duplicatePlaytest.status, 409);
+  assert.equal(duplicatePlaytestBody.written, false,
+    "an explicit playtest ID is create-only and reports that no write happened");
+  assert.equal((await api("/api/games/ember/ui", { token: owner.token })).source_ref, beforeDuplicatePlaytest,
+    "rejecting a duplicate does not create a repository commit");
+  assert.equal(JSON.parse(readFileSync(join(games, "ember", exactPlaytest.path), "utf8")).notes,
+    "The original build stayed on the table.", "duplicate submission never overwrites the existing record");
+
+  const simultaneousPlaytests = await Promise.all(["Table A", "Table B"].map(name =>
+    api("/api/games/ember/playtests", { method: "POST", token: owner.token, json: {
+      date: "2026-09-11", version_ref: openedProject.source_ref, location: "store-night",
+      notes: `${name} notes`, players: [{ name, deck_id: "burn-rush", result: "draw" }],
+    } })));
+  assert.notEqual(simultaneousPlaytests[0].id, simultaneousPlaytests[1].id,
+    "same-day sessions receive unique stable IDs rather than a date/location collision");
+  for (const logged of simultaneousPlaytests) {
+    assert.match(logged.commit, /^[0-9a-f]{40}$/);
+    assert.equal(logged.pinned, openedProject.source_ref);
+    assert(existsSync(join(games, "ember", logged.path)), `${logged.path} survived the concurrent append`);
+  }
+  assert.equal(JSON.parse(readFileSync(join(games, "ember", simultaneousPlaytests[0].path), "utf8")).notes, "Table A notes");
+  assert.equal(JSON.parse(readFileSync(join(games, "ember", simultaneousPlaytests[1].path), "utf8")).notes, "Table B notes",
+    "concurrent additive submissions both remain in the final project tree");
+
+  const historicalCardRef = (await api("/api/games/ember/ui", { token: owner.token })).source_ref;
+  const historicalPaths = ["components/cards.json", "components/printings.json", "decks/burn-rush.json",
+    "decks/alt-art-burn-rush.json", "sets/sets.yaml"];
+  const historicalFiles = new Map(historicalPaths.map(path => [path, readFileSync(join(games, "ember", path))]));
+  const cardsWithoutRat = JSON.parse(historicalFiles.get("components/cards.json")).filter(card => card.id !== "cinder_rat");
+  const printingsWithoutRat = JSON.parse(historicalFiles.get("components/printings.json"))
+    .filter(printing => printing.card_id !== "cinder_rat");
+  const burnRushWithoutRat = JSON.parse(historicalFiles.get("decks/burn-rush.json"));
+  delete burnRushWithoutRat.cards.cinder_rat;
+  writeFileSync(join(games, "ember", "components/cards.json"), JSON.stringify(cardsWithoutRat, null, 2) + "\n");
+  writeFileSync(join(games, "ember", "components/printings.json"), JSON.stringify(printingsWithoutRat, null, 2) + "\n");
+  writeFileSync(join(games, "ember", "decks/burn-rush.json"), JSON.stringify(burnRushWithoutRat, null, 2) + "\n");
+  rmSync(join(games, "ember", "decks/alt-art-burn-rush.json"));
+  writeFileSync(join(games, "ember", "sets/sets.yaml"), historicalFiles.get("sets/sets.yaml").toString()
+    .replace("size: 8", "size: 7"));
+  git(["add", "-A", "games/ember"]); git(["commit", "-qm", "fixture: retire one card and tested build"]);
+  const deletedTreeValidation = spawnSync(process.execPath, [join(ROOT, "tools", "validate.mjs"), join(games, "ember")],
+    { cwd: ROOT, encoding: "utf8" });
+  assert.equal(deletedTreeValidation.status, 0,
+    `historical playtest references do not invalidate today's otherwise valid tree:\n${deletedTreeValidation.stdout}\n${deletedTreeValidation.stderr}`);
+  const historicalReferencePlaytest = await api("/api/games/ember/playtests", {
+    method: "POST", token: owner.token, json: {
+      id: "retired-card-session", date: "2026-09-11", version_ref: historicalCardRef,
+      notes: "Logged after the tested card and build left HEAD.",
+      players: [{ name: "project-owner", deck_id: "alt-art-burn-rush", result: "win" }],
+      card_notes: [{ card_id: "cinder_rat", tag: "fun", note: "This was the highlight of the old build." }],
+    },
+  });
+  assert.equal(historicalReferencePlaytest.pinned, historicalCardRef);
+  assert.equal(historicalReferencePlaytest.session.players[0].deck_id, "alt-art-burn-rush");
+  assert.equal(historicalReferencePlaytest.session.card_notes[0].card_id, "cinder_rat",
+    "card and deck references are validated against the tested snapshot rather than current HEAD");
+  const bogusHistoricalResponse = await fetch(`${origin}/api/games/ember/playtests`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ id: "bogus-historical-session", version_ref: historicalCardRef,
+      players: [{ name: "project-owner", deck_id: "never-existed-deck" }],
+      card_notes: [{ card_id: "never_existed_card", tag: "bug", note: "Must not be accepted." }] }),
+  });
+  const bogusHistorical = await bogusHistoricalResponse.json();
+  assert.equal(bogusHistoricalResponse.status, 422);
+  assert.equal(bogusHistorical.written, false);
+  assert(bogusHistorical.report.some(line => line.includes("never_existed_card")));
+  assert(bogusHistorical.report.some(line => line.includes("never-existed-deck")),
+    "bogus references are still rejected against the pinned source version");
+  for (const [path, bytes] of historicalFiles) {
+    writeFileSync(join(games, "ember", path), bytes);
+  }
+  git(["add", "-A", "games/ember"]); git(["commit", "-qm", "fixture: restore retired card and tested build"]);
 
   const targetProfile = {
     schema_version: 1, preset: "the-game-crafter-poker",
@@ -371,8 +502,9 @@ w.save(p)
   assert.equal(JSON.parse(readFileSync(join(games, "ember", "templates", "component-design.json")))
     .families[0].style.fill, "#123456");
   const componentExport = await api("/api/games/ember/export/components?wait=1", { method: "POST", token: owner.token });
-  assert.match(componentExport.urls[0], /ember-components-v6\.zip$/);
+  assert.match(componentExport.urls[0], /ember-components-v7\.zip$/);
   assert(componentExport.urls.some(url => /cut-sheets\/01-a4\.svg$/.test(url)));
+  assert(componentExport.urls.some(url => /setup-maps\/first-table\.svg$/.test(url)));
   const componentArchive = readZip(Buffer.from(await (await fetch(`${origin}${componentExport.urls[0]}`)).arrayBuffer()));
   const componentManifest = JSON.parse(componentArchive.get("manifest.json"));
   assert.equal(componentManifest.source_ref, componentExport.ref);
@@ -387,12 +519,127 @@ w.save(p)
   assert.equal(componentManifest.totals.setup_maps, 1);
   assert(componentManifest.source_files.includes(firstSetup.path));
   assert(componentArchive.has("setup-maps/first-table.svg"));
+  const standaloneSetupMapUrl = componentExport.urls.find(url => url.endsWith("/setup-maps/first-table.svg"));
+  const standaloneSetupMap = Buffer.from(await (await fetch(`${origin}${standaloneSetupMapUrl}`)).arrayBuffer());
+  assert.deepEqual(standaloneSetupMap, componentArchive.get("setup-maps/first-table.svg"),
+    "the standalone exact-version setup map is byte-identical to the map inside the component kit");
   assert(componentArchive.has("faces/spark_token.svg"));
   assert(componentArchive.has("faces/ash_token-back.svg"));
   assert(componentArchive.has("cut-sheets/01-a4.svg"));
   assert(componentArchive.has("cut-sheets/01-a4-back.svg"));
   assert(componentArchive.has("family-templates/ember-token.svg"));
   assert.equal(componentManifest.family_templates.length, 2);
+
+  const componentReleaseReady = await api("/api/games/ember/releases/preflight", { token: owner.token });
+  assert.deepEqual(componentReleaseReady.components, { required: true, ready: true, piece_types: 3,
+    setup_maps: 1, artifact: "ember-components-v7.zip", error: null });
+  assert(componentReleaseReady.checks.some(check => check.key === "components" && check.required && check.pass),
+    "release preflight proves component production from the exact candidate ref");
+  const emptyComponentReady = await api("/api/games/netrunner-sg/releases/preflight", { token: owner.token });
+  assert.deepEqual(emptyComponentReady.components, { required: false, ready: true, piece_types: 0,
+    setup_maps: 0, artifact: null, error: null },
+    "a project without production pieces does not gain a fake component release requirement");
+  const releaseSideEffects = () => {
+    const testDb = new DatabaseSync(dbPath);
+    const counts = { releases: testDb.prepare("SELECT COUNT(*) AS count FROM releases WHERE game_slug = 'ember'").get().count,
+      jobs: testDb.prepare("SELECT COUNT(*) AS count FROM export_jobs WHERE game_slug = 'ember'").get().count };
+    testDb.close(); return counts;
+  };
+
+  const componentDesignPath = join(games, "ember", "templates", "component-design.json");
+  const releaseableComponentDesign = readFileSync(componentDesignPath, "utf8");
+  const unresolvedComponentDesign = JSON.parse(releaseableComponentDesign);
+  delete unresolvedComponentDesign.production.player_count;
+  writeFileSync(componentDesignPath, JSON.stringify(unresolvedComponentDesign, null, 2) + "\n");
+  git(["add", "games/ember/templates/component-design.json"]);
+  git(["commit", "-qm", "fixture: unresolved per-player component quantity"]);
+  const unresolvedReady = await api("/api/games/ember/releases/preflight", { token: owner.token });
+  assert.equal(unresolvedReady.components.required, true);
+  assert.equal(unresolvedReady.components.ready, false);
+  assert.equal(unresolvedReady.components.artifact, null);
+  assert.match(unresolvedReady.components.error, /production\.player_count/);
+  const unresolvedEffects = releaseSideEffects();
+  const unresolvedResponse = await fetch(`${origin}/api/games/ember/releases`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ tag: "v8-unresolved", base_ref: unresolvedReady.ref }),
+  });
+  assert.equal(unresolvedResponse.status, 422);
+  assert.match((await unresolvedResponse.json()).error, /component production/);
+  assert.deepEqual(releaseSideEffects(), unresolvedEffects,
+    "unresolved per-player quantities cannot create export jobs or a release");
+  assert.notEqual(spawnSync("git", ["show-ref", "--verify", "--quiet", "refs/tags/forge/ember/v8-unresolved"],
+    { cwd: temp }).status, 0, "unresolved component quantities create no repository tag");
+  writeFileSync(componentDesignPath, releaseableComponentDesign);
+  git(["add", "games/ember/templates/component-design.json"]);
+  git(["commit", "-qm", "fixture: restore exact component player count"]);
+
+  const releaseableTokens = readFileSync(join(games, "ember", "components", "tokens.json"), "utf8");
+  const brokenTokens = JSON.parse(releaseableTokens);
+  brokenTokens[0].art = "assets/components/release-preflight-missing.png";
+  writeFileSync(join(games, "ember", "components", "tokens.json"), JSON.stringify(brokenTokens, null, 2) + "\n");
+  git(["add", "games/ember/components/tokens.json"]);
+  git(["commit", "-qm", "fixture: component exporter failure"]);
+  const brokenComponentReady = await api("/api/games/ember/releases/preflight", { token: owner.token });
+  assert.equal(brokenComponentReady.components.required, true);
+  assert.equal(brokenComponentReady.components.ready, false);
+  assert.match(brokenComponentReady.components.error, /release-preflight-missing\.png/);
+  assert(brokenComponentReady.checks.some(check => check.key === "components" && !check.pass));
+  const effectsBeforeFailedRelease = releaseSideEffects();
+  const brokenReleaseResponse = await fetch(`${origin}/api/games/ember/releases`, {
+    method: "POST", headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ tag: "v9-component-fail", title: "Must not publish", base_ref: brokenComponentReady.ref }),
+  });
+  const brokenRelease = await brokenReleaseResponse.json();
+  assert.equal(brokenReleaseResponse.status, 422);
+  assert.equal(brokenRelease.written, false);
+  assert.match(brokenRelease.error, /component production/);
+  assert.deepEqual(releaseSideEffects(), effectsBeforeFailedRelease,
+    "failed required component production creates no release or export-job side effects");
+  assert.notEqual(spawnSync("git", ["show-ref", "--verify", "--quiet", "refs/tags/forge/ember/v9-component-fail"],
+    { cwd: temp }).status, 0, "failed required component production creates no repository tag");
+
+  writeFileSync(join(games, "ember", "components", "tokens.json"), releaseableTokens);
+  git(["add", "games/ember/components/tokens.json"]);
+  git(["commit", "-qm", "fixture: restore releaseable components"]);
+  const finalComponentReady = await api("/api/games/ember/releases/preflight", { token: owner.token });
+  assert(finalComponentReady.ready && finalComponentReady.components.ready && finalComponentReady.components.required);
+  const componentRelease = await api("/api/games/ember/releases", { method: "POST", token: owner.token,
+    json: { tag: "v0.7", title: "Component production", base_ref: finalComponentReady.ref } });
+  assert(componentRelease.build.required_exports.includes("components"));
+  assert(componentRelease.artifacts.some(item => item.status === "ready" && item.name === "ember-components-v7.zip"));
+  assert(componentRelease.artifacts.some(item => item.status === "ready" && item.name === "setup-maps/first-table.svg"));
+  const componentReleaseDetail = await api("/api/games/ember/releases/v0.7", { token: owner.token });
+  assert.match(componentReleaseDetail.downloads.components, /ember-components-v7\.zip$/);
+  assert.deepEqual(componentReleaseDetail.downloads.setup_maps,
+    [{ file: "setup-maps/first-table.svg",
+      url: `/cache/exports/ember/${componentRelease.sha}/setup-maps/first-table.svg` }]);
+  assert(componentReleaseDetail.downloads.component_sheets.length >= 2);
+  const releasedComponentArchive = readZip(Buffer.from(await (await fetch(
+    `${origin}${componentReleaseDetail.downloads.components}`)).arrayBuffer()));
+  const releasedSetupUrl = componentReleaseDetail.downloads.setup_maps[0].url;
+  const releasedSetupMap = Buffer.from(await (await fetch(`${origin}${releasedSetupUrl}`)).arrayBuffer());
+  assert.deepEqual(releasedSetupMap, releasedComponentArchive.get("setup-maps/first-table.svg"));
+  writeFileSync(join(cacheDir, "exports", "ember", componentRelease.sha, "setup-maps", "first-table.svg"),
+    Buffer.from("corrupt released component map"));
+  const releaseDb = new DatabaseSync(dbPath);
+  const originalBuildJson = releaseDb.prepare("SELECT build_json FROM releases WHERE game_slug = 'ember' AND tag = 'v0.7'").get().build_json;
+  const unavailableBuild = JSON.parse(originalBuildJson); unavailableBuild.exporters.components = 6;
+  releaseDb.prepare("UPDATE releases SET build_json = ? WHERE game_slug = 'ember' AND tag = 'v0.7'")
+    .run(JSON.stringify(unavailableBuild));
+  releaseDb.close();
+  const unavailableRecovery = await fetch(`${origin}${releasedSetupUrl}`);
+  assert.equal(unavailableRecovery.status, 503);
+  assert.match((await unavailableRecovery.json()).error, /historical component exporter is unavailable/,
+    "Forge fails explicitly instead of pretending a current exporter can recreate historical component bytes");
+  const restoreReleaseDb = new DatabaseSync(dbPath);
+  restoreReleaseDb.prepare("UPDATE releases SET build_json = ? WHERE game_slug = 'ember' AND tag = 'v0.7'")
+    .run(originalBuildJson);
+  restoreReleaseDb.close();
+  const recoveredSetupResponse = await fetch(`${origin}${releasedSetupUrl}`);
+  const recoveredSetupMap = Buffer.from(await recoveredSetupResponse.arrayBuffer());
+  assert.equal(recoveredSetupResponse.status, 200);
+  assert.deepEqual(recoveredSetupMap, releasedSetupMap,
+    "a missing or corrupt frozen setup map regenerates byte-for-byte from its exact source and receipt");
 
   const nandeckExport = await api("/api/games/ember/export/nandeck?wait=1", { method: "POST", token: owner.token });
   assert.match(nandeckExport.urls[0], /ember-nandeck-v1\.zip$/);

@@ -1,13 +1,18 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import yaml from "js-yaml";
 import { buildComponentSvgProject } from "./component-svg.mjs";
 import { auditRights, RIGHTS_MANIFEST } from "../../platform/rights.mjs";
 
 export const COMPONENT_DESIGN_PATH = "templates/component-design.json";
 export const COMPONENT_EXPORT_PROFILE = "forge-component-production";
-export const COMPONENT_EXPORT_VERSION = 6;
+export const COMPONENT_EXPORT_VERSION = 7;
+export const COMPONENT_PRODUCTION_LIMITS = Object.freeze({ source_bytes: 2 * 1024 * 1024,
+  piece_types: 256, family_types: 128, resolved_per_piece: 500, physical_pieces: 5_000,
+  dimension_mm: 2_000, setup_files: 128, setup_items: 5_000, setup_board_dimension: 100_000,
+  production_pages: 1_000, source_art_bytes: 48 * 1024 * 1024,
+  expanded_art_bytes: 64 * 1024 * 1024 });
 
 const PAGE = { A4: { width: 210, height: 297 }, Letter: { width: 215.9, height: 279.4 } };
 const esc = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
@@ -15,6 +20,20 @@ const esc = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<"
 const round = value => Math.round(Number(value) * 1000) / 1000;
 const deep = (value, path) => String(path || "").split(".").reduce((current, key) => current?.[key], value);
 const mime = path => ({ ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml" }[extname(path).toLowerCase()] || "application/octet-stream");
+const COMPONENT_FILE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+function assertComponentFileId(value, label) {
+  if (typeof value !== "string" || !COMPONENT_FILE_ID.test(value))
+    throw new Error(`unsafe ${label} '${String(value)}': use 1-128 ASCII letters, numbers, underscores, or hyphens`);
+  return value;
+}
+function assertComponentEntryName(name) {
+  if (typeof name !== "string" || !name || name.length > 512 || name.startsWith("/") || name.includes("\\") || name.includes("\0"))
+    throw new Error(`unsafe component production entry name: ${String(name)}`);
+  const parts = name.split("/");
+  if (parts.some(part => !part || part === "." || part === ".." || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(part)))
+    throw new Error(`unsafe component production entry name: ${name}`);
+  return name;
+}
 
 export function defaultComponentDesign() {
   return {
@@ -233,10 +252,121 @@ function largePiecePages(gameDir, pieces, design, excluded, symbols) {
 function loadComponentSetups(gameDir) {
   const root = join(gameDir, "setups");
   if (!existsSync(root)) return [];
-  return readdirSync(root).filter(name => /\.(?:json|ya?ml)$/i.test(name)).sort().map(name => {
-    const path = `setups/${name}`, source = readFileSync(join(root, name), "utf8");
+  const names = readdirSync(root).filter(name => /\.(?:json|ya?ml)$/i.test(name)).sort();
+  if (names.length > COMPONENT_PRODUCTION_LIMITS.setup_files)
+    throw new Error(`component production exceeds the ${COMPONENT_PRODUCTION_LIMITS.setup_files}-setup limit`);
+  return names.map(name => {
+    const sourcePath = join(root, name);
+    if (statSync(sourcePath).size > COMPONENT_PRODUCTION_LIMITS.source_bytes)
+      throw new Error(`component setup '${name}' exceeds the ${COMPONENT_PRODUCTION_LIMITS.source_bytes}-byte source limit`);
+    const path = `setups/${name}`, source = readFileSync(sourcePath, "utf8");
     return { path, document: name.toLowerCase().endsWith(".json") ? JSON.parse(source) : yaml.load(source) };
   });
+}
+
+function componentProductionBounds(pieces, design, setups) {
+  if (!Array.isArray(pieces) || pieces.length > COMPONENT_PRODUCTION_LIMITS.piece_types)
+    throw new Error(`component production exceeds the ${COMPONENT_PRODUCTION_LIMITS.piece_types}-piece-type limit`);
+  if (!Array.isArray(design.families) || design.families.length > COMPONENT_PRODUCTION_LIMITS.family_types)
+    throw new Error(`component production exceeds the ${COMPONENT_PRODUCTION_LIMITS.family_types}-family limit`);
+  let physicalPieces = 0;
+  for (const piece of pieces) {
+    const family = componentFamily(design, piece);
+    if (!family) throw new Error(`no component design family for '${piece.id}'`);
+    const quantity = componentQuantity(piece, design);
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > COMPONENT_PRODUCTION_LIMITS.resolved_per_piece)
+      throw new Error(`component '${piece.id}' exceeds the ${COMPONENT_PRODUCTION_LIMITS.resolved_per_piece}-copy resolved quantity limit`);
+    physicalPieces += quantity;
+    for (const face of piece.back ? [piece, componentFace(piece, "back")] : [piece]) {
+      const faceFamily = componentFamily(design, face), width = Number(face.size_mm?.width || faceFamily?.size_mm?.width);
+      const height = Number(face.size_mm?.height || faceFamily?.size_mm?.height);
+      if (![width, height].every(value => Number.isFinite(value) && value > 0 && value <= COMPONENT_PRODUCTION_LIMITS.dimension_mm))
+        throw new Error(`component '${piece.id}' exceeds the ${COMPONENT_PRODUCTION_LIMITS.dimension_mm} mm finished-dimension limit`);
+    }
+  }
+  if (physicalPieces > COMPONENT_PRODUCTION_LIMITS.physical_pieces)
+    throw new Error(`component production exceeds the ${COMPONENT_PRODUCTION_LIMITS.physical_pieces}-physical-piece limit`);
+  let setupItems = 0;
+  for (const { document: setup } of setups) {
+    const boardWidth = Number(setup?.board?.width ?? 1600), boardHeight = Number(setup?.board?.height ?? 1000);
+    if (![boardWidth, boardHeight].every(value => Number.isFinite(value) && value > 0
+      && value <= COMPONENT_PRODUCTION_LIMITS.setup_board_dimension))
+      throw new Error(`component setup '${setup?.id}' exceeds the ${COMPONENT_PRODUCTION_LIMITS.setup_board_dimension}-unit board-dimension limit`);
+    setupItems += [setup?.pieces, setup?.zones, setup?.seats, setup?.stacks, setup?.counters]
+      .reduce((sum, items) => sum + (Array.isArray(items) ? items.length : 0), 0);
+  }
+  if (setupItems > COMPONENT_PRODUCTION_LIMITS.setup_items)
+    throw new Error(`component production exceeds the ${COMPONENT_PRODUCTION_LIMITS.setup_items}-setup-item limit`);
+  return { physicalPieces };
+}
+
+function largePiecePageEstimate(pieces, design, excluded) {
+  const sheet = design.production.sheet, page = PAGE[sheet.page] || PAGE.A4, margin = sheet.margin_mm;
+  const printableWidth = page.width - margin * 2, printableHeight = page.height - margin * 2;
+  const overlap = Math.min(Number(design.production.large_piece_overlap_mm ?? 8), printableWidth - .1, printableHeight - .1);
+  const stepX = printableWidth - overlap, stepY = printableHeight - overlap, bleed = design.production.bleed_mm || 0;
+  let pages = 0;
+  for (const piece of pieces.filter(candidate => excluded.includes(candidate.id))) {
+    for (const side of piece.back ? ["front", "back"] : ["front"]) {
+      const face = componentFace(piece, side), family = componentFamily(design, face);
+      const width = (face.size_mm?.width || family.size_mm.width) + bleed * 2;
+      const height = (face.size_mm?.height || family.size_mm.height) + bleed * 2;
+      const columns = Math.max(1, Math.ceil(Math.max(0, width - printableWidth) / stepX) + 1);
+      const rows = Math.max(1, Math.ceil(Math.max(0, height - printableHeight) / stepY) + 1);
+      pages += componentQuantity(piece, design) * rows * columns;
+    }
+  }
+  return pages;
+}
+
+function componentArtFile(gameDir, rel) {
+  if (typeof rel !== "string" || !rel || rel.startsWith("/") || rel.includes("\\") || rel.includes("\0")
+    || rel.split("/").some(part => !part || part === "." || part === ".."))
+    throw new Error(`unsafe component art path '${String(rel)}'`);
+  const base = resolve(gameDir), target = resolve(base, rel), local = relative(base, target);
+  if (!local || local === ".." || local.startsWith(`..${sep}`) || isAbsolute(local))
+    throw new Error(`component art path '${rel}' escapes the exact project snapshot`);
+  if (!existsSync(target) || !statSync(target).isFile()) throw new Error(`component art asset '${rel}' does not exist`);
+  return target;
+}
+
+function componentArtworkBudget(gameDir, pieces, design) {
+  const sheet = design.production.sheet, page = PAGE[sheet.page] || PAGE.A4, margin = sheet.margin_mm;
+  const printableWidth = page.width - margin * 2, printableHeight = page.height - margin * 2;
+  const overlap = Math.min(Number(design.production.large_piece_overlap_mm ?? 8), printableWidth - .1, printableHeight - .1);
+  const stepX = printableWidth - overlap, stepY = printableHeight - overlap, bleed = design.production.bleed_mm || 0;
+  const sizes = new Map(), used = new Set(); let expanded = 0;
+  const bytesOf = path => {
+    if (!sizes.has(path)) sizes.set(path, statSync(componentArtFile(gameDir, path)).size);
+    used.add(path); return sizes.get(path);
+  };
+  for (const piece of pieces) {
+    const quantity = componentQuantity(piece, design);
+    for (const side of piece.back ? ["front", "back"] : ["front"]) {
+      const face = componentFace(piece, side), art = face.art;
+      if (!art) continue;
+      const family = componentFamily(design, face), width = (face.size_mm?.width || family.size_mm.width) + bleed * 2;
+      const height = (face.size_mm?.height || family.size_mm.height) + bleed * 2;
+      const tiles = width > printableWidth || height > printableHeight
+        ? Math.max(1, Math.ceil(Math.max(0, width - printableWidth) / stepX) + 1)
+          * Math.max(1, Math.ceil(Math.max(0, height - printableHeight) / stepY) + 1) : 1;
+      const encodedBytes = 4 * Math.ceil(bytesOf(art) / 3);
+      expanded += encodedBytes * (1 + quantity * tiles);
+    }
+    // Die and alternate faces are not all sheet-rendered today. Budget them as
+    // if every physical copy were embedded so adding that output cannot turn a
+    // previously accepted exact release into an unbounded synchronous render.
+    for (const face of piece.faces || []) if (face.art) {
+      const encodedBytes = 4 * Math.ceil(bytesOf(face.art) / 3);
+      expanded += encodedBytes * (1 + quantity);
+    }
+  }
+  const source = [...used].reduce((sum, path) => sum + sizes.get(path), 0);
+  if (source > COMPONENT_PRODUCTION_LIMITS.source_art_bytes)
+    throw new Error(`component artwork exceeds the ${COMPONENT_PRODUCTION_LIMITS.source_art_bytes}-byte source-art limit`);
+  if (expanded > COMPONENT_PRODUCTION_LIMITS.expanded_art_bytes)
+    throw new Error(`component artwork exceeds the ${COMPONENT_PRODUCTION_LIMITS.expanded_art_bytes}-byte expanded-render limit`);
+  return { source_bytes: source, expanded_bytes: expanded };
 }
 
 function renderSetupMap(setupEntry, pieces, design) {
@@ -275,12 +405,22 @@ function componentArtwork(piece) {
 
 export function buildComponentProduction(gameDir, { sourceRef = "HEAD" } = {}) {
   const piecesPath = join(gameDir, "components/tokens.json");
+  if (existsSync(piecesPath) && statSync(piecesPath).size > COMPONENT_PRODUCTION_LIMITS.source_bytes)
+    throw new Error(`components/tokens.json exceeds the ${COMPONENT_PRODUCTION_LIMITS.source_bytes}-byte source limit`);
   const pieces = existsSync(piecesPath) ? JSON.parse(readFileSync(piecesPath, "utf8")) : [];
   if (!pieces.length) throw new Error("game has no components/tokens.json pieces to manufacture");
+  const designPath = join(gameDir, COMPONENT_DESIGN_PATH);
+  if (existsSync(designPath) && statSync(designPath).size > COMPONENT_PRODUCTION_LIMITS.source_bytes)
+    throw new Error(`${COMPONENT_DESIGN_PATH} exceeds the ${COMPONENT_PRODUCTION_LIMITS.source_bytes}-byte source limit`);
   const design = loadComponentDesign(gameDir), symbols = gameSymbols(gameDir), bleed = design.production?.bleed_mm || 0;
+  for (const piece of pieces) assertComponentFileId(piece.id, "component id");
+  for (const family of design.families || []) assertComponentFileId(family.id, "component family id");
+  const setupEntries = loadComponentSetups(gameDir);
+  for (const setup of setupEntries) assertComponentFileId(setup.document?.id, "component setup id");
+  componentProductionBounds(pieces, design, setupEntries);
   const rightsAudit = auditRights(gameDir, { sourceSha: sourceRef }), rightsByPath = new Map(rightsAudit.files.map(file => [file.path, file]));
   const artPaths = [...new Set(pieces.flatMap(componentArtwork).map(item => item.path))].sort();
-  for (const path of artPaths) if (!existsSync(join(gameDir, path))) throw new Error(`component art asset '${path}' does not exist`);
+  const artworkBudget = componentArtworkBudget(gameDir, pieces, design);
   const playerCount = Number.isInteger(design.production?.player_count) ? design.production.player_count : null;
   const hasPerPlayer = pieces.some(piece => piece.per_player);
   const entries = new Map(), rendered = [];
@@ -301,7 +441,7 @@ export function buildComponentProduction(gameDir, { sourceRef = "HEAD" } = {}) {
       entries.set(backFile, Buffer.from(backSvg)); backSha = createHash("sha256").update(backSvg).digest("hex"); backFamily = reverseFamily.id;
     }
     const artwork = componentArtwork(piece).map(item => ({ ...item,
-      sha256: createHash("sha256").update(readFileSync(join(gameDir, item.path))).digest("hex"),
+      sha256: createHash("sha256").update(readFileSync(componentArtFile(gameDir, item.path))).digest("hex"),
       rights: rightsByPath.has(item.path) ? { license: rightsByPath.get(item.path).license,
         status: rightsByPath.get(item.path).status, copyright: rightsByPath.get(item.path).copyright,
         redistribution: rightsByPath.get(item.path).redistribution,
@@ -313,6 +453,10 @@ export function buildComponentProduction(gameDir, { sourceRef = "HEAD" } = {}) {
       sha256: createHash("sha256").update(svg).digest("hex"), ...(backFile ? { back_file: backFile, back_family: backFamily, back_sha256: backSha } : {}) });
   }
   const { page, pages, excluded } = sheetPages(gameDir, pieces, design), sheetFiles = [], backSheetFiles = [];
+  const estimatedPages = pages.length + pages.filter(items => items.some(item => item.piece.back)).length
+    + largePiecePageEstimate(pieces, design, excluded) + setupEntries.length;
+  if (estimatedPages > COMPONENT_PRODUCTION_LIMITS.production_pages)
+    throw new Error(`component production exceeds the ${COMPONENT_PRODUCTION_LIMITS.production_pages}-page limit`);
   pages.forEach((items, index) => {
     const file = `cut-sheets/${String(index + 1).padStart(2, "0")}-${design.production.sheet.page.toLowerCase()}.svg`;
     const labels = items.map(item => `<text x="${round(item.x)}" y="${round(item.y - 1)}" font-family="Arial,sans-serif" font-size="2.2mm" fill="#4b5563">${esc(item.piece.name)} · ${item.copy + 1}</text>`).join("");
@@ -333,7 +477,7 @@ export function buildComponentProduction(gameDir, { sourceRef = "HEAD" } = {}) {
   const largePieceTiles = largePiecePages(gameDir, pieces, design, excluded, symbols);
   for (const tiled of largePieceTiles) for (const tile of tiled.files) entries.set(tile.file, tile.content);
   const largePieceFiles = largePieceTiles.flatMap(tiled => tiled.files.map(tile => tile.file));
-  const setupEntries = loadComponentSetups(gameDir), setupMaps = setupEntries.map(setup => renderSetupMap(setup, pieces, design));
+  const setupMaps = setupEntries.map(setup => renderSetupMap(setup, pieces, design));
   for (const map of setupMaps) entries.set(map.file, map.content);
   const manifest = { profile: COMPONENT_EXPORT_PROFILE, version: COMPONENT_EXPORT_VERSION, source_ref: sourceRef,
     source_files: ["components/tokens.json", ...(existsSync(join(gameDir, COMPONENT_DESIGN_PATH)) ? [COMPONENT_DESIGN_PATH] : []),
@@ -347,6 +491,7 @@ export function buildComponentProduction(gameDir, { sourceRef = "HEAD" } = {}) {
     duplex: { mode: "long-edge-mirrored", print_scale: "100%", alignment_note: "Print each back sheet behind the same-numbered front sheet using long-edge duplex; verify one page before the full run." },
     quantity_resolution: { status: hasPerPlayer && !playerCount ? "unresolved" : "resolved",
       player_count: playerCount, rule: "Pieces marked per_player are multiplied by the versioned production.player_count." },
+    resource_budget: { artwork: artworkBudget, limits: COMPONENT_PRODUCTION_LIMITS },
     excluded_from_standard_cut_sheets: excluded, excluded_from_cut_sheets: [],
     totals: { piece_types: pieces.length,
       declared_physical_pieces: pieces.reduce((sum, piece) => sum + (piece.quantity || 1), 0),
@@ -360,5 +505,6 @@ export function buildComponentProduction(gameDir, { sourceRef = "HEAD" } = {}) {
       "Setup maps freeze authored non-card placement for review and release; the VTT adapter does not yet auto-stage these components."] };
   entries.set("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2) + "\n"));
   entries.set("README.md", Buffer.from(`# Forge component production\n\nExact source: \`${sourceRef}\`\n\n- Individual editable SVG faces are in \`faces/\`; two-sided pieces include a named \`-back.svg\`.\n- Home-print front and long-edge-mirrored back sheets with explicit trim lines are in \`cut-sheets/\`. Print at 100% and verify one duplex page before the full run.\n- Oversize boards and other large pieces are poster-tiled in \`large-pieces/\` with ${design.production.large_piece_overlap_mm ?? 8} mm overlap, assembly crosses, row/column labels, and exact source offsets.\n- Per-player quantities are resolved from the versioned \`production.player_count\`${playerCount ? ` (${playerCount} players for this kit)` : "; this version has no selection, so declared quantities are preserved"}.\n- Bounded, round-trippable layout working copies are in \`family-templates/\`.\n- Version-pinned table placement maps are in \`setup-maps/\`. They are authoring and release proofs; the current VTT adapter does not auto-stage non-card components.\n- Component artwork is embedded in rendered faces; \`manifest.json\` pins each source path, hash, license, credit, rights status, and redistribution rule.\n- \`manifest.json\` also records declared and resolved quantities, family bindings, setup sources, duplex alignment, and production limits.\n- Change component data through Forge or the traced \`tokens.csv\` workflow. Change reusable appearance in Forge Piece Studio or return one of its family SVGs for visual review.\n`));
+  for (const name of entries.keys()) assertComponentEntryName(name);
   return { entries, manifest };
 }

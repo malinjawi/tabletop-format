@@ -32,6 +32,13 @@ const parseAuthor = (a) => {
 };
 const isPointer = (buf) => buf.slice(0, 60).toString().startsWith("version https://git-lfs");
 
+function createOnlyConflict(key, path, cause = null) {
+  return Object.assign(
+    new Error(`project '${key}' already contains '${path}'; no files were written`, cause ? { cause } : undefined),
+    { code: "STORE1_PATH_EXISTS", status: 409, path, written: false },
+  );
+}
+
 /** @param {{root:string, forgeUrl:string, token:string, basicAuth?:string|null, farmDir?:string}} cfg */
 export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, farmDir }) {
   if (!forgeUrl || !token) throw new Error("STORE1=forgejo requires FORGE_URL and FORGE_TOKEN");
@@ -155,22 +162,44 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
   }
 
   /** Batch commit with correct create/update ops + author. The spike's B+C+D as one call. */
-  async function commitFiles(key, files, message, author) {
+  async function commitFiles(key, files, message, author, { createOnlyPaths = [] } = {}) {
     const { owner, slug } = repoOf(key);
+    const createOnly = new Set(createOnlyPaths.map(String));
+    for (const path of createOnly) {
+      const file = files.find(candidate => candidate.path === path);
+      if (!file || file.content === null)
+        throw new Error(`create-only path '${path}' must name a created file in this write`);
+    }
     const ops = [];
     for (const f of files) {
       const sha = await blobShaOf(owner, slug, f.path);
+      if (createOnly.has(f.path) && sha) throw createOnlyConflict(key, f.path);
       if (f.content === null) {
         if (sha) ops.push({ operation: "delete", path: f.path, sha });
         continue;
       }
-      ops.push({ operation: sha ? "update" : "create", path: f.path,
+      ops.push({ operation: createOnly.has(f.path) ? "create" : sha ? "update" : "create", path: f.path,
                  content: Buffer.from(f.content).toString("base64"), ...(sha ? { sha } : {}) });
     }
     if (!ops.length) return { sha: await store.headSha(key) };
     const a = parseAuthor(author);
     const r = await api("POST", `/repos/${owner}/${slug}/contents`, { sudo: owner,
-      body: { branch: "main", message, files: ops, author: a, committer: a }, expect: [200, 201] });
+      body: { branch: "main", message, files: ops, author: a, committer: a } });
+    if (![200, 201].includes(r.status)) {
+      // Forgejo's batch endpoint has no repository-head CAS, but each `create`
+      // operation is checked by the server. If a competitor created the path
+      // after our absence read, the batch fails rather than updating it.
+      // Forgejo versions differ in how they map the same safe non-fast-forward
+      // create race (some return 422, while v15 can surface 500). Re-read the
+      // protected paths after every failed batch and classify only an observed
+      // appearance as the stable create-only conflict.
+      if (createOnly.size) {
+        for (const path of createOnly)
+          if (await blobShaOf(owner, slug, path)) throw createOnlyConflict(key, path);
+      }
+      throw Object.assign(new Error(`forge POST /repos/${owner}/${slug}/contents → ${r.status}: ${JSON.stringify(r.data).slice(0, 300)}`),
+        { status: r.status });
+    }
     reg.set(key, { ...repoOf(key), owner, slug }); // head changed
     const reported = r.data.commit?.sha ?? r.data.files?.[0]?.commit?.sha;
     return { sha: reported
@@ -278,7 +307,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
       return null;
     },
 
-    async writeFiles(slug, files, message, author) {
+    async writeFiles(slug, files, message, author, options = {}) {
       const { owner, slug: repoSlug } = repoOf(slug), prepared = [];
       for (const f of files) {
         if (f.content !== null && f.path.startsWith("assets/") && !isPointer(Buffer.from(f.content))) {
@@ -286,7 +315,7 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
           prepared.push({ ...f, content: up.pointer });
         } else prepared.push(f);
       }
-      return commitFiles(slug, prepared, message, author);
+      return commitFiles(slug, prepared, message, author, options);
     },
 
     async createGame(key, srcTree, message, author) {
@@ -424,6 +453,12 @@ export function createForgejoStore({ root, forgeUrl, token, basicAuth = null, fa
     },
     async getAsset(slug, rel) {
       const buf = await store.readFile(slug, rel);
+      if (!buf) return null;
+      if (isPointer(buf)) { const repo = repoOf(slug); return downloadAsset(lfsUrl(repo.owner, repo.slug), buf.toString(), await lfsAuthorization(), base); }
+      return buf;
+    },
+    async getAssetAt(slug, ref, rel) {
+      const buf = await store.fileAt(slug, ref, rel);
       if (!buf) return null;
       if (isPointer(buf)) { const repo = repoOf(slug); return downloadAsset(lfsUrl(repo.owner, repo.slug), buf.toString(), await lfsAuthorization(), base); }
       return buf;

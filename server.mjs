@@ -316,14 +316,28 @@ async function hubHtml() {
 async function uiGame(slug) {
   const sha = await store.headSha(slug), key = `${slug}@${sha}`;
   if (uiGameCache.has(key)) return uiGameCache.get(key);
-  const dir = await store.dir(slug);
-  const args = [join(ROOT, "tools", "build_hub.py"), "--game-json", dir, "--live-assets"];
-  if (STORE1 === "local") args.push("--repo-root", LOCAL_STORE_ROOT);
-  const { stdout } = await execFileAsync(PYTHON, args, { maxBuffer: 64 * 1024 * 1024 });
-  const game = JSON.parse(stdout);
-  uiGameCache.set(key, game);
-  if (uiGameCache.size > 40) uiGameCache.delete(uiGameCache.keys().next().value);
-  return game;
+  // Live UI payloads carry exact Store-1 asset URLs, so pointer files are
+  // enough to discover source paths. Resolving every LFS object here would
+  // redownload an entire art library after each source commit.
+  const snapshot = await store.materialize(slug, sha, { resolveLfs: false });
+  try {
+    const args = [join(ROOT, "tools", "build_hub.py"), "--game-json", snapshot.dir,
+      "--live-assets", "--route-slug", slug, "--history-ref", sha];
+    if (STORE1 === "local") {
+      // The snapshot lives in a temporary directory, while local commit
+      // history still lives in Store 1. Supplying only its repository-relative
+      // identity preserves the Commits/credit views without reading live game
+      // content a second time.
+      const liveDir = await store.dir(slug);
+      args.push("--repo-root", LOCAL_STORE_ROOT, "--git-rel", relative(LOCAL_STORE_ROOT, liveDir));
+    }
+    const { stdout } = await execFileAsync(PYTHON, args, { maxBuffer: 64 * 1024 * 1024 });
+    // The ref and every game file above come from one immutable snapshot.
+    const game = { ...JSON.parse(stdout), source_ref: sha };
+    uiGameCache.set(key, game);
+    if (uiGameCache.size > 40) uiGameCache.delete(uiGameCache.keys().next().value);
+    return game;
+  } finally { snapshot.cleanup(); }
 }
 
 /* ---------- gateway + middleware ---------- */
@@ -375,6 +389,30 @@ const PRIVATE_PROJECT_CACHE = "private, no-store";
 // Until Forge has an explicit irrevocable-publication policy, shared caches
 // must ask the gateway to re-authorize every public artifact request.
 const PUBLIC_REVALIDATE_CACHE = "public, no-cache, must-revalidate";
+const exactRightsAuditCache = new Map();
+async function exactRightsAudit(slug, ref) {
+  const key = `${slug}@${ref}`;
+  if (exactRightsAuditCache.has(key)) return exactRightsAuditCache.get(key);
+  // Rights declarations and file inventory are ordinary Git source. Auditing
+  // pointer bytes is sufficient here and avoids downloading every LFS object
+  // merely to decide whether one exact asset may be served.
+  // Cache the in-flight work too: one card grid can request dozens of faces in
+  // parallel and must materialize/audit its shared exact tree only once.
+  const pending = (async () => {
+    const snapshot = await store.materialize(slug, ref, { resolveLfs: false });
+    try { return auditRights(snapshot.dir, { sourceSha: ref }); }
+    finally { snapshot.cleanup(); }
+  })();
+  exactRightsAuditCache.set(key, pending);
+  if (exactRightsAuditCache.size > 80)
+    exactRightsAuditCache.delete(exactRightsAuditCache.keys().next().value);
+  try {
+    return await pending;
+  } catch (error) {
+    if (exactRightsAuditCache.get(key) === pending) exactRightsAuditCache.delete(key);
+    throw error;
+  }
+}
 async function projectCacheControl(slug, publicPolicy = PUBLIC_REVALIDATE_CACHE) {
   const game = store.has(slug) ? await q.gameBySlug(db, slug) : null;
   return game?.visibility === "public" ? publicPolicy : PRIVATE_PROJECT_CACHE;
@@ -499,6 +537,46 @@ async function validateCandidateAt(slug, ref, relPath, content, extra = {}) {
 }
 async function validateCandidate(slug, relPath, content, extra = {}) {
   return validateCandidateAt(slug, "HEAD", relPath, content, extra);
+}
+function sourceDocuments(dir, relDir) {
+  const root = join(dir, relDir);
+  if (!existsSync(root)) return [];
+  return readdirSync(root).filter(name => /\.(?:json|ya?ml)$/i.test(name)).sort().flatMap(name => {
+    const raw = readFileSync(join(root, name), "utf8");
+    const document = name.endsWith(".json") ? JSON.parse(raw) : yaml.load(raw);
+    return Array.isArray(document) ? document : [document];
+  });
+}
+/** A playtest is historical evidence: its card/build references belong to the
+ *  immutable version on the table, not today's project head. Validate the
+ *  complete candidate tree, then optionally enforce those references against
+ *  this exact materialized version. */
+async function validatePlaytestCandidateAt(slug, ref, relPath, content, session, { pinnedReferences = false } = {}) {
+  const { dir, cleanup } = await store.materialize(slug, ref, { resolveLfs: false });
+  try {
+    const full = join(dir, relPath);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content);
+    const checked = py("validate.py", [dir]);
+    const report = `${checked.stdout || ""}\n${checked.stderr || ""}`.trim().split("\n").filter(Boolean);
+    if (!pinnedReferences) return { ok: checked.status === 0, report };
+    const cardIds = new Set(JSON.parse(readFileSync(join(dir, "components/cards.json"), "utf8")).map(card => card.id));
+    const deckIds = new Set(sourceDocuments(dir, "decks").map(deck => deck?.id).filter(Boolean));
+    const referenceErrors = [];
+    for (const note of session.card_notes || [])
+      if (!cardIds.has(note.card_id)) referenceErrors.push(
+        `playtest '${session.id}': card_note references unknown card '${note.card_id}' at pinned version ${ref}`);
+    for (const decision of session.decisions || [])
+      if (decision.card_id && !cardIds.has(decision.card_id)) referenceErrors.push(
+        `playtest '${session.id}': decision references unknown card '${decision.card_id}' at pinned version ${ref}`);
+    for (const player of session.players || [])
+      if (player.deck_id && !deckIds.has(player.deck_id)) referenceErrors.push(
+        `playtest '${session.id}': player deck '${player.deck_id}' is unavailable at pinned version ${ref}`);
+    return { ok: checked.status === 0 && referenceErrors.length === 0,
+      report: [...report, ...referenceErrors.map(error => `ERROR ${error}`)] };
+  } catch (error) {
+    return { ok: false, report: [`playtest validation failed: ${error.message}`] };
+  } finally { cleanup(); }
 }
 async function exactFileBytes(slug, ref, relPath) {
   const { dir, cleanup } = await store.materialize(slug, ref);
@@ -730,6 +808,8 @@ const publishedArtifactKind=(slug,file)=>file==="pnp.pdf"?"pnp"
   : file===`${slug}-ttc.zip`?"ttc"
   : file===cache.ttpgArtifactName(slug)||file==="ttpg-manifest.json"?"ttpg"
   : ["print-ready.zip","print-a4.pdf","print-letter.pdf","print-press-rgb.pdf","print-press-cmyk.pdf"].includes(file)?"print"
+  : file.startsWith("cut-sheets/")||file.startsWith("setup-maps/")
+    ||(file.startsWith(`${slug}-components-v`)&&/-components-v[1-9][0-9]*\.zip$/.test(file))?"components"
   : file===cache.projectArtifactName(slug)?"project"
   : file.startsWith("vtt-faces/")||[cache.vttArtifactName("vtt"),cache.vttArtifactName("json")].includes(file)?"vtt":null;
 // TTS saves and raw VirtualTabletop state contain absolute texture URLs. A
@@ -841,11 +921,18 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
         const kind=publishedArtifactKind(slug,file);
         if(!kind){rmSync(fp,{recursive:true,force:true});
           return ctx.send(503,{error:"published artifact cannot be regenerated by this build"});}
+        const build=release.build_json?JSON.parse(release.build_json):null;
+        if(kind==="components"){
+          const recorded=Number(build?.exporters?.components),available=cache.exporterVersion("components");
+          if(!Number.isInteger(recorded)||recorded!==available)
+            return ctx.send(503,{error:"historical component exporter is unavailable; retained immutable release bytes are required",
+              recorded_exporter_version:Number.isInteger(recorded)?recorded:null,
+              available_exporter_version:available});
+        }
         // A cache marker only proves the original family completed. If one
         // sibling was lost, invalidate the whole derived family before the
         // queued rebuild so immutable release recovery succeeds in one GET.
         if(cache.exportReady(slug,ref,kind))discardRegeneratedKind(slug,ref,kind,artifacts);
-        const build=release.build_json?JSON.parse(release.build_json):null;
         await (await queueExportJob({slug,sha:ref,kind,
           publicOrigin:build?.public_origin||PUBLIC_ORIGIN})).promise;
         // One exporter can publish a family of files (for example a TTS save,
@@ -2564,15 +2651,32 @@ gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const rel = ctx.params["*"];
   if (rel.includes("..")) return ctx.send(404, { error: "no such asset" });
-  let buf;
-  try { buf = await store.getAsset(slug, `assets/${rel}`); }
-  catch (e) { return ctx.send(502, { error: e.message }); }
+  const requestedRef = ctx.url.searchParams.get("ref");
+  let buf, exactRef = null;
+  try {
+    if (requestedRef) {
+      exactRef = await store.resolveRef(slug, requestedRef);
+      const rights = await exactRightsAudit(slug, exactRef);
+      if (!rights.publishable) {
+        const access = await accessFor(await authedUser(ctx), slug);
+        // Current Store-2 visibility cannot grant anonymous access to bytes
+        // from an older snapshot whose own declarations prohibited release.
+        // Project members retain authoring access to their history.
+        if (!(access.is_owner || access.role)) {
+          ctx.setHeader("cache-control", PRIVATE_PROJECT_CACHE);
+          return ctx.send(404, { error: "asset not found" });
+        }
+      }
+      buf = await store.getAssetAt(slug, exactRef, `assets/${rel}`);
+    } else buf = await store.getAsset(slug, `assets/${rel}`);
+  }
+  catch (e) { return ctx.send(e.status || 502, { error: e.message }); }
   if (!buf) return ctx.send(404, { error: "no such asset" });
   ctx.sendRaw(200, buf, { "content-type": MIME[rel.toLowerCase().split(".").pop()] ?? "application/octet-stream",
-    // This endpoint follows repository HEAD and can change without its URL
-    // changing. Public callers must revalidate; private callers must not store.
+    // Exact refs never change meaning, but visibility can, so public callers
+    // still revalidate authorization. Omitting ref deliberately follows HEAD.
     "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE) });
-}, "serve asset, materializing LFS pointers");
+}, "serve HEAD or exact-ref asset, materializing LFS pointers");
 
 /* ---------- Affinity — committed data -> native production document ----------
  * Local Affinity is intentionally a derived worker, not Store 1. The bridge
@@ -3092,6 +3196,7 @@ const EXPORT_KINDS = new Set(["print", "pnp", "tts", "ttc", "ttpg", "vtt", "proj
 const activeExportJobs = new Map();
 function exportPayload(slug, sha, fmt, artifact) {
   const dir = artifact.dir, base = `/cache/exports/${slug}/${sha}`;
+  const artifactFiles = (artifact.manifest.files || []).map(file => file.name);
   const printFiles = ["print-ready.zip", "print-a4.pdf", "print-letter.pdf", "print-press-rgb.pdf",
     ...(artifact.manifest.files?.some(item => item.name === "print-press-cmyk.pdf") ? ["print-press-cmyk.pdf"] : [])];
   const urls = fmt === "print" ? printFiles.map(file => `${base}/${file}`)
@@ -3105,8 +3210,9 @@ function exportPayload(slug, sha, fmt, artifact) {
     : fmt === "svg" ? [`${base}/${cache.svgDesignArtifactName(slug)}`]
     : fmt === "pnpink" ? [`${base}/${cache.pnpinkArtifactName(slug)}`]
     : fmt === "squib" ? [`${base}/${cache.squibArtifactName(slug)}`]
-    : fmt === "components" ? [`${base}/${cache.componentArtifactName(slug)}`,
-        ...readdirSync(join(dir, "cut-sheets")).filter(file => file.endsWith(".svg")).sort().map(file => `${base}/cut-sheets/${file}`)]
+    : fmt === "components" ? [cache.componentArtifactName(slug),
+        ...artifactFiles.filter(file => file.startsWith("cut-sheets/") || file.startsWith("setup-maps/")).sort()]
+      .filter(file => artifactFiles.includes(file)).map(file => `${base}/${file}`)
     : fmt === "rulebook" ? JSON.parse(readFileSync(join(dir, "rulebook-build.json"), "utf8")).outputs.map(output => `${base}/${output.file}`)
     : fmt === "publication" ? JSON.parse(readFileSync(join(dir, "publication-build.json"), "utf8")).outputs.map(output => `${base}/${output.file}`)
     : fmt === "vtt" ? [`${base}/${cache.vttArtifactName("vtt")}`, `${base}/${cache.vttArtifactName("json")}`]
@@ -3966,39 +4072,111 @@ gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
   const s = await json(ctx);
-  if (!s || !Array.isArray(s.players) || !s.players.some(p => p && p.name))
-    return ctx.send(422, { error: "a session needs at least one named player" });
-  const sha0 = await store.headSha(slug);
+  if (!s || !Array.isArray(s.players) || !s.players.length)
+    return ctx.send(422, { error: "a session needs at least one named player", written: false });
+  if (s.players.some(p => !p || typeof p !== "object" || Array.isArray(p)
+      || typeof p.name !== "string" || !p.name.trim()))
+    return ctx.send(422, { error: "every player name must be a non-empty string", written: false });
+  if (s.players.some(p => p.deck_id != null
+      && (typeof p.deck_id !== "string" || !p.deck_id.trim())))
+    return ctx.send(422, { error: "a selected deck or build id must be a non-empty string", written: false });
+  if (s.notes != null && typeof s.notes !== "string")
+    return ctx.send(422, { error: "playtest notes must be text", written: false });
+  if (typeof s.notes === "string" && s.notes.length > 20_000)
+    return ctx.send(422, { error: "playtest notes cannot exceed 20000 characters", written: false });
+
+  // The tested version and the commit base are deliberately different. A
+  // table opened at A must stay pinned to A even if authors advance HEAD to B
+  // before the notes are submitted; the new session is then appended at B.
+  const initialWriteHead = await store.headSha(slug);
   let versionRef;
-  try { versionRef = await store.resolveRef(slug, s.version_ref || sha0); }
+  try { versionRef = await store.resolveRef(slug, s.version_ref || initialWriteHead); }
   catch (error) { return ctx.send(error.status || 422, { error: "playtest version is unavailable", detail: error.message }); }
   const date = (typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date)) ? s.date : new Date().toISOString().slice(0, 10);
-  let id = String(s.id || `${date}-${s.location || "session"}`).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
-  if (!/^[a-z0-9]/.test(id)) id = `${date}-session`;
+  const explicitId = Object.prototype.hasOwnProperty.call(s, "id");
+  if (explicitId && (typeof s.id !== "string" || !/^[a-z0-9][a-z0-9_-]{1,63}$/.test(s.id)))
+    return ctx.send(422, { error: "playtest id must be 2-64 lowercase letters, numbers, '_' or '-'", written: false });
+  let id = explicitId ? s.id : newId("pt");
   const RES = new Set(["win", "loss", "draw"]);
   const TAGS = new Set(["balance", "confusing", "fun", "bug", "art", "timing"]);
-  const session = {
-    id, date, version_ref: versionRef,
+  const sessionFor = sessionId => ({
+    id: sessionId, date, version_ref: versionRef,
     ...(s.format_id ? { format_id: s.format_id } : {}),
     ...(s.location ? { location: s.location } : {}),
     ...(s.duration_minutes ? { duration_minutes: parseInt(s.duration_minutes, 10) } : {}),
-    players: s.players.filter(p => p && p.name).map(p => { const res = typeof p.result === "string" ? p.result.toLowerCase() : p.result; return {
-      name: p.name, ...(p.deck_id ? { deck_id: p.deck_id } : {}),
+    players: s.players.map(p => { const res = typeof p.result === "string" ? p.result.toLowerCase() : p.result; return {
+      name: p.name.trim(), ...(p.deck_id ? { deck_id: p.deck_id.trim() } : {}),
       ...(RES.has(res) ? { result: res } : {}),
       ...(typeof p.score === "number" ? { score: p.score } : {}),
       ...(p.first_game ? { first_game: true } : {}) }; }),
+    ...(typeof s.notes === "string" && s.notes.length ? { notes: s.notes } : {}),
     ...(Array.isArray(s.card_notes) ? { card_notes: s.card_notes
       .map(n => (n && n.card_id && n.note) ? { card_id: n.card_id, tag: String(n.tag || "").toLowerCase(), note: n.note, ...(n.suggestion ? { suggestion: n.suggestion } : {}) } : null)
       .filter(n => n && TAGS.has(n.tag)) } : {}),
     ...(Array.isArray(s.decisions) ? { decisions: s.decisions.filter(d => d && d.action)
       .map(d => ({ action: d.action, ...(d.card_id ? { card_id: d.card_id } : {}), ...(d.rationale ? { rationale: d.rationale } : {}) })) } : {}),
-  };
-  const path = `playtests/${id}.json`;
-  const content = JSON.stringify(session, null, 2) + "\n";
-  const v = await validateCandidate(slug, path, content);
-  if (!v.ok) return ctx.send(422, { error: "playtest failed validation", report: v.report });
-  const { sha } = await store.writeFiles(slug, [{ path, content }], `playtest: log session ${id}`, `${u.handle} <${u.email}>`);
-  ctx.send(201, { id, commit: sha, pinned: session.version_ref });
+  });
+  const duplicate = path => ctx.send(409, {
+    error: `playtest '${id}' already exists`, id, path, written: false,
+  });
+
+  // Local Store 1 has a verified exact-head compare-and-commit primitive. Two
+  // simultaneous, distinct sessions that start from the same head therefore
+  // serialize and retry instead of one overwriting the other's tree. Forgejo's
+  // verified contract provides atomic file create/update (and rejects a second
+  // create of the same path), but not a repository-head CAS; do not pretend it
+  // does. In both stores, an existing path is never updated by this route.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const path = `playtests/${id}.json`;
+    const session = sessionFor(id);
+    const content = JSON.stringify(session, null, 2) + "\n";
+    const writeHead = await store.headSha(slug);
+    if (await store.fileAt(slug, writeHead, path)) {
+      if (explicitId) return duplicate(path);
+      id = newId("pt");
+      continue;
+    }
+    const pinnedValidation = await validatePlaytestCandidateAt(slug, versionRef, path, content, session,
+      { pinnedReferences: true });
+    if (!pinnedValidation.ok) return ctx.send(422, { error: "playtest failed validation at its pinned version",
+      report: pinnedValidation.report, written: false });
+    // The current tree may no longer contain a historical card or build. Its
+    // generic validator treats that expected mismatch as a warning, while all
+    // other schema and whole-project failures remain release-blocking.
+    const currentValidation = writeHead === versionRef ? pinnedValidation
+      : await validatePlaytestCandidateAt(slug, writeHead, path, content, session);
+    if (!currentValidation.ok) return ctx.send(422, { error: "playtest failed current project validation",
+      report: currentValidation.report, written: false });
+    try {
+      const options = { createOnlyPaths: [path],
+        ...(store.kind === "local" ? { expectedRef: writeHead } : {}) };
+      const { sha } = await store.writeFiles(slug, [{ path, content }],
+        `playtest: log session ${id}`, `${u.handle} <${u.email}>`, options);
+      return ctx.send(201, { id, path, commit: sha, pinned: session.version_ref, session });
+    } catch (error) {
+      // A same-path create that won while this request was validating is a
+      // duplicate, never permission to update it. Distinct local additions
+      // retry from the newly current project head.
+      let latest = null, pathNow = null;
+      try { latest = await store.headSha(slug); }
+      catch {}
+      try { if (latest) pathNow = await store.fileAt(slug, latest, path); }
+      catch {}
+      if (pathNow) {
+        if (explicitId) return duplicate(path);
+        id = newId("pt");
+        continue;
+      }
+      if (error?.code === "STORE1_PATH_EXISTS") {
+        if (explicitId) return duplicate(path);
+        id = newId("pt");
+        continue;
+      }
+      if (store.kind === "local" && error?.code === "STORE1_EXPECTED_REF_MISMATCH") continue;
+      throw error;
+    }
+  }
+  ctx.send(409, { error: "the project kept changing; no playtest was written", written: false });
 }, "log a playtest session (owner/collaborator) → validated, version-pinned commit");
 gw.route("GET", "/api/games/:slug/diff", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -4324,10 +4502,42 @@ async function releasePreflight(slug, user) {
   const sha = await store.headSha(slug);
   const source = await store.materialize(slug, sha);
   let rights, licenses, validation;
+  let components = { required: false, ready: true, piece_types: 0, setup_maps: 0,
+    artifact: null, error: null };
   try {
     rights = auditRights(source.dir, { sourceSha: sha });
     licenses = py("check_licenses.py", [source.dir]);
     validation = py("validate.py", [source.dir]);
+    const piecesPath = join(source.dir, "components/tokens.json");
+    if (existsSync(piecesPath)) {
+      const rawPieces = readFileSync(piecesPath, "utf8");
+      try {
+        const pieces = JSON.parse(rawPieces);
+        components.piece_types = Array.isArray(pieces) ? pieces.length : 0;
+        components.required = Array.isArray(pieces) && pieces.length > 0;
+        if (components.required) {
+          try {
+            const built = buildComponentProduction(source.dir, { sourceRef: sha });
+            const quantitiesReady = built.manifest.quantity_resolution.status === "resolved";
+            components = { required: true, ready: quantitiesReady,
+              piece_types: built.manifest.totals.piece_types,
+              setup_maps: built.manifest.totals.setup_maps,
+              artifact: quantitiesReady ? cache.componentArtifactName(slug) : null,
+              error: quantitiesReady ? null
+                : "component production has per-player quantities but no versioned production.player_count" };
+          } catch (error) {
+            components = { ...components, ready: false,
+              error: String(error.message || error).replaceAll(source.dir, "<exact project snapshot>").slice(0, 500) };
+          }
+        }
+      } catch (error) {
+        // Validation reports malformed JSON too. Keep component production as a
+        // separate failing gate when a non-empty source file claims components.
+        if (rawPieces.trim() && rawPieces.trim() !== "[]") components = { ...components,
+          required: true, ready: false,
+          error: `components/tokens.json is invalid: ${String(error.message || error).slice(0, 400)}` };
+      }
+    }
   } finally { source.cleanup(); }
   const publicReport = result => `${result.stdout || ""}\n${result.stderr || ""}`.trim().split("\n")
     .map(line => line.replaceAll(source.dir, "<exact project snapshot>"))
@@ -4342,13 +4552,17 @@ async function releasePreflight(slug, user) {
     { key: "rights", pass: rights.publishable,
       detail: rights.publishable ? `${rights.files.length} source files have release declarations`
         : `${rights.blockers.length} rights blocker${rights.blockers.length === 1 ? "" : "s"}` },
+    { key: "components", pass: components.ready, required: components.required,
+      detail: !components.required ? "no versioned production pieces declared"
+        : components.ready ? `${components.piece_types} piece type${components.piece_types === 1 ? "" : "s"} and ${components.setup_maps} setup map${components.setup_maps === 1 ? "" : "s"} are ready at this exact version`
+          : components.error || "component production failed" },
   ];
   const candidateReady = checks.every(check => check.pass);
   const canRelease = await canAdmin(user, slug, { releases: true });
   return { ref: sha, candidate_ready: candidateReady, ready: candidateReady && canRelease,
     access: { signed_in: !!user, can_release: canRelease }, checks,
     validation: { ok: validation.status === 0, report: validationReport },
-    license: { ok: licenses.status === 0, report: licenseReport }, rights };
+    license: { ok: licenses.status === 0, report: licenseReport }, rights, components };
 }
 const PRINT_DELIVERY_SHA_RE = /^[a-f0-9]{64}$/i;
 const printableReleaseArtifact = name => name === "print-ready.zip" || /(?:^|\/)[^/]+\.pdf$/i.test(name);
@@ -4419,6 +4633,7 @@ gw.route("GET", "/api/games/:slug/releases/preflight", async (ctx) => {
   const result = await releasePreflight(slug, await authedUser(ctx));
   ctx.send(200, { ref: result.ref, ready: result.ready, candidate_ready: result.candidate_ready,
     access: result.access, checks: result.checks, validation: result.validation, license: result.license,
+    components: result.components,
     rights: { publishable: result.rights.publishable, blockers: result.rights.blockers,
       warnings: result.rights.warnings, file_count: result.rights.files.length,
       manifest_sha256: result.rights.manifest_sha256 } });
@@ -4440,6 +4655,18 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   if (ready.has(`${slug}-ttc.zip`)) downloads.ttc = `${base}/${slug}-ttc.zip`;
   if (ready.has(cache.ttpgArtifactName(slug))) downloads.ttpg = `${base}/${cache.ttpgArtifactName(slug)}`;
   if (ready.has(cache.vttArtifactName("vtt"))) downloads.vtt = `${base}/${cache.vttArtifactName("vtt")}`;
+  const componentArtifacts = artifacts.filter(item => item.status === "ready"
+    && publishedArtifactKind(slug, item.name) === "components");
+  const componentKit = componentArtifacts.find(item => /-components-v[1-9][0-9]*\.zip$/.test(item.name));
+  if (componentKit) downloads.components = `${base}/${componentKit.name}`;
+  const componentSheets = componentArtifacts.filter(item => item.name.startsWith("cut-sheets/"))
+    .map(item => ({ file: item.name, url: `${base}/${item.name}` })).sort((a, b) => a.file.localeCompare(b.file));
+  const setupMaps = componentArtifacts.filter(item => item.name.startsWith("setup-maps/"))
+    .map(item => ({ file: item.name, url: `${base}/${item.name}` })).sort((a, b) => a.file.localeCompare(b.file));
+  if (componentArtifacts.length) {
+    downloads.component_sheets = componentSheets;
+    downloads.setup_maps = setupMaps;
+  }
   ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes, author: r.author_handle, created_at: r.created_at,
     repository_tag: { object_sha: r.tag_object_sha, annotated: !!r.tag_annotated,
       protected: !!r.tag_protected, verified_now: !!liveTag && liveTag.annotated && liveTag.protected
@@ -4549,16 +4776,21 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   if (!preflight.license.ok) return ctx.send(422, { error: "release blocked by license/provenance checks",
     report: preflight.license.report });
   if (!rights.publishable) return ctx.send(422, { error: "release blocked by repository rights", rights });
+  if (preflight.components.required && !preflight.components.ready)
+    return ctx.send(422, { error: "release blocked by component production",
+      components: preflight.components, written: false });
   const prev = (await q.releasesFor(db, slug))[0];
   const hist = await store.history(slug, "components/cards.json", 30);
   let commits = hist;
   if (prev) { const i = hist.findIndex(h => h.sha === prev.sha || h.full === prev.sha); if (i >= 0) commits = hist.slice(0, i); }
   const notes = commits.map(h => `- ${h.subject} (${h.author})`).join("\n") || "- (initial release)";
   const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
+  const requiredExports = [...(privateProject?["pnp","ttc","project"]:["pnp","tts","ttc","project"]),
+    ...(preflight.components.required ? ["components"] : [])];
   let exportDir;
   const releaseOutputs=[];
   try {
-    for (const kind of privateProject?["pnp","ttc","project"]:["pnp","tts","ttc","project"])
+    for (const kind of requiredExports)
       releaseOutputs.push(await (await queueExportJob({ slug, sha, kind, user: u })).promise);
     exportDir = dirname(cache.pathOf(cache.exportKey(slug, sha, "receipt-placeholder")));
   } catch (error) {
@@ -4583,7 +4815,8 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
       detail:String(error.message||error).slice(0,500)});
   }
   const build = { format: "forge-release-build", version: 1, public_origin: PUBLIC_ORIGIN,
-    build_id: process.env.FORGE_BUILD_ID || null, exporters: { ...cache.EXPORTER_VERSIONS } };
+    build_id: process.env.FORGE_BUILD_ID || null, exporters: { ...cache.EXPORTER_VERSIONS },
+    required_exports: requiredExports, components: preflight.components };
   const tagMessage = `${title?.trim() || tag}\n\n${notes}\n\nForge project: ${slug}\nExact source: ${sha}`;
   let repositoryTag;
   try { repositoryTag = await store.createReleaseTag(slug, tag, sha, tagMessage, `${u.handle} <${u.email}>`); }

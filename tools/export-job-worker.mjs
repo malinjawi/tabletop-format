@@ -6,7 +6,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deterministicZip } from "./lib/deterministic-zip.mjs";
 import { buildNandeckProject } from "./lib/nandeck-layout.mjs";
@@ -26,6 +26,16 @@ const input = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const { source_dir: source, stage_dir: out, kind, slug, ref, public_origin: origin,
   allow_network: allowNetwork, build_pdf: buildPdf, names, budget } = input;
 mkdirSync(out, { recursive: true });
+const stageRoot = resolve(out);
+function safeStageTarget(name) {
+  if (typeof name !== "string" || !name || name.startsWith("/") || name.includes("\\") || name.includes("\0")
+    || name.split("/").some(part => !part || part === "." || part === ".."))
+    throw new Error(`unsafe export staging path: ${String(name)}`);
+  const target = resolve(stageRoot, name), rel = relative(stageRoot, target);
+  if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
+    throw new Error(`export staging path escapes its isolated directory: ${name}`);
+  return target;
+}
 
 const run = (command, args) => execFileSync(command, args, { stdio: "pipe", timeout: budget.child_timeout_ms,
   maxBuffer: budget.max_log_bytes });
@@ -82,9 +92,10 @@ if (kind === "pnp") {
   writeFileSync(join(out, names.squib), deterministicZip(built.entries));
 } else if (kind === "components") {
   const built = buildComponentProduction(source, { sourceRef: ref });
-  writeFileSync(join(out, names.components), deterministicZip(built.entries));
-  for (const [name, bytes] of built.entries) if (name.startsWith("cut-sheets/")) {
-    const target = join(out, name); mkdirSync(dirname(target), { recursive: true }); writeFileSync(target, bytes);
+  writeFileSync(safeStageTarget(names.components), deterministicZip(built.entries));
+  for (const [name, bytes] of built.entries)
+    if (name.startsWith("cut-sheets/") || name.startsWith("setup-maps/")) {
+    const target = safeStageTarget(name); mkdirSync(dirname(target), { recursive: true }); writeFileSync(target, bytes);
   }
 } else if (kind === "rulebook") {
   buildRulebookPipeline(source, out, { allowNetwork, buildPdf });

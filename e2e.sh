@@ -310,7 +310,12 @@ s=json.load(open('examples/ember/playtests/2026-06-20-first-blood.json'))
 s['card_notes'][0]['card_id']='ghost_card'
 json.dump(s,open('$SCRATCH/badpt.json','w'))
 import shutil; shutil.copy('$SCRATCH/badpt.json','examples/ember/playtests/2026-06-20-first-blood.json')"
-check_fails "playtest bad card ref caught" python3 tools/validate.py examples/ember
+if python3 tools/validate.py examples/ember > "$SCRATCH/badpt.out" 2>&1 \
+  && grep -q "warn.*ghost_card.*pinned version" "$SCRATCH/badpt.out"; then
+  ok "historical playtest card ref is preserved with an exact-version warning"
+else
+  bad "historical playtest card ref warning" "offline validation must not erase valid pinned-history evidence"
+fi
 cp "$REPO"/examples/ember/playtests/*.json examples/ember/playtests/
 check "validate ember (playtests restored)" python3 tools/validate.py examples/ember
 

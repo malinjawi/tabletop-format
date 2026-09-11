@@ -18,7 +18,7 @@
  *   readFile(slug, rel)           → Buffer | null
  *   readMeta(slug)                → { title, license, cardCount } (index fodder, DA-3)
  *   setVisibility(slug, value)     → storage-layer visibility reconciliation
- *   writeFiles(slug, files, message, author, { expectedRef? }) → { sha }
+ *   writeFiles(slug, files, message, author, { expectedRef?, createOnlyPaths? }) → { sha }
  *                                      // atomic multi-file compare-and-commit
  *   createGame(slug, srcTree, message, author) → { sha } // import a validated tree
  *   fork(src, dest, transformYaml, message, author, ref?) → { sha }
@@ -27,6 +27,7 @@
  *   resolveRef(slug, ref)         → full 40-character commit sha
  *   headSha(slug)                 → full 40-character commit sha
  *   materialize(slug, ref)        → { dir, cleanup }     // exact tree at ref (Store 3 feed)
+ *   getAssetAt(slug, ref, rel)    → Buffer | null        // exact asset with LFS resolved
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -35,6 +36,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, statSync,
 import { join, dirname, isAbsolute, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { uploadAsset, downloadAsset } from "../tools/lib/lfs.mjs";
+import { MAX_ASSET_BYTES } from "../tools/lib/limits.mjs";
 import { PROJECT_META, parseProjectMeta } from "./project-ref.mjs";
 import { fullStore1ObjectId, localStore1Ref } from "./store1-ref.mjs";
 
@@ -59,6 +61,13 @@ function expectedRefConflict(slug, expectedRef, currentRef) {
   return Object.assign(
     new Error(`project '${slug}' changed from ${expectedRef} to ${currentRef}; no files were written`),
     { code: "STORE1_EXPECTED_REF_MISMATCH", status: 409, expectedRef, currentRef, written: false },
+  );
+}
+
+function createOnlyConflict(slug, path) {
+  return Object.assign(
+    new Error(`project '${slug}' already contains '${path}'; no files were written`),
+    { code: "STORE1_PATH_EXISTS", status: 409, path, written: false },
   );
 }
 
@@ -199,13 +208,27 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixture
     /** files: [{path, content:Buffer|string}] — one atomic commit, authored as the user.
      *  expectedRef must be the exact project head the editor opened. The check
      *  happens inside the local mutation lock and before any live-tree write. */
-    async writeFiles(slug, files, message, author, { expectedRef = null } = {}) {
+    async writeFiles(slug, files, message, author, { expectedRef = null, createOnlyPaths = [] } = {}) {
       return withLocalMutationLock(root, async () => {
+        const createOnly = new Set(createOnlyPaths.map(String));
+        for (const path of createOnly) {
+          const file = files.find(candidate => candidate.path === path);
+          if (!file || file.content === null)
+            throw new Error(`create-only path '${path}' must name a created file in this write`);
+        }
+        const current = (expectedRef !== null && expectedRef !== undefined) || createOnly.size
+          ? store.headSha(slug) : null;
         if (expectedRef !== null && expectedRef !== undefined) {
           const expected = fullStore1ObjectId(expectedRef, "expected project revision");
-          const current = store.headSha(slug);
           if (expected !== current) throw expectedRefConflict(slug, expected, current);
         }
+        // This test is inside the same repository mutation lock as the write,
+        // so a second local request can never turn a reviewed create into an
+        // update between the absence check and commit. A developer's unstaged
+        // file is also existing work and must not be overwritten.
+        for (const path of createOnly)
+          if (existsSync(join(abs(slug), path)) || store.fileAt(slug, current, path))
+            throw createOnlyConflict(slug, path);
         for (const f of files) {
           const dest = join(abs(slug), f.path);
           if (f.content === null) { rmSync(dest, { force: true }); continue; }
@@ -280,8 +303,21 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixture
           sha, author, date, subject };
       });
     },
+    /** @returns {Buffer | null} */
     fileAt(slug, ref, relPath) {
-      try { return Buffer.from(git(["show", `${ref}:${rel(slug)}/${relPath}`], QUIET)); }
+      try {
+        // `git()` is deliberately text-oriented and Node's default child
+        // buffer is only about 1 MiB. Exact source faces, fonts, and SVGs are
+        // binary repository objects up to Forge's 25 MiB asset limit: reading
+        // them through UTF-8 can corrupt bytes, while the default buffer makes
+        // larger valid assets look absent. Keep this path byte-for-byte and
+        // explicitly bounded to the accepted per-asset size.
+        return Buffer.from(execFileSync("git", ["-C", root, "show", `${ref}:${rel(slug)}/${relPath}`], {
+          encoding: null,
+          maxBuffer: MAX_ASSET_BYTES + 64 * 1024,
+          stdio: ["ignore", "pipe", "ignore"],
+        }));
+      }
       catch { return null; }
     },
     // Each game is conceptually its own repository even though the local beta
@@ -291,8 +327,21 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixture
     resolveRef(slug, ref) {
       const safeRef = localStore1Ref(ref, slug);
       try {
-        return fullStore1ObjectId(git(["rev-parse", "--verify", `${safeRef}^{commit}`], QUIET),
-          `resolved revision for ${slug}`);
+        const resolved = safeRef === "HEAD" ? store.headSha(slug)
+          : fullStore1ObjectId(git(["rev-parse", "--verify", `${safeRef}^{commit}`], QUIET),
+            `resolved revision for ${slug}`);
+        // The local driver is a monorepo. A syntactically valid object ID can
+        // belong to a time before this game existed or to a commit that only
+        // changed another game. Pinning is project-scoped only when the exact
+        // tree contains this project's identity root AND this commit is itself
+        // a revision in the project's path history.
+        git(["cat-file", "-e", `${resolved}:${rel(slug)}/game.yaml`], QUIET);
+        const projectRevision = fullStore1ObjectId(
+          git(["log", "-1", "--format=%H", resolved, "--", rel(slug)], QUIET),
+          `nearest project revision for ${slug}`,
+        );
+        if (projectRevision !== resolved) throw new Error(`${resolved} did not change project '${slug}'`);
+        return resolved;
       } catch (cause) {
         throw Object.assign(new Error(`version '${ref}' is unavailable for ${slug}`), { status: 422, cause });
       }
@@ -348,6 +397,13 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixture
       if (buf.slice(0, 60).toString().startsWith("version https://git-lfs")) {
         buf = lfsUrl ? await downloadAsset(lfsUrl, buf.toString()) : localLfsObject(buf);
       }
+      return buf;
+    },
+    async getAssetAt(slug, ref, relPath) {
+      let buf = store.fileAt(slug, ref, relPath);
+      if (!buf) return null;
+      if (buf.slice(0, 60).toString().startsWith("version https://git-lfs"))
+        buf = lfsUrl ? await downloadAsset(lfsUrl, buf.toString()) : localLfsObject(buf);
       return buf;
     },
 
