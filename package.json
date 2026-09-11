@@ -26,6 +26,7 @@
     "test:project-reindex": "node tools/test-project-reindex.mjs",
     "test:hosted-project-reindex": "node tools/test-hosted-project-reindex.mjs",
     "test:private-cache": "node tools/test-private-cache-and-stale-index.mjs",
+    "test:local-private-preview": "node tools/test-local-private-preview.mjs",
     "test:store1-forgejo": "node tools/test-store1-forgejo.mjs",
     "test:fixture-discovery": "node tools/test-fixture-discovery.mjs",
     "test:ui": "node tools/ui-smoke.mjs",

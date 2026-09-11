@@ -129,6 +129,7 @@ check "protected project identity and sandbox metadata fail closed" node tools/t
 check "trusted project ownership is restored during repository reindex" node tools/test-project-reindex.mjs
 check "hosted renames and identity conflicts reconcile safely" node tools/test-hosted-project-reindex.mjs
 check "private artifact caches and stale game indexes fail closed" node tools/test-private-cache-and-stale-index.mjs
+check "local private preview serves pinned assets without public access" node tools/test-local-private-preview.mjs
 check "Forgejo privacy and repository-bound identity reconciliation" node tools/test-store1-forgejo.mjs
 check "immutable release bytes survive cache loss and reject corruption" node tools/test-release-vault.mjs
 check "concurrent export requests join the winning immutable job" node tools/test-export-job-race.mjs

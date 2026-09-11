@@ -247,12 +247,16 @@ try {
   });
   assert.equal(ownerHistoricalAsset.status, 200,
     "the project owner retains access to an exact non-public authoring snapshot");
+  assert.equal(ownerHistoricalAsset.headers.get("cache-control"), "private, no-store",
+    "today's public visibility cannot make restricted historical bytes publicly cacheable");
   assert.deepEqual(Buffer.from(await ownerHistoricalAsset.arrayBuffer()), currentAssetBytes);
   const collaboratorHistoricalAsset = await fetch(`${origin}${assetPath}?ref=${historicalBlockedRef}`, {
     headers: { authorization: `Bearer ${collaboratorToken}` },
   });
   assert.equal(collaboratorHistoricalAsset.status, 200,
     "an explicit project collaborator also retains access to exact authoring history");
+  assert.equal(collaboratorHistoricalAsset.headers.get("cache-control"), "private, no-store",
+    "member access to restricted history never enables shared caching");
   assert.deepEqual(Buffer.from(await collaboratorHistoricalAsset.arrayBuffer()), currentAssetBytes);
 
   console.log("PROJECT ACCESS GREEN — project and card routes expose public work, hide private work, and admit its owner.");

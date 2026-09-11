@@ -480,6 +480,12 @@ const isLoopbackRequest = (ctx) => {
   return ["localhost", "127.0.0.1", "::1"].includes(host)
     && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote);
 };
+// The explicit local-fixture preview applies to both the project and its
+// versioned assets. Keep the production, fixture, and loopback boundaries
+// identical so a readable card does not lose its exact artwork and symbols.
+const canPreviewPrivateFixture = (slug, ctx) => !PRODUCTION
+  && process.env.FORGE_LOCAL_PRIVATE_PREVIEW === "1"
+  && store.isFixture?.(slug) && isLoopbackRequest(ctx);
 async function canRead(u, slug, ctx = null) {
   const g = await currentGameForAccess(slug);
   if (!g) return false;
@@ -488,8 +494,7 @@ async function canRead(u, slug, ctx = null) {
   // loopback UI for local production testing. The Host check is deliberate:
   // the same process can sit behind a temporary Sheets tunnel, where private
   // projects must remain undiscoverable and inaccessible.
-  if (!PRODUCTION && process.env.FORGE_LOCAL_PRIVATE_PREVIEW === "1"
-    && store.isFixture?.(slug) && isLoopbackRequest(ctx)) return true;
+  if (canPreviewPrivateFixture(slug, ctx)) return true;
   return (await accessFor(u, slug, g)).can_read;
 }
 async function canReview(u, slug) { return (await accessFor(u, slug)).can_review; }
@@ -2749,17 +2754,19 @@ gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
   const rel = ctx.params["*"];
   if (rel.includes("..")) return ctx.send(404, { error: "no such asset" });
   const requestedRef = ctx.url.searchParams.get("ref");
-  let buf, exactRef = null;
+  let buf, exactRef = null, restrictedSnapshot = false;
   try {
     if (requestedRef) {
       exactRef = await store.resolveRef(slug, requestedRef);
       const rights = await exactRightsAudit(slug, exactRef);
+      restrictedSnapshot = !rights.publishable;
       if (!rights.publishable) {
         const access = await accessFor(await authedUser(ctx), slug);
         // Current Store-2 visibility cannot grant anonymous access to bytes
         // from an older snapshot whose own declarations prohibited release.
-        // Project members retain authoring access to their history.
-        if (!(access.is_owner || access.role)) {
+        // Project members retain authoring access to their history, as does
+        // the explicitly enabled loopback-only fixture preview.
+        if (!(access.is_owner || access.role || canPreviewPrivateFixture(slug, ctx))) {
           ctx.setHeader("cache-control", PRIVATE_PROJECT_CACHE);
           return ctx.send(404, { error: "asset not found" });
         }
@@ -2772,7 +2779,8 @@ gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
   ctx.sendRaw(200, buf, { "content-type": MIME[rel.toLowerCase().split(".").pop()] ?? "application/octet-stream",
     // Exact refs never change meaning, but visibility can, so public callers
     // still revalidate authorization. Omitting ref deliberately follows HEAD.
-    "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE) });
+    "cache-control": restrictedSnapshot ? PRIVATE_PROJECT_CACHE
+      : await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE) });
 }, "serve HEAD or exact-ref asset, materializing LFS pointers");
 
 /* ---------- Affinity — committed data -> native production document ----------
