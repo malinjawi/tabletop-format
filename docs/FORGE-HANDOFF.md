@@ -59,9 +59,9 @@ A verified incremental source bundle preserves the six application commits and r
 | b07fa1f | Protected/recoverable authored drafts and real contributor proposals. | Studio/rules proposals, account-scoped recovery, exact baselines, accumulated reviewed edits. |
 | 2b2655d | Resilient visual studios and first playable setup. | Mouse/touch/keyboard, Piece Studio recovery, create a first table, preview and atomically commit pieces/design/setup, local expected-version write guard. |
 | 4e530f0 | Frozen playable-component evidence. | Required component kits in exact releases; append-only pinned playtests; browser component table; historical-art/access safety; hostile-text and offline-hub handling. |
-| d7bc4ba, September 11 | Crash-safe durable releases. | Prior task reports 205 functional checks, 112 Forgejo journey assertions, 111 DB checks on SQLite and real PostgreSQL, full UI/browser journeys, and concurrent PostgreSQL startup. These were not rerun for this handoff. |
+| d7bc4ba, September 11 | Crash-safe durable releases. | Prior task reports 205 functional checks, 112 Forgejo journey assertions, 111 DB checks on SQLite and real PostgreSQL, full UI/browser journeys, and concurrent PostgreSQL startup. A fresh retrospective run reproduced 205 functional checks, 109 local journey assertions and the full browser workflow; Forgejo counts remain separate. See PR #2 for production-toolchain qualification. |
 
-The last task's final result and Git HEAD agree on d7bc4ba. Matching retained full logs for its 205/112/111 counts were not located during this audit; do not present those counts as newly reproduced. Some /private/tmp logs contain intermediate counts and must not be substituted for final-run evidence.
+The last task's final result and Git HEAD agree on d7bc4ba. Matching retained full logs for all of the historical 205/112/111 counts were not located during initial handoff. The retrospective then independently reproduced 205 functional, 109 local journey and 234 browser assertions, preserving complete logs outside temporary storage. Current [PR #2](https://github.com/malinjawi/tabletop-format/pull/2) records the exact-head CI result; the first run exposed a test navigation race despite the local pass.
 
 ### Qualified image identities
 
@@ -179,7 +179,7 @@ Do not run destructive cleanup/reset scripts or the old root DEPLOY.md's nightly
 1. Recheck branch/status and this handoff, then inspect or restore the latest local runtime using its existing data locations. Verify the actual application build, not just an HTTP 200. Keep legacy data and archived work intact.
 2. Walk one complete newcomer workflow in the browser: new/imported game → edit → actual proof → review → commit/proposal → merge → exact release → playtest/second version. Include a contributor without write access and narrow-screen use. Select the next concrete failure from that journey; do not assume every item from an older audit is still missing.
 3. Continue the known software backlog: efficient large-PDF delivery/streaming; onboarding and editor clarity; and complete publication/recovery reconciliation described below. These are remaining work, not features implemented by this handoff.
-4. Preserve focused milestones, appropriate regression tests, and browser evidence. The six current application commits have not yet been qualified/published as a new candidate. A later publication should use the protected PR/qualification process and identify its own exact image.
+4. Preserve focused milestones, appropriate regression tests, and browser evidence. The six application commits and current project records are pushed in [PR #2](https://github.com/malinjawi/tabletop-format/pull/2). Its latest protected checks and merge record identify the source publication state; a resulting main image has its own revision/digest. Do not attach the old beta image to newer code.
 
 ### Concrete release-integrity gap
 

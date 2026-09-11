@@ -1762,10 +1762,15 @@ w.save(p)
     "the production review exposes validation, exact counts, and the honest press boundary");
   const printCommitResponse=page.waitForResponse(response=>response.request().method()==="PUT"
     &&new URL(response.url()).pathname.endsWith("/design/print-profile"));
+  // A successful print commit schedules a full reload. Wait for it before
+  // changing only the hash, which otherwise leaves that reload pending.
+  const printCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"Commit print profile",exact:true}).click();
   const printCommitHttp=await printCommitResponse,printCommitBody=await printCommitHttp.json();
   assert(printCommitHttp.ok()&&printCommitBody.saved,
     "the exact reviewed print contract becomes a repository commit",JSON.stringify(printCommitBody));
+  await printCommitNavigation;
+  await page.getByRole("button",{name:"Configure print",exact:true}).waitFor();
   const printProfile=readFileSync(join(gamesRoot,"wizard-ui-smoke","templates","print.yaml"),"utf8");
   assert(/preset: opaque-sleeves/.test(printProfile)&&/- strike/.test(printProfile)
     &&/fronts_only: true/.test(printProfile)&&/gutter_mm: 3/.test(printProfile)
@@ -1800,7 +1805,7 @@ w.save(p)
       ],print_deliveries:[],
     }])});
   });
-  await page.evaluate(()=>liveReleases(G("wizard-ui-smoke")));
+  await page.reload({waitUntil:"domcontentloaded"});
   const componentKitLink=page.getByRole("link",{name:/Component kit$/}),setupMapLink=page.getByRole("link",{name:/Setup map · Table$/});
   await componentKitLink.waitFor();
   await setupMapLink.waitFor();
