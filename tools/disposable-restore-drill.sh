@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Build real collaboration state on Forgejo + PostgreSQL, take a synchronized
-# three-store backup, and restore it into fresh disposable volumes. When an S3
-# test image is supplied, LFS lives only in S3 and that bucket is independently
-# snapshotted/restored. The restored gateway starts with no render cache,
-# proving Store 3 is genuinely derived.
+# backup of every durable store, and restore it into fresh disposable volumes.
+# When an S3 test image is supplied, LFS lives only in S3 and that bucket is
+# independently snapshotted/restored. Published bytes live in a dedicated
+# release vault; the restored gateway starts with no render cache and must
+# serve the exact release from that restored vault.
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
@@ -69,6 +70,8 @@ source_s3_volume="$prefix-source-s3-data"; restore_s3_volume="$prefix-restore-s3
 secret_volume="$prefix-secrets"
 source_gateway_volume="$prefix-source-gateway-data"
 gateway_volume="$prefix-gateway-data"
+source_vault_volume="$prefix-source-release-vault"
+restore_vault_volume="$prefix-restore-release-vault"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/forge-restore-drill.XXXXXX")"
 gateway_pid=""
 
@@ -76,7 +79,7 @@ cleanup(){
   status=$?
   [ -n "$gateway_pid" ] && kill "$gateway_pid" >/dev/null 2>&1 || true
   docker container rm --force "$source_forgejo" "$restore_forgejo" "$source_pg" "$restore_pg" "$source_s3" "$restore_s3" "$restore_helper" "$source_gateway" "$gateway_container" >/dev/null 2>&1 || true
-  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$source_s3_volume" "$restore_s3_volume" "$secret_volume" "$source_gateway_volume" "$gateway_volume" >/dev/null 2>&1 || true
+  docker volume rm "$source_pg_volume" "$source_forgejo_volume" "$restore_pg_volume" "$restore_forgejo_volume" "$source_s3_volume" "$restore_s3_volume" "$secret_volume" "$source_gateway_volume" "$gateway_volume" "$source_vault_volume" "$restore_vault_volume" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   if [ "${FORGE_KEEP_RESTORE_DRILL:-0}" = "1" ]; then
     printf 'restore drill evidence retained at %s\n' "$scratch" >&2
@@ -103,7 +106,8 @@ journey_invite_alice=""; journey_invite_bob=""; journey_invite_charlie=""
 s3_access="forgeaccess$run_id"; s3_secret="forge-secret-$run_id-password"
 s3_bucket="forge-lfs-${run_id//[^a-zA-Z0-9-]/-}"
 
-mkdir -p "$scratch/secrets" "$scratch/backup" "$scratch/staging" "$scratch/restored-cache" "$scratch/restored-farm"
+mkdir -p "$scratch/secrets" "$scratch/backup" "$scratch/staging" \
+  "$scratch/source-release-vault" "$scratch/restored-cache" "$scratch/restored-farm"
 chmod 700 "$scratch/secrets"
 umask 077
 printf '%s\n' "$forgejo_password" > "$scratch/secrets/forgejo-db-password"
@@ -121,6 +125,10 @@ done
 if [ -n "$s3_image" ]; then
   docker volume create "$source_s3_volume" >/dev/null
   docker volume create "$restore_s3_volume" >/dev/null
+fi
+if [ -n "$gateway_image" ]; then
+  docker volume create "$source_vault_volume" >/dev/null
+  docker volume create "$restore_vault_volume" >/dev/null
 fi
 docker run --rm --volume "$secret_volume:/secrets" \
   --env FORGEJO_DB_PASSWORD="$(tr -d '\n' < "$scratch/secrets/forgejo-db-password")" \
@@ -260,14 +268,16 @@ write_gateway_secrets(){
     '
 }
 start_gateway(){
-  local container="$1" volume="$2" database_host="$3" forgejo_host="$4"
+  local container="$1" volume="$2" vault_volume="$3" database_host="$4" forgejo_host="$5"
   docker run --detach --name "$container" --network "$network" \
     --publish "127.0.0.1:$gateway_port:8420" --read-only --tmpfs /tmp:size=536870912,mode=1777 \
-    --volume "$volume:/app/data" --volume "$secret_volume:/run/secrets:ro" \
+    --volume "$volume:/app/data" --volume "$vault_volume:/app/vault" \
+    --volume "$secret_volume:/run/secrets:ro" \
     --env STORE1=forgejo --env FORGE_URL="http://$forgejo_host:3000" \
     --env DB=postgres --env PGHOST="$database_host" --env PGPORT=5432 \
     --env PGDATABASE=platform --env PGUSER=platform \
     --env CACHE_DIR=/app/data/cache --env FARM_DIR=/app/data/forge-farm \
+    --env RELEASE_VAULT_DIR=/app/vault \
     --env FORGE_HUB_PATH=/app/data/hub.html \
     --env FORGE_PUBLIC_ORIGIN="$gateway_origin" --env FORGE_ALLOWED_ORIGINS="$gateway_origin" \
     --env FORGEJO_PUBLIC_ORIGIN="$gateway_git_origin" \
@@ -317,7 +327,7 @@ if [ -n "$gateway_image" ]; then
   [ -n "$source_gateway_token" ] || { printf 'could not mint source gateway token\n' >&2; exit 1; }
   docker volume create "$source_gateway_volume" >/dev/null
   write_gateway_secrets "$source_gateway_token"
-  start_gateway "$source_gateway" "$source_gateway_volume" "$source_pg" "$source_forgejo"
+  start_gateway "$source_gateway" "$source_gateway_volume" "$source_vault_volume" "$source_pg" "$source_forgejo"
   issue_drill_invite(){
     docker exec --env PGPASSWORD="$platform_password" "$source_gateway" \
       node tools/pilot-invite.mjs create --label "$1" --cohort restore-drill --hours 1 \
@@ -334,6 +344,7 @@ else
 fi
 if ! env FORGE_URL="$source_origin" ADMIN_USER="$admin_user" ADMIN_PASS="$admin_password" \
   FORGE_ALLOW_FIXTURE_DELETE=1 \
+  FORGE_TEST_RELEASE_VAULT_DIR="$scratch/source-release-vault" \
   FORGE_JOURNEY_INVITE_ALICE="$journey_invite_alice" FORGE_JOURNEY_INVITE_BOB="$journey_invite_bob" \
   FORGE_JOURNEY_INVITE_CHARLIE="$journey_invite_charlie" "${source_gateway_args[@]}" \
   "$repo_dir/journey-forgejo.sh" > "$source_journey_log" 2>&1; then
@@ -350,6 +361,38 @@ if [ -n "$gateway_image" ]; then
   docker volume rm "$source_gateway_volume" >/dev/null
 fi
 docker stop "$source_forgejo" >/dev/null
+
+# The journey's gateway is now stopped, so no process can append to the release
+# vault while it is copied. With a production image, the durable vault is a
+# named volume separate from the discarded Store-3 volume. The local branch
+# deliberately placed its vault outside journey-forgejo's temporary directory.
+if [ -n "$gateway_image" ]; then
+  docker run --rm --read-only --network none --user 0:0 \
+    --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add DAC_READ_SEARCH \
+    --security-opt no-new-privileges:true \
+    --volume "$source_vault_volume:/app/vault:ro" \
+    --volume "$scratch/backup:/backup" \
+    --env "SNAPSHOT_UID=$(id -u)" --env "SNAPSHOT_GID=$(id -g)" \
+    --entrypoint /bin/sh "$gateway_image" -ec '
+      node deploy/release-vault-snapshot.mjs backup \
+        --source /app/vault --output /backup/release-vault
+      chown -R "$SNAPSHOT_UID:$SNAPSHOT_GID" /backup/release-vault
+    '
+else
+  node "$repo_dir/deploy/release-vault-snapshot.mjs" backup \
+    --source "$scratch/source-release-vault" --output "$scratch/backup/release-vault"
+fi
+node "$repo_dir/deploy/release-vault-snapshot.mjs" verify \
+  --input "$scratch/backup/release-vault"
+node -e '
+  const manifest=require(process.argv[1]);
+  if(!manifest.files.some(file=>file.path.startsWith("manifests/")&&file.path.endsWith("/v0.1.json")))
+    throw Error("release-vault snapshot contains no journey v0.1 manifest");
+  if(!manifest.files.some(file=>file.path.startsWith("blobs/sha256/")))
+    throw Error("release-vault snapshot contains no release blobs");
+' "$scratch/backup/release-vault/manifest.json"
+printf '  ✓ immutable release vault snapshotted after writers stopped\n'
+
 if [ -n "$s3_image" ]; then
   node "$repo_dir/deploy/s3-snapshot.mjs" backup \
     --endpoint "http://127.0.0.1:$source_s3_port" --bucket "$s3_bucket" --region us-east-1 \
@@ -373,21 +416,41 @@ docker exec -i "$source_pg" pg_restore --list < "$scratch/backup/forgejo.dump" >
   printf 'created_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf 'forgejo_image=%s\n' "$forgejo_image"
   printf 'postgres_image=%s\n' "$postgres_image"
+  [ -z "$gateway_image" ] || printf 'gateway_image=%s\n' "$gateway_image"
   [ -z "$s3_image" ] || printf 's3_image=%s\n' "$s3_image"
+  printf 'release_vault_files=%s\n' "$(node -e 'process.stdout.write(String(require(process.argv[1]).files.length))' "$scratch/backup/release-vault/manifest.json")"
+  printf 'release_vault_bytes=%s\n' "$(node -e 'process.stdout.write(String(require(process.argv[1]).total_bytes))' "$scratch/backup/release-vault/manifest.json")"
   for secret in "$scratch"/secrets/*; do
     printf '%s_sha256=%s\n' "$(basename "$secret")" "$(shasum -a 256 "$secret" | awk '{print $1}')"
   done
 } > "$scratch/backup/manifest.txt"
-snapshot_manifest=()
-[ -z "$s3_image" ] || snapshot_manifest=(object-store/manifest.json)
-(cd "$scratch/backup" && shasum -a 256 forgejo.zip platform.dump forgejo.dump manifest.txt "${snapshot_manifest[@]}" > SHA256SUMS)
+snapshot_manifests=(release-vault/manifest.json)
+[ -z "$s3_image" ] || snapshot_manifests+=(object-store/manifest.json)
+(cd "$scratch/backup" && shasum -a 256 forgejo.zip platform.dump forgejo.dump manifest.txt "${snapshot_manifests[@]}" > SHA256SUMS)
 (cd "$scratch/backup" && shasum -a 256 -c SHA256SUMS >/dev/null)
 if [ -n "$s3_image" ]; then
   node "$repo_dir/deploy/s3-snapshot.mjs" verify --input "$scratch/backup/object-store"
   docker stop "$source_s3" >/dev/null
 fi
 
-printf '\n== Restore into fresh database and repository volumes ==\n'
+printf '\n== Restore into fresh durable-store volumes ==\n'
+if [ -n "$gateway_image" ]; then
+  docker run --rm --read-only --network none --user 0:0 \
+    --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add DAC_READ_SEARCH \
+    --security-opt no-new-privileges:true \
+    --volume "$restore_vault_volume:/app/vault" \
+    --volume "$scratch/backup/release-vault:/restore/release-vault:ro" \
+    --entrypoint /bin/sh "$gateway_image" -ec '
+      node deploy/release-vault-snapshot.mjs restore \
+        --input /restore/release-vault --output /app/vault
+      chown -R 1000:1000 /app/vault
+    '
+else
+  node "$repo_dir/deploy/release-vault-snapshot.mjs" restore \
+    --input "$scratch/backup/release-vault" --output "$scratch/restored-release-vault"
+fi
+printf '  ✓ release vault restored exactly into a fresh isolated target\n'
+
 start_postgres "$restore_pg" "$restore_pg_volume" "$restore_pg_port"
 docker exec -i "$restore_pg" pg_restore --exit-on-error -U postgres --no-owner --role=platform -d platform \
   < "$scratch/backup/platform.dump" >/dev/null
@@ -432,8 +495,10 @@ forge_token="$(mint_forge_token "$restore_origin" restore-verifier)"
 
 if [ -n "$gateway_image" ]; then
   docker volume create "$gateway_volume" >/dev/null
+  docker run --rm --volume "$gateway_volume:/store3:ro" "$utility_image" \
+    sh -eu -c 'test -z "$(find /store3 -mindepth 1 -print -quit)"'
   write_gateway_secrets "$forge_token"
-  start_gateway "$gateway_container" "$gateway_volume" "$restore_pg" "$restore_forgejo"
+  start_gateway "$gateway_container" "$gateway_volume" "$restore_vault_volume" "$restore_pg" "$restore_forgejo"
 else
   if find "$scratch/restored-cache" -type f -print -quit | grep -q .; then
     printf 'restored Store 3 must begin empty\n' >&2; exit 1
@@ -442,6 +507,7 @@ else
     FORGE_BASIC="$admin_user:$admin_password" DB=postgres \
     PG_URL="postgres://platform:$platform_password@127.0.0.1:$restore_pg_port/platform" \
     CACHE_DIR="$scratch/restored-cache" FARM_DIR="$scratch/restored-farm" \
+    RELEASE_VAULT_DIR="$scratch/restored-release-vault" \
     FORGEJO_PUBLIC_ORIGIN="$gateway_git_origin" \
     FORGE_HUB_PATH="$scratch/restored-hub.html" FORGE_REGISTRATION_MODE=closed \
     node "$repo_dir/server.mjs" --port "$gateway_port" > "$scratch/restored-gateway.log" 2>&1 &
@@ -456,6 +522,7 @@ if [ -z "$gateway_image" ]; then
 fi
 if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
   FORGE_EXPECTED_REPOSITORY_ORIGIN="$gateway_git_origin" \
+  FORGE_RESTORE_CACHE_WAS_EMPTY=1 \
   node "$repo_dir/tools/restore-verify.mjs" "$gateway_origin"; then
   if [ -n "$gateway_image" ]; then
     printf '\n== Failed gateway container log ==\n' >&2
@@ -463,6 +530,23 @@ if ! FORGE_URL="$restore_origin" FORGE_TOKEN="$forge_token" \
   fi
   exit 1
 fi
+
+# Vault-backed downloads must not repopulate derived Store 3. This turns the
+# empty-cache precondition into an observable postcondition instead of relying
+# only on the response receipt.
+if [ -n "$gateway_image" ]; then
+  if ! docker exec "$gateway_container" /bin/sh -ec \
+    'test ! -d /app/data/cache || test -z "$(find /app/data/cache -type f -print -quit)"'; then
+    printf 'restored gateway populated Store 3 while serving a vaulted release\n' >&2
+    exit 1
+  fi
+else
+  if find "$scratch/restored-cache" -type f -print -quit | grep -q .; then
+    printf 'restored gateway populated Store 3 while serving a vaulted release\n' >&2
+    exit 1
+  fi
+fi
+printf '  ✓ exact released bytes were served while Store 3 stayed empty\n'
 
 if [ -n "$gateway_image" ]; then
   if ! restored_policy="$(docker exec --env PGPASSWORD="$platform_password" "$gateway_container" \
@@ -485,7 +569,7 @@ fi
 printf '  ✓ operator independently verified Alice policy receipt against the restored build\n'
 
 if [ -n "$gateway_image" ]; then
-  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized repository, database%s backup restored into fresh services; the exact release image rebuilt Store 3 and exact released bytes.\n' "$([ -n "$s3_image" ] && printf ', and S3 object' || true)"
+  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized repository, database, release-vault%s backup restored into fresh services; the restored vault served exact released bytes while Store 3 stayed empty.\n' "$([ -n "$s3_image" ] && printf ', and S3 object' || true)"
 else
-  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized backup restored into fresh volumes; Store 3 rebuilt exact released bytes.\n'
+  printf '\nDISPOSABLE RESTORE DRILL GREEN — synchronized durable stores restored into fresh targets; the restored vault served exact released bytes while Store 3 stayed empty.\n'
 fi

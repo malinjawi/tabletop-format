@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -59,8 +59,19 @@ try {
     "Forgejo head returns the authoritative full commit ID");
   assert.equal(await store.resolveRef("demo", releasedAt.slice(0, 7)), releasedAt,
     "Forgejo expands a legacy abbreviated input before it can be persisted downstream");
-  const release = await store.createReleaseTag("demo", "v1.0", releasedAt,
-    "test release", "alice <alice@example.test>");
+  const tagFetch=globalThis.fetch;let createTagBody=null;
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"||input instanceof URL?input:input.url);
+    if(String(init.method||"GET").toUpperCase()==="POST"&&url.pathname.endsWith("/repos/alice/demo/tags"))
+      createTagBody=JSON.parse(String(init.body||"{}"));
+    return tagFetch(input,init);
+  };
+  let release;
+  try{release=await store.createReleaseTag("demo", "v1.0", releasedAt,
+    "test release", "alice <alice@example.test>");}
+  finally{globalThis.fetch=tagFetch;}
+  assert.deepEqual(Object.keys(createTagBody).sort(),["message","tag_name","target"],
+    "Forgejo's CreateTag API records its authenticated repository actor; Forge must not claim its publisher input controls the Git tagger");
   assert.match(release.target, /^[0-9a-f]{40}$/);
   assert.match(release.tagObject, /^[0-9a-f]{40}$/);
   assert.equal(await store.resolveRef("demo", "v1.0"), releasedAt,
@@ -70,6 +81,50 @@ try {
     assert.match(readFileSync(join(released.dir, "game.yaml"), "utf8"),
       /title: Demo/, "a validated public v* release name is safely encoded and materialized from this Forgejo repo");
   } finally { released.cleanup(); }
+
+  const racePath = "playtests/forgejo-create-race.json";
+  assert.equal(await store.fileAt("demo", await store.headSha("demo"), racePath), null,
+    "the route-style precheck sees the playtest path as absent");
+  const competitor = Buffer.from('{"winner":"competing request"}\n');
+  const originalFetch = globalThis.fetch;
+  let injectedCompetitor = false;
+  globalThis.fetch = async (input, init = {}) => {
+    const response = await originalFetch(input, init);
+    const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+    const method = String(init.method || (typeof input === "object" && input?.method) || "GET").toUpperCase();
+    if (!injectedCompetitor && method === "GET" && response.status === 404
+      && url.pathname.endsWith(`/contents/${racePath}`)) {
+      // Land another writer after Store 1's absence read but before its batch
+      // create. This is the exact window that used to turn a create into an
+      // update when the route retried through generic writeFiles.
+      injectedCompetitor = true;
+      const repository = join(tmp, "mock", "repos", "alice", "demo");
+      mkdirSync(join(repository, "playtests"), { recursive: true });
+      writeFileSync(join(repository, racePath), competitor);
+      execFileSync("git", ["-C", repository, "add", "--", racePath]);
+      execFileSync("git", ["-C", repository, "-c", "user.name=Competitor",
+        "-c", "user.email=competitor@example.test", "commit", "-m", "competing playtest create"]);
+    }
+    if (injectedCompetitor && method === "POST" && url.pathname.endsWith("/repos/alice/demo/contents")
+      && response.status === 422) {
+      // Forgejo v15 can preserve the competing commit yet map the final
+      // non-fast-forward push as HTTP 500. Store 1 must inspect the protected
+      // path after any failed batch instead of relying on one status mapping.
+      return new Response(await response.arrayBuffer(), { status: 500, headers: response.headers });
+    }
+    return response;
+  };
+  try {
+    await assert.rejects(() => store.writeFiles("demo", [{ path: racePath,
+      content: '{"winner":"original request"}\n' }], "log playtest", "alice <alice@example.test>",
+    { createOnlyPaths: [racePath] }), error => error?.code === "STORE1_PATH_EXISTS"
+      && error?.status === 409 && error?.written === false && error?.path === racePath,
+    "a competing Forgejo create is surfaced as a create-only conflict");
+  } finally { globalThis.fetch = originalFetch; }
+  assert.equal(injectedCompetitor, true, "the test exercised the between-check-and-write race window");
+  assert.deepEqual(await store.fileAt("demo", await store.headSha("demo"), racePath), competitor,
+    "the losing create-only request never overwrites the competitor's bytes");
+
   let repository = await api("/repos/alice/demo");
   assert.equal(repository.body.private, true, "new repositories are private before policy reconciliation");
   assert.equal((await api("/repos/alice/demo/raw/game.yaml?ref=main")).response.status, 200,

@@ -58,7 +58,7 @@ const validOrigin = input => {
 };
 
 const requiredKeys = ["FORGE_PUBLIC_ORIGIN", "FORGEJO_PUBLIC_ORIGIN", "FORGE_BIND_IP", "FORGEJO_BIND_PORT",
-  "FORGE_SECRET_DIR",
+  "FORGE_SECRET_DIR", "FORGE_RELEASE_VAULT_VOLUME",
   "FORGE_REGISTRATION_MODE", "FORGE_INVITE_MODE", "FORGE_OPERATOR_NAME", "FORGE_CONTACT_EMAIL", "ACME_EMAIL",
   "FORGE_GATEWAY_IMAGE", "FORGEJO_IMAGE", "FORGEJO_VERSION", "POSTGRES_IMAGE", "POSTGRES_MAJOR", "R2_ACCOUNT_ID", "R2_LFS_BUCKET",
   "FORGE_BACKUP_DESTINATION"];
@@ -90,6 +90,9 @@ if (lint) {
   check(value("POSTGRES_MAJOR") === "16", "qualified PostgreSQL major", `${value("POSTGRES_MAJOR") || "missing"}; production recovery is qualified on 16.x`);
   check(/^[a-f0-9]{32}$/i.test(value("R2_ACCOUNT_ID")), "R2 account identifier", "32 hex characters");
   check(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(value("R2_LFS_BUCKET")), "R2 bucket name", value("R2_LFS_BUCKET") || "missing");
+  check(/^[A-Za-z0-9][A-Za-z0-9_.-]{2,127}$/.test(value("FORGE_RELEASE_VAULT_VOLUME"))
+    && !placeholder(value("FORGE_RELEASE_VAULT_VOLUME")), "external release-vault volume name",
+  value("FORGE_RELEASE_VAULT_VOLUME") || "missing");
   const backup = value("FORGE_BACKUP_DESTINATION");
   const unsafeBackup = !isAbsolute(backup) || ["/", "/tmp", "/var", "/Users", "/home"].includes(backup)
     || resolve(backup).startsWith(resolve(ROOT, "deploy") + "/");
@@ -128,6 +131,10 @@ if (!lint && !skipImageInspect) {
     const inspected = spawnSync("docker", ["image", "inspect", value(name)], { cwd: ROOT, encoding: "utf8" });
     check(inspected.status === 0, `${name} available`, inspected.status === 0 ? "exact digest present on host" : "pull/build the exact digest before preflight");
   }
+  const vaultVolume = spawnSync("docker", ["volume", "inspect", value("FORGE_RELEASE_VAULT_VOLUME")],
+    { cwd: ROOT, encoding: "utf8" });
+  check(vaultVolume.status === 0, "external release-vault volume exists",
+    vaultVolume.status === 0 ? "pre-created and outside Compose lifecycle" : "create it before first boot");
   const forgejoVersion = spawnSync("docker", ["image", "inspect", "--format", '{{index .Config.Labels "org.opencontainers.image.version"}}', value("FORGEJO_IMAGE")],
     { cwd: ROOT, encoding: "utf8" }).stdout.trim();
   check(forgejoVersion === value("FORGEJO_VERSION"), "Forgejo digest/version match", `${forgejoVersion || "unknown"} == declared ${value("FORGEJO_VERSION")}`);

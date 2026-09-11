@@ -732,10 +732,10 @@ for s in setups:
 for s in playtests:
     for n in s.get("card_notes") or []:
         if n["card_id"] not in card_ids:
-            err(f"playtest '{s['id']}': card_note references unknown card '{n['card_id']}'")
+            warn(f"playtest '{s['id']}': card_note '{n['card_id']}' is not in the current snapshot; verify it against pinned version '{s['version_ref']}'")
     for d in s.get("decisions") or []:
         if d.get("card_id") and d["card_id"] not in card_ids:
-            err(f"playtest '{s['id']}': decision references unknown card '{d['card_id']}'")
+            warn(f"playtest '{s['id']}': decision card '{d['card_id']}' is not in the current snapshot; verify it against pinned version '{s['version_ref']}'")
     for p in s.get("players") or []:
         if p.get("deck_id") and p["deck_id"] not in deck_ids:
             warn(f"playtest '{s['id']}': player deck '{p['deck_id']}' not found in decks/")

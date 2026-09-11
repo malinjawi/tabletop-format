@@ -13,7 +13,7 @@
  * Run via journey.sh (sets up scratch repo + LFS mock + server).
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:8420";
@@ -64,6 +64,15 @@ const releaseTag = async (slug, tag) => {
   const listed = await fapi(`/repos/${OWNERS[slug]}/${slug}/tags/${tag}`), value = await listed.json();
   const annotated = await fapi(`/repos/${OWNERS[slug]}/${slug}/git/tags/${value.id}`), object = await annotated.json();
   return { annotated: annotated.ok, object: value.id, target: object.object?.sha };
+};
+const releaseTagExists = async (slug, tag) => {
+  if (!FORGE) {
+    try {
+      execFileSync("git", ["show-ref", "--verify", "--quiet", `refs/tags/forge/${slug}/${tag}`]);
+      return true;
+    } catch { return false; }
+  }
+  return (await fapi(`/repos/${OWNERS[slug]}/${slug}/tags/${tag}`)).ok;
 };
 const api = async (method, path, { token, body, raw } = {}) => {
   const r = await fetch(BASE + path, { method,
@@ -358,7 +367,8 @@ const releaseBlockedPreview = await api("GET", "/api/games/tidepool/releases/pre
 assert(releaseBlockedPreview.status === 200 && !releaseBlockedPreview.data.ready
   && releaseBlockedPreview.data.rights.blockers.some(value => /unclassified/.test(value)),
   "release preflight names the exact file that needs a declaration");
-const rightsBlocked = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1" } });
+const rightsBlocked = await api("POST", "/api/games/tidepool/releases", { token: A,
+  body: { tag: "v0.1", base_ref: releaseBlockedPreview.data.ref } });
 assert(rightsBlocked.status === 422 && rightsBlocked.data.rights?.blockers?.some(value => /unclassified/.test(value)),
   "unknown file rights block release before exports or a Git tag are created");
 const incompleteRights = await api("PUT", "/api/games/tidepool/rights", { token: A, body: {
@@ -372,17 +382,42 @@ const declareRights = await api("PUT", "/api/games/tidepool/rights", { token: A,
 assert(declareRights.status === 200 && declareRights.data.rights.publishable,
   "the owner records an auditable per-file declaration and clears the gate");
 const releaseReadyAgain = await api("GET", "/api/games/tidepool/releases/preflight", { token: A });
-assert(releaseReadyAgain.status === 200 && releaseReadyAgain.data.ready,
+assert(releaseReadyAgain.status === 200 && releaseReadyAgain.data.ready && fullGitId(releaseReadyAgain.data.ref),
   "release readiness turns green immediately after the rights commit");
-const rel = await api("POST", "/api/games/tidepool/releases", { token: A, body: { tag: "v0.1", title: "First cut" } });
+const cardsAfterReleasePreflight = (await api("GET", "/api/games/tidepool/cards", { token: A })).data;
+cardsAfterReleasePreflight.find(card => card.id === "anchor").text += " Exact-version release check.";
+const changeAfterReleasePreflight = await api("PUT", "/api/games/tidepool/cards", { token: A,
+  body: { cards: cardsAfterReleasePreflight, base_ref: releaseReadyAgain.data.ref } });
+assert(changeAfterReleasePreflight.status === 200 && changeAfterReleasePreflight.data.saved
+  && fullGitId(changeAfterReleasePreflight.data.commit)
+  && changeAfterReleasePreflight.data.commit !== releaseReadyAgain.data.ref,
+  "a valid commit advances HEAD after Alice viewed the release preflight");
+const staleRelease = await api("POST", "/api/games/tidepool/releases", { token: A,
+  body: { tag: "v0.1", title: "Stale first cut", base_ref: releaseReadyAgain.data.ref } });
+assert(staleRelease.status === 409 && staleRelease.data.written === false
+  && staleRelease.data.base_ref === releaseReadyAgain.data.ref
+  && staleRelease.data.current_ref === changeAfterReleasePreflight.data.commit,
+  "a release cannot publish a different HEAD than the exact version Alice reviewed", staleRelease.data);
+const releasesAfterStaleAttempt = (await api("GET", "/api/games/tidepool/releases")).data;
+assert(releasesAfterStaleAttempt.length === 0 && !(await releaseTagExists("tidepool", "v0.1")),
+  "the stale release attempt creates neither a SQL release nor a repository tag");
+const currentReleaseReady = await api("GET", "/api/games/tidepool/releases/preflight", { token: A });
+assert(currentReleaseReady.status === 200 && currentReleaseReady.data.ready
+  && currentReleaseReady.data.ref === changeAfterReleasePreflight.data.commit,
+  "a fresh preflight presents the new exact release candidate");
+const rel = await api("POST", "/api/games/tidepool/releases", { token: A,
+  body: { tag: "v0.1", title: "First cut", base_ref: currentReleaseReady.data.ref } });
 assert(rel.status === 201 && fullGitId(rel.data.sha) && String(rel.data.notes || "").startsWith("- ")
   && fullGitId(rel.data.repository_tag?.target) && fullGitId(rel.data.repository_tag?.tagObject)
   && rel.data.repository_tag?.annotated && rel.data.repository_tag?.protected
   && rel.data.artifacts?.some(item => item.name === "forge-rights-receipt.json")
   && rel.data.build?.format === "forge-release-build"
   && rel.data.build?.public_origin === BASE
+  && rel.data.vault?.durable === true && rel.data.vault?.format_version === 2
+  && rel.data.vault?.binding === "tag-manifest"
+  && /^[0-9a-f]{64}$/.test(rel.data.vault?.manifest_sha256 || "")
   && rel.data.rights?.publishable && rel.data.rights?.source_sha === rel.data.sha,
-  "alice cuts v0.1 → required artifacts, protected tag, and a per-file rights receipt", rel.data);
+  "alice cuts v0.1 → required artifacts, durable bytes, protected tag, and a per-file rights receipt", rel.data);
 const actualTag = await releaseTag("tidepool", "v0.1");
 assert(actualTag.annotated && fullGitId(actualTag.object) && fullGitId(actualTag.target)
   && actualTag.target === rel.data.sha,
@@ -391,8 +426,9 @@ const relList = (await api("GET", "/api/games/tidepool/releases")).data;
 assert(relList.length === 1 && relList[0].tag === "v0.1" && relList[0].sha === rel.data.sha
   && relList[0].tag_annotated && relList[0].tag_protected && relList[0].artifacts.length >= 6
   && relList[0].rights?.publishable && relList[0].rights?.file_count > 0
-  && relList[0].build?.public_origin === BASE,
-  "releases list shows the pinned version and its immutable receipt");
+  && relList[0].build?.public_origin === BASE
+  && relList[0].vault?.manifest_sha256 === rel.data.vault.manifest_sha256,
+  "releases list shows the pinned version, durable vault, and immutable receipt");
 const relDet = (await api("GET", "/api/games/tidepool/releases/v0.1")).data;
 assert(relDet.repository_tag.verified_now, "release detail re-verifies the protected annotated tag against Store 1");
 assert(relDet.rights?.publishable && relDet.rights.files.some(file => file.path === "assets/art/unclassified.png"),
@@ -448,13 +484,17 @@ if(process.env.FORGE_ALLOW_CACHE_LOSS_TEST==="1"){
   const cacheRoot=resolve(process.env.FORGE_TEST_CACHE_DIR||"");
   if(!cacheRoot||cacheRoot==="/")die("cache-loss test requires a narrow FORGE_TEST_CACHE_DIR");
   rmSync(join(cacheRoot,"exports","tidepool",rel.data.sha),{recursive:true,force:true});
-  const rebuilt=await api("GET",relDet.downloads.ttc);
-  assert(rebuilt.status===200&&rebuilt.headers.get("cache-control")==="public, no-cache, must-revalidate",
-    "losing derived Store 3 triggers an exact released-artifact rebuild from the pinned Git SHA");
+  const preserved=await api("GET",relDet.downloads.ttc);
+  assert(preserved.status===200&&preserved.headers.get("cache-control")==="public, no-cache, must-revalidate"
+    &&!existsSync(join(cacheRoot,"exports","tidepool",rel.data.sha,"tidepool-ttc.zip")),
+    "losing derived Store 3 still serves the exact released artifact directly from the durable vault");
 }
 
+const jamReleaseReady = await api("GET", `/api/games/${jamJoin.data.slug}/releases/preflight`, { token: A });
+assert(jamReleaseReady.status === 200 && jamReleaseReady.data.ready && fullGitId(jamReleaseReady.data.ref),
+  "the jam candidate exposes its exact releasable source version");
 const jamRel = await api("POST", `/api/games/${jamJoin.data.slug}/releases`, { token: A,
-  body: { tag: "v0.1", title: "Spark Jam submission" } });
+  body: { tag: "v0.1", title: "Spark Jam submission", base_ref: jamReleaseReady.data.ref } });
 assert(jamRel.status === 201 && fullGitId(jamRel.data.sha)
   && fullGitId(jamRel.data.repository_tag?.target) && fullGitId(jamRel.data.repository_tag?.tagObject),
   "a jam candidate is packaged as a rights-checked immutable full-SHA release");

@@ -35,8 +35,8 @@ ok(dockerfile.includes("test -f /etc/debian_version")
   && dockerfile.includes("ARG FORGE_SOURCE_REVISION")
   && dockerfile.includes('org.opencontainers.image.revision="${FORGE_SOURCE_REVISION}"'),
   "image requires a compatible Debian base and records its exact source revision");
-ok(dockerfile.includes("mkdir -p /app/data && chown node:node /app/data"),
-  "image seeds the writable data-volume mountpoint for the unprivileged runtime user");
+ok(dockerfile.includes("mkdir -p /app/data /app/vault && chown node:node /app/data /app/vault"),
+  "image seeds the writable cache and release-vault mountpoints for the unprivileged runtime user");
 const dockerignore=readFileSync(resolve(ROOT,".dockerignore"),"utf8");
 ok(/^hub\.html$/m.test(dockerignore) && /^beta-site$/m.test(dockerignore)
   && /^data$/m.test(dockerignore) && /^output$/m.test(dockerignore),
@@ -49,7 +49,13 @@ ok(env.STORE1==="forgejo" && env.DB==="postgres" && env.FORGE_URL==="http://forg
   "production uses Forgejo and PostgreSQL rather than local stores");
 ok(env.FORGE_HUB_PATH==="/app/data/hub.html" && env.CACHE_DIR?.startsWith("/app/data/")
   && env.FARM_DIR?.startsWith("/app/data/"),
-  "all gateway-generated files live on its writable data volume");
+  "regenerable gateway files live on the writable Store-3 data volume");
+const releaseVaultMount=(gateway.volumes||[]).find(volume=>volume.target==="/app/vault");
+const releaseVaultVolume=config.volumes?.["release-vault-data"];
+ok(env.RELEASE_VAULT_DIR==="/app/vault" && releaseVaultMount?.type==="volume"
+  && releaseVaultMount?.source==="release-vault-data" && releaseVaultVolume?.external===true
+  && /^[A-Za-z0-9][A-Za-z0-9_.-]{2,127}$/.test(releaseVaultVolume?.name||""),
+  "release bytes use a pre-created external volume outside Compose and Store-3 lifecycles");
 ok(env.FORGE_BUILD_ID===gateway.image&&/@sha256:/.test(env.FORGE_BUILD_ID||""),
   "release build identity records the digest-pinned gateway image");
 ok(env.FORGE_HTTPS==="1" && /^https:\/\//.test(env.FORGE_PUBLIC_ORIGIN||"")
@@ -96,11 +102,13 @@ ok(edge.includes("{$FORGE_PUBLIC_ORIGIN}") && edge.includes("127.0.0.1:8420")
   && edge.includes("email {$ACME_EMAIL}"),
   "host TLS proxy has explicit Forge, Forgejo, and certificate-contact routes");
 const template=readFileSync(resolve(ROOT,"deploy/.env.example"),"utf8");
-ok(/^ACME_EMAIL=.+/m.test(template) && /^FORGE_BACKUP_DESTINATION=\/.+/m.test(template),
-  "deployment template requires TLS alerts and an explicit off-host backup target");
+ok(/^ACME_EMAIL=.+/m.test(template) && /^FORGE_BACKUP_DESTINATION=\/.+/m.test(template)
+  && /^FORGE_RELEASE_VAULT_VOLUME=[A-Za-z0-9][A-Za-z0-9_.-]+$/m.test(template),
+  "deployment template requires TLS alerts, an external vault, and an explicit off-host backup target");
 ok(/^FORGEJO_VERSION=15\./m.test(template) && /^POSTGRES_MAJOR=16$/m.test(template),
   "deployment template pins the majors qualified by the recovery drill");
 const restoreDrill=readFileSync(resolve(ROOT,"tools/disposable-restore-drill.sh"),"utf8");
+const restoreRunbook=readFileSync(resolve(ROOT,"deploy/RESTORE-DRILL.md"),"utf8");
 ok(restoreDrill.includes("FORGE_GATEWAY_TEST_IMAGE")
   && restoreDrill.includes("org.opencontainers.image.revision")
   && restoreDrill.includes("--read-only --tmpfs /tmp"),
@@ -138,9 +146,32 @@ ok(workflow.includes("cancel-in-progress: ${{ github.event_name == 'pull_request
   && workflow.includes("github.event_name == 'pull_request' && github.ref || github.sha"),
   "only superseded pull-request checks may cancel; main release runs are isolated by commit");
 const backup=readFileSync(resolve(ROOT,"deploy/backup.sh"),"utf8");
+const vaultSnapshot=readFileSync(resolve(ROOT,"deploy/release-vault-snapshot.mjs"),"utf8");
 ok(backup.includes("s3-snapshot.mjs\" backup")
   && backup.includes("object-store/manifest.json")
   && restoreDrill.includes("s3-snapshot.mjs\" restore"),
   "production and disposable recovery independently snapshot and restore the remote LFS object store");
+ok(backup.includes("release-vault-snapshot.mjs backup")
+  && backup.includes("release-vault/manifest.json")
+  && backup.includes("--source /app/vault")
+  && backup.includes('$vault_volume_name:/app/vault:ro')
+  && backup.includes('"$gateway_image_id"'),
+  "synchronized production backup snapshots and checksums the dedicated release-artifact vault");
+ok(backup.includes("backup_lock_dir=") && backup.includes("services_stop_attempted=1")
+  && backup.indexOf("services_stop_attempted=1") < backup.indexOf('"${compose[@]}" stop gateway forgejo')
+  && vaultSnapshot.includes("createReleaseVault({ root }).audit()")
+  && vaultSnapshot.includes('assertSemanticVault(output, "restored output")'),
+  "backup outage is exclusively locked, restart is armed first, and vault semantics are audited on backup/restore");
+ok(restoreDrill.includes('source_vault_volume="$prefix-source-release-vault"')
+  && restoreDrill.includes('restore_vault_volume="$prefix-restore-release-vault"')
+  && restoreDrill.includes("release-vault-snapshot.mjs\" backup")
+  && restoreDrill.includes("release-vault-snapshot.mjs\" restore")
+  && restoreDrill.includes("release-vault/manifest.json")
+  && restoreDrill.includes("RELEASE_VAULT_DIR=/app/vault")
+  && restoreDrill.includes("FORGE_RESTORE_CACHE_WAS_EMPTY=1")
+  && restoreDrill.includes("--cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add DAC_READ_SEARCH")
+  && restoreRunbook.includes('docker volume create "$FORGE_RELEASE_VAULT_VOLUME"')
+  && restoreRunbook.includes("--cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add DAC_READ_SEARCH"),
+  "disposable recovery restores the checksummed durable vault into a fresh target and verifies it with Store 3 empty");
 
 console.log(`\nPRODUCTION CONFIG GREEN — ${checks} deployability and isolation checks passed.`);

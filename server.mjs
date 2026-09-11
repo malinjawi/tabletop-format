@@ -3,7 +3,8 @@
  * server.mjs — the platform backend (Block G), now a real GATEWAY.
  * Usage: node server.mjs [--port 8420] [--games <dir>] [--readonly]
  * Env: STORE1 (local|forgejo) · LFS_URL (local asset mode) · DB_PATH (Store 2)
- *      CACHE_DIR (Store 3) · FORGE_URL/FORGE_TOKEN (forgejo backend)
+ *      CACHE_DIR (Store 3) · RELEASE_VAULT_DIR (durable published bytes)
+ *      FORGE_URL/FORGE_TOKEN (forgejo backend)
  *      FORGE_PUBLIC_ORIGIN (absolute public URL embedded in TTS saves)
  *      VTT_ORIGIN (local/self-hosted VirtualTabletop.io; default localhost:8272)
  *
@@ -18,16 +19,19 @@
  */
 import { execFile, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync, statSync, lstatSync, mkdirSync, mkdtempSync, rmSync, readdirSync, renameSync, realpathSync } from "node:fs";
-import { join, dirname, resolve, relative, sep } from "node:path";
+import { basename, join, dirname, resolve, relative, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 import yaml from "js-yaml";
 import YAML from "yaml";
 import { createGateway, readBody } from "./platform/gateway.mjs";
+import { createReleaseVault, isReleaseVaultVersionSupported,
+  RELEASE_VAULT_NATIVE_VERSION } from "./platform/release-vault.mjs";
+import { createOrJoinExportJob } from "./platform/export-job-race.mjs";
 import { diffCards, summarize, mergeCards } from "./tools/lib/carddiff.mjs";
 import { jamQualify } from "./tools/lib/jamcheck.mjs";
 import { csvToCards, normalizeSheetUrl } from "./tools/lib/cardcsv.mjs";
@@ -129,6 +133,25 @@ const MAX_PROJECT_BYTES = 128 * 1024 * 1024;
 const MAX_NANDECK_BYTES = 2 * 1024 * 1024;
 const ADAPTER_CATALOG = JSON.parse(readFileSync(join(ROOT, "integrations", "adapters", "catalog.json"), "utf8"));
 const PRINT_TARGET_REGISTRY = JSON.parse(readFileSync(join(ROOT, "production", "print-targets.json"), "utf8"));
+const canonicalFuturePath = input => {
+  let existing=resolve(input);const suffix=[];
+  while(!existsSync(existing)){
+    const parent=dirname(existing);
+    if(parent===existing)throw new Error(`cannot resolve storage path ${input}`);
+    suffix.unshift(basename(existing));existing=parent;
+  }
+  return join(realpathSync(existing),...suffix);
+};
+const RELEASE_VAULT_DIR = canonicalFuturePath(process.env.RELEASE_VAULT_DIR ?? join(ROOT, "data", "release-vault"));
+const CANONICAL_CACHE_DIR = canonicalFuturePath(cache.CACHE_DIR);
+const pathContains = (parent, candidate) => {
+  const rel = relative(resolve(parent), resolve(candidate));
+  return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !rel.startsWith("/"));
+};
+if (pathContains(CANONICAL_CACHE_DIR, RELEASE_VAULT_DIR) || pathContains(RELEASE_VAULT_DIR, CANONICAL_CACHE_DIR))
+  throw new Error("RELEASE_VAULT_DIR and CACHE_DIR must be separate, non-overlapping stores");
+const releaseVault = createReleaseVault({ root: RELEASE_VAULT_DIR });
+releaseVault.initialize();
 
 /* ---------- stores ---------- */
 // Store 2 — driver behind the same q surface: node:sqlite (dev) or Postgres (prod)
@@ -316,14 +339,28 @@ async function hubHtml() {
 async function uiGame(slug) {
   const sha = await store.headSha(slug), key = `${slug}@${sha}`;
   if (uiGameCache.has(key)) return uiGameCache.get(key);
-  const dir = await store.dir(slug);
-  const args = [join(ROOT, "tools", "build_hub.py"), "--game-json", dir, "--live-assets"];
-  if (STORE1 === "local") args.push("--repo-root", LOCAL_STORE_ROOT);
-  const { stdout } = await execFileAsync(PYTHON, args, { maxBuffer: 64 * 1024 * 1024 });
-  const game = JSON.parse(stdout);
-  uiGameCache.set(key, game);
-  if (uiGameCache.size > 40) uiGameCache.delete(uiGameCache.keys().next().value);
-  return game;
+  // Live UI payloads carry exact Store-1 asset URLs, so pointer files are
+  // enough to discover source paths. Resolving every LFS object here would
+  // redownload an entire art library after each source commit.
+  const snapshot = await store.materialize(slug, sha, { resolveLfs: false });
+  try {
+    const args = [join(ROOT, "tools", "build_hub.py"), "--game-json", snapshot.dir,
+      "--live-assets", "--route-slug", slug, "--history-ref", sha];
+    if (STORE1 === "local") {
+      // The snapshot lives in a temporary directory, while local commit
+      // history still lives in Store 1. Supplying only its repository-relative
+      // identity preserves the Commits/credit views without reading live game
+      // content a second time.
+      const liveDir = await store.dir(slug);
+      args.push("--repo-root", LOCAL_STORE_ROOT, "--git-rel", relative(LOCAL_STORE_ROOT, liveDir));
+    }
+    const { stdout } = await execFileAsync(PYTHON, args, { maxBuffer: 64 * 1024 * 1024 });
+    // The ref and every game file above come from one immutable snapshot.
+    const game = { ...JSON.parse(stdout), source_ref: sha };
+    uiGameCache.set(key, game);
+    if (uiGameCache.size > 40) uiGameCache.delete(uiGameCache.keys().next().value);
+    return game;
+  } finally { snapshot.cleanup(); }
 }
 
 /* ---------- gateway + middleware ---------- */
@@ -375,6 +412,30 @@ const PRIVATE_PROJECT_CACHE = "private, no-store";
 // Until Forge has an explicit irrevocable-publication policy, shared caches
 // must ask the gateway to re-authorize every public artifact request.
 const PUBLIC_REVALIDATE_CACHE = "public, no-cache, must-revalidate";
+const exactRightsAuditCache = new Map();
+async function exactRightsAudit(slug, ref) {
+  const key = `${slug}@${ref}`;
+  if (exactRightsAuditCache.has(key)) return exactRightsAuditCache.get(key);
+  // Rights declarations and file inventory are ordinary Git source. Auditing
+  // pointer bytes is sufficient here and avoids downloading every LFS object
+  // merely to decide whether one exact asset may be served.
+  // Cache the in-flight work too: one card grid can request dozens of faces in
+  // parallel and must materialize/audit its shared exact tree only once.
+  const pending = (async () => {
+    const snapshot = await store.materialize(slug, ref, { resolveLfs: false });
+    try { return auditRights(snapshot.dir, { sourceSha: ref }); }
+    finally { snapshot.cleanup(); }
+  })();
+  exactRightsAuditCache.set(key, pending);
+  if (exactRightsAuditCache.size > 80)
+    exactRightsAuditCache.delete(exactRightsAuditCache.keys().next().value);
+  try {
+    return await pending;
+  } catch (error) {
+    if (exactRightsAuditCache.get(key) === pending) exactRightsAuditCache.delete(key);
+    throw error;
+  }
+}
 async function projectCacheControl(slug, publicPolicy = PUBLIC_REVALIDATE_CACHE) {
   const game = store.has(slug) ? await q.gameBySlug(db, slug) : null;
   return game?.visibility === "public" ? publicPolicy : PRIVATE_PROJECT_CACHE;
@@ -452,7 +513,7 @@ gw.use(async (ctx) => {
   const p = ctx.url.pathname.split("/").filter(Boolean);
   let slug = null;
   if (p[0] === "api" && p[1] === "games" && p.length >= 3) slug = decodeURIComponent(p[2]);
-  else if (p[0] === "cache" && ["renders", "exports"].includes(p[1]) && p.length >= 3) slug = decodeURIComponent(p[2]);
+  else if (p[0] === "cache" && ["renders", "exports", "releases"].includes(p[1]) && p.length >= 3) slug = decodeURIComponent(p[2]);
   else if (p[0] === "edit" && p.length >= 2) slug = decodeURIComponent(p[1]);
   else if (p[0] === "api" && p[1] === "projects" && p.length >= 4) {
     const row = await q.gameByProject(db, decodeURIComponent(p[2]), decodeURIComponent(p[3])); slug = row?.slug || null;
@@ -482,10 +543,10 @@ const optionalJson = async (ctx) => {
   return raw ? JSON.parse(raw) : {};
 };
 
-/** Validate a candidate tree = game at HEAD + one replaced file. Never touches
- *  the live tree — the rollback path is simply "don't commit". Backend-agnostic. */
-async function validateCandidate(slug, relPath, content, extra = {}) {
-  const { dir, cleanup } = await store.materialize(slug, "HEAD");
+/** Validate a candidate tree = game at one exact ref + one replaced file. Never
+ *  touches the live tree — the rollback path is simply "don't commit". */
+async function validateCandidateAt(slug, ref, relPath, content, extra = {}) {
+  const { dir, cleanup } = await store.materialize(slug, ref);
   try {
     const full = join(dir, relPath);
     mkdirSync(dirname(full), { recursive: true });   // new-file artifacts (e.g. playtests/) may need the dir
@@ -497,6 +558,56 @@ async function validateCandidate(slug, relPath, content, extra = {}) {
     return { ok: v.status === 0, report: `${v.stdout || ""}\n${v.stderr || ""}`.trim().split("\n") };
   } finally { cleanup(); }
 }
+async function validateCandidate(slug, relPath, content, extra = {}) {
+  return validateCandidateAt(slug, "HEAD", relPath, content, extra);
+}
+function sourceDocuments(dir, relDir) {
+  const root = join(dir, relDir);
+  if (!existsSync(root)) return [];
+  return readdirSync(root).filter(name => /\.(?:json|ya?ml)$/i.test(name)).sort().flatMap(name => {
+    const raw = readFileSync(join(root, name), "utf8");
+    const document = name.endsWith(".json") ? JSON.parse(raw) : yaml.load(raw);
+    return Array.isArray(document) ? document : [document];
+  });
+}
+/** A playtest is historical evidence: its card/build references belong to the
+ *  immutable version on the table, not today's project head. Validate the
+ *  complete candidate tree, then optionally enforce those references against
+ *  this exact materialized version. */
+async function validatePlaytestCandidateAt(slug, ref, relPath, content, session, { pinnedReferences = false } = {}) {
+  const { dir, cleanup } = await store.materialize(slug, ref, { resolveLfs: false });
+  try {
+    const full = join(dir, relPath);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content);
+    const checked = py("validate.py", [dir]);
+    const report = `${checked.stdout || ""}\n${checked.stderr || ""}`.trim().split("\n").filter(Boolean);
+    if (!pinnedReferences) return { ok: checked.status === 0, report };
+    const cardIds = new Set(JSON.parse(readFileSync(join(dir, "components/cards.json"), "utf8")).map(card => card.id));
+    const deckIds = new Set(sourceDocuments(dir, "decks").map(deck => deck?.id).filter(Boolean));
+    const referenceErrors = [];
+    for (const note of session.card_notes || [])
+      if (!cardIds.has(note.card_id)) referenceErrors.push(
+        `playtest '${session.id}': card_note references unknown card '${note.card_id}' at pinned version ${ref}`);
+    for (const decision of session.decisions || [])
+      if (decision.card_id && !cardIds.has(decision.card_id)) referenceErrors.push(
+        `playtest '${session.id}': decision references unknown card '${decision.card_id}' at pinned version ${ref}`);
+    for (const player of session.players || [])
+      if (player.deck_id && !deckIds.has(player.deck_id)) referenceErrors.push(
+        `playtest '${session.id}': player deck '${player.deck_id}' is unavailable at pinned version ${ref}`);
+    return { ok: checked.status === 0 && referenceErrors.length === 0,
+      report: [...report, ...referenceErrors.map(error => `ERROR ${error}`)] };
+  } catch (error) {
+    return { ok: false, report: [`playtest validation failed: ${error.message}`] };
+  } finally { cleanup(); }
+}
+async function exactFileBytes(slug, ref, relPath) {
+  const { dir, cleanup } = await store.materialize(slug, ref);
+  try {
+    const path = join(dir, relPath);
+    return existsSync(path) ? readFileSync(path) : null;
+  } finally { cleanup(); }
+}
 
 /* ---------- reusable repository assets ----------
  * Cards are structured objects, but the playable game also depends on files:
@@ -504,7 +615,7 @@ async function validateCandidate(slug, relPath, content, extra = {}) {
  * setups. These paths are first-class game source. The helpers below provide
  * one safe, renderer-neutral inventory used by the Assets tab and by PRs. */
 const REUSABLE_ROOTS = ["assets/", "templates/", "setups/", "rules/"];
-const REVIEWED_EXACT = new Set(["game.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST,
+const REVIEWED_EXACT = new Set(["game.yaml", "community.yaml", "CREDITS.md", "CODEOWNERS", "forge/collaboration.json", RIGHTS_MANIFEST,
   SOURCE_ASSETS_MANIFEST]);
 // These files define project identity, legal publication authority, or access
 // control. Contributors may propose them through a fork/PR, but direct generic
@@ -632,6 +743,13 @@ function mergeRepoFiles(base = {}, proposed = {}, current = {}) {
   }
   return { changes, conflicts };
 }
+function reviewableFileEntry(path, bytes) {
+  if (bytes == null) return null;
+  const buf = Buffer.from(bytes);
+  const hash = path === RIGHTS_MANIFEST ? rightsContributionHash(buf)
+    : path === "game.yaml" ? gameYamlContributionHash(buf) : hashBuffer(buf);
+  return { hash, size: buf.length };
+}
 const snapshotCache = new Map();
 async function gameSnapshot(slug, ref = null) {
   const pinned = ref ? await store.resolveRef(slug, ref) : await store.headSha(slug);
@@ -645,9 +763,7 @@ async function gameSnapshot(slug, ref = null) {
     const files = {};
     for (const item of walkRepo(dir).filter(item => isReviewablePath(item.path) && !PR_LOCAL_ONLY.has(item.path))) {
       const buf = readFileSync(item.full);
-      const hash = item.path === RIGHTS_MANIFEST ? rightsContributionHash(buf)
-        : item.path === "game.yaml" ? gameYamlContributionHash(buf) : hashBuffer(buf);
-      files[item.path] = { hash, size: buf.length };
+      files[item.path] = reviewableFileEntry(item.path, buf);
     }
     const snapshot = { version: 3, ref: pinned, cards, printings, files };
     snapshotCache.set(cacheKey, snapshot);
@@ -715,6 +831,8 @@ const publishedArtifactKind=(slug,file)=>file==="pnp.pdf"?"pnp"
   : file===`${slug}-ttc.zip`?"ttc"
   : file===cache.ttpgArtifactName(slug)||file==="ttpg-manifest.json"?"ttpg"
   : ["print-ready.zip","print-a4.pdf","print-letter.pdf","print-press-rgb.pdf","print-press-cmyk.pdf"].includes(file)?"print"
+  : file.startsWith("cut-sheets/")||file.startsWith("setup-maps/")
+    ||(file.startsWith(`${slug}-components-v`)&&/-components-v[1-9][0-9]*\.zip$/.test(file))?"components"
   : file===cache.projectArtifactName(slug)?"project"
   : file.startsWith("vtt-faces/")||[cache.vttArtifactName("vtt"),cache.vttArtifactName("json")].includes(file)?"vtt":null;
 // TTS saves and raw VirtualTabletop state contain absolute texture URLs. A
@@ -739,6 +857,7 @@ function safeArtifactPath(file){
 }
 const validArtifactReceipt=(item,file)=>item?.status==="ready"&&item.name===file
   &&Number.isSafeInteger(item.bytes)&&item.bytes>=0&&/^[0-9a-f]{64}$/i.test(item.sha256||"");
+const TAG_RE = /^v[0-9][0-9A-Za-z._-]{0,31}$/;
 const exportInputHash=(slug,ref,kind,version)=>createHash("sha256")
   .update(`${slug}\0${ref}\0${kind}\0${version}`).digest("hex");
 function parseExportJobEvidence(job,slug,ref,file){
@@ -776,7 +895,21 @@ async function releaseArtifactEvidence(slug,ref,file){
   if(matches.some(match=>match.expected.bytes!==matches[0].expected.bytes
     ||match.expected.sha256!==matches[0].expected.sha256))
     return {error:"frozen releases disagree about the bytes at this exact artifact URL"};
-  return matches[0];
+  // Once a release has durable vault evidence, it is the authority for this
+  // exact URL. Legacy cache-backed releases remain readable during migration.
+  return matches.find(match=>match.release.vault_manifest_sha256)||matches[0];
+}
+function readVaultedReleaseArtifact(slug,release,expected,file){
+  if(!isReleaseVaultVersionSupported(Number(release.vault_format_version)))
+    throw Object.assign(new Error("the release uses an unsupported vault format"),{code:"VAULT_FORMAT"});
+  const preserved=releaseVault.readArtifact({slug,tag:release.tag,sourceSha:release.sha,name:file});
+  if(preserved.manifest.version!==Number(release.vault_format_version))
+    throw Object.assign(new Error("the database and vault format versions disagree"),{code:"VAULT_FORMAT"});
+  if(preserved.manifestSha256!==String(release.vault_manifest_sha256).toLowerCase())
+    throw Object.assign(new Error("the database and vault manifest digests disagree"),{code:"VAULT_BINDING"});
+  if(preserved.receipt.bytes!==expected.bytes||preserved.receipt.sha256!==expected.sha256)
+    throw Object.assign(new Error("the database and vault artifact receipts disagree"),{code:"VAULT_RECEIPT"});
+  return preserved.bytes;
 }
 async function exportJobArtifactEvidence(slug,ref,file){
   const matches=(await q.succeededExportJobsForRef(db,slug,ref))
@@ -811,7 +944,22 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
     return ctx.send(404,{error:"private hosted tabletop artifact is unavailable; use a self-contained package"});
   const fp = cache.pathOf(cache.exportKey(slug, ref, file));
   const releaseEvidence=await releaseArtifactEvidence(slug,ref,file);
-  if(releaseEvidence?.error)return ctx.send(503,{error:releaseEvidence.error});
+  if(releaseEvidence?.error){ctx.setHeader("cache-control","private, no-store");
+    return ctx.send(503,{error:releaseEvidence.error});}
+  if(releaseEvidence?.release?.vault_manifest_sha256){
+    try{
+      const {release,expected}=releaseEvidence;
+      await requireNativeReleaseTagBinding(slug,release);
+      const bytes=readVaultedReleaseArtifact(slug,release,expected,file);
+      return ctx.sendRaw(200,bytes,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
+        "cache-control":await projectCacheControl(slug)});
+    }catch(error){
+      console.error(`Release vault verification failed for ${slug}/${releaseEvidence.release.tag}/${file}: ${error.code||error.message}`);
+      ctx.setHeader("cache-control","private, no-store");
+      return ctx.send(503,{error:"frozen release vault integrity verification failed",
+        integrity_code:String(error.code||"VAULT_VERIFY_FAILED").slice(0,80)});
+    }
+  }
   let expected=releaseEvidence?.expected||null;
   if(releaseEvidence&&!artifactMatchesReceipt(fp,expected)) {
     // Store 3 is derived. Rebuild a missing or corrupt published artifact only
@@ -826,11 +974,18 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
         const kind=publishedArtifactKind(slug,file);
         if(!kind){rmSync(fp,{recursive:true,force:true});
           return ctx.send(503,{error:"published artifact cannot be regenerated by this build"});}
+        const build=release.build_json?JSON.parse(release.build_json):null;
+        if(kind==="components"){
+          const recorded=Number(build?.exporters?.components),available=cache.exporterVersion("components");
+          if(!Number.isInteger(recorded)||recorded!==available)
+            return ctx.send(503,{error:"historical component exporter is unavailable; retained immutable release bytes are required",
+              recorded_exporter_version:Number.isInteger(recorded)?recorded:null,
+              available_exporter_version:available});
+        }
         // A cache marker only proves the original family completed. If one
         // sibling was lost, invalidate the whole derived family before the
         // queued rebuild so immutable release recovery succeeds in one GET.
         if(cache.exportReady(slug,ref,kind))discardRegeneratedKind(slug,ref,kind,artifacts);
-        const build=release.build_json?JSON.parse(release.build_json):null;
         await (await queueExportJob({slug,sha:ref,kind,
           publicOrigin:build?.public_origin||PUBLIC_ORIGIN})).promise;
         // One exporter can publish a family of files (for example a TTS save,
@@ -881,6 +1036,38 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
   ctx.sendRaw(200, bytes, { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
     "cache-control": await projectCacheControl(slug) });
 }, "frozen export artifact (sha or release tag)");
+
+gw.route("GET", "/cache/releases/:slug/:tag/*", async (ctx) => {
+  const slug=requireGame(ctx);if(!slug)return;
+  const {tag}=ctx.params,file=ctx.params["*"];
+  if(!TAG_RE.test(tag)||!safeArtifactPath(file))return ctx.send(404,{error:"bad release artifact path"});
+  const release=await q.releaseByTag(db,slug,tag);
+  if(!release)return ctx.send(404,{error:"no such release"});
+  const project=await q.gameBySlug(db,slug);
+  if(project?.visibility!=="public"&&privateDigitalArtifactBlocked(slug,file))
+    return ctx.send(404,{error:"private hosted tabletop artifact is unavailable; use a self-contained package"});
+  let artifacts;
+  try{artifacts=release.artifacts_json?JSON.parse(release.artifacts_json):[];}
+  catch{return ctx.send(503,{error:"frozen release artifact receipt is unreadable"});}
+  if(!Array.isArray(artifacts))return ctx.send(503,{error:"frozen release artifact receipt is invalid"});
+  const matches=artifacts.filter(item=>item?.status==="ready"&&item?.name===file);
+  if(!matches.length)return ctx.send(404,{error:"artifact is not part of this release"});
+  if(matches.length!==1||!validArtifactReceipt(matches[0],file))
+    return ctx.send(503,{error:"frozen release artifact receipt is invalid"});
+  if(!release.vault_manifest_sha256)
+    return ctx.send(404,{error:"this legacy release has no tag-addressed byte vault; use its exact SHA download"});
+  try{
+    await requireNativeReleaseTagBinding(slug,release);
+    const bytes=readVaultedReleaseArtifact(slug,release,matches[0],file);
+    return ctx.sendRaw(200,bytes,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
+      "cache-control":await projectCacheControl(slug)});
+  }catch(error){
+    console.error(`Release vault verification failed for ${slug}/${tag}/${file}: ${error.code||error.message}`);
+    ctx.setHeader("cache-control","private, no-store");
+    return ctx.send(503,{error:"frozen release vault integrity verification failed",
+      integrity_code:String(error.code||"VAULT_VERIFY_FAILED").slice(0,80)});
+  }
+},"tag-addressed immutable release artifact from the durable vault");
 
 /* ---------- routes: Store 2 — identity & social ---------- */
 function setSessionCookie(ctx, token, maxAge = Math.floor(SESSION_TTL / 1000)) {
@@ -1198,21 +1385,29 @@ gw.route("GET", "/api/games/:slug/ui", async (ctx) => {
     // the cached repository payload immutable: cutting a release does not
     // create a game-source commit and therefore does not change its cache key.
     const game = await uiGame(slug);
-    const releases = (await q.releasesFor(db, slug)).slice().reverse().map(release => ({
-      tag: release.tag,
-      sha: release.sha,
-      title: release.title || "",
-      notes: release.notes || "",
-      date: new Date(Number(release.created_at)).toISOString().slice(0, 10),
-      author: release.author_handle || "",
+    const releaseMetadata=await Promise.all((await q.releasesFor(db,slug))
+      .slice().reverse().map(release=>verifiedReleasePublication(slug,release,{verifyTag:true})));
+    const releases = releaseMetadata.map(metadata => ({
+      tag: metadata.row.tag,
+      sha: metadata.row.sha,
+      title: metadata.row.title || "",
+      notes: metadata.row.notes || "",
+      date: new Date(Number(metadata.row.created_at)).toISOString().slice(0, 10),
+      author: metadata.authorName,
     }));
     ctx.send(200, { ...game, releases, repository: repositoryLinks(game) });
   }
-  catch (error) { ctx.send(500, { error: "could not load this project view", detail: error.message }); }
+  catch (error) {
+    if(String(error?.code||"").startsWith("RELEASE_")||String(error?.code||"").startsWith("VAULT_"))
+      return sendReleaseMetadataFailure(ctx,error,slug,"project-view");
+    ctx.send(500, { error: "could not load this project view", detail: error.message });
+  }
 }, "lazy full project view, cached by exact repository commit");
 gw.route("GET", "/api/projects/:namespace/:slug", async (ctx) => {
   const game = await q.gameByProject(db, ctx.params.namespace, ctx.params.slug);
   if (!game || !store.has(game.slug)) return ctx.send(404, { error: "no such project" });
+  const user = await authedUser(ctx);
+  if (!await canRead(user, game.slug, ctx)) return ctx.send(404, { error: "no such project" });
   ctx.send(200, { project_id: game.project_id, namespace: game.namespace,
     slug: game.repo_slug, storage_key: game.slug,
     api: `/api/games/${encodeURIComponent(game.slug)}`,
@@ -1222,6 +1417,8 @@ gw.route("GET", "/api/projects/:namespace/:slug", async (ctx) => {
 gw.route("GET", "/api/projects/:namespace/:slug/cards", async (ctx) => {
   const game = await q.gameByProject(db, ctx.params.namespace, ctx.params.slug);
   if (!game || !store.has(game.slug)) return ctx.send(404, { error: "no such project" });
+  const user = await authedUser(ctx);
+  if (!await canRead(user, game.slug, ctx)) return ctx.send(404, { error: "no such project" });
   const cards = JSON.parse((await store.readFile(game.slug, "components/cards.json")).toString());
   const qtext = String(ctx.url.searchParams.get("q") || "").toLowerCase(), type = String(ctx.url.searchParams.get("type") || "").toLowerCase();
   const limit = Math.max(1, Math.min(100, Number(ctx.url.searchParams.get("limit")) || 40));
@@ -1241,7 +1438,12 @@ async function resolveForkPoint(src, requestedRef) {
     if (!sourceYaml) throw Object.assign(new Error("the latest source version is unavailable"), { code: 422 });
     return { sha, label: "latest working version", sourceYaml: sourceYaml.toString() };
   }
-  const release = await q.releaseByTag(db, src, requested);
+  let release = await q.releaseByTag(db, src, requested);
+  if(release){
+    try{release=(await verifiedReleasePublication(src,release,{verifyTag:true})).row;}
+    catch(cause){throw Object.assign(new Error("the requested release failed immutable publication verification"),
+      {code:503,integrity_code:String(cause?.code||"RELEASE_METADATA_VERIFY_FAILED"),cause});}
+  }
   const candidate = release?.sha ?? requested;
   // Fork refs are deliberately narrower than general git refs: a release tag
   // is resolved server-side and an explicit version must be a commit id. This
@@ -1299,17 +1501,31 @@ async function doFork(u, src, requestedRef = "HEAD") {
   return { slug: newSlug, repo_slug: repoSlug, namespace: u.handle, project_id: projectId,
     sha, source_ref: point.sha, source_label: point.label };
 }
-async function ensureUserFork(u, src) {
+async function ensureUserFork(u, src, ref = "HEAD") {
   const sourceGame = await q.gameBySlug(db, src);
   const sourceRepoSlug = sourceGame?.repo_slug || src;
   const repoSlug = `${sourceRepoSlug}-${u.handle}`.slice(0, 60);
   const existing = await q.gameByProject(db, u.handle, repoSlug);
-  if (!existing) return (await doFork(u, src)).slug;
+  if (!existing) return (await doFork(u, src, ref)).slug;
   if (!(await accessFor(u, existing.slug, existing)).is_owner)
     throw Object.assign(new Error(`'${u.handle}/${repoSlug}' exists and is not yours`), { code: 409 });
   if (existing.forked_from !== src)
     throw Object.assign(new Error(`'${u.handle}/${repoSlug}' is not an edition of '${src}'`), { code: 409 });
   return existing.slug;
+}
+function focusedPrUrl(game, id) {
+  const path = game?.namespace && game?.repo_slug
+    ? publicProjectPath({ namespace: game.namespace, slug: game.repo_slug })
+    : `/g/${encodeURIComponent(game?.slug || "community")}`;
+  return `/#${path}/suggestions/${encodeURIComponent(id)}`;
+}
+async function announcePrOpened(u, slug, id) {
+  const owner = await q.gameBySlug(db, slug);
+  await q.recordEvent(db, { id: newId("ev"), kind: "pr_open", actor_id: u.id, game_slug: slug, target: id });
+  if (owner?.owner_id && owner.owner_id !== u.id)
+    await q.notify(db, { id: newId("n"), user_id: owner.owner_id, kind: "pr_open",
+      actor_handle: u.handle, game_slug: slug, target: id });
+  return focusedPrUrl(owner, id);
 }
 gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
@@ -1324,7 +1540,8 @@ gw.route("POST", "/api/games/:slug/fork", async (ctx) => {
       project_id: f.project_id, forked_from: src, source_ref: f.source_ref,
       source_label: f.source_label, commit: f.sha,
       url: `/#${publicProjectPath({ namespace: f.namespace, slug: f.repo_slug })}` });
-  } catch (e) { ctx.send(e.code ?? 500, { error: e.message,
+  } catch (e) { if(e.integrity_code)ctx.setHeader("cache-control","private, no-store");ctx.send(e.code ?? 500, { error: e.message,
+      ...(e.integrity_code?{integrity_code:e.integrity_code}:{}),
       ...(e.existing ? { existing: e.existing, url: `/#/g/${e.existing}` } : {}) }); }
 }, "create an independent edition from an exact version: copy → attribution → commit → indexed lineage");
 gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
@@ -1333,24 +1550,45 @@ gw.route("POST", "/api/games/:slug/cards/propose", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const bodyIn = await json(ctx);
   const cards = Array.isArray(bodyIn) ? bodyIn : bodyIn.cards;
+  if (!Array.isArray(cards)) return ctx.send(422, { error: "body must contain {cards: [...], base_ref}" });
   const prTitle = (!Array.isArray(bodyIn) && bodyIn.title) || null;
-  const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
-  const changes = diffCards(before, cards ?? []);
+  const baseRef = !Array.isArray(bodyIn) ? String(bodyIn.base_ref || "").trim() : "";
+  const currentRef = await store.headSha(slug);
+  if (baseRef && baseRef !== currentRef)
+    return ctx.send(409, { error: "this game changed after the card editor opened; reload to review the newer version before proposing",
+      base_ref: baseRef, current_ref: currentRef, written: false });
+  const before = JSON.parse((await store.fileAt(slug, currentRef, "components/cards.json")).toString());
+  const changes = diffCards(before, cards);
   if (!changes.length) return ctx.send(422, { error: "no changes to propose" });
   let forkSlug;
-  try { forkSlug = await ensureUserFork(u, slug); }
+  try { forkSlug = await ensureUserFork(u, slug, currentRef); }
   catch (error) { return ctx.send(error.code ?? 500, { error: error.message }); }
+  const forkRef = await store.headSha(forkSlug);
   const content = JSON.stringify(cards, null, 2) + "\n";
   const v = await validateCandidate(forkSlug, "components/cards.json", content);
   if (!v.ok) return ctx.send(422, { error: "validation failed", report: v.report });
+  const [sourceNow, forkNow] = await Promise.all([store.headSha(slug), store.headSha(forkSlug)]);
+  if (sourceNow !== currentRef)
+    return ctx.send(409, { error: "this game changed while Forge validated the proposal; reload before proposing",
+      base_ref: currentRef, current_ref: sourceNow, written: false });
+  if (forkNow !== forkRef)
+    return ctx.send(409, { error: "your edition changed while Forge validated the proposal; reload before proposing",
+      base_ref: forkRef, current_ref: forkNow, written: false });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(forkSlug, [{ path: "components/cards.json", content }],
     `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);
   const id = newId("pr");
+  // This endpoint is deliberately card-only: retain exact refs without
+  // accidentally pulling unrelated files from a contributor's existing edition
+  // into what the editor presented as a card proposal.
+  const base = { version: 2, ref: currentRef, cards: before, printings: [], files: {} };
+  const proposed = { version: 2, ref: sha, cards, printings: [], files: {} };
   await q.createPr(db, { id, to_slug: slug, from_slug: forkSlug,
     title: prTitle ?? auto.title, body: null, author_id: u.id,
-    base: JSON.stringify(before), proposed: JSON.stringify(cards) });
-  ctx.send(201, { proposed: true, pr: id, fork: forkSlug, commit: sha, message: auto.title, changes });
+    base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
+  const url = await announcePrOpened(u, slug, id);
+  ctx.send(201, { proposed: true, pr: id, fork: forkSlug, commit: sha, message: auto.title, changes,
+    base_ref: currentRef, proposed_ref: sha, url });
 }, "edit without access → auto-fork, commit to your fork, PR opened for review");
 gw.route("GET", "/api/games/:slug/access", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -1365,7 +1603,8 @@ gw.route("GET", "/api/games/:slug/access", async (ctx) => {
     role: access.is_owner ? "owner" : access.role,
     isOwner: access.is_owner,
     ownerless: access.ownerless,
-    sandbox: access.sandbox });
+    sandbox: access.sandbox,
+    ref: await store.headSha(slug) });
 }, "can the current user act here? sandbox:true means this is an explicitly marked ownerless PUBLIC demo where signed-in users can write and merge, but must fork before releasing");
 gw.route("GET", "/api/games/:slug/collaborators", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -1537,6 +1776,7 @@ function componentSetupDocuments(dir) {
 }
 function componentSetupBytes(path, document, before = "") {
   if (path.toLowerCase().endsWith(".json")) return `${JSON.stringify(document, null, 2)}\n`;
+  if (!String(before).trim()) return yaml.dump(document, { noRefs: true, lineWidth: -1, sortKeys: false });
   const source = YAML.parseDocument(before, { keepSourceTokens: true });
   if (source.errors.length) throw new Error(`existing setup YAML is invalid: ${source.errors[0].message}`);
   source.set("pieces", document.pieces || []);
@@ -1544,17 +1784,19 @@ function componentSetupBytes(path, document, before = "") {
 }
 gw.route("GET", "/api/games/:slug/components/pieces", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const user = await authedUser(ctx), raw = await store.readFile(slug, "components/tokens.json");
+  const user = await authedUser(ctx);
   const ref = await store.headSha(slug);
   const materialized = await store.materialize(slug, ref);
   try {
+    const piecePath = join(materialized.dir, "components/tokens.json");
+    const designPath = join(materialized.dir, COMPONENT_DESIGN_PATH);
     let design;
     try { design = loadComponentDesign(materialized.dir); } catch (error) {
       return ctx.send(422, { error: `component design is invalid: ${error.message}` });
     }
-    ctx.send(200, { ref, pieces: raw ? JSON.parse(raw.toString()) : [], design,
+    ctx.send(200, { ref, pieces: existsSync(piecePath) ? JSON.parse(readFileSync(piecePath, "utf8")) : [], design,
       setups: componentSetupDocuments(materialized.dir), design_source: COMPONENT_DESIGN_PATH,
-      inferred_design: !(await store.readFile(slug, COMPONENT_DESIGN_PATH)),
+      inferred_design: !existsSync(designPath),
       access: { signed_in: !!user, can_write: await canWrite(user, slug) } });
   } finally { materialized.cleanup(); }
 }, "versioned pieces plus reusable visual families");
@@ -1567,10 +1809,13 @@ gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
   if (setup && (!/^setups\/[A-Za-z0-9_.-]+\.(?:json|ya?ml)$/.test(setup.path || "")
     || !setup.document || typeof setup.document !== "object" || Array.isArray(setup.document)))
     return ctx.send(422, { error: "setup must contain a safe setups/*.yaml or .json path and document object" });
+  const requestedRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(requestedRef))
+    return ctx.send(422, { error: "base_ref must be the exact Git revision opened by Piece Studio", written: false });
   const ref = await store.headSha(slug);
-  if (body.base_ref && body.base_ref !== ref)
+  if (requestedRef !== ref)
     return ctx.send(409, { error: "Component source changed since this draft opened. Reload Piece Studio before reviewing it.",
-      base_ref: body.base_ref, current_ref: ref, written: false });
+      base_ref: requestedRef, current_ref: ref, written: false });
   const materialized = await store.materialize(slug, ref);
   try {
     const pieceContent = `${JSON.stringify(pieces, null, 2)}\n`, designContent = `${JSON.stringify(design, null, 2)}\n`;
@@ -1579,8 +1824,11 @@ gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
     writeFileSync(piecePath, pieceContent); writeFileSync(designPath, designContent);
     if (setup) {
       const path = join(materialized.dir, setup.path);
-      if (!existsSync(path)) return ctx.send(422, { error: `setup '${setup.path}' does not exist; create setup documents through the setup workflow` });
-      try { writeFileSync(path, componentSetupBytes(setup.path, setup.document, readFileSync(path, "utf8"))); }
+      try {
+        const before = existsSync(path) ? readFileSync(path, "utf8") : "";
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, componentSetupBytes(setup.path, setup.document, before));
+      }
       catch (error) { return ctx.send(422, { error: error.message }); }
     }
     const validation = py("validate.py", [materialized.dir]);
@@ -1592,7 +1840,8 @@ gw.route("POST", "/api/games/:slug/components/preview", async (ctx) => {
     try { built = buildComponentProduction(materialized.dir, { sourceRef: `draft:${candidateHash.slice(0, 16)}@${ref.slice(0, 12)}` }); }
     catch (error) { return ctx.send(422, { error: `component production proof failed: ${error.message}` }); }
     const previewFiles = [built.manifest.cut_sheets[0], built.manifest.back_cut_sheets[0],
-      built.manifest.large_piece_tiles[0]?.files?.[0]?.file].filter(Boolean);
+      built.manifest.large_piece_tiles[0]?.files?.[0]?.file,
+      built.manifest.setup_maps[0]?.file].filter(Boolean);
     ctx.setHeader("cache-control", "private, no-store");
     ctx.send(200, { ok: true, written: false, ref, manifest: built.manifest,
       previews: previewFiles.map(file => ({ file, svg: built.entries.get(file).toString("utf8") })) });
@@ -1607,44 +1856,68 @@ gw.route("PUT", "/api/games/:slug/components/pieces", async (ctx) => {
   if (setup && (!/^setups\/[A-Za-z0-9_.-]+\.(?:json|ya?ml)$/.test(setup.path || "")
     || !setup.document || typeof setup.document !== "object" || Array.isArray(setup.document)))
     return ctx.send(422, { error: "setup must contain a safe setups/*.yaml or .json path and document object" });
+  const requestedRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(requestedRef))
+    return ctx.send(422, { saved: false, written: false,
+      error: "base_ref must be the exact Git revision opened by Piece Studio" });
   const currentRef = await store.headSha(slug);
-  if (body.base_ref && body.base_ref !== currentRef)
+  if (requestedRef !== currentRef)
     return ctx.send(409, { saved: false, error: "Component source changed since this draft opened. Reload Piece Studio; Forge did not overwrite it.",
-      base_ref: body.base_ref, current_ref: currentRef });
+      base_ref: requestedRef, current_ref: currentRef, written: false });
   const pieceContent = JSON.stringify(pieces, null, 2) + "\n", designContent = JSON.stringify(design, null, 2) + "\n";
-  const beforePieces = (await store.readFile(slug, "components/tokens.json"))?.toString() || "[]\n";
-  const beforeDesign = (await store.readFile(slug, COMPONENT_DESIGN_PATH))?.toString() || "";
-  const beforeSetupBuffer = setup ? await store.readFile(slug, setup.path) : null;
-  if (setup && !beforeSetupBuffer) return ctx.send(422, { error: `setup '${setup.path}' does not exist; create setup documents through the setup workflow` });
-  let setupContent = null, setupChanged = false;
+  const beforePieces = (await exactFileBytes(slug, currentRef, "components/tokens.json"))?.toString() || "[]\n";
+  const beforeDesign = (await exactFileBytes(slug, currentRef, COMPONENT_DESIGN_PATH))?.toString() || "";
+  const beforeSetupBuffer = setup ? await exactFileBytes(slug, currentRef, setup.path) : null;
+  let setupContent = null, setupChanged = false, setupCreated = false;
   try {
     if (setup) {
-      const beforeSetupText = beforeSetupBuffer.toString(), beforeSetupDocument = setup.path.toLowerCase().endsWith(".json")
-        ? JSON.parse(beforeSetupText) : yaml.load(beforeSetupText);
-      setupChanged = JSON.stringify(beforeSetupDocument?.pieces || []) !== JSON.stringify(setup.document.pieces || []);
+      const beforeSetupText = beforeSetupBuffer?.toString() || "";
+      const beforeSetupDocument = beforeSetupBuffer ? (setup.path.toLowerCase().endsWith(".json")
+        ? JSON.parse(beforeSetupText) : yaml.load(beforeSetupText)) : null;
+      setupCreated = !beforeSetupBuffer;
+      setupChanged = setupCreated
+        || JSON.stringify(beforeSetupDocument?.pieces || []) !== JSON.stringify(setup.document.pieces || []);
       if (setupChanged) setupContent = componentSetupBytes(setup.path, setup.document, beforeSetupText);
     }
   }
   catch (error) { return ctx.send(422, { error: error.message }); }
   if (beforePieces === pieceContent && beforeDesign === designContent && !setupChanged)
     return ctx.send(200, { saved: false, message: "no component changes" });
-  const validation = await validateCandidate(slug, "components/tokens.json", pieceContent,
+  const validation = await validateCandidateAt(slug, currentRef, "components/tokens.json", pieceContent,
     { [COMPONENT_DESIGN_PATH]: designContent, ...(setupChanged ? { [setup.path]: setupContent } : {}) });
   if (!validation.ok) return ctx.send(422, { saved: false, error: "component design failed validation", report: validation.report });
+  if (await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: "Component source changed during validation. Reload Piece Studio; Forge did not overwrite it.",
+      base_ref: currentRef, current_ref: await store.headSha(slug) });
   const beforeRows = JSON.parse(beforePieces), changes = diffRows(beforeRows, pieces);
   const baselineDesign = beforeDesign ? JSON.parse(beforeDesign) : defaultComponentDesign();
   const familiesChanged = design.families.filter(family => JSON.stringify(family)
     !== JSON.stringify(baselineDesign.families.find(candidate => candidate.id === family.id))).map(family => family.id);
-  const summary = `pieces: ${changes.changed.length} changed, ${changes.added.length} added, ${changes.removed.length} removed${setupChanged ? "; setup placement changed" : ""}`;
+  const summary = `pieces: ${changes.changed.length} changed, ${changes.added.length} added, ${changes.removed.length} removed${setupCreated ? "; playable setup created" : setupChanged ? "; setup placement changed" : ""}`;
   const files = [
     { path: "components/tokens.json", content: pieceContent },
     { path: COMPONENT_DESIGN_PATH, content: designContent },
     ...(setupChanged ? [{ path: setup.path, content: setupContent }] : []),
   ];
-  const { sha } = await store.writeFiles(slug, files,
-  `components: update production pieces\n\n${summary}\nFamilies changed: ${familiesChanged.join(", ") || "none"}`,
-  `${user.handle} <${user.email}>`);
-  ctx.send(200, { saved: true, commit: sha, changes, families_changed: familiesChanged, setup_changed: setupChanged, summary });
+  let sha;
+  try {
+    // Local Store-1 is a shared working-tree driver, so its expected-ref check
+    // must run inside the storage mutation lock. Hosted Forgejo keeps its
+    // existing API behavior until that backend has a real remote CAS contract.
+    ({ sha } = await store.writeFiles(slug, files,
+      `components: update production pieces\n\n${summary}\nFamilies changed: ${familiesChanged.join(", ") || "none"}`,
+      `${user.handle} <${user.email}>`, store.kind === "local" ? { expectedRef: currentRef } : undefined));
+  }
+  catch (error) {
+    if (error?.code === "STORE1_EXPECTED_REF_MISMATCH")
+      return ctx.send(409, { saved: false, written: false,
+        error: "Component source changed before the commit. Reload Piece Studio; Forge did not overwrite it.",
+        base_ref: error.expectedRef, current_ref: error.currentRef });
+    throw error;
+  }
+  ctx.send(200, { saved: true, commit: sha, changes, families_changed: familiesChanged,
+    setup_changed: setupChanged, setup_created: setupCreated, setup_path: setup?.path || null, summary });
 }, "commit component data, reusable visual families, and an optional setup placement atomically");
 gw.route("POST", "/api/games/:slug/components/pieces/:piece/art", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -1748,13 +2021,25 @@ gw.route("PUT", "/api/games/:slug/cards", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
-  const incoming = await json(ctx);
+  const body = await json(ctx);
+  const incoming = Array.isArray(body) ? body : body.cards;
+  if (!Array.isArray(incoming)) return ctx.send(422, { saved: false, error: "body must contain {cards: [...], base_ref}" });
+  const baseRef = Array.isArray(body) ? "" : String(body.base_ref || "").trim();
+  const currentRef = await store.headSha(slug);
+  if (baseRef && baseRef !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: "this game changed after the card editor opened; reload to review the newer version before committing",
+      base_ref: baseRef, current_ref: currentRef });
   const before = JSON.parse((await store.readFile(slug, "components/cards.json")).toString());
   const changes = diffCards(before, incoming);
   if (!changes.length) return ctx.send(200, { saved: false, message: "no changes" });
   const content = JSON.stringify(incoming, null, 2) + "\n";
   const v = await validateCandidate(slug, "components/cards.json", content);
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
+  if (baseRef && await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: "this game changed while Forge validated the card draft; reload before committing",
+      base_ref: baseRef, current_ref: await store.headSha(slug) });
   const auto = summarize(changes);
   const { sha } = await store.writeFiles(slug, [{ path: "components/cards.json", content }],
     `${auto.title}\n\n${auto.body}`, `${u.handle} <${u.email}>`);
@@ -1769,21 +2054,139 @@ const ARTIFACTS = {
   "design/notes.md":    { label: "design notes",   msg: "design: update notes" },
   "game.yaml":          { label: "game metadata",  msg: "meta: update game info" },
 };
+gw.route("GET", "/api/games/:slug/artifact", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const path = String(ctx.url.searchParams.get("path") || "");
+  const spec = ARTIFACTS[path];
+  if (!spec) return ctx.send(422, { error: `not an editable artifact: ${path}`, editable: Object.keys(ARTIFACTS) });
+  const ref = await store.headSha(slug);
+  const bytes = await exactFileBytes(slug, ref, path);
+  if (bytes == null) return ctx.send(404, { error: `${spec.label} does not exist at this version`, path, ref });
+  ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
+  ctx.send(200, { path, content: bytes.toString(), ref });
+}, "fetch one editable artifact and its content from the same exact Git revision");
+async function matchingArtifactProposal(user, slug, forkSlug, path) {
+  const marker = `Forge artifact proposal: ${path}`;
+  const candidates = (await q.prsFor(db, slug))
+    .filter(pr => pr.from_slug === forkSlug && pr.status === "open");
+  for (const candidate of candidates) {
+    const row = await q.prById(db, candidate.id);
+    if (!row || row.author_id !== user.id) continue;
+    const base = normalizePrSnapshot(JSON.parse(row.base));
+    const proposed = normalizePrSnapshot(JSON.parse(row.proposed));
+    if (String(row.body || "").startsWith(marker)) return { row, base, proposed };
+    const printings = diffRows(base.printings, proposed.printings, "printings");
+    const files = repoFileChanges(base.files, proposed.files);
+    if (!diffCards(base.cards, proposed.cards).length
+      && !printings.changed.length && !printings.added.length && !printings.removed.length
+      && files.length === 1 && files[0].path === path)
+      return { row, base, proposed };
+  }
+  return null;
+}
 gw.route("PUT", "/api/games/:slug/artifact", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
-  const u = await authedUser(ctx);
-  if (!await canWrite(u, slug)) return denyWrite(ctx, u);
-  const { path, content } = await json(ctx);
+  const u = await requireAuth(ctx); if (!u) return;
+  const body = await json(ctx);
+  const { path, content } = body;
   const spec = ARTIFACTS[path];
   if (!spec) return ctx.send(422, { error: `not an editable artifact: ${path}`, editable: Object.keys(ARTIFACTS) });
   if (typeof content !== "string") return ctx.send(422, { error: "content must be a string" });
-  const before = (await store.readFile(slug, path))?.toString() ?? "";
-  if (before === content) return ctx.send(200, { saved: false, message: "no changes" });
-  const v = await validateCandidate(slug, path, content);
+  const baseRef = String(body.base_ref || "").trim();
+  if (!/^[0-9a-f]{7,64}$/i.test(baseRef))
+    return ctx.send(422, { saved: false, written: false,
+      error: `base_ref must be the exact Git revision opened by the ${spec.label} editor` });
+  const currentRef = await store.headSha(slug);
+  if (baseRef !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `this game changed after the ${spec.label} editor opened; reload to review the newer version before saving`,
+      base_ref: baseRef, current_ref: currentRef });
+  const sourceBytes = await exactFileBytes(slug, currentRef, path);
+  const before = sourceBytes?.toString() ?? "";
+  const direct = await canWrite(u, slug);
+  if (direct && before === content)
+    return ctx.send(200, { saved: false, message: "no changes", base_ref: currentRef, proposed_ref: currentRef });
+  const proposedSourceEntry = reviewableFileEntry(path, Buffer.from(content));
+  if (!direct && (reviewableFileEntry(path, sourceBytes)?.hash ?? null) === (proposedSourceEntry?.hash ?? null))
+    return ctx.send(200, { saved: false, proposed: false, message: "no changes", base_ref: currentRef });
+  const v = await validateCandidateAt(slug, currentRef, path, content);
   if (!v.ok) return ctx.send(422, { saved: false, error: "validation failed", report: v.report });
-  const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
-  ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label });
-}, "edit a non-card artifact (rules, community, design, metadata) → validated commit");
+  if (await store.headSha(slug) !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `this game changed while Forge validated the ${spec.label}; reload before saving`,
+      base_ref: currentRef, current_ref: await store.headSha(slug) });
+
+  if (direct) {
+    const { sha } = await store.writeFiles(slug, [{ path, content }], spec.msg, `${u.handle} <${u.email}>`);
+    if (path === "game.yaml") await reindexGames();
+    return ctx.send(200, { saved: true, commit: sha, message: spec.msg, artifact: spec.label,
+      base_ref: currentRef, proposed_ref: sha });
+  }
+
+  let forkSlug;
+  try { forkSlug = await ensureUserFork(u, slug, currentRef); }
+  catch (error) { return ctx.send(error.code ?? 500, { error: error.message }); }
+  const forkRef = await store.headSha(forkSlug);
+  const forkBytes = await exactFileBytes(forkSlug, forkRef, path);
+  const desiredForkContent = path === "game.yaml"
+    ? mergeContributedGameYaml(forkBytes, Buffer.from(content)) : content;
+  const desiredForkBytes = Buffer.from(desiredForkContent);
+  const forkEntry = reviewableFileEntry(path, forkBytes);
+  const desiredForkEntry = reviewableFileEntry(path, desiredForkBytes);
+  const prior = await matchingArtifactProposal(u, slug, forkSlug, path);
+  const forkPoint = await directForkBaseRef(forkSlug, slug);
+  const forkPointBytes = forkPoint ? await exactFileBytes(slug, forkPoint, path) : null;
+  const safeHashes = new Set([
+    reviewableFileEntry(path, sourceBytes)?.hash ?? null,
+    desiredForkEntry?.hash ?? null,
+  ]);
+  if (prior) safeHashes.add(prior.proposed.files?.[path]?.hash ?? null);
+  if (forkPoint) safeHashes.add(reviewableFileEntry(path, forkPointBytes)?.hash ?? null);
+  if (!safeHashes.has(forkEntry?.hash ?? null))
+    return ctx.send(409, { saved: false, written: false, proposed: false,
+      error: `your edition has an independent change to ${path}; Forge did not overwrite it`,
+      fork: forkSlug, base_ref: currentRef, fork_ref: forkRef, dirty_files: [path] });
+
+  const forkValidation = await validateCandidateAt(forkSlug, forkRef, path, desiredForkContent);
+  if (!forkValidation.ok)
+    return ctx.send(422, { saved: false, error: "the proposed artifact fails validation in your edition",
+      report: forkValidation.report });
+  const [sourceNow, forkNow] = await Promise.all([store.headSha(slug), store.headSha(forkSlug)]);
+  if (sourceNow !== currentRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `this game changed while Forge prepared the ${spec.label} proposal; reload before proposing`,
+      base_ref: currentRef, current_ref: sourceNow });
+  if (forkNow !== forkRef)
+    return ctx.send(409, { saved: false, written: false,
+      error: `your edition changed while Forge prepared the ${spec.label} proposal; reload before proposing`,
+      fork: forkSlug, base_ref: forkRef, current_ref: forkNow });
+
+  let sha = forkRef, saved = false;
+  if (!forkBytes || !forkBytes.equals(desiredForkBytes)) {
+    ({ sha } = await store.writeFiles(forkSlug, [{ path, content: desiredForkContent }], spec.msg,
+      `${u.handle} <${u.email}>`));
+    saved = true;
+    if (path === "game.yaml") await reindexGames();
+  }
+  const baseSnapshot = await gameSnapshot(slug, currentRef);
+  const proposedSnapshot = { ...baseSnapshot, ref: sha, files: { ...baseSnapshot.files,
+    [path]: reviewableFileEntry(path, desiredForkBytes) } };
+  let pr, url, created = false;
+  if (prior) {
+    pr = prior.row.id;
+    await q.refreshPr(db, pr, spec.msg, JSON.stringify(baseSnapshot), JSON.stringify(proposedSnapshot));
+    if ((await prPolicy(slug)).dismiss_stale_reviews) await q.clearReviews(db, pr);
+    url = focusedPrUrl(await q.gameBySlug(db, slug), pr);
+  } else {
+    pr = newId("pr"); created = true;
+    await q.createPr(db, { id: pr, to_slug: slug, from_slug: forkSlug, title: spec.msg,
+      body: `Forge artifact proposal: ${path}\n\nProposed from Forge's ${spec.label} editor after exact-ref validation.`, author_id: u.id,
+      base: JSON.stringify(baseSnapshot), proposed: JSON.stringify(proposedSnapshot) });
+    url = await announcePrOpened(u, slug, pr);
+  }
+  ctx.send(created ? 201 : 200, { saved, proposed: true, pr, fork: forkSlug, commit: sha,
+    message: spec.msg, artifact: spec.label, base_ref: currentRef, proposed_ref: sha, url });
+}, "edit a rules/community/design/metadata artifact → exact commit or focused fork + PR");
 
 gw.route("GET", "/api/games/:slug/prototype", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -2345,15 +2748,32 @@ gw.route("GET", "/api/games/:slug/assets/*", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const rel = ctx.params["*"];
   if (rel.includes("..")) return ctx.send(404, { error: "no such asset" });
-  let buf;
-  try { buf = await store.getAsset(slug, `assets/${rel}`); }
-  catch (e) { return ctx.send(502, { error: e.message }); }
+  const requestedRef = ctx.url.searchParams.get("ref");
+  let buf, exactRef = null;
+  try {
+    if (requestedRef) {
+      exactRef = await store.resolveRef(slug, requestedRef);
+      const rights = await exactRightsAudit(slug, exactRef);
+      if (!rights.publishable) {
+        const access = await accessFor(await authedUser(ctx), slug);
+        // Current Store-2 visibility cannot grant anonymous access to bytes
+        // from an older snapshot whose own declarations prohibited release.
+        // Project members retain authoring access to their history.
+        if (!(access.is_owner || access.role)) {
+          ctx.setHeader("cache-control", PRIVATE_PROJECT_CACHE);
+          return ctx.send(404, { error: "asset not found" });
+        }
+      }
+      buf = await store.getAssetAt(slug, exactRef, `assets/${rel}`);
+    } else buf = await store.getAsset(slug, `assets/${rel}`);
+  }
+  catch (e) { return ctx.send(e.status || 502, { error: e.message }); }
   if (!buf) return ctx.send(404, { error: "no such asset" });
   ctx.sendRaw(200, buf, { "content-type": MIME[rel.toLowerCase().split(".").pop()] ?? "application/octet-stream",
-    // This endpoint follows repository HEAD and can change without its URL
-    // changing. Public callers must revalidate; private callers must not store.
+    // Exact refs never change meaning, but visibility can, so public callers
+    // still revalidate authorization. Omitting ref deliberately follows HEAD.
     "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE) });
-}, "serve asset, materializing LFS pointers");
+}, "serve HEAD or exact-ref asset, materializing LFS pointers");
 
 /* ---------- Affinity — committed data -> native production document ----------
  * Local Affinity is intentionally a derived worker, not Store 1. The bridge
@@ -2552,24 +2972,72 @@ function reviewState(policy, reviews, conflicts = []) {
     required_approvals: policy.required_approvals, checks,
     mergeable: checks.filter(check => check.pass !== null).every(check => check.pass) };
 }
-async function openOrRefreshImportedPr({ u, slug, destination, message, body }) {
+function scopedSnapshotRows(baseRows = [], destinationRows = [], changedIds = []) {
+  const ids = new Set(changedIds), destination = new Map(destinationRows.map(row => [row.id, row]));
+  const baseIds = new Set(baseRows.map(row => row.id)), rows = [];
+  for (const row of baseRows) {
+    if (!ids.has(row.id)) rows.push(row);
+    else if (destination.has(row.id)) rows.push(destination.get(row.id));
+  }
+  for (const row of destinationRows) if (ids.has(row.id) && !baseIds.has(row.id)) rows.push(row);
+  return rows;
+}
+async function openOrRefreshImportedPr({ u, slug, destination, message, body, scope = null,
+  sourceRef = null, changedPaths = null, changedCardIds = [], changedPrintingIds = [] }) {
   const fromRow = await q.gameBySlug(db, destination);
   const baseRef = await directForkBaseRef(destination, slug, fromRow);
-  const proposed = await gameSnapshot(destination);
-  const existing = (await q.prsFor(db, slug)).find(pr => pr.from_slug === destination && pr.status === "open");
-  let id;
+  const candidates = (await q.prsFor(db, slug))
+    .filter(pr => pr.from_slug === destination && pr.status === "open");
+  let existing = null;
+  if (scope) {
+    const marker = `Forge proposal scope: ${scope}`;
+    for (const candidate of candidates) {
+      const row = await q.prById(db, candidate.id);
+      if (row?.author_id === u.id && String(row.body || "").startsWith(marker)) {
+        existing = row;
+        break;
+      }
+    }
+  } else existing = candidates[0] || null;
+  let id, base, previousProposed = null;
   if (existing) {
-    const full = await q.prById(db, existing.id), base = normalizePrSnapshot(JSON.parse(full.base));
+    const full = existing.base ? existing : await q.prById(db, existing.id);
+    base = normalizePrSnapshot(JSON.parse(full.base));
+    previousProposed = normalizePrSnapshot(JSON.parse(full.proposed));
+  } else base = await gameSnapshot(slug, sourceRef || baseRef);
+  const destinationSnapshot = await gameSnapshot(destination);
+  let proposed = destinationSnapshot;
+  if (Array.isArray(changedPaths)) {
+    const accumulatedCardIds = new Set(changedCardIds);
+    const accumulatedPrintingIds = new Set(changedPrintingIds);
+    const accumulatedPaths = new Set(changedPaths);
+    if (previousProposed) {
+      for (const change of diffCards(base.cards, previousProposed.cards)) accumulatedCardIds.add(change.card);
+      const priorPrintings = diffRows(base.printings, previousProposed.printings, "printings");
+      for (const id of [...priorPrintings.changed, ...priorPrintings.added, ...priorPrintings.removed])
+        accumulatedPrintingIds.add(id);
+      for (const change of repoFileChanges(base.files, previousProposed.files)) accumulatedPaths.add(change.path);
+    }
+    proposed = { ...base, ref: destinationSnapshot.ref,
+      cards: scopedSnapshotRows(base.cards, destinationSnapshot.cards, [...accumulatedCardIds]),
+      printings: scopedSnapshotRows(base.printings, destinationSnapshot.printings, [...accumulatedPrintingIds]),
+      files: { ...base.files } };
+    for (const path of accumulatedPaths) {
+      if (path === "components/cards.json" || path === "components/printings.json") continue;
+      if (destinationSnapshot.files[path]) proposed.files[path] = destinationSnapshot.files[path];
+      else delete proposed.files[path];
+    }
+  }
+  if (existing) {
     id = existing.id;
     await q.refreshPr(db, id, message, JSON.stringify(base), JSON.stringify(proposed));
     if ((await prPolicy(slug)).dismiss_stale_reviews) await q.clearReviews(db, id);
   } else {
-    const base = await gameSnapshot(slug, baseRef); id = newId("pr");
-    await q.createPr(db, { id, to_slug: slug, from_slug: destination, title: message, body, author_id: u.id,
+    id = newId("pr");
+    const scopedBody = scope ? `Forge proposal scope: ${scope}\n\n${body}` : body;
+    await q.createPr(db, { id, to_slug: slug, from_slug: destination, title: message, body: scopedBody, author_id: u.id,
       base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
-    const owner = await q.gameBySlug(db, slug);
-    if (owner?.owner_id && owner.owner_id !== u.id)
-      await q.notify(db, { id: newId("n"), user_id: owner.owner_id, kind: "pr_open", actor_handle: u.handle, game_slug: slug, target: id });
+    await announcePrOpened(u, slug, id);
   }
   return id;
 }
@@ -2596,12 +3064,14 @@ gw.route("POST", "/api/games/:slug/prs", async (ctx) => {
   const id = newId("pr");
   await q.createPr(db, { id, to_slug: to, from_slug: from, title: title.trim(), body,
     author_id: u.id, base: JSON.stringify(base), proposed: JSON.stringify(proposed) });
+  const url = await announcePrOpened(u, to, id);
   const cardSummary = summarize(changes)?.title;
   const printingTotal = printing_changes.changed.length + printing_changes.added.length + printing_changes.removed.length;
   const printingSummary = printingTotal ? `printings: ${printingTotal} row${printingTotal === 1 ? "" : "s"}` : null;
   const fileSummary = file_changes.length
     ? `assets: ${file_changes.length} reusable file${file_changes.length === 1 ? "" : "s"}` : null;
   ctx.send(201, { id, to, from, title: title.trim(), changes, printing_changes, file_changes,
+    base_ref: base.ref, proposed_ref: proposed.ref, url,
     summary: [cardSummary, printingSummary, fileSummary].filter(Boolean).join(" · ") });
 }, "open a PR: propose structured card and reusable-file changes back to the source");
 gw.route("GET", "/api/games/:slug/prs", async (ctx) => {
@@ -2646,6 +3116,7 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
   const viewer = await authedUser(ctx);
   const viewerCanReview = !!viewer && pr.author_id !== viewer.id && await canReview(viewer, slug);
   const viewerCanMerge = !!viewer && await canAdmin(viewer, slug);
+  const viewerCanRelease = !!viewer && await canAdmin(viewer, slug, { releases: true });
   const viewerCanClose = !!viewer && (viewerCanMerge || pr.author_id === viewer.id);
   ctx.send(200, { id: pr.id, to: pr.to_slug, from: pr.from_slug, title: pr.title, body: pr.body,
     author: pr.author_handle, status: pr.status, merge_sha: pr.merge_sha ?? null,
@@ -2656,7 +3127,8 @@ gw.route("GET", "/api/games/:slug/prs/:id", async (ctx) => {
     conflicts, printing_conflicts: printingMerge.conflicts, file_conflicts: fileMerge.conflicts,
     policy, ...review,
     access: { signed_in: !!viewer, can_comment: !!viewer, can_review: viewerCanReview,
-      can_merge: viewerCanMerge, can_close: viewerCanClose, is_author: !!viewer && pr.author_id === viewer.id },
+      can_merge: viewerCanMerge, can_release: viewerCanRelease, can_close: viewerCanClose,
+      is_author: !!viewer && pr.author_id === viewer.id },
     comments: await q.commentsFor(db, "pr", pr.id) });
 }, "PR detail: semantic card and reusable-file diff + live three-way conflict check + discussion");
 gw.route("POST", "/api/games/:slug/prs/:id/comments", async (ctx) => {
@@ -2821,6 +3293,7 @@ const EXPORT_KINDS = new Set(["print", "pnp", "tts", "ttc", "ttpg", "vtt", "proj
 const activeExportJobs = new Map();
 function exportPayload(slug, sha, fmt, artifact) {
   const dir = artifact.dir, base = `/cache/exports/${slug}/${sha}`;
+  const artifactFiles = (artifact.manifest.files || []).map(file => file.name);
   const printFiles = ["print-ready.zip", "print-a4.pdf", "print-letter.pdf", "print-press-rgb.pdf",
     ...(artifact.manifest.files?.some(item => item.name === "print-press-cmyk.pdf") ? ["print-press-cmyk.pdf"] : [])];
   const urls = fmt === "print" ? printFiles.map(file => `${base}/${file}`)
@@ -2834,8 +3307,9 @@ function exportPayload(slug, sha, fmt, artifact) {
     : fmt === "svg" ? [`${base}/${cache.svgDesignArtifactName(slug)}`]
     : fmt === "pnpink" ? [`${base}/${cache.pnpinkArtifactName(slug)}`]
     : fmt === "squib" ? [`${base}/${cache.squibArtifactName(slug)}`]
-    : fmt === "components" ? [`${base}/${cache.componentArtifactName(slug)}`,
-        ...readdirSync(join(dir, "cut-sheets")).filter(file => file.endsWith(".svg")).sort().map(file => `${base}/cut-sheets/${file}`)]
+    : fmt === "components" ? [cache.componentArtifactName(slug),
+        ...artifactFiles.filter(file => file.startsWith("cut-sheets/") || file.startsWith("setup-maps/")).sort()]
+      .filter(file => artifactFiles.includes(file)).map(file => `${base}/${file}`)
     : fmt === "rulebook" ? JSON.parse(readFileSync(join(dir, "rulebook-build.json"), "utf8")).outputs.map(output => `${base}/${output.file}`)
     : fmt === "publication" ? JSON.parse(readFileSync(join(dir, "publication-build.json"), "utf8")).outputs.map(output => `${base}/${output.file}`)
     : fmt === "vtt" ? [`${base}/${cache.vttArtifactName("vtt")}`, `${base}/${cache.vttArtifactName("json")}`]
@@ -2862,15 +3336,51 @@ const exportJobView = (job,{privateProject=false}={}) => ({ id: job.id, game: jo
     detail:"Tabletop Simulator cannot authenticate Forge's private texture URLs."}}:{}),
   created_at: job.created_at, started_at: job.started_at, finished_at: job.finished_at,
   status_url: `/api/export-jobs/${job.id}` });
+const exportWinnerDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function waitForWinningExportJob(job,slug,sha,kind){
+  const deadline=Date.now()+cache.EXPORT_BUDGET.wall_time_ms+5_000;
+  while(Date.now()<deadline){
+    const local=activeExportJobs.get(job.id);
+    if(local)return local;
+    const current=await q.exportJobById(db,job.id);
+    if(!current)throw Object.assign(new Error("the winning export job disappeared"),
+      {status:503,code:"EXPORT_JOB_WINNER_MISSING"});
+    if(current.status==="succeeded"){
+      if(!cache.exportReady(slug,sha,kind))
+        throw Object.assign(new Error("the winning export job completed without readable exact artifacts"),
+          {status:503,code:"EXPORT_JOB_WINNER_ARTIFACTS"});
+      try{return {...JSON.parse(current.output_json),cached:true};}
+      catch{throw Object.assign(new Error("the winning export job has an unreadable output receipt"),
+        {status:503,code:"EXPORT_JOB_WINNER_RECEIPT"});}
+    }
+    if(current.status==="failed")throw Object.assign(
+      new Error(current.error||"the winning export job failed"),{status:422,code:"EXPORT_JOB_WINNER_FAILED"});
+    if(!["queued","running"].includes(current.status))
+      throw Object.assign(new Error(`the winning export job entered unsupported state '${current.status}'`),
+        {status:503,code:"EXPORT_JOB_WINNER_STATE"});
+    await exportWinnerDelay(75);
+  }
+  throw Object.assign(new Error("timed out waiting for the winning export job"),
+    {status:503,code:"EXPORT_JOB_WINNER_TIMEOUT"});
+}
 async function queueExportJob({ slug, sha, kind, user = null, allowNetwork = false, buildPdf = true,
   publicOrigin = PUBLIC_ORIGIN }) {
   const version = cache.exporterVersion(kind);
-  let job = await q.exportJobByKey(db, slug, sha, kind, version);
-  if (!job) {
-    const id = newId("job"), inputHash = createHash("sha256").update(`${slug}\0${sha}\0${kind}\0${version}`).digest("hex");
-    await q.createExportJob(db, { id, game_slug: slug, ref: sha, kind, exporter_version: version,
-      input_hash: inputHash, created_by: user?.id ?? null, budget_json: JSON.stringify(cache.EXPORT_BUDGET) });
-    job = await q.exportJobById(db, id);
+  const id=newId("job"),inputHash=createHash("sha256")
+    .update(`${slug}\0${sha}\0${kind}\0${version}`).digest("hex");
+  const candidate={id,game_slug:slug,ref:sha,kind,exporter_version:version,input_hash:inputHash,
+    created_by:user?.id??null,budget_json:JSON.stringify(cache.EXPORT_BUDGET)};
+  const selected=await createOrJoinExportJob({
+    find:()=>q.exportJobByKey(db,slug,sha,kind,version),
+    create:value=>q.createExportJob(db,value),load:value=>q.exportJobById(db,value),candidate});
+  let job=selected.job;
+  if(selected.raced){
+    const promise=waitForWinningExportJob(job,slug,sha,kind);
+    // Non-waiting HTTP callers receive the winning job immediately. Keep a
+    // rejected cross-worker watcher from becoming an unhandled rejection;
+    // wait=1 and release callers still observe the original promise failure.
+    promise.catch(()=>{});
+    return {job,promise};
   }
   if (job.status === "succeeded" && cache.exportReady(slug,sha,kind)) return { job,
     promise: Promise.resolve({ ...JSON.parse(job.output_json), cached: true }) };
@@ -2999,24 +3509,24 @@ gw.route("POST", "/api/games/:slug/design/import", async (ctx) => {
     const baseRef = await directForkBaseRef(destination, slug, fromRow);
     const proposedSnapshot = await gameSnapshot(destination);
     const existing = (await q.prsFor(db, slug)).find(pr => pr.from_slug === destination && pr.status === "open");
-    let prId, baseSnapshot;
+    let prId, baseSnapshot, prUrl;
     if (existing) {
       const full = await q.prById(db, existing.id);
       baseSnapshot = normalizePrSnapshot(JSON.parse(full.base));
       prId = existing.id;
       await q.refreshPr(db, prId, message, JSON.stringify(baseSnapshot), JSON.stringify(proposedSnapshot));
       if ((await prPolicy(slug)).dismiss_stale_reviews) await q.clearReviews(db, prId);
+      prUrl = focusedPrUrl(await q.gameBySlug(db, slug), prId);
     } else {
       baseSnapshot = await gameSnapshot(slug, baseRef);
       prId = newId("pr");
       await q.createPr(db, { id: prId, to_slug: slug, from_slug: destination, title: message,
         body: "Imported from a Forge design project after dry-run and validation.", author_id: u.id,
         base: JSON.stringify(baseSnapshot), proposed: JSON.stringify(proposedSnapshot) });
-      const owner = await q.gameBySlug(db, slug);
-      if (owner?.owner_id && owner.owner_id !== u.id)
-        await q.notify(db, { id: newId("n"), user_id: owner.owner_id, kind: "pr_open", actor_handle: u.handle, game_slug: slug, target: prId });
+      prUrl = await announcePrOpened(u, slug, prId);
     }
-    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr: prId, fork: destination });
+    ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr: prId, fork: destination,
+      base_ref: baseSnapshot.ref, proposed_ref: proposedSnapshot.ref, url: prUrl });
   } finally { materialized.cleanup(); }
 }, "dry-run, commit, or fork+PR a Forge design project with three-way conflict detection");
 
@@ -3407,10 +3917,18 @@ gw.route("GET", "/api/games/:slug/design/svg/:family", async (ctx) => {
     try { artLibrary = parseArtLibrary(existsSync(join(materialized.dir, ART_LIBRARY_MANIFEST))
       ? readFileSync(join(materialized.dir, ART_LIBRARY_MANIFEST)) : null); }
     catch (error) { return ctx.send(422, { error: error.message }); }
+    let cards, printings;
+    try {
+      cards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
+      printings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
+    } catch (error) {
+      return ctx.send(422, { error: `the exact Studio source bundle is invalid: ${error.message}` });
+    }
     ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
     ctx.send(200, { ok: true, ref: sha, family: family.family, source_hash: built.manifest.source_hash,
-      file: family.file, layout: sourceFamily.layout, origins: sourceFamily.origins,
-      art_library: artLibrary,
+      file: family.file, family_definition: sourceFamily,
+      layout: sourceFamily.layout, origins: sourceFamily.origins,
+      cards, printings, art_library: artLibrary,
       svg: built.entries.get(family.file).toString("utf8") });
   } finally { materialized.cleanup(); }
 }, "fetch one current SVG family working copy for the in-Forge visual editor");
@@ -3496,9 +4014,9 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
     baseArtLibrary = parseArtLibrary(await store.fileAt(slug, baseRef, ART_LIBRARY_MANIFEST));
   }
   catch (error) { return ctx.send(409, { error: `the Studio baseline is no longer available; reopen the family (${error.message})` }); }
-  const materialized = await store.materialize(destination, "HEAD");
+  const currentHead = await store.headSha(destination);
+  const materialized = await store.materialize(destination, currentHead);
   try {
-    const currentHead = await store.headSha(destination);
     const currentCards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
     const currentPrintings = JSON.parse(readFileSync(join(materialized.dir, "components/printings.json"), "utf8"));
     let currentArtLibrary;
@@ -3606,7 +4124,10 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
     const { sha } = await store.writeFiles(destination, files, `${message}\n\n${detail}`, `${u.handle} <${u.email}>`);
     if (incomingAssets.length) await reindexGames();
     if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
-    const pr = await openOrRefreshImportedPr({ u, slug, destination, message,
+    const pr = await openOrRefreshImportedPr({ u, slug, destination, message, scope: "studio",
+      sourceRef: baseRef, changedPaths: files.map(file => file.path),
+      changedCardIds: cardChanges.map(change => change.card),
+      changedPrintingIds: [...printingChanges.added, ...printingChanges.changed, ...printingChanges.removed],
       body: "Edited card content and its shared visual family together in Forge Studio, then validated as one candidate." });
     ctx.send(200, { ...response, saved: true, proposed: true, commit: sha, message, pr, fork: destination });
   } finally { materialized.cleanup(); }
@@ -3684,39 +4205,111 @@ gw.route("POST", "/api/games/:slug/playtests", async (ctx) => {
   const u = await authedUser(ctx);
   if (!await canWrite(u, slug)) return denyWrite(ctx, u);
   const s = await json(ctx);
-  if (!s || !Array.isArray(s.players) || !s.players.some(p => p && p.name))
-    return ctx.send(422, { error: "a session needs at least one named player" });
-  const sha0 = await store.headSha(slug);
+  if (!s || !Array.isArray(s.players) || !s.players.length)
+    return ctx.send(422, { error: "a session needs at least one named player", written: false });
+  if (s.players.some(p => !p || typeof p !== "object" || Array.isArray(p)
+      || typeof p.name !== "string" || !p.name.trim()))
+    return ctx.send(422, { error: "every player name must be a non-empty string", written: false });
+  if (s.players.some(p => p.deck_id != null
+      && (typeof p.deck_id !== "string" || !p.deck_id.trim())))
+    return ctx.send(422, { error: "a selected deck or build id must be a non-empty string", written: false });
+  if (s.notes != null && typeof s.notes !== "string")
+    return ctx.send(422, { error: "playtest notes must be text", written: false });
+  if (typeof s.notes === "string" && s.notes.length > 20_000)
+    return ctx.send(422, { error: "playtest notes cannot exceed 20000 characters", written: false });
+
+  // The tested version and the commit base are deliberately different. A
+  // table opened at A must stay pinned to A even if authors advance HEAD to B
+  // before the notes are submitted; the new session is then appended at B.
+  const initialWriteHead = await store.headSha(slug);
   let versionRef;
-  try { versionRef = await store.resolveRef(slug, s.version_ref || sha0); }
+  try { versionRef = await store.resolveRef(slug, s.version_ref || initialWriteHead); }
   catch (error) { return ctx.send(error.status || 422, { error: "playtest version is unavailable", detail: error.message }); }
   const date = (typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date)) ? s.date : new Date().toISOString().slice(0, 10);
-  let id = String(s.id || `${date}-${s.location || "session"}`).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
-  if (!/^[a-z0-9]/.test(id)) id = `${date}-session`;
+  const explicitId = Object.prototype.hasOwnProperty.call(s, "id");
+  if (explicitId && (typeof s.id !== "string" || !/^[a-z0-9][a-z0-9_-]{1,63}$/.test(s.id)))
+    return ctx.send(422, { error: "playtest id must be 2-64 lowercase letters, numbers, '_' or '-'", written: false });
+  let id = explicitId ? s.id : newId("pt");
   const RES = new Set(["win", "loss", "draw"]);
   const TAGS = new Set(["balance", "confusing", "fun", "bug", "art", "timing"]);
-  const session = {
-    id, date, version_ref: versionRef,
+  const sessionFor = sessionId => ({
+    id: sessionId, date, version_ref: versionRef,
     ...(s.format_id ? { format_id: s.format_id } : {}),
     ...(s.location ? { location: s.location } : {}),
     ...(s.duration_minutes ? { duration_minutes: parseInt(s.duration_minutes, 10) } : {}),
-    players: s.players.filter(p => p && p.name).map(p => { const res = typeof p.result === "string" ? p.result.toLowerCase() : p.result; return {
-      name: p.name, ...(p.deck_id ? { deck_id: p.deck_id } : {}),
+    players: s.players.map(p => { const res = typeof p.result === "string" ? p.result.toLowerCase() : p.result; return {
+      name: p.name.trim(), ...(p.deck_id ? { deck_id: p.deck_id.trim() } : {}),
       ...(RES.has(res) ? { result: res } : {}),
       ...(typeof p.score === "number" ? { score: p.score } : {}),
       ...(p.first_game ? { first_game: true } : {}) }; }),
+    ...(typeof s.notes === "string" && s.notes.length ? { notes: s.notes } : {}),
     ...(Array.isArray(s.card_notes) ? { card_notes: s.card_notes
       .map(n => (n && n.card_id && n.note) ? { card_id: n.card_id, tag: String(n.tag || "").toLowerCase(), note: n.note, ...(n.suggestion ? { suggestion: n.suggestion } : {}) } : null)
       .filter(n => n && TAGS.has(n.tag)) } : {}),
     ...(Array.isArray(s.decisions) ? { decisions: s.decisions.filter(d => d && d.action)
       .map(d => ({ action: d.action, ...(d.card_id ? { card_id: d.card_id } : {}), ...(d.rationale ? { rationale: d.rationale } : {}) })) } : {}),
-  };
-  const path = `playtests/${id}.json`;
-  const content = JSON.stringify(session, null, 2) + "\n";
-  const v = await validateCandidate(slug, path, content);
-  if (!v.ok) return ctx.send(422, { error: "playtest failed validation", report: v.report });
-  const { sha } = await store.writeFiles(slug, [{ path, content }], `playtest: log session ${id}`, `${u.handle} <${u.email}>`);
-  ctx.send(201, { id, commit: sha, pinned: session.version_ref });
+  });
+  const duplicate = path => ctx.send(409, {
+    error: `playtest '${id}' already exists`, id, path, written: false,
+  });
+
+  // Local Store 1 has a verified exact-head compare-and-commit primitive. Two
+  // simultaneous, distinct sessions that start from the same head therefore
+  // serialize and retry instead of one overwriting the other's tree. Forgejo's
+  // verified contract provides atomic file create/update (and rejects a second
+  // create of the same path), but not a repository-head CAS; do not pretend it
+  // does. In both stores, an existing path is never updated by this route.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const path = `playtests/${id}.json`;
+    const session = sessionFor(id);
+    const content = JSON.stringify(session, null, 2) + "\n";
+    const writeHead = await store.headSha(slug);
+    if (await store.fileAt(slug, writeHead, path)) {
+      if (explicitId) return duplicate(path);
+      id = newId("pt");
+      continue;
+    }
+    const pinnedValidation = await validatePlaytestCandidateAt(slug, versionRef, path, content, session,
+      { pinnedReferences: true });
+    if (!pinnedValidation.ok) return ctx.send(422, { error: "playtest failed validation at its pinned version",
+      report: pinnedValidation.report, written: false });
+    // The current tree may no longer contain a historical card or build. Its
+    // generic validator treats that expected mismatch as a warning, while all
+    // other schema and whole-project failures remain release-blocking.
+    const currentValidation = writeHead === versionRef ? pinnedValidation
+      : await validatePlaytestCandidateAt(slug, writeHead, path, content, session);
+    if (!currentValidation.ok) return ctx.send(422, { error: "playtest failed current project validation",
+      report: currentValidation.report, written: false });
+    try {
+      const options = { createOnlyPaths: [path],
+        ...(store.kind === "local" ? { expectedRef: writeHead } : {}) };
+      const { sha } = await store.writeFiles(slug, [{ path, content }],
+        `playtest: log session ${id}`, `${u.handle} <${u.email}>`, options);
+      return ctx.send(201, { id, path, commit: sha, pinned: session.version_ref, session });
+    } catch (error) {
+      // A same-path create that won while this request was validating is a
+      // duplicate, never permission to update it. Distinct local additions
+      // retry from the newly current project head.
+      let latest = null, pathNow = null;
+      try { latest = await store.headSha(slug); }
+      catch {}
+      try { if (latest) pathNow = await store.fileAt(slug, latest, path); }
+      catch {}
+      if (pathNow) {
+        if (explicitId) return duplicate(path);
+        id = newId("pt");
+        continue;
+      }
+      if (error?.code === "STORE1_PATH_EXISTS") {
+        if (explicitId) return duplicate(path);
+        id = newId("pt");
+        continue;
+      }
+      if (store.kind === "local" && error?.code === "STORE1_EXPECTED_REF_MISMATCH") continue;
+      throw error;
+    }
+  }
+  ctx.send(409, { error: "the project kept changing; no playtest was written", written: false });
 }, "log a playtest session (owner/collaborator) → validated, version-pinned commit");
 gw.route("GET", "/api/games/:slug/diff", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
@@ -4037,15 +4630,46 @@ gw.route("POST", "/api/games/:slug/sync/pull", async (ctx) => {
 }, "Sheet working copy → semantic/visual candidate → optimistic, validated commit (?dry=1 checks)");
 
 /* ---------- routes: releases (citable, immutable versions) ---------- */
-const TAG_RE = /^v[0-9][0-9A-Za-z._-]{0,31}$/;
 async function releasePreflight(slug, user) {
   const sha = await store.headSha(slug);
   const source = await store.materialize(slug, sha);
   let rights, licenses, validation;
+  let components = { required: false, ready: true, piece_types: 0, setup_maps: 0,
+    artifact: null, error: null };
   try {
     rights = auditRights(source.dir, { sourceSha: sha });
     licenses = py("check_licenses.py", [source.dir]);
     validation = py("validate.py", [source.dir]);
+    const piecesPath = join(source.dir, "components/tokens.json");
+    if (existsSync(piecesPath)) {
+      const rawPieces = readFileSync(piecesPath, "utf8");
+      try {
+        const pieces = JSON.parse(rawPieces);
+        components.piece_types = Array.isArray(pieces) ? pieces.length : 0;
+        components.required = Array.isArray(pieces) && pieces.length > 0;
+        if (components.required) {
+          try {
+            const built = buildComponentProduction(source.dir, { sourceRef: sha });
+            const quantitiesReady = built.manifest.quantity_resolution.status === "resolved";
+            components = { required: true, ready: quantitiesReady,
+              piece_types: built.manifest.totals.piece_types,
+              setup_maps: built.manifest.totals.setup_maps,
+              artifact: quantitiesReady ? cache.componentArtifactName(slug) : null,
+              error: quantitiesReady ? null
+                : "component production has per-player quantities but no versioned production.player_count" };
+          } catch (error) {
+            components = { ...components, ready: false,
+              error: String(error.message || error).replaceAll(source.dir, "<exact project snapshot>").slice(0, 500) };
+          }
+        }
+      } catch (error) {
+        // Validation reports malformed JSON too. Keep component production as a
+        // separate failing gate when a non-empty source file claims components.
+        if (rawPieces.trim() && rawPieces.trim() !== "[]") components = { ...components,
+          required: true, ready: false,
+          error: `components/tokens.json is invalid: ${String(error.message || error).slice(0, 400)}` };
+      }
+    }
   } finally { source.cleanup(); }
   const publicReport = result => `${result.stdout || ""}\n${result.stderr || ""}`.trim().split("\n")
     .map(line => line.replaceAll(source.dir, "<exact project snapshot>"))
@@ -4060,13 +4684,17 @@ async function releasePreflight(slug, user) {
     { key: "rights", pass: rights.publishable,
       detail: rights.publishable ? `${rights.files.length} source files have release declarations`
         : `${rights.blockers.length} rights blocker${rights.blockers.length === 1 ? "" : "s"}` },
+    { key: "components", pass: components.ready, required: components.required,
+      detail: !components.required ? "no versioned production pieces declared"
+        : components.ready ? `${components.piece_types} piece type${components.piece_types === 1 ? "" : "s"} and ${components.setup_maps} setup map${components.setup_maps === 1 ? "" : "s"} are ready at this exact version`
+          : components.error || "component production failed" },
   ];
   const candidateReady = checks.every(check => check.pass);
   const canRelease = await canAdmin(user, slug, { releases: true });
   return { ref: sha, candidate_ready: candidateReady, ready: candidateReady && canRelease,
     access: { signed_in: !!user, can_release: canRelease }, checks,
     validation: { ok: validation.status === 0, report: validationReport },
-    license: { ok: licenses.status === 0, report: licenseReport }, rights };
+    license: { ok: licenses.status === 0, report: licenseReport }, rights, components };
 }
 const PRINT_DELIVERY_SHA_RE = /^[a-f0-9]{64}$/i;
 const printableReleaseArtifact = name => name === "print-ready.zip" || /(?:^|\/)[^/]+\.pdf$/i.test(name);
@@ -4115,16 +4743,204 @@ function printDeliveryReceipt(row) {
       boundary: "Forge binds the creator's printer record to immutable release bytes; the named printer or an independent prepress service must verify the evidence." },
   };
 }
+const releaseVaultSummary = release => release?.vault_manifest_sha256 ? {
+  format_version: Number(release.vault_format_version),
+  manifest_sha256: release.vault_manifest_sha256,
+  sealed_at: Number(release.vault_sealed_at),
+  binding: release.vault_binding_kind || "db-receipt",
+  durable: true,
+} : null;
+const releaseVaultTagMarker = manifestSha256 => `Forge artifact vault: sha256:${manifestSha256}`;
+const releaseTagMessage = ({ slug, tag, sha, title, notes, manifestSha256 }) =>
+  `${title || tag}\n\n${notes || "- (initial release)"}\n\nForge project: ${slug}\nExact source: ${sha}\n${releaseVaultTagMarker(manifestSha256)}`;
+const sameReleaseTagMessage=(actual,expected)=>String(actual||"").trimEnd()===String(expected).trimEnd();
+const nativeTagManifestBinding=release=>release?.vault_binding_kind==="tag-manifest";
+function nativeReleaseTagStatus(release,liveTag){
+  const required=nativeTagManifestBinding(release);
+  if(!required)return {required:false,ok:true};
+  const marker=releaseVaultTagMarker(String(release.vault_manifest_sha256||"").toLowerCase());
+  const recordedTagObject=String(release.tag_object_sha||"").toLowerCase();
+  const liveTagObject=String(liveTag?.tagObject||"").toLowerCase();
+  const ok=/^[0-9a-f]{40}$/.test(String(release.sha||""))
+    &&/^[0-9a-f]{40}$/.test(recordedTagObject)&&/^[0-9a-f]{40}$/.test(liveTagObject)
+    &&/^[0-9a-f]{64}$/.test(String(release.vault_manifest_sha256||""))
+    &&!!release.tag_annotated&&!!release.tag_protected&&!!liveTag?.annotated&&!!liveTag.protected
+    &&liveTag.target===release.sha
+    &&liveTagObject===recordedTagObject
+    &&String(liveTag.message||"").includes(marker);
+  return {required:true,ok,marker};
+}
+async function requireNativeReleaseTagBinding(slug,release){
+  if(!nativeTagManifestBinding(release))return null;
+  let liveTag;
+  try{liveTag=await store.releaseTagInfo(slug,release.tag);}
+  catch(error){throw Object.assign(new Error("the protected repository tag could not be verified"),
+    {code:"RELEASE_TAG_UNAVAILABLE",cause:error});}
+  if(!nativeReleaseTagStatus(release,liveTag).ok)
+    throw Object.assign(new Error("the protected repository tag no longer matches the frozen release"),
+      {code:"RELEASE_TAG_BINDING"});
+  return liveTag;
+}
+async function refreshedReleaseAuthority(ctx,slug,expectedUserId){
+  const current=await authedUser(ctx);
+  if(!current||current.id!==expectedUserId)return null;
+  return await canAdmin(current,slug,{releases:true})?current:null;
+}
+async function ensureProtectedReleaseTag({slug,tag,sha,message,tagAuthor}){
+  let repositoryTag;
+  // Local Store 1 can use the sealed publisher as the tag author. Forgejo's
+  // CreateTag API chooses its authenticated repository actor, so integrity
+  // never claims publisher === Git tagger; it verifies object/target/message.
+  try{repositoryTag=await store.createReleaseTag(slug,tag,sha,message,tagAuthor);}
+  catch(error){
+    // Retrying after a process stop is safe only when the existing repository
+    // tag proves the exact source and exact immutable artifact manifest.
+    let existing=null;
+    try{existing=await store.releaseTagInfo(slug,tag);}catch{}
+    if(!existing||!existing.annotated||!existing.protected||existing.target!==sha
+      ||!sameReleaseTagMessage(existing.message,message))
+      throw Object.assign(new Error(`repository tag could not be created: ${error.message}`),
+        {status:409,code:"RELEASE_TAG_CONFLICT"});
+    repositoryTag=existing;
+  }
+  const verified=await store.releaseTagInfo(slug,tag);
+  if(!verified?.annotated||!verified.protected||verified.target!==sha
+    ||!sameReleaseTagMessage(verified.message,message))
+    throw Object.assign(new Error("repository tag verification failed"),
+      {status:500,code:"RELEASE_TAG_VERIFY_FAILED"});
+  return verified;
+}
+function pendingReleasePayload(slug,tag,pending){
+  if(pending.vault_binding_kind!=="tag-manifest"
+    ||!isReleaseVaultVersionSupported(Number(pending.vault_format_version)))
+    throw Object.assign(new Error("pending release uses unsupported vault evidence"),
+      {code:"RELEASE_PENDING_VAULT"});
+  let artifacts,rights,build;
+  try{
+    artifacts=pending.artifacts_json?JSON.parse(pending.artifacts_json):[];
+    rights=pending.rights_json?JSON.parse(pending.rights_json):null;
+    build=pending.build_json?JSON.parse(pending.build_json):null;
+  }catch{
+    throw Object.assign(new Error("pending release evidence is unreadable"),
+      {code:"RELEASE_PENDING_CORRUPT"});
+  }
+  if(!Array.isArray(artifacts))
+    throw Object.assign(new Error("pending release artifact receipt is invalid"),
+      {code:"RELEASE_PENDING_CORRUPT"});
+  const ready=artifacts.filter(item=>item?.status==="ready");
+  if(!ready.length||ready.some(item=>!validArtifactReceipt(item,item.name)))
+    throw Object.assign(new Error("pending release artifact receipt is invalid"),
+      {code:"RELEASE_PENDING_CORRUPT"});
+  const preserved=releaseVault.readRelease({slug,tag,sourceSha:pending.source_sha});
+  if(preserved.manifest.version!==Number(pending.vault_format_version)
+    ||preserved.manifestSha256!==pending.vault_manifest_sha256)
+    throw Object.assign(new Error("pending release and vault manifest disagree"),
+      {code:"RELEASE_PENDING_VAULT"});
+  const compact=items=>items.map(item=>({name:item.name,bytes:item.bytes,sha256:item.sha256}))
+    .sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0);
+  if(JSON.stringify(compact(ready))!==JSON.stringify(compact(preserved.manifest.artifacts)))
+    throw Object.assign(new Error("pending release and vault artifact receipts disagree"),
+      {code:"RELEASE_PENDING_VAULT"});
+  let publisher=null;
+  if(preserved.manifest.version===RELEASE_VAULT_NATIVE_VERSION){
+    const publication=preserved.manifest.publication,release=publication.release,event=publication.event;
+    if(Number(pending.created_at)!==publication.created_at
+      ||Number(pending.vault_sealed_at)!==publication.sealed_at
+      ||(pending.title??null)!==(release.title??null)||(pending.notes??null)!==(release.notes??null)
+      ||(pending.author_id??null)!==(release.author_id??null)
+      ||(pending.event_id??null)!==(event.id??null)||(pending.event_kind??null)!==(event.kind??null)
+      ||(pending.event_actor_id??null)!==(event.actor_id??null)
+      ||!isDeepStrictEqual(artifacts,release.artifacts)
+      ||!isDeepStrictEqual(rights,release.rights)||!isDeepStrictEqual(build,release.build))
+      throw Object.assign(new Error("pending release metadata does not match its recoverable vault manifest"),
+        {code:"RELEASE_PENDING_VAULT"});
+    publisher=publication.publisher;
+  }
+  return {artifacts,rights,build,preserved,publisher};
+}
+function pendingPublicationFromNativeManifest(slug,tag,preserved){
+  const manifest=preserved?.manifest;
+  if(manifest?.version!==RELEASE_VAULT_NATIVE_VERSION||!manifest.publication)
+    throw Object.assign(new Error("sealed release evidence cannot reconstruct a native publication"),
+      {code:"RELEASE_ORPHAN_UNRECOVERABLE"});
+  const publication=manifest.publication,release=publication.release,event=publication.event;
+  return {release:{game_slug:slug,tag,sha:manifest.release.source_sha,title:release.title,
+    notes:release.notes,author_id:release.author_id,artifacts_json:JSON.stringify(release.artifacts),
+    rights_json:release.rights==null?null:JSON.stringify(release.rights),
+    build_json:release.build==null?null:JSON.stringify(release.build)},
+    vault:{format_version:manifest.version,binding_kind:"tag-manifest",
+      manifest_sha256:preserved.manifestSha256,sealed_at:publication.sealed_at},
+    event:{id:event.id,kind:event.kind,actor_id:event.actor_id},created_at:publication.created_at};
+}
+const releaseMetadataFailure=(message,code="RELEASE_METADATA_BINDING")=>Object.assign(new Error(message),{code});
+function releaseMetadataJson(row){
+  let artifacts,rights,build;
+  try{
+    artifacts=row.artifacts_json?JSON.parse(row.artifacts_json):[];
+    rights=row.rights_json?JSON.parse(row.rights_json):null;
+    build=row.build_json?JSON.parse(row.build_json):null;
+  }catch{throw releaseMetadataFailure("release metadata JSON is unreadable","RELEASE_METADATA_CORRUPT");}
+  if(!Array.isArray(artifacts))throw releaseMetadataFailure(
+    "release artifact metadata is invalid","RELEASE_METADATA_CORRUPT");
+  return {artifacts,rights,build};
+}
+async function verifiedReleasePublication(slug,summary,{verifyTag=false}={}){
+  const row=Object.hasOwn(summary||{},"author_id")?summary:await q.releaseByTag(db,slug,summary?.tag);
+  if(!row)throw releaseMetadataFailure("release metadata disappeared","RELEASE_METADATA_MISSING");
+  const decoded=releaseMetadataJson(row);
+  if(!nativeTagManifestBinding(row))return {row,...decoded,authorName:row.author_handle||"",native:false};
+  const format=Number(row.vault_format_version);
+  if(!isReleaseVaultVersionSupported(format))throw releaseMetadataFailure(
+    "release metadata uses an unsupported vault format","RELEASE_METADATA_FORMAT");
+  const liveTag=verifyTag?await requireNativeReleaseTagBinding(slug,row):null;
+  // V1 native rows predate recoverable publication metadata. They remain
+  // readable, while every new v2 row is checked against its sealed envelope.
+  if(format!==RELEASE_VAULT_NATIVE_VERSION)
+    return {row,...decoded,authorName:row.author_handle||"",native:false,liveTag};
+  let preserved;
+  try{preserved=releaseVault.readManifest({slug,tag:row.tag,sourceSha:row.sha});}
+  catch(error){throw releaseMetadataFailure(`sealed publication manifest is unavailable: ${error.message}`,
+    String(error.code||"RELEASE_METADATA_VAULT"));}
+  if(preserved.manifest.version!==format
+    ||preserved.manifestSha256!==String(row.vault_manifest_sha256||"").toLowerCase())
+    throw releaseMetadataFailure("database vault evidence does not match the sealed publication");
+  const publication=preserved.manifest.publication,sealed=publication.release,event=publication.event;
+  if(Number(row.created_at)!==publication.created_at||Number(row.vault_sealed_at)!==publication.sealed_at
+    ||(row.title??null)!==(sealed.title??null)||(row.notes??null)!==(sealed.notes??null)
+    ||(row.author_id??null)!==(sealed.author_id??null)
+    ||!isDeepStrictEqual(decoded.artifacts,sealed.artifacts)
+    ||!isDeepStrictEqual(decoded.rights,sealed.rights)||!isDeepStrictEqual(decoded.build,sealed.build))
+    throw releaseMetadataFailure("database release metadata does not match the sealed publication");
+  if(event.kind!=="release"||event.actor_id!==sealed.author_id)
+    throw releaseMetadataFailure("sealed release event metadata is invalid");
+  const storedEvent=await q.releasePublicationEvent(db,slug,row.tag);
+  if(!storedEvent||storedEvent.id!==event.id||storedEvent.kind!==event.kind
+    ||(storedEvent.actor_id??null)!==(event.actor_id??null)||storedEvent.game_slug!==slug
+    ||storedEvent.target!==row.tag||Number(storedEvent.created_at)!==publication.created_at)
+    throw releaseMetadataFailure("database release event does not match the sealed publication");
+  return {row,artifacts:sealed.artifacts,rights:sealed.rights,build:sealed.build,
+    authorName:publication.publisher.name,native:true,preserved,liveTag};
+}
+function sendReleaseMetadataFailure(ctx,error,slug,tag){
+  console.error(`Release metadata verification failed for ${slug}/${tag}: ${error.code||error.message}`);
+  ctx.setHeader("cache-control","private, no-store");
+  return ctx.send(503,{error:"frozen release metadata integrity verification failed",
+    integrity_code:String(error.code||"RELEASE_METADATA_VERIFY_FAILED").slice(0,80)});
+}
 gw.route("GET", "/api/games/:slug/releases", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const releases = await q.releasesFor(db, slug);
   const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
-  ctx.send(200, await Promise.all(releases.map(async r => {
-    const rights = r.rights_json ? JSON.parse(r.rights_json) : null;
-    const build = r.build_json ? JSON.parse(r.build_json) : null;
-    const artifacts=(r.artifacts_json ? JSON.parse(r.artifacts_json) : [])
+  let verified;
+  try{verified=await Promise.all(releases.map(r=>verifiedReleasePublication(slug,r,{verifyTag:true})));}
+  catch(error){return sendReleaseMetadataFailure(ctx,error,slug,"list");}
+  ctx.send(200, await Promise.all(verified.map(async metadata => {
+    const r=metadata.row,rights=metadata.rights,build=metadata.build;
+    const artifacts=metadata.artifacts
       .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
-    return { ...r, rights_json: undefined, build_json: undefined, build,
+    return {tag:r.tag,sha:r.sha,title:r.title,created_at:r.created_at,
+      tag_object_sha:r.tag_object_sha,author_handle:metadata.authorName,build,
+      vault:releaseVaultSummary(r),
       tag_annotated: !!r.tag_annotated, tag_protected: !!r.tag_protected,
       artifacts,
       print_deliveries: (await q.printDeliveriesForRelease(db, slug, r.tag)).map(printDeliveryReceipt),
@@ -4137,6 +4953,7 @@ gw.route("GET", "/api/games/:slug/releases/preflight", async (ctx) => {
   const result = await releasePreflight(slug, await authedUser(ctx));
   ctx.send(200, { ref: result.ref, ready: result.ready, candidate_ready: result.candidate_ready,
     access: result.access, checks: result.checks, validation: result.validation, license: result.license,
+    components: result.components,
     rights: { publishable: result.rights.publishable, blockers: result.rights.blockers,
       warnings: result.rights.warnings, file_count: result.rights.files.length,
       manifest_sha256: result.rights.manifest_sha256 } });
@@ -4145,10 +4962,27 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const r = await q.releaseByTag(db, slug, ctx.params.tag);
   if (!r) return ctx.send(404, { error: "no such release" });
-  const base = `/cache/exports/${slug}/${r.sha}`;
-  const liveTag = await store.releaseTagInfo(slug, r.tag);
+  let metadata;
+  try{metadata=await verifiedReleasePublication(slug,r,{verifyTag:true});}
+  catch(error){return sendReleaseMetadataFailure(ctx,error,slug,r.tag);}
+  const vault=releaseVaultSummary(r);
+  const base = vault ? `/cache/releases/${slug}/${encodeURIComponent(r.tag)}` : `/cache/exports/${slug}/${r.sha}`;
+  let liveTag=metadata.liveTag;
+  try{if(!liveTag)liveTag=await store.releaseTagInfo(slug,r.tag);}
+  catch(error){
+    if(nativeTagManifestBinding(r)){ctx.setHeader("cache-control","private, no-store");
+      return ctx.send(503,{error:"the protected repository tag could not be verified",
+        integrity_code:"RELEASE_TAG_UNAVAILABLE"});}
+    throw error;
+  }
+  const nativeTagStatus=nativeReleaseTagStatus(r,liveTag);
+  if(nativeTagStatus.required&&!nativeTagStatus.ok){
+    ctx.setHeader("cache-control","private, no-store");
+    return ctx.send(503,{error:"the protected repository tag no longer matches the frozen release",
+      integrity_code:"RELEASE_TAG_BINDING"});
+  }
   const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
-  const artifacts = (r.artifacts_json ? JSON.parse(r.artifacts_json) : [])
+  const artifacts = metadata.artifacts
     .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
   const ready = new Set(artifacts.filter(a => a.status === "ready").map(a => a.name));
   const downloads = {};
@@ -4158,12 +4992,28 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   if (ready.has(`${slug}-ttc.zip`)) downloads.ttc = `${base}/${slug}-ttc.zip`;
   if (ready.has(cache.ttpgArtifactName(slug))) downloads.ttpg = `${base}/${cache.ttpgArtifactName(slug)}`;
   if (ready.has(cache.vttArtifactName("vtt"))) downloads.vtt = `${base}/${cache.vttArtifactName("vtt")}`;
-  ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes, author: r.author_handle, created_at: r.created_at,
+  const componentArtifacts = artifacts.filter(item => item.status === "ready"
+    && publishedArtifactKind(slug, item.name) === "components");
+  const componentKit = componentArtifacts.find(item => /-components-v[1-9][0-9]*\.zip$/.test(item.name));
+  if (componentKit) downloads.components = `${base}/${componentKit.name}`;
+  const componentSheets = componentArtifacts.filter(item => item.name.startsWith("cut-sheets/"))
+    .map(item => ({ file: item.name, url: `${base}/${item.name}` })).sort((a, b) => a.file.localeCompare(b.file));
+  const setupMaps = componentArtifacts.filter(item => item.name.startsWith("setup-maps/"))
+    .map(item => ({ file: item.name, url: `${base}/${item.name}` })).sort((a, b) => a.file.localeCompare(b.file));
+  if (componentArtifacts.length) {
+    downloads.component_sheets = componentSheets;
+    downloads.setup_maps = setupMaps;
+  }
+  const vaultMarker=vault?releaseVaultTagMarker(vault.manifest_sha256):null;
+  const tagObjectMatches=!r.tag_object_sha
+    ||String(liveTag?.tagObject||"").toLowerCase()===String(r.tag_object_sha).toLowerCase();
+  ctx.send(200, { tag: r.tag, sha: r.sha, title: r.title, notes: r.notes,
+    author: metadata.authorName, created_at: r.created_at,
     repository_tag: { object_sha: r.tag_object_sha, annotated: !!r.tag_annotated,
       protected: !!r.tag_protected, verified_now: !!liveTag && liveTag.annotated && liveTag.protected
-        && liveTag.target === r.sha },
-    artifacts, rights: r.rights_json ? JSON.parse(r.rights_json) : null,
-    build: r.build_json ? JSON.parse(r.build_json) : null, downloads,
+        && liveTag.target === r.sha && tagObjectMatches
+        && (!vaultMarker||String(liveTag.message||"").includes(vaultMarker)) },
+    artifacts, rights: metadata.rights, build: metadata.build, vault, downloads,
     print_deliveries: (await q.printDeliveriesForRelease(db, slug, r.tag)).map(printDeliveryReceipt) });
 }, "release detail + frozen (immutable) export URLs pinned to the exact sha");
 gw.route("GET", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) => {
@@ -4185,6 +5035,10 @@ gw.route("POST", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) 
     return ctx.send(403, { error: "only the game's owner can record a printer delivery for a release" });
   const release = await q.releaseByTag(db, slug, ctx.params.tag);
   if (!release) return ctx.send(404, { error: "no such release" });
+  let releaseMetadata;
+  try{
+    releaseMetadata=await verifiedReleasePublication(slug,release,{verifyTag:true});
+  }catch(error){return sendReleaseMetadataFailure(ctx,error,slug,release.tag);}
   const body = await json(ctx, 32 * 1024);
   let artifactName, printerName, jobReference, submissionUrl, submissionHash, note;
   try {
@@ -4197,7 +5051,7 @@ gw.route("POST", "/api/games/:slug/releases/:tag/print-deliveries", async (ctx) 
   } catch (error) { return ctx.send(error.status || 422, { error: error.message }); }
   if (submissionUrl && !submissionHash)
     return ctx.send(422, { error: "a submission evidence URL also requires its SHA-256 digest" });
-  const artifacts = release.artifacts_json ? JSON.parse(release.artifacts_json) : [];
+  const artifacts = releaseMetadata.artifacts;
   const artifact = artifacts.find(item => item.status === "ready" && item.name === artifactName);
   if (!artifact) return ctx.send(422, { error: "artifact is not part of this frozen release receipt" });
   if (!printableReleaseArtifact(artifact.name))
@@ -4250,25 +5104,126 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
   if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release; fork a public sandbox into an owned edition before releasing" });
-  const { tag, title } = await json(ctx);
+  const { tag, title, base_ref: suppliedBaseRef } = await json(ctx);
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must start with v and a number, for example v1.0" });
+  let releaseTitle;
+  try {
+    if (title != null && typeof title !== "string")
+      throw Object.assign(new Error("release title must be text"), { status: 422 });
+    releaseTitle = optionalText(title, "release title", 160);
+  } catch (error) { return ctx.send(error.status || 422, { error: error.message, written: false }); }
   if (await q.releaseByTag(db, slug, tag)) return ctx.send(409, { error: `release ${tag} already exists` });
+  let pending=await q.pendingReleasePublication(db,slug,tag);
+  if(!pending){
+    let orphan=null;
+    try{orphan=releaseVault.readRelease({slug,tag});}
+    catch(error){
+      if(error?.code!=="VAULT_MISSING"){
+        console.error(`Sealed release recovery lookup failed for ${slug}/${tag}: ${error.code||error.message}`);
+        ctx.setHeader("cache-control","private, no-store");
+        return ctx.send(503,{error:"sealed release evidence exists but could not be verified",
+          integrity_code:String(error.code||"RELEASE_ORPHAN_VERIFY_FAILED").slice(0,80),written:false});
+      }
+    }
+    if(orphan){
+      if(orphan.manifest.version!==RELEASE_VAULT_NATIVE_VERSION){
+        ctx.setHeader("cache-control","private, no-store");
+        return ctx.send(503,{error:"this interrupted legacy release predates automatic recovery; operator reconciliation is required",
+          integrity_code:"RELEASE_ORPHAN_UNRECOVERABLE",written:false});
+      }
+      let recovered;
+      try{recovered=pendingPublicationFromNativeManifest(slug,tag,orphan);}
+      catch(error){
+        ctx.setHeader("cache-control","private, no-store");
+        return ctx.send(503,{error:"sealed release evidence cannot reconstruct the interrupted publication",
+          integrity_code:String(error.code||"RELEASE_ORPHAN_UNRECOVERABLE").slice(0,80),written:false});
+      }
+      if(recovered.release.author_id!==u.id)
+        return ctx.send(409,{error:"this sealed interrupted release belongs to a different publisher and cannot be adopted by this session",
+          integrity_code:"RELEASE_ORPHAN_ACTOR_CONFLICT",written:false});
+      if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+        return ctx.send(403,{error:"release authority changed before the interrupted publication could be prepared",
+          written:false});
+      try{await q.prepareReleasePublication(db,recovered);}
+      catch(error){
+        return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+          {error:"sealed release evidence could not be restored to the publication journal",
+            integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+      }
+      pending=await q.pendingReleasePublication(db,slug,tag);
+      if(!pending)return ctx.send(503,{error:"the restored publication journal could not be read",
+        integrity_code:"RELEASE_PENDING_NOT_FOUND",written:false});
+    }
+  }
+  if(pending){
+    let payload;
+    try{payload=pendingReleasePayload(slug,tag,pending);}
+    catch(error){
+      console.error(`Pending release recovery failed for ${slug}/${tag}: ${error.code||error.message}`);
+      return ctx.send(503,{error:"the interrupted release could not be verified from its sealed bytes",
+        integrity_code:String(error.code||"RELEASE_PENDING_VERIFY_FAILED").slice(0,80),written:false});
+    }
+    let publisher=payload.publisher;
+    if(!publisher){
+      const author=await q.userById(db,pending.author_id);
+      if(!author?.handle||!author?.email)
+        return ctx.send(503,{error:"the interrupted release author record is unavailable",written:false});
+      publisher={name:author.handle,email:author.email};
+    }
+    const message=releaseTagMessage({slug,tag,sha:pending.source_sha,title:pending.title,
+      notes:pending.notes,manifestSha256:pending.vault_manifest_sha256});
+    if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+      return ctx.send(403,{error:"release authority changed before the protected tag could be created",
+        publication_pending:true});
+    let repositoryTag;
+    try{repositoryTag=await ensureProtectedReleaseTag({slug,tag,sha:pending.source_sha,message,
+      tagAuthor:`${publisher.name} <${publisher.email}>`});}
+    catch(error){return ctx.send(error.status||500,{error:error.message,
+      integrity_code:String(error.code||"RELEASE_TAG_FAILED").slice(0,80),written:false});}
+    let publication;
+    try{
+      publication=await q.finalizeReleasePublication(db,{game_slug:slug,tag,
+        tag_object_sha:repositoryTag.tagObject,tag_annotated:true,tag_protected:true});
+    }catch(error){
+      return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+        {error:"the interrupted release could not be finalized from its preserved evidence",
+          integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+    }
+    return ctx.send(201,{tag,sha:pending.source_sha,title:pending.title,notes:pending.notes,
+      repository_tag:repositoryTag,artifacts:payload.artifacts,rights:payload.rights,build:payload.build,
+      vault:{format_version:Number(publication.vault.format_version),
+        manifest_sha256:publication.vault.manifest_sha256,sealed_at:Number(publication.vault.sealed_at),
+        binding:publication.vault.binding_kind,durable:true},resumed_pending:true});
+  }
+  const baseRef = String(suppliedBaseRef || "").trim();
+  const currentRef = await store.headSha(slug);
+  if (baseRef && baseRef !== currentRef)
+    return ctx.send(409, { error: "this game changed after release readiness was checked; review the newer exact version before publishing",
+      base_ref: baseRef, current_ref: currentRef, written: false });
   const preflight = await releasePreflight(slug, u), sha = preflight.ref, rights = preflight.rights;
+  if (baseRef && sha !== baseRef)
+    return ctx.send(409, { error: "this game changed while Forge refreshed release readiness; no release or tag was created",
+      base_ref: baseRef, current_ref: sha, written: false });
   if (!preflight.validation.ok) return ctx.send(422, { error: "release blocked by game validation",
     report: preflight.validation.report });
   if (!preflight.license.ok) return ctx.send(422, { error: "release blocked by license/provenance checks",
     report: preflight.license.report });
   if (!rights.publishable) return ctx.send(422, { error: "release blocked by repository rights", rights });
+  if (preflight.components.required && !preflight.components.ready)
+    return ctx.send(422, { error: "release blocked by component production",
+      components: preflight.components, written: false });
   const prev = (await q.releasesFor(db, slug))[0];
   const hist = await store.history(slug, "components/cards.json", 30);
   let commits = hist;
   if (prev) { const i = hist.findIndex(h => h.sha === prev.sha || h.full === prev.sha); if (i >= 0) commits = hist.slice(0, i); }
   const notes = commits.map(h => `- ${h.subject} (${h.author})`).join("\n") || "- (initial release)";
   const privateProject=(await q.gameBySlug(db,slug))?.visibility!=="public";
+  const requiredExports = [...(privateProject?["pnp","ttc","project"]:["pnp","tts","ttc","project"]),
+    ...(preflight.components.required ? ["components"] : [])];
   let exportDir;
   const releaseOutputs=[];
   try {
-    for (const kind of privateProject?["pnp","ttc","project"]:["pnp","tts","ttc","project"])
+    for (const kind of requiredExports)
       releaseOutputs.push(await (await queueExportJob({ slug, sha, kind, user: u })).promise);
     exportDir = dirname(cache.pathOf(cache.exportKey(slug, sha, "receipt-placeholder")));
   } catch (error) {
@@ -4293,19 +5248,60 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
       detail:String(error.message||error).slice(0,500)});
   }
   const build = { format: "forge-release-build", version: 1, public_origin: PUBLIC_ORIGIN,
-    build_id: process.env.FORGE_BUILD_ID || null, exporters: { ...cache.EXPORTER_VERSIONS } };
-  const tagMessage = `${title?.trim() || tag}\n\n${notes}\n\nForge project: ${slug}\nExact source: ${sha}`;
+    build_id: process.env.FORGE_BUILD_ID || null, exporters: { ...cache.EXPORTER_VERSIONS },
+    required_exports: requiredExports, components: preflight.components };
+  const publicationTime=Date.now();
+  const eventId=`ev_release_${createHash("sha256").update(`${slug}\0${tag}`).digest("hex").slice(0,32)}`;
+  const publicationEnvelope={created_at:publicationTime,sealed_at:publicationTime,
+    release:{artifacts,author_id:u.id,build,notes,rights,title:releaseTitle},
+    event:{id:eventId,kind:"release",actor_id:u.id},publisher:{name:u.handle,email:u.email}};
+  let vaultSeal;
+  try{
+    vaultSeal=releaseVault.publishNativeRelease({slug,tag,sourceSha:sha,sourceDir:exportDir,
+      artifacts:artifacts.filter(item=>item.status==="ready"),publication:publicationEnvelope});
+  }catch(error){
+    return ctx.send(error?.code==="VAULT_CONFLICT"?409:500,
+      {error:"release bytes and recoverable publication evidence could not be sealed in the durable vault; no tag or release was created",
+        integrity_code:String(error.code||"VAULT_SEAL_FAILED").slice(0,80)});
+  }
+  const tagMessage=releaseTagMessage({slug,tag,sha,title:releaseTitle,notes,
+    manifestSha256:vaultSeal.manifestSha256});
+  const releaseRecord={game_slug:slug,tag,sha,title:releaseTitle,notes,author_id:u.id,
+    artifacts_json:JSON.stringify(artifacts),rights_json:JSON.stringify(rights),build_json:JSON.stringify(build)};
+  if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+    return ctx.send(403,{error:"release authority changed before the sealed publication could be prepared",
+      sealed:true,publication_pending:false});
+  try{
+    await q.prepareReleasePublication(db,{release:releaseRecord,
+      vault:{format_version:RELEASE_VAULT_NATIVE_VERSION,binding_kind:"tag-manifest",
+        manifest_sha256:vaultSeal.manifestSha256,sealed_at:publicationTime},
+      event:{id:eventId,kind:"release",actor_id:u.id},created_at:publicationTime});
+  }catch(error){
+    return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+      {error:"sealed release evidence could not be prepared for repository publication",
+        integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+  }
+  if(!await refreshedReleaseAuthority(ctx,slug,u.id))
+    return ctx.send(403,{error:"release authority changed before the protected tag could be created",
+      sealed:true,publication_pending:true});
   let repositoryTag;
-  try { repositoryTag = await store.createReleaseTag(slug, tag, sha, tagMessage, `${u.handle} <${u.email}>`); }
-  catch (error) { return ctx.send(409, { error: "repository tag could not be created; release was not published", detail: error.message }); }
-  if (!repositoryTag.annotated || !repositoryTag.protected || repositoryTag.target !== sha)
-    return ctx.send(500, { error: "repository tag verification failed; release record was not published" });
-  await q.createRelease(db, { game_slug: slug, tag, sha, title: title?.trim() || null, notes, author_id: u.id,
-    tag_object_sha: repositoryTag.tagObject, tag_annotated: true, tag_protected: true,
-    artifacts_json: JSON.stringify(artifacts), rights_json: JSON.stringify(rights), build_json: JSON.stringify(build) });
-  await q.recordEvent(db, { id: newId("ev"), kind: "release", actor_id: u.id, game_slug: slug, target: tag });
-  ctx.send(201, { tag, sha, notes, repository_tag: repositoryTag, artifacts, rights, build });
-}, "cut a release atomically: required exports → annotated protected Git tag → immutable receipt");
+  try{repositoryTag=await ensureProtectedReleaseTag({slug,tag,sha,message:tagMessage,
+    tagAuthor:`${publicationEnvelope.publisher.name} <${publicationEnvelope.publisher.email}>`});}
+  catch(error){return ctx.send(error.status||500,{error:error.message,
+    integrity_code:String(error.code||"RELEASE_TAG_FAILED").slice(0,80),written:false});}
+  let publication;
+  try{
+    publication=await q.finalizeReleasePublication(db,{game_slug:slug,tag,
+      tag_object_sha:repositoryTag.tagObject,tag_annotated:true,tag_protected:true});
+  }catch(error){
+    return ctx.send(error.code==="FORGE_RELEASE_PUBLICATION_CONFLICT"?409:500,
+      {error:"the protected release tag exists, but its prepared evidence could not be finalized",
+        integrity_code:String(error.code||"RELEASE_PUBLICATION_FAILED").slice(0,80),written:false});
+  }
+  const vault={format_version:RELEASE_VAULT_NATIVE_VERSION,manifest_sha256:vaultSeal.manifestSha256,
+    sealed_at:Number(publication.vault.sealed_at),binding:publication.vault.binding_kind,durable:true};
+  ctx.send(201, { tag, sha, notes, repository_tag: repositoryTag, artifacts, rights, build, vault });
+}, "cut a crash-recoverable release: exports → durable byte vault → Store-2 journal → protected Git tag → finalized evidence");
 
 /* ---------- routes: discovery + activity feed ---------- */
 gw.route("GET", "/api/discover", async (ctx) => {
@@ -4443,6 +5439,10 @@ gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
   if (!releaseTag) return ctx.send(422, { error: "submit an immutable Forge release tag, not mutable project HEAD" });
   const release = await q.releaseByTag(db, game, String(releaseTag));
   if (!release) return ctx.send(422, { error: `release '${releaseTag}' does not exist on this game` });
+  let releaseMetadata;
+  try{
+    releaseMetadata=await verifiedReleasePublication(game,release,{verifyTag:true});
+  }catch(error){return sendReleaseMetadataFailure(ctx,error,game,release.tag);}
   const res = await qualifyJamGame(j, game, release.sha);
   if (!res.qualified) return ctx.send(422, { error: "entry does not qualify", reasons: res.reasons });
   const handles = [...new Set([u.handle, ...(Array.isArray(team) ? team : [])]
@@ -4452,7 +5452,8 @@ gw.route("POST", "/api/jams/:id/submit", async (ctx) => {
   const receipt = { format: "forge-jam-submission", version: 1, jam: j.id, definition_sha256: definitionHash,
     game, release: { tag: release.tag, sha: release.sha }, submitted_by: u.handle, team: handles,
     submitted_at: submittedAt, eligibility: res,
-    rights: release.rights_json ? { sha256: createHash("sha256").update(release.rights_json).digest("hex") } : null };
+    rights: releaseMetadata.rights ? { sha256:createHash("sha256")
+      .update(JSON.stringify(releaseMetadata.rights)).digest("hex") } : null };
   receipt.sha256 = createHash("sha256").update(JSON.stringify(receipt)).digest("hex");
   const receiptJson = JSON.stringify(receipt);
   await q.enterJam(db, { jam_id: j.id, game_slug: game, user_id: u.id, qualified: 1, state: "submitted",

@@ -24,6 +24,7 @@ try {
     "FORGE_BIND_IP=127.0.0.1",
     "FORGEJO_BIND_PORT=3000",
     `FORGE_SECRET_DIR=${secretDir}`,
+    "FORGE_RELEASE_VAULT_VOLUME=forge-release-vault-pilot",
     "FORGE_REGISTRATION_MODE=invite",
     "FORGE_INVITE_MODE=database",
     "FORGE_OPERATOR_NAME=Forge Pilot Operator",

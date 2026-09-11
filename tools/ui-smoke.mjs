@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /** Launch-level browser smoke: lazy shell, topics, narrow layouts, and touch size. */
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { chromium } from "playwright-core";
 import { DatabaseSync } from "node:sqlite";
@@ -52,6 +53,7 @@ let logs = "";
 const server = spawn(process.execPath, [join(ROOT, "server.mjs"), "--port", String(port), "--games", gamesRoot], {
   cwd: ROOT,
   env: { ...process.env, DB_PATH: join(scratch, "platform.db"), CACHE_DIR: join(scratch, "cache"),
+    RELEASE_VAULT_DIR: join(scratch, "release-vault"),
     FARM_DIR: join(scratch, "farm"), FORGE_HUB_PATH: join(scratch, "hub.html"),
     LOCAL_STORE_ROOT: storeRoot, FORGE_PUBLIC_ORIGIN: origin, FORGE_REGISTRATION_MODE: "open", FORGE_RATE_MAX: "1000",
     FORGE_INCLUDE_TEST_FIXTURES: "1" },
@@ -92,6 +94,44 @@ try {
     "catalog ignores stale index rows whose repositories no longer exist");
 
   browser = await chromium.launch({ executablePath: chrome, headless: true });
+
+  // A downloaded hub has no Forge API behind it. Prove that component art is
+  // embedded and the exact setup remains playable from file:// instead of
+  // emitting a broken live-only /api/games URL.
+  const staticGames = join(scratch, "static-games"), staticGame = join(staticGames, "static-components");
+  mkdirSync(join(staticGame, "components"), { recursive: true });
+  mkdirSync(join(staticGame, "templates"), { recursive: true });
+  mkdirSync(join(staticGame, "setups"), { recursive: true });
+  mkdirSync(join(staticGame, "assets"), { recursive: true });
+  writeFileSync(join(staticGame, "game.yaml"), "title: Static components\nlicense: CC0-1.0\nplayers:\n  min: 1\n  max: 2\n");
+  writeFileSync(join(staticGame, "components", "cards.json"), "[]\n");
+  writeFileSync(join(staticGame, "components", "printings.json"), "[]\n");
+  writeFileSync(join(staticGame, "components", "tokens.json"), JSON.stringify([{ id:"board", name:"Offline board", kind:"board", art:"assets/board.png" }], null, 2));
+  writeFileSync(join(staticGame, "templates", "component-design.json"), JSON.stringify({ version:1,
+    families:[{ id:"board", label:"Board", match:{kinds:["board"]}, shape:"rectangle",
+      size_mm:{width:120,height:80}, style:{fill:"#24313a",border:"#f0b44d",border_mm:1,text:"#fff",font_family:"Arial",font_size_pt:8},
+      regions:[{id:"art",type:"image",source:"art",x:0,y:0,w:100,h:100,align:"center"}] }],
+    production:{bleed_mm:2,safe_mm:3,sheet:{page:"A4",margin_mm:8,gap_mm:3},large_piece_overlap_mm:8} }, null, 2));
+  writeFileSync(join(staticGame, "setups", "table.json"), JSON.stringify({ schema_version:1,id:"table",name:"Offline table",
+    board:{width:1600,height:1000,background:"assets/board.png"},seats:[{id:"p1",name:"Player 1",position:{x:120,y:500}}],
+    zones:[{id:"play",name:"Play area",kind:"play",position:{x:200,y:100},size:{width:1200,height:800}}],stacks:[],
+    pieces:[{id:"board-piece",component_id:"board",position:{x:800,y:500}}],counters:[],instructions:["Place the board."] }, null, 2));
+  writeFileSync(join(staticGame, "assets", "board.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"));
+  const staticHub = join(scratch, "static-components.html");
+  const staticBuild = spawnSync(PYTHON, [join(ROOT, "tools", "build_hub.py"), "--games", staticGames, "-o", staticHub], { cwd:ROOT, encoding:"utf8" });
+  assert(staticBuild.status===0,"a self-contained component hub builds",staticBuild.stderr||staticBuild.stdout);
+  const staticPage = await browser.newPage({ viewport:{width:900,height:800} });
+  await staticPage.goto(`${pathToFileURL(staticHub).href}#/g/community/static-components/play`,{waitUntil:"domcontentloaded"});
+  await staticPage.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const staticTable=staticPage.getByRole("region",{name:"Offline table versioned tabletop",exact:true});
+  await staticTable.waitFor();
+  const staticArt=await staticTable.locator('image[data-component-embedded-art="true"]').getAttribute("href");
+  const staticStageStyle=await staticTable.locator("[data-play-component-stage]").getAttribute("style");
+  assert(staticArt?.startsWith("data:image/png;base64,")
+    &&staticStageStyle?.includes("data:image/png;base64,")
+    &&await staticTable.locator('image[href^="/api/games/"]').count()===0,
+    "an offline hub embeds component and board artwork and emits no unavailable live API URL");
+  await staticPage.close();
 
   // Exercise the Google-hosted sidebar as a user sees it. Apps Script itself is
   // covered by sheets-addon-check.mjs; this browser mock verifies the client
@@ -201,7 +241,7 @@ try {
   assert(registration.status === 201, "onboarding smoke account created in the disposable server", `${registration.status} ${registration.body}`);
   const fixtureOwner = new DatabaseSync(join(scratch, "platform.db"));
   fixtureOwner.prepare(`UPDATE games SET owner_id =
-    (SELECT id FROM users WHERE handle = 'onboarding-smoke') WHERE slug = 'netrunner-sg'`).run();
+    (SELECT id FROM users WHERE handle = 'onboarding-smoke') WHERE slug IN ('netrunner-sg','secret-hitler')`).run();
   fixtureOwner.close();
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Bring or start a game" }).click();
@@ -301,11 +341,33 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
     "the repository preserves original columns, reviewed mapping, and identity result in its import receipt");
   assert(imported.repository === null, "local projects do not advertise a fake hosted Git remote");
 
+  // The project payload is intentionally left cached while a separate writer
+  // advances the rulebook. Opening the editor must fetch prose and ref as one
+  // exact source, rather than pairing stale page text with the newer HEAD.
+  await page.goto(`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/rules`,{waitUntil:"domcontentloaded"});
+  await page.getByText("Official Rules",{exact:true}).waitFor();
+  const advancedRules=await page.evaluate(async()=>{
+    const sourceResponse=await fetch(`/api/games/onboarding-smoke-game/artifact?path=${encodeURIComponent("rules/rules.md")}`),source=await sourceResponse.json();
+    const content=`${String(source.content||"").trimEnd()}\n\n## Exact editor source\nThis line was committed after the page payload loaded.\n`;
+    const response=await fetch("/api/games/onboarding-smoke-game/artifact",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({path:"rules/rules.md",content,base_ref:source.ref})});
+    return {status:response.status,body:await response.json()};
+  });
+  assert(advancedRules.status===200&&advancedRules.body.saved,"a separate exact rulebook commit can advance beyond the cached page",JSON.stringify(advancedRules));
+  await page.getByRole("button",{name:"✎ Edit book",exact:true}).click();
+  await page.locator("#rmd").waitFor();
+  const exactRulesEditor=await page.evaluate(()=>({content:document.getElementById("rmd")?.value,base:RULES_EDIT?.baseRef}));
+  assert(exactRulesEditor.content.includes("This line was committed after the page payload loaded.")
+    &&exactRulesEditor.base===advancedRules.body.commit,
+    "the rulebook editor opens content and Git base from one exact source",JSON.stringify(exactRulesEditor));
+
   await page.goto(`${origin}/#g/netrunner-sg/design`, { waitUntil:"domcontentloaded" });
   await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
-  assert(await page.getByRole("button", { name:"Open Forge Studio" }).first().isVisible()
-    && await page.getByText("Keep your existing tools", { exact:true }).isVisible(),
-    "Design starts with a visible choice between Forge Studio and an external working copy");
+  assert(await page.getByRole("button", { name:"Open Forge Studio", exact:true }).count()===1
+    && await page.getByText("Use another editor · traced round trips", { exact:true }).isVisible(),
+    "Design starts with one primary Forge Studio action and a clear external-working-copy choice");
+  await page.getByText("Use another editor · traced round trips", { exact:true }).click();
+  assert(await page.getByText("Keep your existing tools", { exact:true }).isVisible(),
+    "the external-tool path expands on demand instead of competing with the primary studio action");
   assert(await page.getByText("Excel · LibreOffice · Dextrous · Component Studio · Sheets", { exact:true }).isVisible()
     && await page.getByRole("button", { name:"Excel / LibreOffice" }).isVisible()
     && await page.getByRole("button", { name:"Cards CSV" }).isVisible()
@@ -368,8 +430,22 @@ w.save(p)
     && await page.getByText("Rendered impact",{exact:true}).isVisible(),
     "a returned editor CSV opens a semantic and rendered dry run before any commit");
   await page.getByRole("button",{name:"× Close"}).click();
+  const exactStudioAdvance=await page.evaluate(async()=>{
+    const [access,cards]=await Promise.all([
+      (await fetch("/api/games/netrunner-sg/access")).json(),
+      (await fetch("/api/games/netrunner-sg/cards")).json()
+    ]),target=cards.find(card=>card.id==="buzzsaw")||cards[0],marker="Exact Studio source bundle marker.";
+    target.text=`${String(target.text||"").trimEnd()}\n${marker}`;
+    const response=await fetch("/api/games/netrunner-sg/cards",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({cards,base_ref:access.ref})});
+    return {status:response.status,body:await response.json(),card:target.id,marker};
+  });
+  assert(exactStudioAdvance.status===200&&exactStudioAdvance.body.saved,
+    "card data can advance after the broad Design page was cached",JSON.stringify(exactStudioAdvance));
   await page.getByRole("button", { name:"Open Forge Studio" }).first().click();
   await page.getByText("Edit the card, not the template", { exact:true }).waitFor();
+  const exactStudioSource=await page.evaluate(id=>({ref:DES.sourceRef,text:DES.cards.find(card=>card.id===id)?.text}),exactStudioAdvance.card);
+  assert(exactStudioSource.ref===exactStudioAdvance.body.commit&&exactStudioSource.text.includes(exactStudioAdvance.marker),
+    "Studio opens cards, printings, family layout, and Git base from one exact source bundle",JSON.stringify(exactStudioSource));
   assert(await page.getByRole("button", { name:"Content", exact:true }).isVisible()
     && await page.getByRole("button", { name:"Layout", exact:true }).isVisible()
     && await page.getByLabel("Name", { exact:true }).isVisible(),
@@ -457,6 +533,101 @@ w.save(p)
     && artAssignment.tags.some(record=>record.path===artAssignment.paths[0]&&record.tags.join(",")==="portrait,cyberpunk"),
     "one explicit target set batch-assigns the same versioned art and credit without flattening per-printing data",JSON.stringify(artAssignment));
   await page.getByRole("button",{name:"Layout",exact:true}).click();
+  const dragRegion=await page.evaluate(()=>{
+    const geom=desGeom(),regions=DES.layout.regions||[];
+    const movable=regions.filter(region=>!["rect","background"].includes(region.type)&&!region.group).find(region=>{
+      const box=desRegionBounds(region);return Math.max(box.x,box.y,geom.W-box.right,geom.H-box.bottom)>=2;
+    })||regions.find(region=>!["rect","background"].includes(region.type));
+    if(!movable)throw new Error("No direct-manipulation layer is available");
+    desSelectRegion(movable.id,{individual:true,focus:true});const box=desRegionBounds(movable);
+    return{id:movable.id,x:movable.x||0,y:movable.y||0,undo:DES.undo.length,
+      dx:geom.W-box.right>=2?12:box.x>=2?-12:0,dy:geom.H-box.bottom>=2?8:box.y>=2?-8:0};
+  });
+  let dragBox=page.locator(`.des-box[data-rid="${dragRegion.id}"]`),dragBounds=await dragBox.boundingBox();
+  assert(dragBounds,"the selected production layer has a visible pointer target");
+  const mouseDrag=await page.evaluate(({id,dx,dy})=>{
+    const box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),rect=box.getBoundingClientRect(),pointerId=1,
+      fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"mouse",isPrimary:true,button:type==="pointermove"?-1:0,buttons,clientX:x,clientY:y}));
+    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;fire(box,"pointerdown",x,y,1);fire(document,"pointermove",x+dx/2,y+dy/2,1);fire(document,"pointermove",x+dx,y+dy,1);fire(document,"pointerup",x+dx,y+dy,0);
+    const region=desRegion(id);return{x:region?.x,y:region?.y,undo:DES.undo.length,focus:document.activeElement?.dataset?.rid,drag:DES_DRAG};
+  },dragRegion);
+  assert((mouseDrag.x!==dragRegion.x||mouseDrag.y!==dragRegion.y)&&mouseDrag.undo===dragRegion.undo+1
+    &&mouseDrag.focus===dragRegion.id&&mouseDrag.drag===null,
+    "mouse pointer dragging survives canvas redraws, restores focus, and creates one undo step",JSON.stringify(mouseDrag));
+
+  const touchDrag=await page.evaluate(id=>{
+    const region=desRegion(id),geom=desGeom(),bounds=desRegionBounds(region),before={x:region.x||0,y:region.y||0,undo:DES.undo.length},box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),rect=box.getBoundingClientRect(),pointerId=71,
+      dx=geom.W-bounds.right>=2?10:bounds.x>=2?-10:0,dy=geom.H-bounds.bottom>=2?11:bounds.y>=2?-11:0;
+    const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"touch",isPrimary:true,button:0,buttons,clientX:x,clientY:y}));
+    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;fire(box,"pointerdown",x,y,1);fire(document,"pointermove",x+dx,y+dy,1);fire(document,"pointerup",x+dx,y+dy,0);
+    const after=desRegion(id);return{before,after:{x:after.x||0,y:after.y||0},undo:DES.undo.length,focus:document.activeElement?.dataset?.rid,drag:DES_DRAG};
+  },dragRegion.id);
+  assert((touchDrag.after.x!==touchDrag.before.x||touchDrag.after.y!==touchDrag.before.y)
+    &&touchDrag.undo===touchDrag.before.undo+1&&touchDrag.focus===dragRegion.id&&touchDrag.drag===null,
+    "touch pointer dragging uses the same exact geometry and one-step undo path",JSON.stringify(touchDrag));
+
+  const cancelledDrag=await page.evaluate(id=>{
+    const region=desRegion(id),before={x:region.x||0,y:region.y||0,undo:DES.undo.length,layout:JSON.stringify(DES.layout)},box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),rect=box.getBoundingClientRect(),pointerId=72;
+    const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"pen",isPrimary:true,button:0,buttons,clientX:x,clientY:y}));
+    const x=rect.left+rect.width/2,y=rect.top+rect.height/2;fire(box,"pointerdown",x,y,1);fire(document,"pointermove",x+18,y+14,1);fire(document,"pointercancel",x+18,y+14,0);
+    const after=desRegion(id),layout=JSON.stringify(DES.layout);return{before:{x:before.x,y:before.y,undo:before.undo},after:{x:after.x||0,y:after.y||0,undo:DES.undo.length},sameLayout:layout===before.layout,focus:document.activeElement?.dataset?.rid,drag:DES_DRAG};
+  },dragRegion.id);
+  assert(cancelledDrag.after.x===cancelledDrag.before.x&&cancelledDrag.after.y===cancelledDrag.before.y
+    &&cancelledDrag.after.undo===cancelledDrag.before.undo&&cancelledDrag.sameLayout
+    &&cancelledDrag.focus===dragRegion.id&&cancelledDrag.drag===null,
+    "a cancelled stylus gesture rolls back completely without polluting undo history",JSON.stringify(cancelledDrag));
+
+  dragBox=page.locator(`.des-box[data-rid="${dragRegion.id}"]`);
+  await dragBox.focus();
+  const keyboardBefore=await page.evaluate(id=>{const region=desRegion(id),geom=desGeom(),bounds=desRegionBounds(region),key=bounds.right+.5<=geom.W?"ArrowRight":bounds.x>=.5?"ArrowLeft":bounds.bottom+.5<=geom.H?"ArrowDown":"ArrowUp";return{x:region.x||0,y:region.y||0,key,undo:DES.undo.length};},dragRegion.id);
+  await dragBox.press(keyboardBefore.key);
+  const keyboardAfter=await page.evaluate(id=>{const region=desRegion(id),box=document.activeElement;return{x:region.x||0,y:region.y||0,undo:DES.undo.length,focus:box?.dataset?.rid,role:box?.getAttribute("role"),pressed:box?.getAttribute("aria-pressed"),describedBy:box?.getAttribute("aria-describedby")};},dragRegion.id);
+  assert((Math.abs(keyboardAfter.x-keyboardBefore.x)===.5||Math.abs(keyboardAfter.y-keyboardBefore.y)===.5)
+    &&keyboardAfter.undo===keyboardBefore.undo+1&&keyboardAfter.focus===dragRegion.id
+    &&keyboardAfter.role==="button"&&keyboardAfter.pressed==="true"&&keyboardAfter.describedBy==="des-canvas-instructions",
+    "keyboard geometry keeps focus on the selected accessible layer after each redraw",JSON.stringify({keyboardBefore,keyboardAfter}));
+
+  const keyboardActivation=await page.evaluate(id=>{
+    const activate=key=>{
+      DES.selRegion=null;DES.selRegions=[];
+      const box=document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`),event=new KeyboardEvent("keydown",{key,bubbles:true,cancelable:true});
+      box.dispatchEvent(event);return{selected:DES.selRegion,pressed:document.querySelector(`.des-box[data-rid="${CSS.escape(id)}"]`)?.getAttribute("aria-pressed"),prevented:event.defaultPrevented,focus:document.activeElement?.dataset?.rid};
+    };
+    return{enter:activate("Enter"),space:activate(" ")};
+  },dragRegion.id);
+  assert(keyboardActivation.enter.selected===dragRegion.id&&keyboardActivation.enter.pressed==="true"&&keyboardActivation.enter.prevented
+    &&keyboardActivation.space.selected===dragRegion.id&&keyboardActivation.space.pressed==="true"&&keyboardActivation.space.prevented,
+    "Enter and Space activate and select a layer exposed as an accessible button",JSON.stringify(keyboardActivation));
+
+  for(const width of [320,390]){
+    await page.setViewportSize({width,height:844});await page.waitForTimeout(80);
+    const mobileStudio=await page.evaluate(()=>{
+      const visible=node=>{const rect=node.getBoundingClientRect(),style=getComputedStyle(node);return rect.width>0&&rect.height>0&&style.visibility!=="hidden"&&style.display!=="none";};
+      const stage=document.getElementById("des-stage"),work=document.querySelector(".forge-studio-workarea"),workStyle=getComputedStyle(work),available=work.clientWidth-(parseFloat(workStyle.paddingLeft)||0)-(parseFloat(workStyle.paddingRight)||0);
+      const controls=[...document.querySelectorAll(".forge-studio-top button,.forge-studio-top summary,.forge-studio-canvasbar button,.forge-studio-panel-tabs button")].filter(visible).map(node=>({label:node.getAttribute("aria-label")||node.textContent.trim(),height:node.getBoundingClientRect().height}));
+      const handles=[...document.querySelectorAll(".des-h")].filter(visible).map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height}));
+      const status=document.querySelector(".forge-studio-status");return{viewport:innerWidth,scroll:document.documentElement.scrollWidth,stage:stage.getBoundingClientRect().width,available,controls,handles,statusVisible:visible(status),statusRole:status.getAttribute("role"),statusLive:status.getAttribute("aria-live")};
+    });
+    assert(mobileStudio.scroll<=mobileStudio.viewport&&mobileStudio.stage<=mobileStudio.available+1,
+      `${width}px Studio fits the card canvas without page overflow`,JSON.stringify(mobileStudio));
+    assert(mobileStudio.controls.length>0&&mobileStudio.controls.every(control=>control.height>=44)
+      &&mobileStudio.handles.length===8&&mobileStudio.handles.every(handle=>handle.width>=44&&handle.height>=44),
+      `${width}px Studio chrome and resize handles expose touch-sized targets`,JSON.stringify(mobileStudio));
+    assert(mobileStudio.statusVisible&&mobileStudio.statusRole==="status"&&mobileStudio.statusLive==="polite",
+      `${width}px Studio keeps the local draft status visible to sighted and assistive users`,JSON.stringify(mobileStudio));
+  }
+  const handleEdgeResize=await page.evaluate(()=>{
+    const geom=desGeom(),region=desRegions().filter(item=>item.type!=="badge"&&Number(item.w||0)*geom.pxmm>70&&Number(item.h||0)*geom.pxmm>60)[0];
+    if(!region)throw new Error("No layer is large enough to isolate a coarse resize handle");
+    desSelectRegion(region.id,{individual:true,focus:true});
+    const before={w:region.w,undo:DES.undo.length},box=document.querySelector(`.des-box[data-rid="${CSS.escape(region.id)}"]`),handle=box.querySelector(".des-h-e"),rect=handle.getBoundingClientRect(),pointerId=92;
+    const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:"touch",isPrimary:true,button:0,buttons,clientX:x,clientY:y}));
+    const x=rect.right-2,y=rect.top+rect.height/2;fire(handle,"pointerdown",x,y,1);const chosen=DES_DRAG?.handle;fire(document,"pointermove",x-16,y,1);fire(document,"pointerup",x-16,y,0);
+    return{id:region.id,target:{width:rect.width,height:rect.height,offsetFromGrip:Math.round(rect.width/2-2)},chosen,before,after:{w:desRegion(region.id)?.w,undo:DES.undo.length}};
+  });
+  assert(handleEdgeResize.target.width>=44&&handleEdgeResize.target.height>=44&&handleEdgeResize.target.offsetFromGrip>12
+    &&handleEdgeResize.chosen==="e"&&handleEdgeResize.after.w!==handleEdgeResize.before.w&&handleEdgeResize.after.undo===handleEdgeResize.before.undo+1,
+    "the outer edge of a 44px coarse-pointer handle still performs a resize",JSON.stringify(handleEdgeResize));
   const alignPair=await page.evaluate(()=>{const regions=DES.layout.regions||[];for(const first of regions)for(const second of regions)if(first.id!==second.id&&Math.abs(Number(first.x||0)-Number(second.x||0))>.5)return[first.id,second.id];return regions.slice(0,2).map(region=>region.id);});
   await page.evaluate(ids=>{desSelectRegion(ids[0]);desSelectRegion(ids[1],{toggle:true});},alignPair);
   await page.getByText("2 elements selected",{exact:true}).waitFor();
@@ -567,6 +738,7 @@ w.save(p)
     && await page.getByRole("button", { name:"Commit reviewed candidate" }).isEnabled(),
     "Studio dry-runs the combined component candidate before enabling its atomic commit",JSON.stringify(studioReview));
   await page.getByRole("button", { name:"Keep editing", exact:true }).click();
+  page.once("dialog", dialog=>dialog.accept());
   await page.reload({ waitUntil:"domcontentloaded" });
   await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
   const designSteps=await page.locator(".design-golden-step").allTextContents();
@@ -663,6 +835,16 @@ w.save(p)
   await page.locator(".component-studio-list button").filter({hasText:"Run marker"}).click();
   assert(await page.locator(".component-studio-inspector input[type=color]").first().inputValue()==="#173b57",
     "editing the independent family no longer changes the original shared token style");
+  await page.getByLabel("Stage this piece in setup").check();
+  await page.getByLabel("Setup quantity").fill("3");
+  await page.getByLabel("Setup face").selectOption("back");
+  await page.getByLabel("Setup X").fill("520");
+  await page.getByLabel("Setup Y").fill("410");
+  await page.getByLabel("Setup rotation").fill("25");
+  assert(await page.getByLabel("Setup face").inputValue()==="back"
+    &&await page.getByLabel("Setup quantity").inputValue()==="3"
+    &&await page.getByLabel("Setup rotation").inputValue()==="25",
+    "the authored table keeps a two-sided piece's quantity, face, position, and rotation as setup data");
   await page.locator(".component-studio-list button").filter({hasText:"Prototype board"}).click();
   await page.getByLabel("Stage this piece in setup").check();
   const setupMap=page.getByLabel("System Gateway starter duel component setup map");
@@ -670,6 +852,41 @@ w.save(p)
   assert(await page.getByText(/Click the table to move Prototype board/).isVisible()
     && Number(await page.getByLabel("Setup X").inputValue())>0,
     "a non-card piece can be positioned visually in the existing versioned table setup");
+  const componentRecoveryBase=await page.evaluate(()=>COMPONENT_EDIT.ref);
+  await page.evaluate(()=>componentDraftFlush());
+  const storedComponentDraft=await page.evaluate(async()=>{
+    const identity=componentDraftIdentity(),record=(await desDraftAll()).find(item=>item.key===componentDraftKey(identity));
+    return record&&{actor:record.actor,slug:record.slug,ref:record.ref,pieces:record.state?.pieces?.map(piece=>piece.name),setupPieces:record.state?.setup?.document?.pieces?.length};
+  });
+  assert(storedComponentDraft?.actor===`user:${await page.evaluate(()=>ME?.id)}`&&storedComponentDraft.slug==="netrunner-sg"
+    &&storedComponentDraft.ref===componentRecoveryBase&&storedComponentDraft.pieces.includes("Alert marker")&&storedComponentDraft.setupPieces>0,
+    "Piece Studio keeps data, family, production, and setup edits under the exact account, game, and Git base",JSON.stringify(storedComponentDraft));
+  await page.getByRole("button",{name:"← Card design",exact:true}).click();
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  await page.locator("#modal").click({position:{x:4,y:4}});
+  assert(await page.evaluate(()=>COMPONENT_EDIT.pieces.length)===0
+    &&await page.getByRole("button",{name:"Restore draft",exact:true}).isVisible()
+    &&await page.getByRole("button",{name:"Discard draft",exact:true}).isVisible(),
+    "returning after in-app navigation offers Restore and Discard without silently applying component work");
+  assert(await page.evaluate(()=>!!COMPONENT_DRAFT_OFFER&&!COMPONENT_EDIT._draftReady)
+    &&await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).isVisible(),
+    "clicking the modal backdrop cannot dismiss an unresolved Piece Studio recovery choice");
+  await page.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await page.locator(".component-studio-list button").filter({hasText:"Alert marker"}).isVisible()
+    &&await page.getByText(/browser recovery on/).isVisible(),
+    "Restore returns the complete Piece Studio draft after navigation");
+  await page.evaluate(()=>componentDraftFlush());
+  const componentUnloadProtection=await page.evaluate(()=>{const event=new Event("beforeunload",{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;});
+  assert(componentUnloadProtection,"dirty Piece Studio work protects an accidental reload or tab close");
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  await page.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await page.locator(".component-studio-list button").filter({hasText:"Alert marker"}).isVisible()
+    &&await page.getByLabel("Stage this piece in setup").isChecked(),
+    "the same exact-base Piece Studio draft survives a full page reload");
   await page.setViewportSize({width:390,height:844});
   const componentMobile=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,
     controls:[...document.querySelectorAll(".component-studio-head button,.component-studio-head select,.component-studio-head input")].map(control=>({label:control.textContent?.trim()||control.getAttribute("aria-label"),height:control.getBoundingClientRect().height})),
@@ -691,7 +908,7 @@ w.save(p)
   assert(await page.getByText(/Letter · 10 physical pieces/).isVisible()
     && await page.getByText(/1 front \+ 1 back sheets/).isVisible()
     && await page.getByText(/2 poster tiles/).isVisible()
-    && await page.locator(".component-proof-card img").count()===3
+    && await page.locator(".component-proof-card img").count()===4
     && await page.locator(".component-proof-card img").first().evaluate(image=>image.complete&&image.naturalWidth>0)
     && await page.getByRole("button",{name:"Commit component change"}).isEnabled(),
     "review renders canonical front, duplex-back, and poster-tile proofs before enabling commit",
@@ -703,8 +920,23 @@ w.save(p)
   assert(componentCommitResult.ok(),"component data and reusable design commit atomically through the UI",
     `${componentCommitResult.status()} ${await componentCommitResult.text()}`);
   await page.getByText(/3 stable piece types/).waitFor({timeout:15_000});
+  const componentDraftsAfterCommit=await page.evaluate(async()=>
+    (await desDraftAll()).filter(record=>record.kind==="component-studio"&&record.slug==="netrunner-sg").length);
+  assert(componentDraftsAfterCommit===0,"a successful Piece Studio commit clears its browser recovery copy");
   await page.locator(".component-section").getByRole("button",{name:"Open Piece Studio"}).click();
   await page.getByRole("heading",{name:/Pieces — Netrunner/}).waitFor();
+  await page.locator(".component-studio-list button").filter({hasText:"Run marker"}).click();
+  await page.getByLabel("Name",{exact:true}).fill("Discard this local marker name");
+  await page.evaluate(()=>componentDraftFlush());
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Piece Studio draft?",exact:true}).waitFor();
+  await page.getByRole("button",{name:"Discard draft",exact:true}).click();
+  assert(await page.locator(".component-studio-list button").filter({hasText:"Run marker"}).isVisible()
+    &&await page.locator(".component-studio-list button").filter({hasText:"Discard this local marker name"}).count()===0
+    &&await page.evaluate(async()=>!(await desDraftAll()).some(record=>record.kind==="component-studio"&&record.slug==="netrunner-sg")),
+    "Discard after reload removes the recovery copy and keeps the committed component version visible");
   await page.locator(".component-studio-list button").filter({hasText:"Prototype board"}).click();
   const componentArtChooserPromise=page.waitForEvent("filechooser");
   await page.getByRole("button",{name:"Upload front art + rights"}).click();
@@ -746,12 +978,124 @@ w.save(p)
   assert((await familySvgCommitResponse).ok(),
     "piece studio commits the reviewed external family edit through the browser");
   await page.getByRole("heading",{name:/Pieces — Netrunner/}).waitFor({timeout:15_000});
+
+  // The same exact component and setup sources must become a useful browser
+  // table without mutating Git. Keep the existing card sandbox below it.
+  const componentPlayMutations=[];
+  const watchComponentPlay=request=>{
+    const url=new URL(request.url());
+    if(url.pathname.includes("/api/games/netrunner-sg/")&&!['GET','HEAD','OPTIONS'].includes(request.method()))
+      componentPlayMutations.push(`${request.method()} ${url.pathname}`);
+  };
+  page.on("request",watchComponentPlay);
+  await page.goto(`${origin}/#/g/community/netrunner-sg/play`,{waitUntil:"domcontentloaded"});
+  await page.getByText("Versioned table setup",{exact:true}).waitFor();
+  const componentPlayRef=await page.evaluate(()=>window._ps?.sourceRef||"");
+  const setupChoice=await page.locator(".play-setup-choice").innerText();
+  assert(/^[0-9a-f]{40}$/i.test(componentPlayRef)
+    &&setupChoice.includes("System Gateway starter duel")
+    &&setupChoice.includes("2 seats")&&setupChoice.includes("12 zones")
+    &&setupChoice.includes("4 staged pieces")&&setupChoice.includes("8 counters")
+    &&setupChoice.includes("4 setup steps"),
+    "Play previews the complete authored setup and exact version before starting",`${componentPlayRef} ${setupChoice}`);
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const componentTable=page.getByRole("region",{name:"System Gateway starter duel versioned tabletop",exact:true});
+  await componentTable.waitFor();
+  const componentRuntime=await page.evaluate(()=>({
+    ref:window._ps?.playtestRef,
+    setup:window._ps?.setup?.name,
+    pieces:window._ps?.setup?.pieces,
+    counters:window._ps?.setup?.counters?.map(counter=>({id:counter.id,value:counter.value,minimum:counter.minimum})),
+    cards:{hand:window._ps?.hand?.length,board:window._ps?.board?.length},
+  }));
+  assert(componentRuntime.ref===componentPlayRef&&componentRuntime.setup==="System Gateway starter duel"
+    &&componentRuntime.pieces.length===2
+    &&componentRuntime.pieces.some(piece=>piece.component_id==="new_token"&&piece.quantity===3&&piece.face==="back"&&piece.rotation===25&&piece.position.x===520&&piece.position.y===410)
+    &&componentRuntime.pieces.some(piece=>piece.component_id==="new_board")
+    &&componentRuntime.counters.length===8&&componentRuntime.cards.hand===7&&componentRuntime.cards.board===0,
+    "starting clones pieces, authored values, counters, and the unchanged card sandbox into one ephemeral exact-version session",JSON.stringify(componentRuntime));
+  assert(await componentTable.locator("[data-play-zone]").count()===12
+    &&await componentTable.locator("[data-play-seat]").count()===2
+    &&await componentTable.locator("[data-play-piece]").count()===2
+    &&await componentTable.locator("[data-play-counter]").count()===8
+    &&await componentTable.locator(".play-instructions li").count()===4,
+    "the versioned tabletop visibly renders zones, seats, non-card pieces, counters, and setup instructions");
+  const hostileName='Quoted " name data-component-injected="true';
+  await page.evaluate(name=>{window._ps.setup.zones[0].name=name;window._ps.setup.seats[0].name=name;window._ps.setup.counters[0].name=name;renderPlay();},hostileName);
+  assert(await componentTable.locator("[data-component-injected]").count()===0
+    &&await componentTable.locator("[data-play-zone]").first().getAttribute("aria-label")===`${hostileName} zone`
+    &&await componentTable.locator("[data-play-seat]").first().getAttribute("aria-label")===`${hostileName} seat`,
+    "community-authored setup names stay text inside attributes and cannot inject browser behavior");
+  await page.evaluate(()=>playResetSetup());
+  const boardArtHref=await componentTable.locator('[data-play-piece="new_board-piece"] image[data-component-repository-art="true"]').getAttribute("href");
+  assert(boardArtHref===`/api/games/netrunner-sg/assets/components/new_board-front.png?ref=${componentPlayRef}`,
+    "browser component art resolves only through the same-origin repository endpoint at the full exact ref",boardArtHref||"no art href");
+  const runPiece=componentTable.locator('[data-play-piece="new_token-piece"]');
+  await runPiece.focus();
+  const beforeNudge=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  await runPiece.press("ArrowRight");
+  const afterNudge=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  assert(afterNudge.x===beforeNudge.x+5&&afterNudge.y===beforeNudge.y
+    &&await componentTable.locator('[data-play-piece="new_token-piece"]:focus').count()===1,
+    "a focused component nudges by keyboard and keeps a usable focus target",JSON.stringify({beforeNudge,afterNudge}));
+  const beforeDrag=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  const runBox=await componentTable.locator('[data-play-piece="new_token-piece"]').boundingBox(),stageBox=await componentTable.locator("[data-play-component-stage]").boundingBox();
+  await page.mouse.move(runBox.x+runBox.width/2,runBox.y+runBox.height/2);
+  await page.mouse.down();
+  await page.mouse.move(Math.min(stageBox.x+stageBox.width-12,runBox.x+runBox.width/2+70),Math.min(stageBox.y+stageBox.height-12,runBox.y+runBox.height/2+36),{steps:4});
+  await page.mouse.up();
+  const afterDrag=await page.evaluate(()=>structuredClone(window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").position));
+  assert(afterDrag.x!==beforeDrag.x||afterDrag.y!==beforeDrag.y,
+    "a pointer drag moves only the ephemeral component placement",JSON.stringify({beforeDrag,afterDrag}));
+  await componentTable.getByRole("button",{name:"Flip Run marker",exact:true}).click();
+  assert((await page.evaluate(()=>window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece").face))==="front"
+    &&(await componentTable.locator('[data-play-piece="new_token-piece"]').getAttribute("aria-label")).includes("front face"),
+    "Flip is available for an authored back and switches the temporary face");
+  await componentTable.locator('[data-play-piece="new_board-piece"]').click();
+  assert(await componentTable.getByRole("button",{name:/^Flip /}).count()===0,
+    "one-sided pieces never expose a fake flip action");
+  const corpAgenda=componentTable.locator('[data-play-counter="corp-agenda"]');
+  assert(await corpAgenda.getByRole("button",{name:"Decrease Corp agenda points",exact:true}).isDisabled(),
+    "counter controls stop at the authored minimum");
+  await corpAgenda.getByRole("button",{name:"Increase Corp agenda points",exact:true}).click();
+  assert(await corpAgenda.getByLabel("Corp agenda points value",{exact:true}).textContent()==="1",
+    "counter controls update the temporary setup within their bounds");
+  await componentTable.getByRole("button",{name:"Reset setup",exact:true}).click();
+  const resetRuntime=await page.evaluate(()=>({piece:window._ps.setup.pieces.find(piece=>piece.id==="new_token-piece"),counter:window._ps.setup.counters.find(counter=>counter.id==="corp-agenda")}));
+  assert(resetRuntime.piece.position.x===520&&resetRuntime.piece.position.y===410&&resetRuntime.piece.face==="back"
+    &&resetRuntime.counter.value===0,
+    "Reset setup restores authored placement, face, and counter values without resetting the card session",JSON.stringify(resetRuntime));
+  await page.setViewportSize({width:390,height:844});
+  const componentPlayMobile=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,
+    stage:document.querySelector("[data-play-component-stage]")?.getBoundingClientRect().width,
+    touch:[...document.querySelectorAll(".play-component-actions button,.play-piece,.play-counter-controls button")].map(control=>({label:control.getAttribute("aria-label")||control.textContent.trim(),width:control.getBoundingClientRect().width,height:control.getBoundingClientRect().height}))}));
+  assert(componentPlayMobile.scroll<=componentPlayMobile.viewport&&componentPlayMobile.stage<=componentPlayMobile.viewport,
+    "390px component play has no horizontal overflow",JSON.stringify(componentPlayMobile));
+  assert(componentPlayMobile.touch.every(control=>control.width>=44&&control.height>=44),
+    "component play movement, reset, flip, and counters keep 44px touch targets",JSON.stringify(componentPlayMobile.touch));
+  await page.setViewportSize({width:1280,height:900});
+  const refAfterComponentPlay=await page.evaluate(async()=>await (await fetch("/api/games/netrunner-sg/ui")).json().then(game=>game.source_ref));
+  page.off("request",watchComponentPlay);
+  assert(refAfterComponentPlay===componentPlayRef&&componentPlayMutations.length===0,
+    "browser tabletop interactions are ephemeral and send no repository mutation",JSON.stringify({componentPlayRef,refAfterComponentPlay,componentPlayMutations}));
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/play`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const cardOnlyPlay=await page.evaluate(()=>({hand:window._ps.hand.length,cards:window._ps.g.cards.length,setups:window._ps.g.setups?.length||0,pieces:window._ps.g.tokens?.length||0}));
+  assert(await page.locator(".play-component-shell").count()===0
+    &&await page.getByText("Table (click a card to discard)",{exact:true}).isVisible()
+    &&cardOnlyPlay.hand===Math.min(7,cardOnlyPlay.cards)&&cardOnlyPlay.setups===0&&cardOnlyPlay.pieces===0,
+    "a game without setup pieces keeps the existing card-only play experience",JSON.stringify(cardOnlyPlay));
+
+  await page.goto(`${origin}/#/g/community/netrunner-sg/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces"}).click();
+  await page.getByRole("heading",{name:/Pieces — Netrunner/}).waitFor({timeout:15_000});
   const componentDownloadPromise=page.waitForEvent("download");
   await page.getByRole("button",{name:"Build cut sheets"}).click();
   const componentDownload=await componentDownloadPromise;
   const componentKit=readZip(readFileSync(await componentDownload.path()));
   const componentManifest=JSON.parse(componentKit.get("manifest.json"));
-  assert(/netrunner-sg-components-v6\.zip$/.test(componentDownload.suggestedFilename())
+  assert(/netrunner-sg-components-v7\.zip$/.test(componentDownload.suggestedFilename())
     && componentKit.has("faces/new_token-back.svg")
     && componentKit.has("cut-sheets/01-letter-back.svg")
     && componentKit.has("large-pieces/new_board-01-front-r1c2-letter.svg")
@@ -790,8 +1134,9 @@ w.save(p)
   await page.locator("details.more-tabs .repo-menu a").filter({hasText:"Releases"}).click();
   await page.getByText(/^Release readiness/).waitFor();
   assert(await page.getByText("READY", { exact:true }).isVisible()
-    && await page.getByRole("button", { name:"Cut this exact release" }).isVisible(),
-    "the owner sees a preflighted exact version before starting an expensive release build");
+    && await page.getByRole("button", { name:"Cut this exact release" }).isVisible()
+    && await page.locator('[data-release-check="components"]').count()===0,
+    "a card-only game keeps the existing concise release path without a phantom component requirement");
 
   // An old/API/imported asset can still arrive without rights. The release UI
   // must name it, withhold the release action, and provide the repair path.
@@ -819,11 +1164,19 @@ w.save(p)
   await page.getByRole("button", { name:"Cut this exact release" }).click();
   await page.getByLabel("Tag (e.g. v1.0)").fill("v0.1");
   await page.getByLabel("Title (optional)").fill("UI manufacturing proof");
+  const displayedReleaseRef=(await page.locator(".box").filter({hasText:"Release readiness"})
+    .first().locator("code").first().textContent()).trim();
   const releaseResponse=page.waitForResponse(response=>response.request().method()==="POST"
     &&new URL(response.url()).pathname==="/api/games/onboarding-smoke-game/releases",{timeout:90_000});
   await page.getByRole("button",{name:"Release",exact:true}).click();
-  assert((await releaseResponse).status()===201,"the browser cuts a rights-cleared exact release before printer handoff");
+  const releaseHttp=await releaseResponse,releaseRequest=releaseHttp.request().postDataJSON();
+  assert(releaseHttp.status()===201,"the browser cuts a rights-cleared exact release before printer handoff");
+  assert(typeof releaseRequest.base_ref==="string"&&releaseRequest.base_ref.startsWith(displayedReleaseRef),
+    "release creation pins the exact version shown by readiness instead of silently following a newer HEAD",
+    JSON.stringify({displayed:displayedReleaseRef,sent:releaseRequest.base_ref||null}));
   await page.getByRole("button",{name:"Record exact handoff"}).waitFor({timeout:90_000});
+  assert(await page.locator('[data-release-component-downloads]').count()===0,
+    "a card-only release does not invent or duplicate component downloads");
   await page.getByRole("button",{name:"Record exact handoff"}).click();
   await page.getByLabel("Printer or manufacturer").fill("Example Print House");
   await page.getByLabel("Job / quote reference").fill("UI-JOB-42");
@@ -856,8 +1209,9 @@ w.save(p)
     &&(await page.locator("body").innerText()).includes("not independently verified by Forge"),
     "the release surfaces a downloadable receipt and keeps the evidence boundary explicit");
 
-  // Build a real Bob proposal through the public contract, then verify the
-  // browser presents only the actions each person is authorized to perform.
+  // Build a real Bob edition, then open its proposal through the product UI.
+  // The contributor must land on the exact review rather than being abandoned
+  // in their editor with only a temporary toast.
   const api=async(method,path,token,body)=>{
     const response=await fetch(origin+path,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),
       ...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined});
@@ -869,36 +1223,120 @@ w.save(p)
   const bobFork=await api("POST","/api/games/onboarding-smoke-game/fork",bobToken,{ref:"HEAD"});
   const bobCards=await api("GET",`/api/games/${bobFork.data.slug}/cards`,bobToken);
   bobCards.data.find(card=>card.id==="spark_01").text="Deal 2 damage after review.";
-  const bobEdit=await api("PUT",`/api/games/${bobFork.data.slug}/cards`,bobToken,bobCards.data);
-  const bobProposal=await api("POST","/api/games/onboarding-smoke-game/prs",bobToken,{
-    from:bobFork.data.slug,title:"Tune Spark after playtest"});
-  assert(bobFork.status===201&&bobEdit.status===200&&bobProposal.status===201,
-    "the collaborator's independent edition becomes a semantic proposal");
-
-  const proposalUrl=`${origin}/#/g/onboarding-smoke/onboarding-smoke-game/suggestions`;
-  await page.goto(proposalUrl,{waitUntil:"domcontentloaded"});
-  await page.getByRole("button",{name:"View game changes"}).click();
-  await page.getByRole("button",{name:"✓ Approve"}).waitFor();
-  assert(await page.getByRole("button",{name:"Merge after approval"}).isDisabled()
-    && await page.getByRole("button",{name:"✎ Request changes"}).isVisible(),
-    "the owner sees review controls while merge stays locked behind approval");
+  const bobAccess=await api("GET",`/api/games/${bobFork.data.slug}/access`,bobToken);
+  const bobEdit=await api("PUT",`/api/games/${bobFork.data.slug}/cards`,bobToken,
+    {cards:bobCards.data,base_ref:bobAccess.data.ref});
+  assert(bobFork.status===201&&bobEdit.status===200,
+    "the collaborator has an independently versioned edition ready to propose");
 
   const bobContext=await browser.newContext({viewport:{width:390,height:844}}),bobPage=await bobContext.newPage();
   await bobPage.goto(origin,{waitUntil:"domcontentloaded"});
   const bobLogin=await bobPage.evaluate(async()=>{
     const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},
-      body:JSON.stringify({handle:"bob",password:"password123"})});return response.status;
+      body:JSON.stringify({handle:"bob",password:"password123"})});
+    await response.json();
+    return response.status;
   });
   assert(bobLogin===200,"collaborator can sign into an independent browser session");
+  await bobPage.evaluate(()=>refreshLive());
+
+  await bobPage.goto(`${origin}/#g/onboarding-smoke-game/rules`,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"✎ Edit rules",exact:true}).click();
+  await bobPage.locator("#rmd").waitFor();
+  const bobRulesBase=await bobPage.evaluate(()=>RULES_EDIT?.baseRef);
+  const bobRules=await bobPage.locator("#rmd").inputValue();
+  await bobPage.locator("#rmd").fill(`${bobRules.trimEnd()}\n\n## Community clarification\nResolve ties in active-player order.\n`);
+  const rulesProposalResponse=bobPage.waitForResponse(response=>response.request().method()==="PUT"
+    &&new URL(response.url()).pathname==="/api/games/onboarding-smoke-game/artifact");
+  await bobPage.getByRole("button",{name:"Commit to my edition + open PR",exact:true}).click();
+  const rulesProposalHttp=await rulesProposalResponse,rulesProposalBody=await rulesProposalHttp.json();
+  assert(rulesProposalHttp.ok()&&rulesProposalBody.proposed
+    &&rulesProposalBody.base_ref===bobRulesBase&&rulesProposalBody.proposed_ref===rulesProposalBody.commit,
+    "a contributor rulebook edit becomes one exact fork commit and proposal",JSON.stringify({status:rulesProposalHttp.status(),editor_base:bobRulesBase,...rulesProposalBody}));
+  await bobPage.waitForURL(url=>decodeURIComponent(url.hash).endsWith(`/suggestions/${rulesProposalBody.pr}`));
+  const rulesProposalPanel=bobPage.locator(`#prb-${rulesProposalBody.pr}`);await rulesProposalPanel.waitFor();
+  assert(await rulesProposalPanel.isVisible(),
+    "the rules editor hands the contributor directly to its focused file review");
+
+  // A contributor editing a source family's cards and layout in the native
+  // Studio must arrive at the exact proposal it just created. A transient
+  // toast followed by a source reload would make the advertised handoff false.
+  await bobPage.goto(`${origin}/#g/secret-hitler/design`,{waitUntil:"domcontentloaded"});
+  try{
+    await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).waitFor({timeout:15_000});
+  }catch(error){
+    const detail=await bobPage.evaluate(()=>({url:location.href,hash:location.hash,
+      text:document.getElementById("view")?.innerText?.slice(0,2000),
+      games:(typeof DATA!=="undefined"?DATA.games:[]).filter(game=>game.slug==="secret-hitler").map(game=>({slug:game.slug,namespace:game.namespace,summary:!!game._summary,has_design:!!game.card_design}))}));
+    throw new Error(`Contributor Studio route did not become ready: ${JSON.stringify(detail)}\n${error.message}`);
+  }
+  await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await bobPage.locator(".forge-studio-title").waitFor();
+  await bobPage.getByLabel("Keywords (comma-separated)",{exact:true}).fill("studio-proposal-smoke");
+  await bobPage.evaluate(()=>desDraftFlush());
+  const bobDraftScope=await bobPage.evaluate(async()=>({actor:desDraftIdentity()?.actor,user:ME?.id,
+    stored:(await desDraftAll()).some(record=>record.key===desDraftKey())}));
+  assert(bobDraftScope.stored&&bobDraftScope.actor===`user:${bobDraftScope.user}`,
+    "browser recovery scopes a contributor draft to that exact account",JSON.stringify(bobDraftScope));
+  await bobPage.evaluate(()=>signOut());
+  const switchedOwner=await bobPage.evaluate(async()=>{const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify({handle:"onboarding-smoke",password:"password123"})});await response.json();await refreshLive();return{status:response.status,id:ME?.id};});
+  assert(switchedOwner.status===200&&switchedOwner.id!==bobDraftScope.user,"the same browser can switch accounts without inheriting in-memory Studio state",JSON.stringify(switchedOwner));
+  await bobPage.goto(`${origin}/#g/secret-hitler/design`,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await bobPage.locator(".forge-studio-title").waitFor();
+  assert(await bobPage.getByRole("heading",{name:"Restore local Studio draft?",exact:true}).count()===0
+    &&await bobPage.evaluate(()=>desDraftIdentity()?.actor===`user:${ME?.id}`),
+    "a different signed-in account cannot see or restore the contributor's browser draft");
+  await bobPage.evaluate(()=>signOut());
+  const switchedBack=await bobPage.evaluate(async()=>{const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json","x-forge-browser":"1"},body:JSON.stringify({handle:"bob",password:"password123"})});await response.json();await refreshLive();return response.status;});
+  assert(switchedBack===200,"the contributor can return to the browser-scoped recovery copy");
+  await bobPage.goto(`${origin}/#g/secret-hitler/design`,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await bobPage.getByRole("heading",{name:"Restore local Studio draft?",exact:true}).waitFor();
+  await bobPage.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await bobPage.getByLabel("Keywords (comma-separated)",{exact:true}).inputValue()==="studio-proposal-smoke",
+    "returning to the original account restores only that account's exact-version draft");
+  await bobPage.getByRole("button",{name:"Review changes",exact:true}).click();
+  await bobPage.getByRole("button",{name:"Commit to my edition + open PR",exact:true}).waitFor();
+  const studioProposalResponse=bobPage.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/design/studio")&&new URL(response.url()).searchParams.get("commit")==="1");
+  await bobPage.getByRole("button",{name:"Commit to my edition + open PR",exact:true}).click();
+  const studioProposalHttp=await studioProposalResponse,studioProposalBody=await studioProposalHttp.json();
+  assert(studioProposalHttp.ok()&&studioProposalBody.proposed&&studioProposalBody.pr,
+    "a no-write Studio commit creates a credited fork proposal",JSON.stringify(studioProposalBody));
+  await bobPage.waitForURL(url=>decodeURIComponent(url.hash).endsWith(`/suggestions/${studioProposalBody.pr}`));
+  const studioProposalPanel=bobPage.locator(`#prb-${studioProposalBody.pr}`);
+  await studioProposalPanel.waitFor();
+  assert(await studioProposalPanel.isVisible(),
+    "native Studio hands the contributor directly to the exact proposal it opened");
+
+  await bobPage.goto(origin+bobFork.data.url,{waitUntil:"domcontentloaded"});
+  await bobPage.getByRole("button",{name:/Propose upstream/}).waitFor();
+  await bobPage.getByRole("button",{name:/Propose upstream/}).click();
+  await bobPage.getByLabel("Title for your pull request").fill("Tune Spark after playtest");
+  const bobProposalResponse=bobPage.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname==="/api/games/onboarding-smoke-game/prs");
+  await bobPage.getByRole("button",{name:"Open PR",exact:true}).click();
+  const bobProposalHttp=await bobProposalResponse,bobProposal={status:bobProposalHttp.status(),data:await bobProposalHttp.json()};
+  assert(bobProposal.status===201,"the collaborator opens a semantic proposal from their edition through Forge");
+  await bobPage.waitForURL(url=>decodeURIComponent(url.hash).endsWith(`/suggestions/${bobProposal.data.id}`));
+  const proposalUrl=bobPage.url();
+  assert(decodeURIComponent(new URL(proposalUrl).hash).endsWith(`/suggestions/${bobProposal.data.id}`),
+    "proposal creation navigates directly to its focused review route",proposalUrl);
   const bobPrAccess=await bobPage.evaluate(async({slug,id})=>await (await fetch(`/api/games/${slug}/prs/${id}`)).json(),
     {slug:"onboarding-smoke-game",id:bobProposal.data.id});
   assert(bobPrAccess.access?.is_author===true,"proposal API recognizes its author in the independent browser session",JSON.stringify(bobPrAccess.access));
-  await bobPage.goto(proposalUrl,{waitUntil:"domcontentloaded"});
-  await bobPage.getByRole("button",{name:"View game changes"}).click();
   await bobPage.getByText(/A maintainer must review it/).waitFor();
   assert(await bobPage.getByRole("button",{name:"Close"}).isVisible()
     && await bobPage.getByRole("button",{name:/Approve|Merge/}).count()===0,
-    "the proposer sees close and discussion, never unauthorized approve or merge controls");
+    "the focused proposal opens expanded for its author without unauthorized review controls");
+
+  await page.goto(proposalUrl,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"✓ Approve"}).waitFor();
+  assert(await page.getByRole("button",{name:"Merge after approval"}).isDisabled()
+    && await page.getByRole("button",{name:"✎ Request changes"}).isVisible()
+    && await page.getByRole("button",{name:"View game changes"}).count()===1,
+    "the owner lands on the same focused review while merge stays locked behind approval");
 
   await page.getByRole("button",{name:"✓ Approve"}).click();
   const mergeButton=page.getByRole("button",{name:/Merge — commits as bob/});
@@ -906,6 +1344,14 @@ w.save(p)
   const mergeResponse=page.waitForResponse(response=>response.request().method()==="POST"&&new URL(response.url()).pathname.endsWith(`/prs/${bobProposal.data.id}/merge`));
   await mergeButton.click();
   assert((await mergeResponse).ok(),"the owner approves and merges the visual proposal through the browser");
+  await page.getByText(/Accepted into/i).waitFor();
+  const acceptedPanel=page.locator(`#prb-${bobProposal.data.id}`);
+  const acceptedText=await acceptedPanel.innerText();
+  assert(/accepted/i.test(acceptedText)&&/bob/i.test(acceptedText)&&/credit|author/i.test(acceptedText),
+    "the merged proposal visibly confirms acceptance and preserves the contributor's credit",acceptedText);
+  assert(await acceptedPanel.getByRole("button",{name:"View accepted cards",exact:true}).isVisible()
+    &&await acceptedPanel.getByRole("button",{name:"Prepare this version for release",exact:true}).isVisible(),
+    "the accepted view hands the owner directly to the landed cards and exact-version release workflow");
   const mergedCards=await api("GET","/api/games/onboarding-smoke-game/cards",null);
   assert(mergedCards.data.find(card=>card.id==="spark_01").text==="Deal 2 damage after review.",
     "the accepted browser proposal lands exactly and preserves the collaborator's authored content");
@@ -928,8 +1374,15 @@ w.save(p)
   });
   assert(wizardProject.status===201&&wizardProject.data.cards===0,
     "idea-first onboarding creates an empty versioned project for the card wizard",JSON.stringify(wizardProject));
-  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
-  await page.getByRole("button",{name:"Build first card component",exact:true}).click();
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/overview`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Build the first card system",exact:true}).click();
+  await page.waitForURL(/\/design$/);
+  await page.getByRole("heading",{name:"Put the first playable cards on the table",exact:true}).waitFor();
+  assert(await page.getByRole("heading",{name:"Put the first playable cards on the table",exact:true}).isVisible()
+    && await page.getByText("Already have card data? Start from a traced workbook or CSV.",{exact:true}).isVisible()
+    && await page.getByRole("button",{name:"Open Forge Studio",exact:true}).count()===0,
+    "an empty idea reaches one focused setup choice instead of a blank editor or dead Studio action");
+  await page.getByRole("button",{name:"Build the first card system",exact:true}).click();
   await page.getByLabel("Starting layout").selectOption("classic");
   await page.getByLabel("Physical size").selectOption("japanese");
   await page.getByLabel("Copies of each").fill("2");
@@ -951,6 +1404,12 @@ w.save(p)
     &&new URL(response.url()).pathname.endsWith("/design/card-starter")&&new URL(response.url()).searchParams.get("commit")==="1");
   await page.getByRole("button",{name:"Commit first component",exact:true}).click();
   assert((await starterCommitResponse).ok(),"the exact reviewed starter commits successfully");
+  await page.waitForURL(/#g\/wizard-ui-smoke\/cards\/edit$/);
+  await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).waitFor();
+  assert(await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).isVisible()
+    && await page.getByRole("button",{name:"+ New card",exact:true}).isVisible()
+    && await page.getByText("Live print preview",{exact:true}).isVisible(),
+    "the starter continues directly into a real editable card instead of stranding the creator");
   await page.waitForFunction(async()=>{
     const cards=await (await fetch("/api/games/wizard-ui-smoke/cards")).json();return cards.length===2;
   });
@@ -961,6 +1420,184 @@ w.save(p)
     &&/w_mm: 59/.test(wizardLayout)&&/text: WIZARD DECK/.test(wizardLayout)
     &&/preset: balanced-duplex/.test(wizardPrint),
     "the browser commits stable rows, typed fields, Japanese trim, shared back, and print contract atomically");
+
+  const editorBase=await page.evaluate(()=>ED?.access?.ref);
+  assert(/^[0-9a-f]{40}$/.test(editorBase||""),"the visible editor is pinned to the exact Git version it opened",editorBase);
+  await page.locator("#ef-text").fill("A stale browser draft must not overwrite a newer change.");
+  const concurrentCommit=await page.evaluate(async(baseRef)=>{
+    const cards=await (await fetch("/api/games/wizard-ui-smoke/cards")).json();
+    cards[0].text="A newer Sheet or maintainer change wins.";
+    const response=await fetch("/api/games/wizard-ui-smoke/cards",{method:"PUT",headers:{"content-type":"application/json"},
+      body:JSON.stringify({cards,base_ref:baseRef})});
+    return {status:response.status,body:await response.json()};
+  },editorBase);
+  assert(concurrentCommit.status===200&&concurrentCommit.body.saved,
+    "a concurrent version is committed after the editor opens",JSON.stringify(concurrentCommit));
+  const staleWriteResponse=page.waitForResponse(response=>response.request().method()==="PUT"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/cards"));
+  await page.getByRole("button",{name:"Commit changes",exact:true}).click();
+  const staleWriteHttp=await staleWriteResponse,staleWriteBody=await staleWriteHttp.json();
+  assert(staleWriteHttp.status()===409&&staleWriteBody.written===false,
+    "the real card-editor request refuses to overwrite a newer Sheet or maintainer commit",JSON.stringify(staleWriteBody));
+  const expectedConflict=errors.lastIndexOf("409 /api/games/wizard-ui-smoke/cards");
+  if(expectedConflict>=0)errors.splice(expectedConflict,1);
+  await page.getByRole("button",{name:"Reload newer version",exact:true}).waitFor();
+  assert((await page.locator("#hubtoast").innerText()).includes("Your draft was not written"),
+    "the editor explains the no-write result and offers a clear recovery action");
+  const persistedCards=await page.evaluate(async()=>await (await fetch("/api/games/wizard-ui-smoke/cards")).json());
+  assert(persistedCards[0].text==="A newer Sheet or maintainer change wins.",
+    "the newer committed value survives the rejected stale draft",JSON.stringify(persistedCards[0]));
+  await Promise.all([
+    page.waitForNavigation({waitUntil:"domcontentloaded"}),
+    page.getByRole("button",{name:"Reload newer version",exact:true}).click(),
+  ]);
+  await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).waitFor();
+  assert(await page.locator("#ef-text").inputValue()==="A newer Sheet or maintainer change wins.",
+    "reload brings the editor forward to the accepted repository version");
+
+  await page.route("**/api/games/wizard-ui-smoke/access",route=>route.abort());
+  await page.goto(`${origin}/?access-failure=1#/g/onboarding-smoke/wizard-ui-smoke/cards/edit`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("heading",{name:"✎ Editing cards — Wizard UI Smoke",exact:true}).waitFor();
+  await page.locator("#ef-text").fill("This disconnected draft must remain local.");
+  assert(await page.getByText(/exact opening version unavailable — editing is safe, but commit is paused/).isVisible()
+    &&await page.getByRole("button",{name:"Reconnect to commit",exact:true}).isDisabled(),
+    "a failed exact-version handshake leaves editing available but makes a blind commit impossible");
+  await page.unroute("**/api/games/wizard-ui-smoke/access");
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).waitFor();
+  const starterStudioResponse=page.waitForResponse(response=>response.request().method()==="GET"
+    &&new URL(response.url()).pathname.endsWith("/design/svg/card"));
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  assert((await starterStudioResponse).ok(),"the generated native family opens as a traced Studio working copy");
+  await page.getByRole("heading",{name:"Wizard UI Smoke · Card",exact:true}).waitFor();
+  assert(await page.locator(".forge-studio-panel-tabs").getByRole("button",{name:"Layers",exact:true}).isVisible()
+    && await page.locator('[data-design-card="strike"]').isVisible()
+    && await page.locator("#des-content-name").inputValue()==="Strike",
+    "a first-time project reaches the full native visual Studio with its real cards and layers");
+
+  // A native Studio draft may include layout, card/back content, artwork bytes,
+  // and rights metadata. Keep that recovery copy in browser storage, pinned to
+  // the exact Git ref, and require an explicit decision before applying it.
+  const recoveryBase=await page.evaluate(()=>DES.sourceRef);
+  await page.locator("#des-content-name").fill("Strike — recovered locally");
+  const capturedDraftPersistence=await page.evaluate(async()=>{
+    const snapshot=desDraftSnapshot(),card=DES.cards.find(item=>item.id==="strike"),draftName=card.name;
+    card.name=DES.origCards.find(item=>item.id==="strike").name;
+    const laterStateDirty=desAnyDirty();await desDraftPersist(snapshot);card.name=draftName;
+    const stored=(await desDraftAll()).find(record=>record.key===snapshot.key);
+    return{laterStateDirty,storedName:stored?.state?.cards?.find(item=>item.id==="strike")?.name};
+  });
+  assert(!capturedDraftPersistence.laterStateDirty&&capturedDraftPersistence.storedName==="Strike — recovered locally",
+    "a queued recovery write uses its captured Studio state instead of a later family or account",JSON.stringify(capturedDraftPersistence));
+  await page.evaluate(()=>desDraftFlush());
+  const recoveryStored=await page.evaluate(async()=>{
+    const records=await desDraftAll(),identity=desDraftIdentity();
+    return records.find(record=>record.key===desDraftKey(identity));
+  });
+  assert(recoveryStored?.ref===recoveryBase&&recoveryStored?.actor===`user:${await page.evaluate(()=>ME?.id)}`
+    &&recoveryStored.state.cards.find(card=>card.id==="strike")?.name==="Strike — recovered locally",
+    "Studio saves the complete local draft against the exact Git version it opened",JSON.stringify({ref:recoveryStored?.ref,name:recoveryStored?.state?.cards?.[0]?.name}));
+  const unloadProtection=await page.evaluate(()=>{const event=new Event("beforeunload",{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;});
+  assert(unloadProtection,"dirty Studio work installs accidental reload/navigation protection");
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await page.getByRole("heading",{name:"Restore local Studio draft?",exact:true}).waitFor();
+  const beforeRestore=await page.evaluate(()=>DES.cards.find(card=>card.id==="strike")?.name);
+  assert(beforeRestore==="Strike"
+    &&await page.getByRole("button",{name:"Restore draft",exact:true}).isVisible()
+    &&await page.getByRole("button",{name:"Discard draft",exact:true}).isVisible(),
+    "returning to the exact base offers Restore and Discard without silently applying the draft",beforeRestore);
+  await page.getByRole("button",{name:"Restore draft",exact:true}).click();
+  assert(await page.locator("#des-content-name").inputValue()==="Strike — recovered locally"
+    &&(await page.locator(".forge-studio-status").innerText()).includes("draft"),
+    "Restore returns the card draft to the live production preview without committing it");
+  await page.evaluate(()=>desDraftFlush());
+
+  const advancedWhileDraftOpen=await page.evaluate(async baseRef=>{
+    const cards=await (await fetch("/api/games/wizard-ui-smoke/cards")).json();
+    cards.find(card=>card.id==="strike").text="A newer collaborator version must stay intact.";
+    const response=await fetch("/api/games/wizard-ui-smoke/cards",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({cards,base_ref:baseRef})});
+    return {status:response.status,body:await response.json()};
+  },recoveryBase);
+  assert(advancedWhileDraftOpen.status===200&&advancedWhileDraftOpen.body.saved,
+    "the repository can advance independently while an older Studio draft remains local",JSON.stringify(advancedWhileDraftOpen));
+  page.once("dialog",dialog=>dialog.accept());
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open Forge Studio",exact:true}).click();
+  await page.getByRole("heading",{name:"Local draft belongs to an older version",exact:true}).waitFor();
+  const staleBoundary=await page.evaluate(()=>({name:DES.cards.find(card=>card.id==="strike")?.name,ref:DES.sourceRef}));
+  assert(staleBoundary.name==="Strike"&&staleBoundary.ref!==recoveryBase
+    &&await page.getByRole("button",{name:"Restore draft",exact:true}).count()===0
+    &&await page.getByRole("button",{name:"Discard older draft",exact:true}).isVisible(),
+    "an older local draft cannot be restored over a newer repository version",JSON.stringify(staleBoundary));
+  await page.getByRole("button",{name:"Discard older draft",exact:true}).click();
+  const staleDraftsLeft=await page.evaluate(async()=>{
+    const identity=desDraftIdentity();return (await desDraftAll()).filter(record=>record.slug===identity.slug&&record.family===identity.family).length;
+  });
+  assert(staleDraftsLeft===0&&await page.locator("#des-content-name").inputValue()==="Strike",
+    "discard removes the browser recovery copy and keeps the newer repository version visible");
+
+  await page.getByLabel("Rules text",{exact:true}).fill("Committed after local recovery was verified.");
+  await page.evaluate(()=>desDraftFlush());
+  assert((await page.evaluate(async()=>{const identity=desDraftIdentity();return (await desDraftAll()).some(record=>record.key===desDraftKey(identity));})),
+    "a new exact-base draft is present before its reviewed commit");
+  await page.getByRole("button",{name:"Review changes",exact:true}).click();
+  await page.getByRole("heading",{name:"Review component content, artwork, and layout together",exact:true}).waitFor();
+  const recoveredCommitResponse=page.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/design/studio")&&new URL(response.url()).searchParams.get("commit")==="1");
+  const recoveredCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Commit reviewed candidate",exact:true}).click();
+  assert((await recoveredCommitResponse).ok(),"the restored workflow still commits through the normal exact candidate review");
+  await recoveredCommitNavigation;
+  const draftsAfterCommit=await page.evaluate(async()=>{
+    return (await desDraftAll()).filter(record=>record.slug==="wizard-ui-smoke"&&record.family==="card").length;
+  });
+  assert(draftsAfterCommit===0,"a successful Studio commit clears its browser recovery copy");
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Open pieces",exact:true}).click();
+  await page.getByRole("heading",{name:/Pieces — Wizard UI Smoke/}).waitFor();
+  assert(await page.getByText("No playable table yet",{exact:true}).isVisible()
+    &&await page.getByText(/Create the first token, counter, tile, dial, or board above/).isVisible()
+    &&await page.getByRole("button",{name:"Create playable table",exact:true}).count()===0,
+    "an empty piece workspace explains the order without offering a dead table action");
+  await page.getByRole("button",{name:"Create first token",exact:true}).click();
+  await page.getByRole("button",{name:"Create playable table",exact:true}).click();
+  const firstTable=page.getByLabel("Wizard UI Smoke table component setup map");
+  assert(await firstTable.isVisible()
+    &&await page.getByText("LOCAL TABLE DRAFT",{exact:true}).isVisible()
+    &&await firstTable.locator("[data-setup-seat]").count()>0
+    &&await firstTable.getByText("Play area",{exact:true}).isVisible(),
+    "one click creates a visible freeform board, player seats, and public play area as a local draft");
+  await page.getByLabel("Stage this piece in setup",{exact:true}).check();
+  const setupXBefore=Number(await page.getByLabel("Setup X",{exact:true}).inputValue());
+  await firstTable.click({position:{x:250,y:180}});
+  const setupXAfter=Number(await page.getByLabel("Setup X",{exact:true}).inputValue());
+  assert(setupXAfter!==setupXBefore&&await page.getByText(/Click the table to move New token/).isVisible(),
+    "the first physical piece can be staged and positioned directly on the draft table");
+  await page.getByRole("button",{name:"Review changes",exact:true}).click();
+  await page.getByRole("heading",{name:"Review component production change",exact:true}).waitFor();
+  await page.getByText("Exact uncommitted manufacturing proof",{exact:true}).waitFor({timeout:15_000});
+  await page.getByText("setup-maps/table.svg",{exact:true}).waitFor();
+  assert(await page.getByText(/1 setup map/).isVisible()
+    &&await page.getByText(/setup map changed/).isVisible()
+    &&await page.getByRole("button",{name:"Commit component change",exact:true}).isEnabled(),
+    "the first table is rendered in the no-write manufacturing proof before commit");
+  const firstTableCommitResponse=page.waitForResponse(response=>response.request().method()==="PUT"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/components/pieces"));
+  const firstTableCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Commit component change",exact:true}).click();
+  const firstTableCommitHttp=await firstTableCommitResponse,firstTableCommitBody=await firstTableCommitHttp.json();
+  assert(firstTableCommitHttp.ok()&&firstTableCommitBody.saved&&firstTableCommitBody.setup_created
+    &&firstTableCommitBody.setup_path==="setups/table.yaml",
+    "the first piece, visual family state, and playable table land in one exact commit",JSON.stringify(firstTableCommitBody));
+  await firstTableCommitNavigation;
+  const firstTableSource=readFileSync(join(gamesRoot,"wizard-ui-smoke","setups","table.yaml"),"utf8");
+  assert(/id: table/.test(firstTableSource)&&/name: Wizard UI Smoke table/.test(firstTableSource)
+    &&/id: play-area/.test(firstTableSource)&&/component_id: new_token/.test(firstTableSource),
+    "the committed table remains portable, readable source with its staged component");
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("heading",{name:"Save the exact cards you intend to test or manufacture",exact:true}).waitFor();
@@ -993,6 +1630,87 @@ w.save(p)
     &&Object.values(committedBuild.printings).reduce((sum,count)=>sum+count,0)===3,
     "the committed portable deck document reconciles gameplay counts with manufacturing quantities");
   await page.waitForTimeout(900);
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/play`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).waitFor();
+  const firstPlayRef=await page.evaluate(()=>window._ps?.sourceRef||"");
+  assert(/^[0-9a-f]{40}$/i.test(firstPlayRef)
+    &&(await page.getByText("Version ready to test:",{exact:false}).innerText()).includes(firstPlayRef),
+    "Play opens with the full immutable game version visible before the table starts",firstPlayRef);
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const pinnedPlayState=await page.evaluate(()=>({ref:window._ps?.playtestRef,deck:window._ps?.playtestDeck}));
+  assert(pinnedPlayState.ref===firstPlayRef&&pinnedPlayState.deck?.id==="first-exact-playtest",
+    "starting the table freezes the exact version and selected playable build in the session",JSON.stringify(pinnedPlayState));
+
+  // Advance HEAD after the table starts. The recorder must keep the older
+  // version that was actually tested while the server appends the report to
+  // the newer project history.
+  const advancedDuringPlay=await page.evaluate(async()=>{
+    const sourceResponse=await fetch(`/api/games/wizard-ui-smoke/artifact?path=${encodeURIComponent("rules/rules.md")}`),source=await sourceResponse.json();
+    const content=`${String(source.content||"").trimEnd()}\n\n## Advanced during a live table\nThe active playtest must remain pinned to the version from before this line.\n`;
+    const response=await fetch("/api/games/wizard-ui-smoke/artifact",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({path:"rules/rules.md",content,base_ref:source.ref})});
+    return {sourceRef:source.ref,status:response.status,body:await response.json()};
+  });
+  assert(advancedDuringPlay.sourceRef===firstPlayRef&&advancedDuringPlay.status===200&&advancedDuringPlay.body.saved
+    &&advancedDuringPlay.body.commit!==firstPlayRef,
+    "the game can advance after a table begins without changing what that table tested",JSON.stringify(advancedDuringPlay));
+
+  await page.getByRole("button",{name:/Log playtest$/}).click();
+  const firstRecorder=page.getByRole("dialog",{name:"Log this playtest",exact:true});
+  await firstRecorder.waitFor();
+  const firstRecorderPin=await firstRecorder.locator("[data-playtest-recorder-pin]").innerText();
+  assert(firstRecorderPin.includes(firstPlayRef)&&firstRecorderPin.includes("First exact playtest")
+    &&firstRecorderPin.includes("first-exact-playtest"),
+    "the recorder shows the full frozen version and selected build before submission",firstRecorderPin);
+  await firstRecorder.getByLabel("How did it go?",{exact:true}).fill("The exact build felt quick and readable.");
+  await firstRecorder.getByLabel("Your result",{exact:true}).selectOption("win");
+  await firstRecorder.getByLabel("Minutes",{exact:true}).fill("18");
+  await firstRecorder.getByLabel("Card to flag",{exact:true}).selectOption("strike");
+  await firstRecorder.getByLabel("Observation tag",{exact:true}).selectOption("fun");
+  await firstRecorder.getByLabel("Card observation",{exact:true}).fill("Strike made the opening decision clear.");
+  const firstPlaytestResponse=page.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/playtests"));
+  await firstRecorder.getByRole("button",{name:"Log playtest",exact:true}).click();
+  const firstPlaytestHttp=await firstPlaytestResponse,firstPlaytestRequest=firstPlaytestHttp.request().postDataJSON(),firstPlaytestBody=await firstPlaytestHttp.json();
+  assert(firstPlaytestHttp.status()===201&&firstPlaytestRequest.version_ref===firstPlayRef
+    &&firstPlaytestRequest.id===undefined&&firstPlaytestRequest.players?.[0]?.name==="onboarding-smoke"
+    &&typeof firstPlaytestRequest.players[0].name==="string"
+    &&firstPlaytestRequest.players[0].deck_id==="first-exact-playtest"
+    &&firstPlaytestBody.pinned===firstPlayRef&&firstPlaytestBody.session?.notes==="The exact build felt quick and readable.",
+    "the real recorder sends a handle, build, notes, and original exact ref without inventing a replaceable ID",
+    JSON.stringify({request:firstPlaytestRequest,response:firstPlaytestBody}));
+  await page.waitForURL(/\/playtests$/,{timeout:20_000});
+  const firstSession=page.locator(`[data-playtest-session="${firstPlaytestBody.id}"]`);
+  await firstSession.waitFor();
+  const firstSessionText=await firstSession.innerText();
+  assert(firstSessionText.includes(firstPlayRef)&&firstSessionText.includes("onboarding-smoke")
+    &&firstSessionText.includes("First exact playtest")&&firstSessionText.includes("first-exact-playtest")
+    &&firstSessionText.includes("win")&&firstSessionText.includes("The exact build felt quick and readable.")
+    &&firstSessionText.includes("Strike")&&firstSessionText.includes("Strike made the opening decision clear."),
+    "saving immediately opens a human-readable session with version, player, build, result, notes, and card observation",firstSessionText);
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/play`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Shuffle & play",exact:true}).click();
+  const secondPlayRef=await page.evaluate(()=>window._ps?.playtestRef||"");
+  await page.getByRole("button",{name:/Log playtest$/}).click();
+  const secondRecorder=page.getByRole("dialog",{name:"Log this playtest",exact:true});
+  await secondRecorder.getByLabel("How did it go?",{exact:true}).fill("Second session on the same day stayed independent.");
+  await secondRecorder.getByLabel("Your result",{exact:true}).selectOption("loss");
+  await secondRecorder.getByLabel("Minutes",{exact:true}).fill("11");
+  const secondPlaytestResponse=page.waitForResponse(response=>response.request().method()==="POST"
+    &&new URL(response.url()).pathname.endsWith("/games/wizard-ui-smoke/playtests"));
+  await secondRecorder.getByRole("button",{name:"Log playtest",exact:true}).click();
+  const secondPlaytestHttp=await secondPlaytestResponse,secondPlaytestBody=await secondPlaytestHttp.json();
+  assert(secondPlaytestHttp.status()===201&&secondPlaytestBody.id!==firstPlaytestBody.id
+    &&secondPlaytestBody.session?.date===firstPlaytestBody.session?.date&&secondPlaytestBody.pinned===secondPlayRef,
+    "a second same-day UI session receives a different stable record instead of replacing the first",JSON.stringify(secondPlaytestBody));
+  await page.waitForURL(/\/playtests$/,{timeout:20_000});
+  await page.locator(`[data-playtest-session="${secondPlaytestBody.id}"]`).waitFor();
+  const playtestFiles=readdirSync(join(gamesRoot,"wizard-ui-smoke","playtests")).filter(file=>file.endsWith(".json"));
+  assert(await page.locator("[data-playtest-session]").count()===2&&playtestFiles.length===2
+    &&playtestFiles.includes(`${firstPlaytestBody.id}.json`)&&playtestFiles.includes(`${secondPlaytestBody.id}.json`),
+    "both same-day sessions remain visible and exist as separate version-controlled files",JSON.stringify(playtestFiles));
+
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"Plan exact print run",exact:false}).click();
   await page.getByRole("heading",{name:"Choose exactly what Forge will manufacture",exact:true}).waitFor();
@@ -1004,7 +1722,7 @@ w.save(p)
   await page.getByRole("button",{name:"Close",exact:false}).click();
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
-  await page.getByRole("button",{name:"Print profile",exact:true}).click();
+  await page.getByRole("button",{name:"Configure print",exact:true}).click();
   await page.getByRole("heading",{name:"Choose exactly what Forge will manufacture",exact:true}).waitFor();
   await page.getByLabel("Starting preset").selectOption("the-game-crafter-poker");
   assert(await page.getByLabel("Production target").inputValue()==="the-game-crafter-poker"
@@ -1044,16 +1762,61 @@ w.save(p)
     "the production review exposes validation, exact counts, and the honest press boundary");
   const printCommitResponse=page.waitForResponse(response=>response.request().method()==="PUT"
     &&new URL(response.url()).pathname.endsWith("/design/print-profile"));
+  // A successful print commit schedules a full reload. Wait for it before
+  // changing only the hash, which otherwise leaves that reload pending.
+  const printCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"Commit print profile",exact:true}).click();
   const printCommitHttp=await printCommitResponse,printCommitBody=await printCommitHttp.json();
   assert(printCommitHttp.ok()&&printCommitBody.saved,
     "the exact reviewed print contract becomes a repository commit",JSON.stringify(printCommitBody));
+  await printCommitNavigation;
+  await page.getByRole("button",{name:"Configure print",exact:true}).waitFor();
   const printProfile=readFileSync(join(gamesRoot,"wizard-ui-smoke","templates","print.yaml"),"utf8");
   assert(/preset: opaque-sleeves/.test(printProfile)&&/- strike/.test(printProfile)
     &&/fronts_only: true/.test(printProfile)&&/gutter_mm: 3/.test(printProfile)
     &&/crop_mark_sides: fronts/.test(printProfile)
     &&/sleeve_profile: japanese-62x89/.test(printProfile),
     "the committed profile preserves preset, selection, fronts-only, gutter, and sleeve intent");
+
+  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/releases`,{waitUntil:"domcontentloaded"});
+  await page.getByText(/^Release readiness/).waitFor();
+  const componentReadiness=page.locator('[data-release-check="components"]');
+  assert(await componentReadiness.isVisible()
+    &&(await componentReadiness.innerText()).includes("1 piece type")
+    &&(await componentReadiness.innerText()).includes("1 setup map")
+    &&(await page.locator('[data-release-component-explainer]').innerText()).includes("Tokens, counters, tiles, boards, dials, and setup maps")
+    &&await page.getByRole("button",{name:/Cut this exact release$/}).isVisible(),
+    "release readiness treats the exact printable piece and playable table as required production, not optional attachments",
+    await componentReadiness.innerText());
+  const componentReleaseRef=await page.evaluate(async()=>{
+    const response=await fetch("/api/games/wizard-ui-smoke/releases/preflight");return(await response.json()).ref;
+  });
+  // The focused server suite cuts and recovers real component releases. Keep
+  // this browser assertion scoped to presenting that canonical frozen-artifact
+  // contract; a second all-format release makes the UI suite needlessly slow.
+  await page.route("**/api/games/wizard-ui-smoke/releases",route=>{
+    if(route.request().method()!=="GET")return route.continue();
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify([{
+      tag:"v0.1",sha:componentReleaseRef,title:"First playable component kit",author_handle:"onboarding-smoke",
+      artifacts:[
+        {status:"ready",name:"wizard-ui-smoke-components-v7.zip"},
+        {status:"ready",name:"setup-maps/table.svg"},
+        {status:"ready",name:"forge-project-v2.zip"},
+      ],print_deliveries:[],
+    }])});
+  });
+  await page.reload({waitUntil:"domcontentloaded"});
+  const componentKitLink=page.getByRole("link",{name:/Component kit$/}),setupMapLink=page.getByRole("link",{name:/Setup map · Table$/});
+  await componentKitLink.waitFor();
+  await setupMapLink.waitFor();
+  const componentReleaseLinks=await page.locator('[data-release-component-downloads] a').evaluateAll(links=>links.map(link=>({label:link.textContent.trim(),href:link.getAttribute("href")})));
+  assert(await componentKitLink.count()===1&&await setupMapLink.count()===1
+    &&componentReleaseLinks.some(link=>/wizard-ui-smoke-components-v7\.zip$/.test(link.href))
+    &&componentReleaseLinks.some(link=>/setup-maps\/table\.svg$/.test(link.href))
+    &&new Set(componentReleaseLinks.map(link=>link.href)).size===componentReleaseLinks.length,
+    "the frozen release shows one component kit and one human-named setup map without duplicate artifact links",
+    JSON.stringify(componentReleaseLinks));
+  await page.unroute("**/api/games/wizard-ui-smoke/releases");
 
   const sourceAfter={head:sourceGit(["rev-parse","HEAD"]),status:sourceGit(["status","--porcelain"])};
   assert(sourceAfter.head===sourceBefore.head && sourceAfter.status===sourceBefore.status,

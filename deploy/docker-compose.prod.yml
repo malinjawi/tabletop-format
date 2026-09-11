@@ -24,6 +24,14 @@ services:
       - /tmp:size=536870912,mode=1777
     volumes:
       - gateway-data:/app/data
+      # Exact published release bytes live outside regenerable Store 3. The
+      # external volume has an independent lifecycle, so `compose down -v`
+      # cannot erase published releases. Pre-create it before first boot.
+      - type: volume
+        source: release-vault-data
+        target: /app/vault
+        volume:
+          nocopy: false
     secrets:
       - forge_token
       - platform_db_password
@@ -37,6 +45,7 @@ services:
       PGUSER: platform
       CACHE_DIR: /app/data/cache
       FARM_DIR: /app/data/forge-farm
+      RELEASE_VAULT_DIR: /app/vault
       # The shell is regenerated when application assets change. /app itself
       # is intentionally read-only, so derived UI must live on the data volume.
       FORGE_HUB_PATH: /app/data/hub.html
@@ -169,5 +178,8 @@ networks:
 
 volumes:
   gateway-data: {}
+  release-vault-data:
+    external: true
+    name: ${FORGE_RELEASE_VAULT_VOLUME:?set the pre-created release vault volume name}
   forgejo-data: {}
   pg-data: {}

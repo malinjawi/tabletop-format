@@ -83,6 +83,7 @@ header h1{font-size:17px;margin:0;flex:1}
 const DATA = __DATA__;
 const ORIGINAL = JSON.parse(JSON.stringify(DATA.cards));
 let cards = DATA.cards, cur = 0;
+let liveBaseRef = null, liveMustReload = false;
 const PALETTE = [["#8c2f1b","#f6e3d3"],["#1b4f8c","#dbe9f6"],["#3a6b28","#e2f0d9"],["#6b285a","#f0d9ea"],["#7a5a1b","#f4ead2"],["#37474f","#e0e7ea"]];
 const GLYPHS = Object.assign({spark:"✦",ash:"▲",cargo:"■",credit:"¤",mu:"μ",click:"◇",link:"⚑"}, DATA.glyphs||{});
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
@@ -329,15 +330,20 @@ function toast(html, ms){ const t=document.getElementById("toast");
   clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms||6000); }
 async function saveToServer(){
   const btn=document.getElementById("saveBtn");
+  if(!liveBaseRef || liveMustReload){
+    toast(`<b style="color:#ffa198">Reload before saving</b><br><span style="opacity:.8">Forge could not confirm the exact game version this draft opened from. Your draft was not written.</span>`, 9000);
+    return;
+  }
   btn.disabled=true; btn.textContent="Saving…";
   try {
     const auth=localStorage.forge_token?{Authorization:"Bearer "+localStorage.forge_token}:{};
     const rsp=await fetch(`/api/games/${DATA.live_slug}/cards`,{
       method:"PUT", headers:{"content-type":"application/json",...auth},
-      body:JSON.stringify(cards)});
+      body:JSON.stringify({cards,base_ref:liveBaseRef})});
     const d=await rsp.json();
     if(rsp.status===200 && d.saved){
       toast(`<b>✓ Committed ${esc(d.commit)}</b><br>${esc(d.message)}<br><span style="opacity:.7">Your change is now in the game's history.</span>`);
+      liveBaseRef=d.commit||liveBaseRef;
       ORIGINAL.length=0; for(const c of cards) ORIGINAL.push(JSON.parse(JSON.stringify(c)));
       renderAll();
     } else if(rsp.status===200){
@@ -346,27 +352,56 @@ async function saveToServer(){
       toast(`<b style="color:#ffa198">✗ Not saved — validation failed</b><br>`+
         (d.report||[]).filter(l=>l.trim().startsWith("ERROR")).slice(0,4).map(esc).join("<br>")+
         `<br><span style="opacity:.7">Nothing was committed; fix and save again.</span>`, 10000);
+    } else if(rsp.status===409){
+      liveMustReload=true; liveBaseRef=null;
+      btn.textContent="Reload newer version";
+      btn.onclick=()=>location.reload();
+      toast(`<b style="color:#ffa198">✗ A newer version is already in Forge</b><br><span style="opacity:.8">Your draft was not written. Reload to compare it with the latest game before committing.</span>`, 12000);
     } else if(rsp.status===401){
       toast(`<b style="color:#ffa198">Sign in to save</b><br><span style="opacity:.8">Open the hub, sign in, and come back — your edits stay right here.</span>`, 9000);
     } else if(rsp.status===403 && d.propose){
       if(confirm("You don't have commit access to this game.\n\nPropose your edit as a PULL REQUEST instead?\n(We'll fork it under your name, commit there, and open the PR for review.)")){
         const pr=await fetch(`/api/games/${DATA.live_slug}/cards/propose`,{
           method:"POST", headers:{"content-type":"application/json",...auth},
-          body:JSON.stringify({cards})});
+          body:JSON.stringify({cards,base_ref:liveBaseRef})});
         const pd=await pr.json();
         if(pr.status===201) toast(`<b>⇡ PR opened</b><br>${esc(pd.message)}<br><span style="opacity:.7">Committed to your fork <b>${esc(pd.fork)}</b> as ${esc(pd.commit)} — the owner can review & merge on the hub.</span>`, 12000);
+        else if(pr.status===409){
+          liveMustReload=true; liveBaseRef=null;
+          btn.textContent="Reload newer version";
+          btn.onclick=()=>location.reload();
+          toast(`<b style="color:#ffa198">✗ The source game changed</b><br><span style="opacity:.8">Your draft was not proposed or written. Reload to review the newer version first.</span>`, 12000);
+        }
         else toast(`<b style="color:#ffa198">✗ ${esc(pd.error||pr.status)}</b>`, 8000);
       }
     } else {
       toast(`<b style="color:#ffa198">✗ ${esc(d.error||rsp.status)}</b>`, 8000);
     }
   } catch(e){ toast(`<b style="color:#ffa198">✗ ${esc(e.message)}</b>`,8000); }
-  btn.disabled=false; btn.textContent="✓ Save (commit)";
+  if(!liveMustReload){ btn.disabled=false; btn.textContent="✓ Save (commit)"; }
 }
-if(DATA.live_slug){ document.getElementById("saveBtn").style.display=""; }
+async function connectLiveVersion(){
+  if(!DATA.live_slug) return;
+  const btn=document.getElementById("saveBtn");
+  btn.style.display=""; btn.disabled=true; btn.textContent="Connecting…";
+  try {
+    const auth=localStorage.forge_token?{Authorization:"Bearer "+localStorage.forge_token}:{};
+    const rsp=await fetch(`/api/games/${DATA.live_slug}/access`,{headers:auth});
+    const d=await rsp.json();
+    if(!rsp.ok || !d.ref) throw new Error(d.error||"Forge did not provide an exact opening version");
+    liveBaseRef=d.ref;
+    btn.disabled=false; btn.textContent="✓ Save (commit)";
+  } catch(e){
+    liveMustReload=true;
+    btn.textContent="Reload to reconnect";
+    btn.onclick=()=>location.reload();
+    toast(`<b style="color:#ffa198">Live save is unavailable</b><br><span style="opacity:.8">${esc(e.message)}. Your draft remains in this page and nothing can be committed until you reload.</span>`, 10000);
+  }
+}
 
 function renderAll(){renderList(); if(setupMode) renderSetup(); else renderForm(); renderCard();renderDiff();}
 renderAll();
+connectLiveVersion();
 </script></body></html>"""
     page = page.replace("__TITLE__", html.escape(payload["title"])).replace("__DATA__", data_js)
     out_path.parent.mkdir(parents=True, exist_ok=True)

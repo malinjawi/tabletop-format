@@ -130,6 +130,11 @@ check "trusted project ownership is restored during repository reindex" node too
 check "hosted renames and identity conflicts reconcile safely" node tools/test-hosted-project-reindex.mjs
 check "private artifact caches and stale game indexes fail closed" node tools/test-private-cache-and-stale-index.mjs
 check "Forgejo privacy and repository-bound identity reconciliation" node tools/test-store1-forgejo.mjs
+check "immutable release bytes survive cache loss and reject corruption" node tools/test-release-vault.mjs
+check "concurrent export requests join the winning immutable job" node tools/test-export-job-race.mjs
+check "legacy release receipts migrate without regeneration" node tools/test-release-vault-cli.mjs
+check "release-vault backup and restore preserve exact bytes" node tools/test-release-vault-snapshot.mjs
+check "production backups lock outages and recover partial stops" node tools/test-backup-guards.mjs
 check "editor-neutral SVG family round trip" node tools/test-svg-design.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "safe Squib card and layout working copy" node tools/test-squib.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint
@@ -310,7 +315,12 @@ s=json.load(open('examples/ember/playtests/2026-06-20-first-blood.json'))
 s['card_notes'][0]['card_id']='ghost_card'
 json.dump(s,open('$SCRATCH/badpt.json','w'))
 import shutil; shutil.copy('$SCRATCH/badpt.json','examples/ember/playtests/2026-06-20-first-blood.json')"
-check_fails "playtest bad card ref caught" python3 tools/validate.py examples/ember
+if python3 tools/validate.py examples/ember > "$SCRATCH/badpt.out" 2>&1 \
+  && grep -q "warn.*ghost_card.*pinned version" "$SCRATCH/badpt.out"; then
+  ok "historical playtest card ref is preserved with an exact-version warning"
+else
+  bad "historical playtest card ref warning" "offline validation must not erase valid pinned-history evidence"
+fi
 cp "$REPO"/examples/ember/playtests/*.json examples/ember/playtests/
 check "validate ember (playtests restored)" python3 tools/validate.py examples/ember
 
@@ -453,7 +463,8 @@ REDIR=$(curl -s -o /dev/null -w '%{redirect_url}' "localhost:$PORT/edit/ember")
 case "$REDIR" in *"#/g/ember/cards/edit") ok "/edit/:slug redirects into the SPA route (#/g/:slug/cards/edit)";; *) bad "edit redirect" "$REDIR";; esac
 ANONART=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -d '{"path":"rules/rules.md","content":"x"}' "localhost:$PORT/api/games/ember/artifact")
 [ "$ANONART" = "401" ] && ok "artifact write requires auth (401)" || bad "artifact auth" "$ANONART"
-ARTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d '{"path":"rules/rules.md","content":"# Ember\n\nEdited rulebook via artifact route."}' "localhost:$PORT/api/games/ember/artifact" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message'))" 2>/dev/null)
+ARTREF=$(curl -s "localhost:$PORT/api/games/ember/artifact?path=rules%2Frules.md" | python3 -c "import json,sys;print(json.load(sys.stdin).get('ref',''))" 2>/dev/null)
+ARTMSG=$(curl -s -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d "{\"path\":\"rules/rules.md\",\"content\":\"# Ember\\n\\nEdited rulebook via artifact route.\",\"base_ref\":\"$ARTREF\"}" "localhost:$PORT/api/games/ember/artifact" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('saved'),d.get('message'))" 2>/dev/null)
 echo "$ARTMSG" | grep -q "True rules: update rulebook" && ok "rules editable as an artifact → committed (not just cards)" || bad "artifact rules commit" "$ARTMSG"
 BADART=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -H "Authorization: Bearer $GTOK" -d '{"path":"../secret","content":"x"}' "localhost:$PORT/api/games/ember/artifact")
 [ "$BADART" = "422" ] && ok "artifact path allowlist blocks traversal (422)" || bad "artifact allowlist" "$BADART"

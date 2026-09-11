@@ -19,6 +19,8 @@ from design_engines import design_engines_metadata, load_design_engines
 ROOT = Path(__file__).resolve().parent.parent
 GIT_ROOT = ROOT
 LIVE_ASSETS = False
+RUNTIME_GAME_SLUG = None
+RUNTIME_SOURCE_REF = None
 
 FIXTURES_DIR = "_fixtures"
 
@@ -63,7 +65,9 @@ def runtime_asset(gd, path):
     if LIVE_ASSETS:
         stat = path.stat()
         version = f"{stat.st_mtime_ns:x}-{stat.st_size:x}"
-        return f"/api/games/{quote(Path(gd).name, safe='')}/assets/{quote(rel, safe='/')}?v={version}"
+        slug = RUNTIME_GAME_SLUG or Path(gd).name
+        exact = f"ref={quote(RUNTIME_SOURCE_REF, safe='')}&" if RUNTIME_SOURCE_REF else ""
+        return f"/api/games/{quote(slug, safe='')}/assets/{quote(rel, safe='/')}?{exact}v={version}"
     return data_uri(path)
 
 def game_file(gd, rel, label):
@@ -87,7 +91,10 @@ def load_production(gd):
         for resource in template.get("resources") or []:
             resource_path = game_file(gd, resource, "production resource")
             reference = posixpath.relpath(resource_path.as_posix(), svg_path.parent.as_posix())
-            uri = data_uri(resource_path)
+            # Live snapshots intentionally retain LFS pointers. Address the
+            # resource through the exact Store-1 asset route instead of
+            # embedding pointer text as if it were the image or font bytes.
+            uri = runtime_asset(gd, resource_path) if LIVE_ASSETS else data_uri(resource_path)
             # SVG editors emit both href="..." and CSS url("..."). Replacing
             # the exact declared relative reference handles both while keeping
             # undeclared paths visible to validation instead of silently reading them.
@@ -123,12 +130,15 @@ def embed_rules_assets(gd, rules_md):
             print(f"  ! rules.md image not found, leaving as plain path: {path}", file=sys.stderr)
             continue
         size = resolved.stat().st_size
-        if size > RULES_ASSET_MAX_BYTES:
+        if not LIVE_ASSETS and size > RULES_ASSET_MAX_BYTES:
             print(f"  ! rules.md image too big to embed ({size}B > {RULES_ASSET_MAX_BYTES}B cap), "
                   f"leaving as plain path: {path}", file=sys.stderr)
             continue
-        mime = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
-        out[path] = f"data:{mime};base64,{base64.b64encode(resolved.read_bytes()).decode()}"
+        if LIVE_ASSETS:
+            out[path] = runtime_asset(gd, resolved)
+        else:
+            mime = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+            out[path] = f"data:{mime};base64,{base64.b64encode(resolved.read_bytes()).decode()}"
     return out
 
 def load_rulebook_publication(gd):
@@ -252,8 +262,8 @@ def md_to_html(md):
     if in_ol: out.append("</ol>")
     return "\n".join(out)
 
-def git_history(scope_rel, cards_rel, limit=15):
-    log = sh(["git", "log", f"-{limit}", "--format=%H|%h|%an|%as|%s", "--", scope_rel], ok_fail=True)
+def git_history(scope_rel, cards_rel, limit=15, ref="HEAD"):
+    log = sh(["git", "log", f"-{limit}", "--format=%H|%h|%an|%as|%s", ref, "--", scope_rel], ok_fail=True)
     if not log: return []
     entries = []
     for line in log.split("\n"):
@@ -299,9 +309,9 @@ def render_ref_faces(game_rel, ref, want_ids):
             if f.exists(): out[cid] = b64(f)
         return out
 
-def build_game(gd):
+def build_game(gd, route_slug=None, git_rel=None, history_ref="HEAD"):
     gd = Path(gd).resolve()
-    slug = gd.name  # Store-1 compatibility key; public identity is namespace/repo_slug.
+    slug = route_slug or gd.name  # Store-1 compatibility key; public identity is namespace/repo_slug.
     project = {}
     project_path = gd / "forge" / "project.json"
     if project_path.exists():
@@ -312,8 +322,10 @@ def build_game(gd):
     project_id = project.get("project_id") or f"legacy:{slug}"
     # games can live OUTSIDE the platform repo (forgejo-backend checkout farm,
     # scratch dirs): git-derived views degrade gracefully instead of crashing
-    try: game_rel = str(gd.relative_to(GIT_ROOT))
-    except ValueError: game_rel = None
+    if git_rel is not None: game_rel = git_rel
+    else:
+        try: game_rel = str(gd.relative_to(GIT_ROOT))
+        except ValueError: game_rel = None
     game = yaml.safe_load((gd / "game.yaml").read_text())
     symbols = []
     for symbol in game.get("symbols") or []:
@@ -391,6 +403,12 @@ def build_game(gd):
     sets_ = load_dir(gd, "sets"); formats = load_dir(gd, "formats")
     restrictions = load_dir(gd, "restrictions"); decks = load_dir(gd, "decks")
     setups = load_dir(gd, "setups")
+    for setup in setups:
+        board = setup.get("board") or {}
+        background = board.get("background")
+        if background and background.startswith("assets/"):
+            background_path = game_file(gd, background, "setup board background")
+            board["background_data"] = runtime_asset(gd, background_path)
     faces = gd / "exports" / "faces"
     first = {}
     for p in printings: first.setdefault(p["card_id"], p)
@@ -420,7 +438,7 @@ def build_game(gd):
             scans[c["id"]] = printing["image"]
 
     rel = f"{game_rel}/components/cards.json" if game_rel else None
-    history = git_history(game_rel, rel) if rel else []
+    history = git_history(game_rel, rel, ref=history_ref) if rel else []
 
     # Rules can use the backwards-compatible Markdown renderer or declare a
     # native production pipeline in rules/pipeline.yaml. The browser receives
@@ -443,12 +461,23 @@ def build_game(gd):
                 "overlay_files": overlay_files,
                 "source_lock": f"git:{(active.get('source') or {}).get('url', '')}#{(active.get('source') or {}).get('ref', '')}",
             }
-    rules_log = (sh(["git", "log", "-10", "--format=%h|%an|%as|%s", "--", f"{game_rel}/rules"], ok_fail=True) or "") if game_rel else ""
+    rules_log = (sh(["git", "log", "-10", "--format=%h|%an|%as|%s", history_ref, "--", f"{game_rel}/rules"], ok_fail=True) or "") if game_rel else ""
     rules_history = [dict(zip(["sha", "author", "date", "subject"], l.split("|", 3)))
                      for l in rules_log.split("\n") if l]
     tokens = []
     tk = gd / "components" / "tokens.json"
-    if tk.exists(): tokens = json.loads(tk.read_text())
+    if tk.exists():
+        tokens = json.loads(tk.read_text())
+        # Piece Studio uses the same source paths in live and self-contained
+        # hubs.  Live payloads resolve those paths through the exact-ref asset
+        # route; static hubs need the bytes embedded because `/api/games/...`
+        # does not exist when the file is opened offline.
+        for token in tokens:
+            for face in [token, token.get("back") or {}, *(token.get("faces") or [])]:
+                art = face.get("art")
+                if art and not re.match(r"^(?:data:|https?:|file:)", art, re.I):
+                    art_path = game_file(gd, art, "component art")
+                    face["art_data"] = runtime_asset(gd, art_path)
     component_design = None
     cd = gd / "templates" / "component-design.json"
     if cd.exists(): component_design = json.loads(cd.read_text())
@@ -470,7 +499,7 @@ def build_game(gd):
     people = {}
     for c in community.get("contributors") or []:
         people[c["name"]] = {"roles": set(c["roles"]), "commits": 0, "sessions": 0}
-    authors = ((sh(["git", "log", "--format=%an", "--", game_rel], ok_fail=True) or "").splitlines()) if game_rel else []
+    authors = ((sh(["git", "log", "--format=%an", history_ref, "--", game_rel], ok_fail=True) or "").splitlines()) if game_rel else []
     for a in authors:
         a = a.strip()
         if not a: continue
@@ -503,7 +532,7 @@ def build_game(gd):
     if not rel: branches = []
     for br in branches:
         if br in ("", "main"): continue
-        base = cards_at("main", rel); head = cards_at(br, rel)
+        base = cards_at(history_ref, rel); head = cards_at(br, rel)
         if not base or not head: continue
         changes = diff_cards(base, head)
         if not changes: continue
@@ -520,7 +549,7 @@ def build_game(gd):
     # main-branch cards through the canonical renderer.
     if prs and game_rel:
         current_ids = sorted({ch["card"] for pr in prs for ch in pr["changes"]})
-        images.update(render_ref_faces(game_rel, "main", current_ids))
+        images.update(render_ref_faces(game_rel, history_ref, current_ids))
 
     # releases (tags touching this file's history — keep simple: all tags with notes)
     releases = []
@@ -600,14 +629,18 @@ def build_people(games, jams):
             for p in people.values()]
 
 def main():
-    global GIT_ROOT, LIVE_ASSETS
+    global GIT_ROOT, LIVE_ASSETS, RUNTIME_GAME_SLUG, RUNTIME_SOURCE_REF
     args = sys.argv[1:]
     if "--repo-root" in args:
         GIT_ROOT = Path(args[args.index("--repo-root") + 1]).resolve()
     LIVE_ASSETS = "--live-assets" in args
     if "--game-json" in args:
         gd = Path(args[args.index("--game-json") + 1]).resolve()
-        print(json.dumps(build_game(gd)).replace("</", "<\\/"))
+        route_slug = args[args.index("--route-slug") + 1] if "--route-slug" in args else None
+        git_rel = args[args.index("--git-rel") + 1] if "--git-rel" in args else None
+        history_ref = args[args.index("--history-ref") + 1] if "--history-ref" in args else "HEAD"
+        RUNTIME_GAME_SLUG, RUNTIME_SOURCE_REF = route_slug, history_ref if history_ref != "HEAD" else None
+        print(json.dumps(build_game(gd, route_slug=route_slug, git_rel=git_rel, history_ref=history_ref)).replace("</", "<\\/"))
         return
     out_path = Path(args[args.index("-o") + 1]) if "-o" in args else ROOT / "hub.html"
     base = args[args.index("--games") + 1] if "--games" in args else None

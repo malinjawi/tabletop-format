@@ -27,15 +27,15 @@
         "required": ["name"],
         "additionalProperties": false,
         "properties": {
-          "name": { "type": "string", "description": "Name or handle; playtesters deserve credit too." },
-          "deck_id": { "type": "string" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Name or handle; playtesters deserve credit too." },
+          "deck_id": { "type": "string", "minLength": 1, "maxLength": 128 },
           "result": { "type": "string", "enum": ["win", "loss", "draw"] },
           "score": { "type": "number" },
           "first_game": { "type": "boolean", "description": "New player? Their confusion data is gold." }
         }
       }
     },
-    "notes": { "type": "string", "description": "Session-level observations." },
+    "notes": { "type": "string", "maxLength": 20000, "description": "Session-level observations." },
     "card_notes": {
       "type": "array",
       "description": "Per-card observations — the raw material of balance work.",

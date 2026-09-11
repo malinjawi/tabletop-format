@@ -694,9 +694,9 @@ for (const s of setups) {
 }
 for (const s of playtests) {
   for (const n of s.card_notes ?? [])
-    if (!cardIds.has(n.card_id)) err(`playtest '${s.id}': card_note references unknown card '${n.card_id}'`);
+    if (!cardIds.has(n.card_id)) warn(`playtest '${s.id}': card_note '${n.card_id}' is not in the current snapshot; verify it against pinned version '${s.version_ref}'`);
   for (const d of s.decisions ?? [])
-    if (d.card_id && !cardIds.has(d.card_id)) err(`playtest '${s.id}': decision references unknown card '${d.card_id}'`);
+    if (d.card_id && !cardIds.has(d.card_id)) warn(`playtest '${s.id}': decision card '${d.card_id}' is not in the current snapshot; verify it against pinned version '${s.version_ref}'`);
   for (const p of s.players ?? [])
     if (p.deck_id && !deckIds.has(p.deck_id)) warn(`playtest '${s.id}': player deck '${p.deck_id}' not found in decks/`);
 }

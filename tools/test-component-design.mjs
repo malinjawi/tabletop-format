@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildComponentProduction, componentDialValues, componentFamily, componentQuantity, defaultComponentDesign, loadComponentDesign, renderComponentSvg } from "./lib/component-design.mjs";
+import { buildComponentProduction, COMPONENT_PRODUCTION_LIMITS, componentDialValues, componentFamily, componentQuantity, defaultComponentDesign, loadComponentDesign, renderComponentSvg } from "./lib/component-design.mjs";
 import { analyzeComponentSvgImport, buildComponentSvgProject, parseComponentSvg } from "./lib/component-svg.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -151,6 +152,73 @@ pieces:
   assert(poster.manifest.source_files.includes("assets/components/map.png"));
   assert.equal(poster.manifest.pieces.find(piece => piece.id === "map_board").artwork[0].rights.status, "original");
   assert.equal(poster.manifest.artwork_rights.dependencies[0].copyright[0], "Poster maker");
+
+  const tokensPath = join(posterGame, "components", "tokens.json");
+  const validTokens = readFileSync(tokensPath, "utf8"), maliciousPieces = JSON.parse(validTokens);
+  maliciousPieces[0].id = "../../escaped-face";
+  writeFileSync(tokensPath, JSON.stringify(maliciousPieces));
+  assert.throws(() => buildComponentProduction(posterGame), /unsafe component id/,
+    "component IDs cannot become archive or staging paths");
+  const excessivePieces = JSON.parse(validTokens);
+  excessivePieces[0].quantity = COMPONENT_PRODUCTION_LIMITS.resolved_per_piece + 1;
+  writeFileSync(tokensPath, JSON.stringify(excessivePieces));
+  assert.throws(() => buildComponentProduction(posterGame), /resolved quantity limit/,
+    "quantity expansion is rejected before cut-sheet rendering");
+  const artHeavyPieces = JSON.parse(validTokens), repeatedArt = "assets/components/repeated-large.png";
+  writeFileSync(join(posterGame, repeatedArt), Buffer.alloc(1024 * 1024, 7));
+  artHeavyPieces[0].art = repeatedArt;
+  artHeavyPieces[0].quantity = 250;
+  writeFileSync(tokensPath, JSON.stringify(artHeavyPieces));
+  assert.throws(() => buildComponentProduction(posterGame), /expanded-render limit/,
+    "repeated base64 artwork is budgeted before physical-copy rendering can allocate a multi-gigabyte SVG");
+  writeFileSync(tokensPath, validTokens);
+
+  const designPath = join(posterGame, "templates", "component-design.json");
+  const validDesign = readFileSync(designPath, "utf8"), maliciousDesign = JSON.parse(validDesign);
+  maliciousDesign.families[0].id = "../escaped-family";
+  writeFileSync(designPath, JSON.stringify(maliciousDesign));
+  assert.throws(() => buildComponentProduction(posterGame), /unsafe component family id/);
+  writeFileSync(designPath, validDesign);
+
+  const setupPath = join(posterGame, "setups", "table.yaml"), validSetup = readFileSync(setupPath, "utf8");
+  writeFileSync(setupPath, validSetup.replace("id: poster-table", "id: ../../escaped-component-map"));
+  assert.throws(() => buildComponentProduction(posterGame), /unsafe component setup id/,
+    "setup IDs cannot traverse out of setup-maps in an archive");
+  const workerRoot = mkdtempSync(join(tmpdir(), "forge-component-worker-"));
+  try {
+    const stage = join(workerRoot, "stage"), job = join(workerRoot, "job.json");
+    writeFileSync(job, JSON.stringify({ source_dir: posterGame, stage_dir: stage, kind: "components",
+      slug: "poster-test", ref: "malicious", public_origin: "http://localhost.invalid",
+      allow_network: false, build_pdf: false, exporter_version: 7,
+      names: { components: "poster-test-components-v7.zip" },
+      budget: { child_timeout_ms: 5_000, max_log_bytes: 64_000, max_files: 100,
+        max_output_bytes: 10 * 1024 * 1024 } }));
+    const escaped = join(workerRoot, "escaped-component-map.svg");
+    const worker = spawnSync(process.execPath, [join(root, "tools", "export-job-worker.mjs"), job],
+      { encoding: "utf8" });
+    assert.notEqual(worker.status, 0, "the isolated worker rejects malicious component output names");
+    assert.match(`${worker.stdout}\n${worker.stderr}`, /unsafe component setup id/);
+    assert.equal(existsSync(escaped), false, "no malicious setup-map path escapes component staging");
+    assert.deepEqual(existsSync(stage) ? readdirSync(stage) : [], [],
+      "a rejected component build publishes no partial staging files");
+    writeFileSync(setupPath, validSetup);
+    const targetStage = join(workerRoot, "target-stage"), targetJob = join(workerRoot, "target-job.json");
+    writeFileSync(targetJob, JSON.stringify({ source_dir: posterGame, stage_dir: targetStage, kind: "components",
+      slug: "poster-test", ref: "malicious-target", public_origin: "http://localhost.invalid",
+      allow_network: false, build_pdf: false, exporter_version: 7,
+      names: { components: "../escaped-component-kit.zip" },
+      budget: { child_timeout_ms: 5_000, max_log_bytes: 64_000, max_files: 100,
+        max_output_bytes: 10 * 1024 * 1024 } }));
+    const escapedKit = join(workerRoot, "escaped-component-kit.zip");
+    const targetWorker = spawnSync(process.execPath,
+      [join(root, "tools", "export-job-worker.mjs"), targetJob], { encoding: "utf8" });
+    assert.notEqual(targetWorker.status, 0);
+    assert.match(`${targetWorker.stdout}\n${targetWorker.stderr}`, /unsafe export staging path/);
+    assert.equal(existsSync(escapedKit), false,
+      "the worker's independent containment check rejects a malicious artifact target");
+    assert.deepEqual(existsSync(targetStage) ? readdirSync(targetStage) : [], []);
+  } finally { rmSync(workerRoot, { recursive: true, force: true }); }
+  writeFileSync(setupPath, validSetup);
 } finally { rmSync(posterGame, { recursive: true, force: true }); }
 
 console.log("component families → bounded SVG round trip → faces → quantity-aware cut sheets → oversize poster tiles verified");
