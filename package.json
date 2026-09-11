@@ -31,6 +31,8 @@
     "test:fixture-discovery": "node tools/test-fixture-discovery.mjs",
     "test:ui": "node tools/ui-smoke.mjs",
     "test:ui-preview-assets": "node tools/ui-preview-assets.mjs",
+    "test:ui-sheets": "node tools/ui-sheets-connector.mjs",
+    "test:ui-exports": "node tools/ui-export-selection.mjs",
     "test:csv-mapping": "node tools/test-csv-mapping.mjs",
     "test:nandeck": "node tools/test-nandeck-layout.mjs",
     "test:squib": "node tools/test-squib.mjs",

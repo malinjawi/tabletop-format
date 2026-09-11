@@ -319,7 +319,7 @@ async function hubHtml() {
   // intentionally separate. Invalidate for either side: a game-data change,
   // or a renderer/builder change in this checkout. Otherwise a newly added
   // template can remain invisible until some unrelated card file is edited.
-  const appVersion = Math.max(...["tools/build_hub.py", "tools/card_design.py", "tools/design_engines.py", "tools/hub_template.html"].map(rel => {
+  const appVersion = Math.max(...["tools/build_hub.py", "tools/card_design.py", "tools/design_engines.py", "tools/hub_template.html", "tools/creator_help.py", "docs/CREATOR-GUIDE.md", "docs/CONNECTORS.md"].map(rel => {
     const path = join(ROOT, rel); return existsSync(path) ? statSync(path).mtimeMs : 0;
   }));
   const v = String(appVersion);

@@ -224,9 +224,23 @@ try {
   });
   await page.goto(origin, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Topic filters").waitFor();
-  assert(await page.getByLabel("How Forge helps").isVisible()
-    && await page.getByText("Review the actual game", { exact: true }).isVisible(),
-    "Explore explains the game-aware layer before exposing repository mechanics");
+  assert(await page.getByRole("heading", {name:"Make your next playable version."}).isVisible()
+    && await page.getByRole("link", { name: "Getting started" }).isVisible(),
+    "Explore has a direct creator action and a visible getting-started guide");
+
+  await page.getByRole("link",{name:"Getting started",exact:true}).click();
+  await page.getByRole("heading",{name:"Make your first playable version in Forge"}).waitFor();
+  assert(await page.getByRole("heading",{name:"Review and save",exact:true}).isVisible(),
+    "Bundled help explains the actual creator workflow");
+  await page.getByRole("navigation",{name:"Help topics"}).getByRole("link",{name:"Connectors and file handoffs"}).click();
+  await page.getByRole("heading",{name:"Connectors and file handoffs",exact:true}).waitFor();
+  assert(await page.getByRole("heading",{name:"Connect a private Google Sheet",exact:true}).isVisible()
+    &&await page.locator('.help-page article').getByRole('link',{name:'Creator guide',exact:true}).getAttribute('href')==='#help',
+    "Connector help includes private setup and a working link back to the creator guide");
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),
+    "Long connector tables remain contained on mobile");
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await page.getByLabel("Topic filters").waitFor();
 
   const pseudoLink = page.locator(".gcard h3 a").first();
   assert(await pseudoLink.getAttribute("role") === "link" && await pseudoLink.getAttribute("tabindex") === "0",
@@ -244,7 +258,7 @@ try {
     (SELECT id FROM users WHERE handle = 'onboarding-smoke') WHERE slug IN ('netrunner-sg','secret-hitler')`).run();
   fixtureOwner.close();
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Bring or start a game" }).click();
+  await page.locator(".hero").getByRole("button", { name: "New game", exact:true }).click();
   assert(await page.getByRole("radio", { name: /Start from an idea/ }).isChecked(),
     "new game opens on the guided idea path");
   await page.getByRole("radio", { name: /Import CSV/ }).check();
@@ -297,7 +311,7 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
 
   // Exercise the real self-serve import UI, not merely its API. The disposable
   // server/store keeps this mutation isolated from the developer's catalog.
-  await page.getByRole("button", { name: "Bring or start a game" }).click();
+  await page.locator(".hero").getByRole("button", { name: "New game", exact:true }).click();
   await page.getByRole("radio", { name: /Import CSV/ }).check();
   await page.getByLabel("Working title").fill("Onboarding Smoke Game");
   await page.getByLabel("CSV card data").fill(`Card Key,Card Title,Category,Rules,Energy\nspark-01,Spark,unit,Deal 1 damage.,1\nguard-02,Guard,unit,Prevent 1 damage.,2`);
@@ -353,7 +367,7 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
     return {status:response.status,body:await response.json()};
   });
   assert(advancedRules.status===200&&advancedRules.body.saved,"a separate exact rulebook commit can advance beyond the cached page",JSON.stringify(advancedRules));
-  await page.getByRole("button",{name:"✎ Edit book",exact:true}).click();
+  await page.locator("#pane").getByRole("button",{name:"✎ Edit rules",exact:true}).click();
   await page.locator("#rmd").waitFor();
   const exactRulesEditor=await page.evaluate(()=>({content:document.getElementById("rmd")?.value,base:RULES_EDIT?.baseRef}));
   assert(exactRulesEditor.content.includes("This line was committed after the page payload loaded.")
@@ -361,18 +375,20 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
     "the rulebook editor opens content and Git base from one exact source",JSON.stringify(exactRulesEditor));
 
   await page.goto(`${origin}/#g/netrunner-sg/design`, { waitUntil:"domcontentloaded" });
-  await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
+  await page.getByRole("heading", { name:"Card design" }).waitFor();
   assert(await page.getByRole("button", { name:"Open Forge Studio", exact:true }).count()===1
-    && await page.getByText("Use another editor · traced round trips", { exact:true }).isVisible(),
+    && await page.locator("summary").filter({hasText:/^Use another editor$/}).isVisible(),
     "Design starts with one primary Forge Studio action and a clear external-working-copy choice");
-  await page.getByText("Use another editor · traced round trips", { exact:true }).click();
-  assert(await page.getByText("Keep your existing tools", { exact:true }).isVisible(),
+  await page.locator("summary").filter({hasText:/^Use another editor$/}).click();
+  assert(await page.getByRole("heading", {name:"Use another editor",exact:true}).isVisible(),
     "the external-tool path expands on demand instead of competing with the primary studio action");
-  assert(await page.getByText("Excel · LibreOffice · Dextrous · Component Studio · Sheets", { exact:true }).isVisible()
+  assert(await page.getByText("Excel and LibreOffice", { exact:true }).isVisible()
+    && await page.getByText("CSV-compatible editors", {exact:true}).isVisible()
+    && await page.getByText("Google Sheets", {exact:true}).isVisible()
     && await page.getByRole("button", { name:"Excel / LibreOffice" }).isVisible()
     && await page.getByRole("button", { name:"Cards CSV" }).isVisible()
     && await page.getByRole("button", { name:"Return XLSX / CSV / ZIP" }).first().isVisible(),
-    "Excel, LibreOffice, Dextrous, Component Studio, and Sheets share an explicit data round-trip path");
+    "Spreadsheet files, CSV tools, and connected Sheets explain their different handoffs");
   const squibTool=page.locator(".design-tool").filter({hasText:"Squib"});
   assert(await squibTool.getByText("Squib",{exact:true}).isVisible()
     && await squibTool.getByRole("button",{name:"Download"}).isVisible()
@@ -740,10 +756,10 @@ w.save(p)
   await page.getByRole("button", { name:"Keep editing", exact:true }).click();
   page.once("dialog", dialog=>dialog.accept());
   await page.reload({ waitUntil:"domcontentloaded" });
-  await page.getByRole("heading", { name:"Design once. Review every card. Ship the exact version." }).waitFor();
-  const designSteps=await page.locator(".design-golden-step").allTextContents();
-  assert(designSteps.length===5&&designSteps[0].includes("Choose a template")&&designSteps[4].includes("Print or play"),
-    "Design explains the complete template-to-release path",JSON.stringify(designSteps));
+  await page.getByRole("heading", { name:"Card design" }).waitFor();
+  const designOrder=await page.evaluate(()=>({templates:document.querySelector('.design-family-grid').getBoundingClientRect().top,connectors:[...document.querySelectorAll('summary')].find(el=>el.textContent==='Use another editor').getBoundingClientRect().top,technicalVisible:[...document.querySelectorAll('.design-family details')].some(el=>el.open)}));
+  assert(designOrder.templates<designOrder.connectors&&!designOrder.technicalVisible,
+    "Design leads with templates and keeps technical details collapsed",JSON.stringify(designOrder));
   for (const width of [320,390]) {
     await page.setViewportSize({width,height:844});
     const geometry=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,
