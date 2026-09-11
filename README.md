@@ -1,7 +1,22 @@
-# An Open Format for Living Card Games
+# Forge — a workshop for tabletop games
+
+Forge connects card and component authoring, visual review, Git collaboration,
+playtesting, and exact-version print/tabletop releases over a portable game format.
+
+**Joining the engineering team?** Start with [local setup](docs/DEVELOPMENT.md),
+then the [developer handoff](docs/DEVELOPER-HANDOFF.md) and [contribution rules](CONTRIBUTING.md).
+Use Node **24.20.0**, Python **3.11**, and Chrome/Chromium. After selecting Node
+from `.nvmrc`, run `npm run setup:dev`, then `npm run dev` and open
+**http://localhost:8420/**. This creates a separate persistent Ember workspace in
+ignored `data/dev`; browser edits do not change the application branch.
+
+Current status: qualified software for controlled development and evaluation.
+The [handoff](docs/DEVELOPER-HANDOFF.md) records remaining engineering and launch
+evidence. [Main qualification](https://github.com/malinjawi/tabletop-format/actions/workflows/quality.yml)
+identifies each published image; image publication does not deploy a public service.
 
 Using the Forge app? Start with the [Creator guide](docs/CREATOR-GUIDE.md) or [Connectors and file handoffs](docs/CONNECTORS.md). Both are available from **Help** inside Forge.
-### v0.1.0 — working draft
+### Portable format v0.1.0 — working draft
 
 Card games deserve source code. Today a living card game's truth is scattered across
 spreadsheets, PDFs, Discord pins, and one volunteer's hard drive. Communities like
@@ -60,16 +75,16 @@ npm run doctor      # Node, Python, Git, Chromium, and adapter readiness
 Forge automatically prefers `.venv/bin/python` (or `FORGE_PYTHON`) so browser
 exports and CLI exports use the same dependency set.
 
-The current invite-only alpha decision, evidence, operating limits, and
+The historical invite-only alpha decision, evidence, operating limits, and
 deployment stop conditions are recorded in
 [`docs/CONTROLLED-ALPHA-LAUNCH-GATE-2026-09-01.md`](docs/CONTROLLED-ALPHA-LAUNCH-GATE-2026-09-01.md).
-The latest requirement-by-requirement beta audit and exact remaining external
+The September 2 requirement-by-requirement beta audit and external
 inputs are recorded in
 [`docs/CONTROLLED-BETA-READINESS-2026-09-02.md`](docs/CONTROLLED-BETA-READINESS-2026-09-02.md).
 
 ```
-./e2e.sh                                             # 186-check functional integration gate
-./journey.sh                                         # 96-assertion two-user golden path
+./e2e.sh                                             # functional integration gate
+./journey.sh                                         # two-user golden path
 ./perf.sh                                            # bounded scale + concurrent-write smoke
 ./launch-gate.sh                                     # all mandatory controlled-beta gates
 ./demo.sh                                            # the whole loop, one command, narrated
@@ -127,10 +142,10 @@ fmt setup                        # plain `git diff` becomes a semantic card diff
 Real git underneath — clone, branch, push anywhere. The porcelain just makes
 the history read like a designer's changelog instead of a hash pile.
 
-## The platform server (v0)
+## The platform server
 
 ```
-node server.mjs            # http://localhost:8420 — zero dependencies
+npm run dev               # http://localhost:8420 — isolated local game workspace
 ```
 
 A live HTTP server over the game repos: the hub UI at `/`, a REST API at
@@ -139,8 +154,9 @@ the part that makes it a platform — **`PUT /api/games/:slug/cards` validates,
 then commits, with the message auto-written from the semantic diff.** Invalid
 writes get a 422 and a rollback; history is served as card changes. Games are
 discovered by scanning for `game.yaml` — drop a new game dir in, it's live.
-These are the exact verbs the production backend (headless Forgejo) will
-speak; the contracts are proven here against plain git first.
+The production backend uses headless Forgejo through the same Store-1 interface;
+qualification exercises the local and hosted contracts. See the maintained
+[deployment runbook](deploy/DEPLOY.md) for the production topology.
 
 `demo.sh` runs: import a designer's CSV → validate → render → PnP PDF + TTS mod →
 apply a balance patch → semantic diff. Spreadsheet to playable-and-printable in

@@ -239,7 +239,7 @@ export async function ensureExport(gameRel, gameSlug, ref, kind, { publicOrigin 
           vtt_json: vttArtifactName("json"), vtt_package: vttArtifactName("vtt") },
         budget: EXPORT_BUDGET };
       const jobFile = join(stage, ".job.json"); writeFileSync(jobFile, JSON.stringify(input));
-      const env = Object.fromEntries(["PATH", "LANG", "LC_ALL", "TMPDIR", "FORGE_PYTHON"]
+      const env = Object.fromEntries(["PATH", "LANG", "LC_ALL", "TMPDIR", "FORGE_PYTHON", "CHROME_PATH", "FMT_CHROME_BIN", "FORGE_CHROME"]
         .filter(name => process.env[name] != null).map(name => [name, process.env[name]]));
       const { stdout } = await execFileAsync(process.execPath, [join(ROOT, "tools", "export-job-worker.mjs"), jobFile],
         { cwd: ROOT, env, timeout: EXPORT_BUDGET.wall_time_ms, maxBuffer: EXPORT_BUDGET.max_log_bytes });

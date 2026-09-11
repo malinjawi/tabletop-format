@@ -41,8 +41,12 @@ function commandPath(name) {
 }
 
 function findChrome() {
+  const configured = process.env.CHROME_PATH || process.env.FMT_CHROME_BIN;
+  if (configured) {
+    if (!existsSync(configured)) throw new Error(`Configured Chrome/Chromium executable does not exist: ${configured}`);
+    return configured;
+  }
   const candidates = [
-    process.env.FMT_CHROME_BIN,
     commandPath("chromium"), commandPath("chromium-browser"),
     commandPath("google-chrome"), commandPath("google-chrome-stable"),
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -52,7 +56,7 @@ function findChrome() {
     "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
   ].filter(Boolean);
   const found = candidates.find(existsSync);
-  if (!found) throw new Error("Chrome/Chromium was not found; install Chrome or set FMT_CHROME_BIN");
+  if (!found) throw new Error("Chrome/Chromium was not found; install Chrome or set CHROME_PATH");
   return found;
 }
 

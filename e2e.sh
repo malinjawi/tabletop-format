@@ -99,8 +99,7 @@ tar -C "$REPO" \
   --exclude='tmp' \
   --exclude='output' \
   --exclude='hub.html' \
-  --exclude='data/cache' \
-  --exclude='data/forge-farm' \
+  --exclude='data' \
   --exclude='examples/*/exports' \
   --exclude='examples/_fixtures' \
   -cf - . | tar -C "$SCRATCH" -xf -

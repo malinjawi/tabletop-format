@@ -34,8 +34,8 @@ echo "journey: scratch at $SCRATCH"
   done
 ) & WATCH_PID=$!
 tar -C "$REPO" --exclude='.git' --exclude='.venv' --exclude='node_modules' --exclude='beta-site' \
-    --exclude='tmp' --exclude='output' --exclude='hub.html' --exclude='data/cache' \
-    --exclude='data/forge-farm' --exclude='examples/*/exports' --exclude='examples/_fixtures' \
+    --exclude='tmp' --exclude='output' --exclude='hub.html' --exclude='data' \
+    --exclude='examples/*/exports' --exclude='examples/_fixtures' \
     -cf - . | tar -C "$SCRATCH" -xf -
 ln -s "$REPO/node_modules" "$SCRATCH/node_modules"
 ln -s "$REPO/.venv" "$SCRATCH/.venv"

@@ -8,6 +8,7 @@
     "fmt": "tools/fmt.mjs"
   },
   "scripts": {
+    "dev": "node tools/dev.mjs",
     "demo": "./demo.sh",
     "typecheck": "tsc -p tsconfig.json",
     "validate:ember": "node tools/fmt.mjs validate examples/ember",
@@ -44,6 +45,7 @@
     "build:rulebook-publication": "node tools/build-rulebook-publication.mjs examples/_fixtures/netrunner-sg output/pdf/netrunner-sg-rulebook-publication",
     "setup:dev": "node tools/setup-dev.mjs",
     "doctor": "node tools/doctor.mjs",
+    "test:dev": "node tools/test-dev.mjs",
     "smoke:alpha": "node tools/alpha-readiness.mjs",
     "test:production-config": "node tools/production-config-check.mjs",
     "release:vault": "node tools/release-vault.mjs",
@@ -92,6 +94,6 @@
     "typescript": "7.0.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24.20.0 <25"
   }
 }
