@@ -748,8 +748,12 @@ grep -q "openEditor" "$SCRATCH/live-hub.html" && grep -q 'id="ed-preview"' "$SCR
   && ok "live hub ships the routed card editor (live production preview + commit/propose)" || bad "hub editor wiring"
 grep -q "liveIssues" "$SCRATCH/live-hub.html" && grep -q "commentThread" "$SCRATCH/live-hub.html" \
   && grep -q "commentPr" "$SCRATCH/live-hub.html" && ok "live hub ships Issues tab + comment threads (issues & PRs)" || bad "hub issues wiring"
-grep -q "EDITABLE_TABS" "$SCRATCH/live-hub.html" && grep -q "rulesEdit" "$SCRATCH/live-hub.html" \
-  && grep -q "g/\${g.slug}/cards/edit" "$SCRATCH/live-hub.html" && ok "hub: editing is a routed mode (#/g/:slug/:tab/edit) for cards AND rules" || bad "hub edit routing"
+# Editors now live in each workspace toolbar; the retired shared-header
+# constant is not evidence that either routed editor remains reachable.
+grep -q "cardsEdit" "$SCRATCH/live-hub.html" && grep -q "rulesEdit" "$SCRATCH/live-hub.html" \
+  && grep -Fq 'g/${g.slug}/cards/edit' "$SCRATCH/live-hub.html" \
+  && grep -Fq 'g/${g.slug}/rules/edit' "$SCRATCH/live-hub.html" \
+  && ok "hub: editing is a routed mode (#/g/:slug/:tab/edit) for cards AND rules" || bad "hub edit routing"
 grep -q "exportMenu" "$SCRATCH/live-hub.html" && grep -q "Tabletop Club" "$SCRATCH/live-hub.html" \
   && grep -q "Tabletop Playground" "$SCRATCH/live-hub.html" \
   && ok "live hub Export offers Tabletop Playground / Tabletop Club / TTS / PnP downloads" || bad "hub export wiring"
