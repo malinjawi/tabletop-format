@@ -336,12 +336,20 @@ node deploy/preflight.mjs --env deploy/.env --first-boot
 ```
 
 After the scoped Forgejo token exists and DNS is live, run the online preflight.
-It verifies DNS/TLS and HSTS, both service health endpoints, and a signed,
-read-only list request to the configured R2 bucket. It never prints secret
-values. Keep its evidence beside the restore-drill record, not in Git:
+It verifies DNS/TLS and HSTS, both service health endpoints, versioned preview
+assets through the public Forge address, and a signed, read-only list request
+to the configured R2 bucket. Select an existing public game with artwork using
+`--preview-game <storage-slug>`; otherwise the first catalog game is used.
+The asset check samples up to 32 URLs emitted by that game's actual preview,
+including available image/font formats. Missing assets, redirects, HTML error
+pages, unresolved LFS pointers, and unpinned versions fail the preflight. This
+checks the deployed proxy and permissions as an anonymous visitor; it does not
+enable private fixtures. Keep its evidence beside the restore-drill record,
+not in Git:
 
 ```sh
 node deploy/preflight.mjs --env deploy/.env --online \
+  --preview-game ember \
   --evidence /encrypted/off-host/evidence/forge-preflight-$(date -u +%Y%m%dT%H%M%SZ).json
 ```
 
@@ -383,13 +391,19 @@ REQUIRE_PRODUCTION_BACKENDS=1 \
 ```
 
 On the actual host, make the same gate require the offline deployment preflight
-(or add `FORGE_DEPLOY_ONLINE=1` after DNS/TLS is live):
+(or add `FORGE_DEPLOY_ONLINE=1` after DNS/TLS is live, and
+`FORGE_DEPLOY_PREVIEW_GAME=<storage-slug>` to select the public smoke-test game):
 
 ```sh
 FORGE_DEPLOY_ENV=deploy/.env \
 REQUIRE_DEPLOY_PREFLIGHT=1 \
 ./launch-gate.sh
 ```
+
+The protected product gate also opens public and explicitly enabled local
+fixture card previews in Chromium and checks that rendered images and fonts
+decode. The online host preflight is a separate required proof before pilot
+approval, so a green health endpoint alone cannot qualify the public preview.
 
 The digest-pinned helper is the safe default: it creates a fresh Forgejo
 container and volume, runs the journey, and removes them. To test an already

@@ -51,6 +51,14 @@ if (preflightRecord) {
     if (evidence.images?.[field] !== expected) evidenceFailures.push(`production preflight ${field} image does not match the pilot candidate`);
   if (!Array.isArray(evidence.checks) || !evidence.checks.length || evidence.checks.some(item => item?.ok !== true))
     evidenceFailures.push("production preflight evidence does not contain an all-green check set");
+  const preview = evidence.preview_assets;
+  if (!Array.isArray(evidence.checks)
+    || !evidence.checks.some(item => item?.name === "public card-preview assets" && item.ok === true)
+    || typeof preview?.slug !== "string" || !preview.slug
+    || !/^[a-f0-9]{40}$/.test(preview?.ref || "")
+    || !Number.isInteger(preview?.checked) || preview.checked < 1
+    || !Number.isInteger(preview?.total) || preview.total < preview.checked)
+    evidenceFailures.push("production preflight is missing public card-preview asset evidence; rerun the online preflight");
 }
 
 const packageRecord = readEvidence("Sheets package receipt", document.candidate.sheets_connector.package_receipt);

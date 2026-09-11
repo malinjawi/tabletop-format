@@ -140,6 +140,7 @@ check "editor-neutral SVG family round trip" node tools/test-svg-design.mjs "$RE
 check "safe Squib card and layout working copy" node tools/test-squib.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint
 check "strict production host preflight" node tools/test-deploy-preflight.mjs
+check "public preview asset delivery rejects broken launch candidates" node tools/test-preview-assets.mjs
 check "safe production deployment bootstrap" node tools/test-deploy-bootstrap.mjs
 check "five-person pilot decision contract" node tools/test-pilot-report.mjs
 check "production source package contracts" node tools/test-source-assets.mjs

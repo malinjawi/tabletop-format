@@ -16,7 +16,9 @@ try {
     commit: base.candidate.commit,
     origins: { forge: base.candidate.origin, forgejo: "https://git.forge.example", r2_bucket: "forge-lfs" },
     images: { gateway: base.candidate.gateway_image, forgejo: base.candidate.forgejo_image, postgres: base.candidate.postgres_image },
-    checks: [{ ok: true, name: "Forge HTTPS health", detail: "HTTP 200" }],
+    checks: [{ ok: true, name: "Forge HTTPS health", detail: "HTTP 200" },
+      { ok: true, name: "public card-preview assets", detail: "4/4 assets checked" }],
+    preview_assets: { slug: "ember", ref: "a".repeat(40), checked: 4, total: 4 },
   };
   writeFileSync(join(temp, "preflight.json"), JSON.stringify(preflight));
   const sheetsDir = join(temp, "sheets"), sourceDir = join(sheetsDir, "src");
@@ -47,6 +49,13 @@ try {
   base.candidate.sheets_connector.resulting_commit = "1234567890abcdef";
   const green = join(temp, "green.json"); writeFileSync(green, JSON.stringify(base));
   const passed = run(green); assert.equal(passed.status, 0, passed.stderr); assert.equal(JSON.parse(passed.stdout).decision, "PROCEED");
+  const healthOnly = structuredClone(preflight);
+  delete healthOnly.preview_assets;
+  healthOnly.checks = healthOnly.checks.filter(item => item.name !== "public card-preview assets");
+  writeFileSync(join(temp, "preflight.json"), JSON.stringify(healthOnly));
+  const missingPreview = run(green); assert.notEqual(missingPreview.status, 0);
+  assert.match(missingPreview.stdout, /missing public card-preview asset evidence/);
+  writeFileSync(join(temp, "preflight.json"), JSON.stringify(preflight));
   const wrongCandidate = structuredClone(base);
   wrongCandidate.candidate.origin = "https://different.forge.example";
   const mismatched = join(temp, "mismatched.json"); writeFileSync(mismatched, JSON.stringify(wrongCandidate));
