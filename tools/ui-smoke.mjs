@@ -367,7 +367,7 @@ s=w.create_sheet("Card Pool");s.append(["Card Key","Card Title","Category","Rule
     return {status:response.status,body:await response.json()};
   });
   assert(advancedRules.status===200&&advancedRules.body.saved,"a separate exact rulebook commit can advance beyond the cached page",JSON.stringify(advancedRules));
-  await page.getByRole("button",{name:"✎ Edit book",exact:true}).click();
+  await page.locator("#pane").getByRole("button",{name:"✎ Edit rules",exact:true}).click();
   await page.locator("#rmd").waitFor();
   const exactRulesEditor=await page.evaluate(()=>({content:document.getElementById("rmd")?.value,base:RULES_EDIT?.baseRef}));
   assert(exactRulesEditor.content.includes("This line was committed after the page payload loaded.")

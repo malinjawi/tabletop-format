@@ -15,7 +15,7 @@ This is an engineering and interface review, not an independent-user usability s
 
 | Problem | Change |
 | --- | --- |
-| Repeated workspace actions and seven primary tabs | Five primary tabs; secondary features remain in More. Download is directly visible. Cards has one edit action. Jams remains available in the footer. |
+| Repeated workspace actions and seven primary tabs | Five primary tabs; secondary features remain in More. Download is directly visible. Cards and Rules keep their editing actions in the content area. Jams remains available in the footer. |
 | Design began with promotional copy, two process summaries, and technical metadata | Templates appear first, with concise guidance. Shared elements, source details, and adapter internals expand when needed. Artwork, pieces, and print settings remain directly available. |
 | Different external-tool capabilities appeared as one connection | Spreadsheet files, CSV-compatible tools, connected Sheets, and bounded SVG/native-editor handoffs have separate descriptions. Studio says Other editors instead of suggesting it launches an application. |
 | Sheets creation tried an unreviewed commit, then announced success after failure | Creation attaches only. Review and commit remain explicit. Setup success or partial failure survives navigation with the next action and retry URL. |

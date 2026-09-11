@@ -5234,7 +5234,6 @@ function repoPage(g, tab, mode){
     ["suggestions","Pull requests",typeof LIVE!=="undefined"&&LIVE?null:g.prs.length],["issues","Issues",null],
     ["releases","Releases",g.releases.length],["banlist","Banlist",null],["decks","Decks",g.decks.length]];
   const projectActive=projectTabs.find(([id])=>id===tab);
-  const editLabel=tab==="rules"?"Edit book":"Edit cards";
   $("#view").innerHTML = `
   <div class="repohead"><div class="wrap">
     <div class="titleline">
@@ -5247,7 +5246,6 @@ function repoPage(g, tab, mode){
         ${starBtn(g.slug)}
         <button class="btn" onclick="LIVE?forkGame('${g.slug}'):alert('Forking needs the platform server (node server.mjs).\\nCLI today: fmt fork src.git dst.git')">⑂ Create edition</button>
         <button class="btn" onclick="exportMenu('${g.slug}')">⤓ Download</button>
-        ${tab==="rules"?`<button class="btn primary edit-action" onclick="go('${gameRoute(g)}/rules/edit')">✎ ${editLabel}</button>`:``}
         <details class="repo-more"><summary class="btn" aria-label="Game actions">Actions ▾</summary><div class="repo-menu"><div class="menu-note">This version</div>
           ${g.pnp_package?.baseline_current
             ?`<button onclick="openPnpPackage('${g.slug}')" title="Forge-generated package from this exact semantic version">🖨 Print Forge PnP</button>`
@@ -5265,8 +5263,6 @@ function repoPage(g, tab, mode){
   loadSandboxBadge(g.slug);
   ({overview,cards,assets,design,rules,playtests,play,history,suggestions,issues,releases,banlist,decks,community})[tab](g, mode);
 }
-// which tabs have an editor (URL-addressable: #/g/slug/<tab>/edit)
-const EDITABLE_TABS = ["cards","rules"];
 
 /* ---------- tabs ---------- */
 function editionPanel(g){
