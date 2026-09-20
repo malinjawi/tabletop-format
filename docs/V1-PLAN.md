@@ -86,3 +86,8 @@ human evidence with a passing automated test.
   0 failed**. These are local candidate checks, not image/host qualification.
 - Next action: submit V1-01 through both protected CI gates; begin V1-02 on a
   separate branch while preserving the reviewed candidate.
+- PR #6's first image gate stopped at the unavailable Docker Hub MinIO
+  repository before running recovery. The official Quay registry resolves the
+  **same** pinned digest (including amd64 and arm64 manifests); the registry
+  location is corrected without changing image bytes. Fresh CI qualification
+  remains required; the failed run is not a recovery pass.
