@@ -26,6 +26,8 @@ import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { COMPONENT_EXPORT_VERSION } from "../tools/lib/component-design.mjs";
+import { PRINT_EXPORT_VERSION, printArtifactName, isPrintArtifact } from "../tools/lib/print-artifact.mjs";
+export { printArtifactName, isPrintArtifact };
 const execFileAsync = promisify(execFile);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -53,7 +55,7 @@ export const SQUIB_EXPORT_VERSION = 1;
 export const squibArtifactName = gameSlug => `${gameSlug}-squib-v${SQUIB_EXPORT_VERSION}.zip`;
 export { COMPONENT_EXPORT_VERSION };
 export const componentArtifactName = gameSlug => `${gameSlug}-components-v${COMPONENT_EXPORT_VERSION}.zip`;
-export const EXPORTER_VERSIONS = { pnp: 2, print: 2, tts: 4, ttc: 1, ttpg: TTPG_EXPORT_VERSION, vtt: VTT_EXPORT_VERSION,
+export const EXPORTER_VERSIONS = { pnp: 2, print: PRINT_EXPORT_VERSION, tts: 4, ttc: 1, ttpg: TTPG_EXPORT_VERSION, vtt: VTT_EXPORT_VERSION,
   project: PROJECT_EXPORT_VERSION, data: DATA_EXPORT_VERSION, nandeck: NANDECK_EXPORT_VERSION, svg: SVG_DESIGN_EXPORT_VERSION,
   pnpink: PNPINK_EXPORT_VERSION, squib: SQUIB_EXPORT_VERSION, components: COMPONENT_EXPORT_VERSION,
   rulebook: 1, publication: 1 };
@@ -201,7 +203,7 @@ export const EXPORT_BUDGET = {
   max_output_bytes: Math.max(1024 * 1024, Number(process.env.EXPORT_MAX_OUTPUT_BYTES) || 512 * 1024 * 1024),
   max_log_bytes: Math.max(64 * 1024, Number(process.env.EXPORT_MAX_LOG_BYTES) || 2 * 1024 * 1024),
 };
-const doneName = (gameSlug, kind) => ({ pnp: "pnp.pdf", print: "print-ready.zip", tts: "tts.json",
+const doneName = (gameSlug, kind) => ({ pnp: "pnp.pdf", print: printArtifactName("ready.zip"), tts: "tts.json",
   ttc: `${gameSlug}-ttc.zip`, ttpg: ttpgArtifactName(gameSlug), vtt: vttArtifactName("vtt"), project: projectArtifactName(gameSlug), data: dataArtifactName(gameSlug),
   nandeck: nandeckArtifactName(gameSlug), svg: svgDesignArtifactName(gameSlug), pnpink: pnpinkArtifactName(gameSlug), squib: squibArtifactName(gameSlug),
   components: componentArtifactName(gameSlug), rulebook: "rulebook-build.json",

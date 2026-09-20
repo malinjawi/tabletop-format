@@ -44,7 +44,7 @@ Confirm the save succeeded and the new version appears in **More → Commits**. 
 
 Save the changes you want to export first. **Download** builds from the saved project version; an unsaved Studio draft is not included.
 
-For a home test, open **Configure print**, choose the card selection, fronts/backs, and crop settings, then review and commit the print profile. Download a **Print-ready package** or **Forge PnP PDF**. Open the supplied instructions and print one page at 100% scale to check size and duplex alignment before printing the full set.
+For a home test, open **Configure print**, choose the card selection, actual insert dimensions, orientation, fronts/backs, and cut guides, then review and commit the print profile. Download the matching **A4 calibration** or **Letter calibration**, measure both 50 mm rulers, and test one cut insert. Then download the matching sheets or the **Print-ready package**. See [Home printing](HOME-PRINTING.md) for shared cuts, sleeve fit, and duplex instructions. These settings apply to Print-ready output; the separate **Forge PnP PDF** uses its own layout.
 
 For a virtual tabletop, expand **Virtual tabletops** in **Download**, choose the matching package, and follow its included installation instructions. Open it in the target app and check the actual cards, backs, quantities, and table setup before inviting players. An exported package has not been uploaded to that app's community or publishing account.
 

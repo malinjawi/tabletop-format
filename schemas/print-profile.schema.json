@@ -32,35 +32,220 @@
     },
     "home": {
       "type": "object",
-      "required": ["fronts_only", "gutter_mm", "crop_marks", "sleeve_profile", "sleeve_fit"],
+      "required": [
+        "fronts_only",
+        "gutter_mm",
+        "crop_marks",
+        "sleeve_profile",
+        "sleeve_fit"
+      ],
       "additionalProperties": false,
       "allOf": [
         {
-          "if": { "properties": { "crop_marks": { "const": "grid" } }, "required": ["crop_marks"] },
-          "then": { "properties": { "gutter_mm": { "type": "number", "const": 0 } } }
-        },
-        {
-          "if": { "properties": { "crop_marks": { "const": "corners" } }, "required": ["crop_marks"] },
-          "then": { "properties": { "gutter_mm": { "type": "number", "exclusiveMinimum": 0 } } }
+          "if": {
+            "properties": {
+              "crop_marks": {
+                "const": "grid"
+              }
+            },
+            "required": [
+              "crop_marks"
+            ]
+          },
+          "then": {
+            "properties": {
+              "gutter_mm": {
+                "type": "number",
+                "const": 0
+              }
+            }
+          }
         },
         {
           "if": {
             "properties": {
-              "fronts_only": { "const": true },
-              "crop_marks": { "not": { "const": "none" } }
+              "crop_marks": {
+                "const": "corners"
+              }
             },
-            "required": ["fronts_only", "crop_marks"]
+            "required": [
+              "crop_marks"
+            ]
           },
-          "then": { "properties": { "crop_mark_sides": { "enum": ["both", "fronts"] } } }
+          "then": {
+            "properties": {
+              "gutter_mm": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "fronts_only": {
+                "const": true
+              },
+              "crop_marks": {
+                "not": {
+                  "const": "none"
+                }
+              }
+            },
+            "required": [
+              "fronts_only",
+              "crop_marks"
+            ]
+          },
+          "then": {
+            "properties": {
+              "crop_mark_sides": {
+                "enum": [
+                  "both",
+                  "fronts"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sleeve_profile": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "sleeve_profile"
+            ]
+          },
+          "then": {
+            "required": [
+              "insert_mm"
+            ],
+            "properties": {
+              "insert_mm": {}
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "insert_mm"
+              ],
+              "properties": {
+                "insert_mm": {}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "orientation": {
+                "const": "landscape"
+              }
+            },
+            "required": [
+              "orientation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "insert_mm": {
+                "properties": {
+                  "h_mm": {
+                    "maximum": 198,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "insert_mm": {
+                "properties": {
+                  "w_mm": {
+                    "maximum": 198,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
         }
       ],
       "properties": {
-        "fronts_only": { "type": "boolean" },
-        "gutter_mm": { "type": "number", "minimum": 0, "maximum": 10 },
-        "crop_marks": { "enum": ["grid", "corners", "none"] },
-        "crop_mark_sides": { "enum": ["both", "fronts", "backs"], "default": "both", "description": "Which duplex face pages receive marks. This does not remove or reorder any card face." },
-        "sleeve_profile": { "enum": ["none", "japanese-62x89"] },
-        "sleeve_fit": { "enum": ["contain", "cover", "extend"] }
+        "fronts_only": {
+          "type": "boolean"
+        },
+        "gutter_mm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "crop_marks": {
+          "enum": [
+            "grid",
+            "corners",
+            "none"
+          ]
+        },
+        "crop_mark_sides": {
+          "enum": [
+            "both",
+            "fronts",
+            "backs"
+          ],
+          "default": "both",
+          "description": "Which duplex face pages receive marks. This does not remove or reorder any card face."
+        },
+        "sleeve_profile": {
+          "enum": [
+            "none",
+            "japanese-62x89",
+            "custom"
+          ]
+        },
+        "sleeve_fit": {
+          "enum": [
+            "contain",
+            "cover",
+            "extend"
+          ]
+        },
+        "orientation": {
+          "enum": [
+            "portrait",
+            "landscape"
+          ],
+          "default": "portrait",
+          "description": "Both A4 and Letter home PDFs use this orientation; card dimensions remain actual size."
+        },
+        "insert_mm": {
+          "type": "object",
+          "required": [
+            "w_mm",
+            "h_mm"
+          ],
+          "additionalProperties": false,
+          "description": "Actual custom card insert dimensions, never sleeve outside dimensions. Used only with sleeve_profile custom.",
+          "properties": {
+            "w_mm": {
+              "type": "number",
+              "minimum": 20,
+              "maximum": 267.4
+            },
+            "h_mm": {
+              "type": "number",
+              "minimum": 20,
+              "maximum": 267.4
+            }
+          }
+        }
       }
     },
     "press": {

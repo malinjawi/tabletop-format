@@ -1729,7 +1729,7 @@ w.save(p)
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/decks`,{waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"Plan exact print run",exact:false}).click();
-  await page.getByRole("heading",{name:"Choose exactly what Forge will manufacture",exact:true}).waitFor();
+  await page.getByRole("heading",{name:"Print settings",exact:true}).waitFor();
   assert(await page.locator("#print-selection").inputValue()==="exact"
     &&(await page.locator("#print-selection").locator("option:checked").innerText()).includes("First exact playtest")
     &&(await page.locator("#print-card-selector").innerText()).includes("2× exact")
@@ -1739,7 +1739,7 @@ w.save(p)
 
   await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"Configure print",exact:true}).click();
-  await page.getByRole("heading",{name:"Choose exactly what Forge will manufacture",exact:true}).waitFor();
+  await page.getByRole("heading",{name:"Print settings",exact:true}).waitFor();
   await page.getByLabel("Starting preset").selectOption("the-game-crafter-poker");
   assert(await page.getByLabel("Production target").inputValue()==="the-game-crafter-poker"
     &&(await page.locator("#mbody").innerText()).includes("file handoff—not native publishing")

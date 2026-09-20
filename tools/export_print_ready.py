@@ -60,6 +60,7 @@ DEFAULT_PRINT_PROFILE = {
         "crop_mark_sides": "both",
         "sleeve_profile": "none",
         "sleeve_fit": "contain",
+        "orientation": "portrait",
     },
     "press": {
         "target": "generic-srgb",
@@ -112,8 +113,12 @@ def load_print_profile(game_dir):
         raise ValueError("corner crop marks require a positive gutter")
     if home["fronts_only"] and home["crop_marks"] != "none" and home["crop_mark_sides"] == "backs":
         raise ValueError("a fronts-only home PDF cannot put crop marks only on backs")
-    if home["sleeve_profile"] not in {"none", *SLEEVE_PROFILES}:
+    if home["orientation"] not in {"portrait", "landscape"}:
+        raise ValueError("home orientation must be portrait or landscape")
+    if home["sleeve_profile"] not in {"none", "custom", *SLEEVE_PROFILES}:
         raise ValueError(f"unknown sleeve profile: {home['sleeve_profile']}")
+    if home["sleeve_profile"] == "custom":
+        sleeve_profile_spec("custom", home)
     press = profile["press"]
     press["dieline"] = {"enabled": False, **(press.get("dieline") or {})}
     if not press["include_back"] and press["crop_marks"] != "none" and press["crop_mark_sides"] == "backs":
@@ -121,6 +126,23 @@ def load_print_profile(game_dir):
     if not press["include_back"] and press["dieline"].get("enabled") and press["dieline"].get("sides") == "backs":
         raise ValueError("a fronts-only press PDF cannot put a spot dieline only on backs")
     return profile
+
+
+def home_page_size(page_size, orientation="portrait"):
+    return tuple(sorted(page_size, reverse=orientation == "landscape"))
+
+
+def sleeve_profile_spec(name, home):
+    if name != "custom":
+        return SLEEVE_PROFILES[name]
+    dimensions = home.get("insert_mm") or {}
+    values = [dimensions.get("w_mm"), dimensions.get("h_mm")]
+    limits = (267.4, 198) if home.get("orientation") == "landscape" else (198, 267.4)
+    if any(isinstance(value, bool) or not isinstance(value, (int, float))
+           or not math.isfinite(value) or not 20 <= value <= limit
+           for value, limit in zip(values, limits)):
+        raise ValueError("custom insert width and height must be at least 20 mm and fit A4 and Letter with 6 mm margins")
+    return {"sleeve_mm": None, "insert_mm": tuple(values), "background": "#111111"}
 
 
 def print_contract(game_dir):
@@ -711,6 +733,57 @@ def page_notice(pdf, page_w, page_h, page_number, total_pairs, private_notice,
     pdf.restoreState()
 
 
+def calibration_pdf(output, page_size, trim_mm, title, ref):
+    """A separate scale/fit proof, never an extra card or duplex back page."""
+    pdf = canvas.Canvas(str(output), pagesize=page_size, pageCompression=1, invariant=1)
+    pdf.setTitle(f"{title} - printer calibration")
+    pdf.setAuthor("Forge")
+    pdf.setSubject(f"Exact version {ref}; calibration only")
+    pdf.setViewerPreference("PrintScaling", "None")
+    width, height = page_size
+    pdf.setFillColor(PRINT_BLACK)
+    pdf.setStrokeColor(PRINT_BLACK)
+    pdf.setFont(PDF_FONT_NAME, 16)
+    pdf.drawString(18 * mm, height - 20 * mm, "Check your print size")
+    pdf.setFont(PDF_FONT_NAME, 9)
+    lines = ["Match the printer paper to this PDF. Select Actual size / 100%.",
+             "Turn off Fit, Shrink and borderless expansion. Print this page first.",
+             "Measure both 50 mm rulers before cutting or printing the full deck."]
+    for index, line in enumerate(lines):
+        pdf.drawString(18 * mm, height - (29 + index * 6) * mm, line)
+    card_w, card_h = [value * mm for value in trim_mm]
+    if card_w <= width - 70 * mm and card_h <= height - 110 * mm:
+        x, y = (width - card_w) / 2, 57 * mm
+        pdf.setLineWidth(.25)
+        pdf.rect(x, y, card_w, card_h)
+        pdf.setFont(PDF_FONT_NAME, 9)
+        pdf.drawCentredString(width / 2, y + card_h + 5 * mm, f"Cut size: {trim_mm[0]:g} x {trim_mm[1]:g} mm")
+        pdf.drawCentredString(width / 2, y - 6 * mm, "Cut on the line, then test with your sleeve.")
+    else:
+        pdf.drawCentredString(width / 2, height / 2, f"Card cut size: {trim_mm[0]:g} x {trim_mm[1]:g} mm")
+        pdf.drawCentredString(width / 2, height / 2 - 6 * mm, "Use the card sheet to test fit after checking the rulers.")
+    # Horizontal and vertical rulers catch independent scaling in both axes.
+    pdf.setLineWidth(.5)
+    for vertical, x, y in [(False, 25 * mm, 26 * mm), (True, width - 25 * mm, 23 * mm)]:
+        length = 50 * mm
+        pdf.line(x, y, x if vertical else x + length, y + length if vertical else y)
+        for step in range(11):
+            pos, tick = step * 5 * mm, (2 if step % 2 == 0 else 1) * mm
+            if vertical:
+                pdf.line(x - tick, y + pos, x + tick, y + pos)
+            else:
+                pdf.line(x + pos, y - tick, x + pos, y + tick)
+        if vertical:
+            pdf.saveState(); pdf.translate(x - 5 * mm, y + length / 2); pdf.rotate(90)
+            pdf.drawCentredString(0, 0, "50 mm"); pdf.restoreState()
+        else:
+            pdf.drawCentredString(x + length / 2, y + 5 * mm, "50 mm")
+    pdf.setFont(PDF_FONT_NAME, 7)
+    pdf.drawString(18 * mm, 14 * mm, "Sleeve outer dimensions are not the card insert size. Fit also depends on paper and cutting.")
+    pdf.drawString(18 * mm, 9 * mm, f"Calibration only - source {ref[:16]}")
+    pdf.showPage(); pdf.save()
+
+
 def print_at_home_pdf(output, page_size, slots, trim_jpegs, back_jpeg,
                       trim_w_mm, trim_h_mm, title, ref, private_notice,
                       size_notice=None, gutter_mm=0, fronts_only=False,
@@ -748,6 +821,7 @@ def print_at_home_pdf(output, page_size, slots, trim_jpegs, back_jpeg,
     pdf.setTitle(f"{title} - print at home")
     pdf.setAuthor("Forge")
     pdf.setSubject(f"Exact version {ref}; {trim_w_mm:g} x {trim_h_mm:g} mm trim")
+    pdf.setViewerPreference("PrintScaling", "None")
     for page_index, chunk in enumerate(chunks, 1):
         # Front: reading order, top-left to bottom-right.
         page_notice(pdf, page_w, page_h, page_index, len(chunks), private_notice,
@@ -768,7 +842,7 @@ def print_at_home_pdf(output, page_size, slots, trim_jpegs, back_jpeg,
         if fronts_only:
             continue
 
-        # Back: mirror columns so long-edge duplex registration matches fronts.
+        # Long-edge duplex mirrors columns in portrait and rows in landscape.
         page_notice(pdf, page_w, page_h, page_index, len(chunks), private_notice,
                     size_notice)
         if crop_style == "grid" and mark_side_enabled(crop_mark_sides, "backs"):
@@ -776,8 +850,10 @@ def print_at_home_pdf(output, page_size, slots, trim_jpegs, back_jpeg,
         positions = []
         for index, _face in enumerate(chunk):
             row, col = divmod(index, cols)
-            x = ox + (cols - col - 1) * (card_w + gutter)
-            y = oy + (rows - row - 1) * (card_h + gutter)
+            back_col = col if page_w > page_h else cols - col - 1
+            back_row = rows - row - 1 if page_w > page_h else row
+            x = ox + back_col * (card_w + gutter)
+            y = oy + (rows - back_row - 1) * (card_h + gutter)
             positions.append((x, y))
             pdf.drawImage(image(back_jpeg), x, y, card_w, card_h,
                           preserveAspectRatio=False, mask=None)
@@ -1298,7 +1374,7 @@ def main():
             press_path = out / f"{slug}-press-rgb{suffix}.pdf"
             cmyk_press_path = out / f"{slug}-press-cmyk-pdfx1a{suffix}.pdf" if cmyk_requested else None
             print_at_home_pdf(
-                a4_pdf, A4, slots, trim_jpegs, back_trim,
+                a4_pdf, home_page_size(A4, home["orientation"]), slots, trim_jpegs, back_trim,
                 trim_mm[0], trim_mm[1], title, ref, notice,
                 gutter_mm=float(home["gutter_mm"]),
                 fronts_only=bool(home["fronts_only"]),
@@ -1306,7 +1382,7 @@ def main():
                 crop_mark_sides=home["crop_mark_sides"],
             )
             print_at_home_pdf(
-                letter_pdf, LETTER, slots, trim_jpegs, back_trim,
+                letter_pdf, home_page_size(LETTER, home["orientation"]), slots, trim_jpegs, back_trim,
                 trim_mm[0], trim_mm[1], title, ref, notice,
                 gutter_mm=float(home["gutter_mm"]),
                 fronts_only=bool(home["fronts_only"]),
@@ -1385,7 +1461,7 @@ def main():
             }
 
         for profile_name in sleeve_profiles:
-            sleeve_spec = SLEEVE_PROFILES[profile_name]
+            sleeve_spec = sleeve_profile_spec(profile_name, home)
             insert_mm = sleeve_spec["insert_mm"]
             insert_px = (px(insert_mm[0], args.dpi),
                          px(insert_mm[1], args.dpi))
@@ -1424,8 +1500,9 @@ def main():
             letter_pdf = out / f"{slug}-print-at-home-letter-{profile_name}.pdf"
             size_notice = (
                 f"ACTUAL SIZE / 100% - CUT TO {insert_mm[0]:g} x "
-                f"{insert_mm[1]:g} MM - FOR {sleeve_spec['sleeve_mm'][0]:g} x "
-                f"{sleeve_spec['sleeve_mm'][1]:g} MM SLEEVES"
+                f"{insert_mm[1]:g} MM"
+                + (f" - FOR {sleeve_spec['sleeve_mm'][0]:g} x {sleeve_spec['sleeve_mm'][1]:g} MM SLEEVES"
+                   if sleeve_spec["sleeve_mm"] else " - CUSTOM INSERT; TEST FIT FIRST")
             )
             if sleeve_fronts_only:
                 size_notice += " - FRONTS ONLY"
@@ -1434,14 +1511,14 @@ def main():
             elif sleeve_fit == "extend":
                 size_notice += " - FULL HEIGHT / COMPLETE FACE"
             print_at_home_pdf(
-                a4_pdf, A4, sleeve_slots, sleeve_jpegs, sleeve_back,
+                a4_pdf, home_page_size(A4, home["orientation"]), sleeve_slots, sleeve_jpegs, sleeve_back,
                 insert_mm[0], insert_mm[1], title, ref, notice, size_notice,
                 sleeve_gutter_mm, sleeve_fronts_only,
                 "corners" if sleeve_gutter_mm else home["crop_marks"],
                 home["crop_mark_sides"],
             )
             print_at_home_pdf(
-                letter_pdf, LETTER, sleeve_slots, sleeve_jpegs, sleeve_back,
+                letter_pdf, home_page_size(LETTER, home["orientation"]), sleeve_slots, sleeve_jpegs, sleeve_back,
                 insert_mm[0], insert_mm[1], title, ref, notice, size_notice,
                 sleeve_gutter_mm, sleeve_fronts_only,
                 "corners" if sleeve_gutter_mm else home["crop_marks"],
@@ -1453,7 +1530,7 @@ def main():
             }
             sleeve_outputs.append({
                 "profile": profile_name,
-                "sleeve_outer_mm": list(sleeve_spec["sleeve_mm"]),
+                "sleeve_outer_mm": list(sleeve_spec["sleeve_mm"]) if sleeve_spec["sleeve_mm"] else None,
                 "insert_trim_mm": list(insert_mm),
                 "rendered_face_mm": [list(size) for size in sorted(unique_rendered)],
                 "fit": {
@@ -1467,6 +1544,19 @@ def main():
                 "a4_pdf": a4_pdf.name,
                 "letter_pdf": letter_pdf.name,
             })
+
+    # The direct home downloads follow the committed insert choice. Keep native
+    # and optional insert variants in the full package, with explicit names.
+    chosen_home = sleeve_outputs[0] if sleeve_outputs else group_outputs[0]
+    selected_trim = chosen_home.get("insert_trim_mm", chosen_home.get("trim_mm"))
+    calibration = {}
+    for paper, size in (("a4", A4), ("letter", LETTER)):
+        path = out / f"{slug}-calibration-{paper}.pdf"
+        calibration_pdf(path, home_page_size(size, home["orientation"]), selected_trim, title, ref)
+        calibration[paper] = path.name
+    home_downloads = {"a4_pdf": chosen_home["a4_pdf"], "letter_pdf": chosen_home["letter_pdf"],
+                      "trim_mm": selected_trim, "orientation": home["orientation"],
+                      "calibration": calibration}
 
     quantities = out / "quantities.csv"
     write_quantities(quantities, printings, cards)
@@ -1557,6 +1647,7 @@ def main():
         "color_space": "sRGB + CMYK" if cmyk_requested else "sRGB",
         "print_profile": profile,
         "print_profile_source": profile_path.name,
+        "home_downloads": home_downloads,
         "production_target": preflight["production_target"],
         "trim_mm": [contract["w_mm"], contract["h_mm"]],
         "physical_sizes": group_outputs,
@@ -1566,7 +1657,7 @@ def main():
         "unique_fronts": len(printings),
         "physical_cards": sum(max(1, int(p.get("quantity", 1))) for p in printings),
         "duplex": ("fronts only" if home["fronts_only"] else
-                   "portrait, flip on long edge; back columns are mirrored"),
+                   f"{home['orientation']}, flip on long edge; back {'rows' if home['orientation'] == 'landscape' else 'columns'} are mirrored"),
         "press_pdf": ("one RGB PDF per physical size; one unique front per page"
                       + (" plus one fitted back page" if press_config["include_back"] else "")
                       + ("; plus a structurally preflighted CMYK PDF/X-1a:2003 candidate" if cmyk_requested else "")
@@ -1583,10 +1674,12 @@ def main():
         f"Exact version: {ref}\n\n"
         "HOME PRINTING\n"
         "- Open the A4 or US Letter PDF matching both your paper and component size.\n"
-        "- Print at Actual Size / 100%; disable Fit, Shrink, and Scale.\n"
+        "- Print at Actual Size / 100%; disable Fit, Shrink, and borderless expansion.\n"
+        "- Print the matching calibration PDF first. Both rulers must measure 50 mm.\n"
+        "- Sleeve outside dimensions are not the insert dimensions; test a single cut card.\n"
         + ("- This profile contains fronts only; use opaque sleeves or another declared backing.\n"
            if home["fronts_only"] else
-           "- For duplex, flip on the long edge. Forge has mirrored the back columns.\n")
+           f"- For {home['orientation']} duplex, flip on the long edge. Forge mirrors the back {'rows' if home['orientation'] == 'landscape' else 'columns'}.\n")
         + (f"- Crop marks: {home['crop_marks']} on {home['crop_mark_sides']} pages.\n"
            if home["crop_marks"] != "none" else "- Crop marks are disabled.\n")
         + ("- Every home-PDF page is a front sheet.\n\n" if home["fronts_only"] else
@@ -1594,9 +1687,10 @@ def main():
         + "SLEEVE PROFILES\n"
         + ("".join(
             f"- {item['profile']}: cut to {item['insert_trim_mm'][0]:g} x "
-            f"{item['insert_trim_mm'][1]:g} mm for "
-            f"{item['sleeve_outer_mm'][0]:g} x {item['sleeve_outer_mm'][1]:g} mm sleeves; "
-            f"fit: {item['fit']}.\n"
+            f"{item['insert_trim_mm'][1]:g} mm"
+            + (f" for {item['sleeve_outer_mm'][0]:g} x {item['sleeve_outer_mm'][1]:g} mm sleeves"
+               if item['sleeve_outer_mm'] else " (custom insert; test fit first)")
+            + f"; fit: {item['fit']}.\n"
             for item in sleeve_outputs
         ) or "- No optional sleeve profile was requested.\n")
         + "\n"

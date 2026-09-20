@@ -18,6 +18,7 @@ import { buildRulebookPublication } from "./lib/rulebook-publication.mjs";
 import { buildForgeDataWorkingCopy } from "./lib/forge-project.mjs";
 import { buildComponentProduction } from "./lib/component-design.mjs";
 import { buildForgeWorkbook } from "./lib/workbook.mjs";
+import { printArtifactName } from "./lib/print-artifact.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const VENV_PYTHON = process.platform === "win32" ? join(ROOT, ".venv", "Scripts", "python.exe") : join(ROOT, ".venv", "bin", "python");
@@ -47,13 +48,20 @@ if (kind === "pnp") {
 } else if (kind === "print") {
   run(PYTHON, [join(ROOT, "tools/export_print_ready.py"), source, "--ref", ref]);
   const built = join(source, "exports", "print-ready"), artifact = suffix => readdirSync(built).find(file => file.endsWith(suffix));
-  for (const [suffix, target] of [["-print-ready.zip", "print-ready.zip"], ["-print-at-home-a4.pdf", "print-a4.pdf"],
-    ["-print-at-home-letter.pdf", "print-letter.pdf"], ["-press-rgb.pdf", "print-press-rgb.pdf"]]) {
+  for (const [suffix, target] of [["-print-ready.zip", "ready.zip"], ["-press-rgb.pdf", "press-rgb.pdf"]]) {
     const found = artifact(suffix); if (!found) throw new Error(`print exporter did not produce ${suffix}`);
-    cpSync(join(built, found), join(out, target));
+    cpSync(join(built, found), join(out, printArtifactName(target)));
+  }
+  const manifest = JSON.parse(readFileSync(join(built, "manifest.json"), "utf8"));
+  for (const paper of ["a4", "letter"]) {
+    for (const [file, target] of [[manifest.home_downloads?.[`${paper}_pdf`], `${paper}.pdf`],
+      [manifest.home_downloads?.calibration?.[paper], `calibration-${paper}.pdf`]]) {
+      if (typeof file !== "string" || !/^[A-Za-z0-9._-]+\.pdf$/.test(file)) throw new Error("print exporter did not declare a safe home PDF");
+      cpSync(join(built, file), join(out, printArtifactName(target)));
+    }
   }
   const cmyk = artifact("-press-cmyk-pdfx1a.pdf");
-  if (cmyk) cpSync(join(built, cmyk), join(out, "print-press-cmyk.pdf"));
+  if (cmyk) cpSync(join(built, cmyk), join(out, printArtifactName("press-cmyk.pdf")));
 } else if (kind === "ttc") {
   run(PYTHON, [join(ROOT, "tools/export_ttc.py"), source]);
   const zip = readdirSync(join(source, "exports/ttc")).find(file => file.endsWith("-ttc.zip"));

@@ -1,7 +1,7 @@
 {
   "name": "@tabletop-format/tools",
   "version": "0.1.0",
-  "description": "Open game format for living card games — schemas, validator, importers (CSV, NRDB-family), semantic diff, PnP/TTS exporters.",
+  "description": "Open game format for living card games \u2014 schemas, validator, importers (CSV, NRDB-family), semantic diff, PnP/TTS exporters.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
@@ -78,7 +78,8 @@
     "split:card-design": "node tools/split-layout-families.mjs",
     "test:quick": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp",
     "vtt:up": "docker compose -f deploy/docker-compose.vtt.yml up -d",
-    "vtt:down": "docker compose -f deploy/docker-compose.vtt.yml down"
+    "vtt:down": "docker compose -f deploy/docker-compose.vtt.yml down",
+    "test:ui-print": "node tools/ui-home-print.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

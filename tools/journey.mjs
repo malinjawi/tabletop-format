@@ -442,17 +442,18 @@ assert(tagRights.status === 200 && tagRights.data.source_sha === rel.data.sha
   && tagEligibility.status === 200 && tagEligibility.data.ref === rel.data.sha
   && tagFile.status === 200,
   "safe v* links materialize the release but all authoritative responses use its full commit ID");
+const frozenPrint = relDet.artifacts.find(item => /^(?:v[1-9][0-9]*-)?print-ready\.zip$/.test(item.name));
+assert(frozenPrint, "release includes the exact print package");
 const bobDelivery = await api("POST", "/api/games/tidepool/releases/v0.1/print-deliveries", { token: B,
-  body: { artifact_name: "print-ready.zip", printer_name: "Tidepool Print", job_reference: "JOB-100" } });
+  body: { artifact_name: frozenPrint.name, printer_name: "Tidepool Print", job_reference: "JOB-100" } });
 assert(bobDelivery.status === 403, "a contributor cannot attest to the owner's printer delivery");
 const badDelivery = await api("POST", "/api/games/tidepool/releases/v0.1/print-deliveries", { token: A,
   body: { artifact_name: "not-in-release.pdf", printer_name: "Tidepool Print", job_reference: "JOB-100" } });
 assert(badDelivery.status === 422, "a printer handoff cannot name bytes absent from the frozen release receipt");
 const delivery = await api("POST", "/api/games/tidepool/releases/v0.1/print-deliveries", { token: A,
-  body: { artifact_name: "print-ready.zip", printer_name: "Tidepool Print", job_reference: "JOB-100",
+  body: { artifact_name: frozenPrint.name, printer_name: "Tidepool Print", job_reference: "JOB-100",
     evidence_url: "https://printer.example.invalid/jobs/JOB-100", evidence_sha256: "1".repeat(64),
     note: "Uploaded through printer portal" } });
-const frozenPrint = relDet.artifacts.find(item => item.name === "print-ready.zip");
 assert(delivery.status === 201 && delivery.data.status === "submitted"
   && delivery.data.release.sha === rel.data.sha
   && delivery.data.artifact.sha256 === frozenPrint.sha256

@@ -835,7 +835,7 @@ const publishedArtifactKind=(slug,file)=>file==="pnp.pdf"?"pnp"
   : file==="tts.json"||file==="tts-manifest.json"||file.startsWith("tts-components/")||file==="back.png"||/^sheet(?:-\d+)?\.png$/.test(file)?"tts"
   : file===`${slug}-ttc.zip`?"ttc"
   : file===cache.ttpgArtifactName(slug)||file==="ttpg-manifest.json"?"ttpg"
-  : ["print-ready.zip","print-a4.pdf","print-letter.pdf","print-press-rgb.pdf","print-press-cmyk.pdf"].includes(file)?"print"
+  : cache.isPrintArtifact(file)?"print"
   : file.startsWith("cut-sheets/")||file.startsWith("setup-maps/")
     ||(file.startsWith(`${slug}-components-v`)&&/-components-v[1-9][0-9]*\.zip$/.test(file))?"components"
   : file===cache.projectArtifactName(slug)?"project"
@@ -2318,7 +2318,8 @@ gw.route("GET", "/api/games/:slug/design/print-profile", async (ctx) => {
       set_id: printing.set_id, collector_number: printing.collector_number, variant: printing.variant || null })),
     access: { authenticated: !!user, can_write: await canWrite(user, slug) },
     capabilities: { exact_selection: true, exact_printing_quantities: true, a4_and_letter: true, duplex_mirroring: true,
-      sleeve_profile: ["japanese-62x89"], embedded_pdf_font: true, vector_black: "100% K",
+      sleeve_profile: ["japanese-62x89", "custom"], home_orientation: ["portrait", "landscape"],
+      calibration_pdf: true, embedded_pdf_font: true, vector_black: "100% K",
       crop_mark_sides: ["both", "fronts", "backs"],
       press_rgb: true, cmyk: "project-supplied output ICC", pdf_x: "PDF/X-1a:2003 structurally preflighted candidate",
       spot_dielines: "versioned named Separation color, component-trim geometry, stroke overprint",
@@ -3302,8 +3303,8 @@ const activeExportJobs = new Map();
 function exportPayload(slug, sha, fmt, artifact) {
   const dir = artifact.dir, base = `/cache/exports/${slug}/${sha}`;
   const artifactFiles = (artifact.manifest.files || []).map(file => file.name);
-  const printFiles = ["print-ready.zip", "print-a4.pdf", "print-letter.pdf", "print-press-rgb.pdf",
-    ...(artifact.manifest.files?.some(item => item.name === "print-press-cmyk.pdf") ? ["print-press-cmyk.pdf"] : [])];
+  const printFiles = ["ready.zip", "a4.pdf", "letter.pdf", "calibration-a4.pdf", "calibration-letter.pdf",
+    "press-rgb.pdf", "press-cmyk.pdf"].map(cache.printArtifactName).filter(file => artifactFiles.includes(file));
   const urls = fmt === "print" ? printFiles.map(file => `${base}/${file}`)
     : fmt === "pnp" ? [`${base}/pnp.pdf`]
     : fmt === "ttc" ? [`${base}/${slug}-ttc.zip`]
@@ -4705,7 +4706,7 @@ async function releasePreflight(slug, user) {
     license: { ok: licenses.status === 0, report: licenseReport }, rights, components };
 }
 const PRINT_DELIVERY_SHA_RE = /^[a-f0-9]{64}$/i;
-const printableReleaseArtifact = name => name === "print-ready.zip" || /(?:^|\/)[^/]+\.pdf$/i.test(name);
+const printableReleaseArtifact = name => (cache.isPrintArtifact(name) && name.endsWith("ready.zip")) || /(?:^|\/)[^/]+\.pdf$/i.test(name);
 function exactText(value, label, max = 160) {
   const text = String(value || "").trim();
   if (!text || text.length > max)
@@ -4994,7 +4995,8 @@ gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
     .filter(item=>!privateProject||item.status!=="ready"||!privateDigitalArtifactBlocked(slug,item.name));
   const ready = new Set(artifacts.filter(a => a.status === "ready").map(a => a.name));
   const downloads = {};
-  if (ready.has("print-ready.zip")) downloads.print = `${base}/print-ready.zip`;
+  const printPackage = [...ready].find(name => cache.isPrintArtifact(name) && name.endsWith("ready.zip"));
+  if (printPackage) downloads.print = `${base}/${printPackage}`;
   if (ready.has("pnp.pdf")) downloads.pnp = `${base}/pnp.pdf`;
   if (!privateProject&&ready.has("tts.json")) downloads.tts = `${base}/tts.json`;
   if (ready.has(`${slug}-ttc.zip`)) downloads.ttc = `${base}/${slug}-ttc.zip`;
