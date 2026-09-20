@@ -4,6 +4,10 @@ This document gives a five-person engineering team a shared starting point. It r
 
 Forge has a substantial design-to-release workflow and a qualified published image. It is not yet a demonstrated public service: complete publication reconciliation, actual-host evidence, native/physical output checks, and independent-user evidence remain open.
 
+The [v1 execution plan](V1-PLAN.md) tracks the accepted scope, ordered engineering
+slices, and remaining evidence gates from September 20 onward. Use its execution
+record for current work; the qualification receipts below remain historical.
+
 ## Start from the recorded baseline
 
 Use the repository's current protected `main` for new branches and inspect its [latest qualification runs](https://github.com/malinjawi/tabletop-format/actions/workflows/quality.yml). The following is the prior qualified baseline beneath this developer-onboarding work, not a claim that `e2f0618` remains the latest commit or image after this handoff merges:

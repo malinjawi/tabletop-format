@@ -82,14 +82,36 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 /* reusable game source */
 .asset-hero{border:1px solid #b8d9cb;background:linear-gradient(135deg,#f3fff9,#fff);border-radius:10px;padding:18px 20px;margin-bottom:16px}
 .asset-hero h2{font-size:18px;margin:0 0 5px}.asset-hero p{color:var(--mut);margin:0;max-width:760px}
+.asset-hero .badge{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .asset-flow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:13px;font-size:12px}.asset-flow span{border:1px solid var(--bd);background:#fff;border-radius:20px;padding:3px 10px}.asset-flow i{color:var(--mut);font-style:normal}
 .asset-cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-bottom:16px}
 .asset-cat{border:1px solid var(--bd);background:#fff;border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left}.asset-cat:hover,.asset-cat.on{border-color:var(--acc);background:#faf8ff}.asset-cat b{display:block;font-size:13px}.asset-cat span{color:var(--mut);font-size:12px}
 .asset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+#asset-more[hidden],#asset-empty[hidden]{display:none}
 .asset-tile{border:1px solid var(--bd);border-radius:9px;background:#fff;overflow:hidden;cursor:pointer;min-width:0;transition:transform .12s,box-shadow .12s}.asset-tile:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.09)}
 .asset-preview{height:132px;background:linear-gradient(145deg,#f6f8fa,#eef1f4);display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--bd);font-size:38px;color:#6e7781;font-weight:650}.asset-preview img{width:100%;height:100%;object-fit:contain;padding:8px}.asset-preview code{font-size:30px;color:#8250df}
 .asset-info{padding:10px 11px}.asset-name{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.asset-path{font:10.5px/1.35 ui-monospace,Menlo,monospace;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}.asset-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;color:var(--mut);font-size:11px}
+.asset-open{display:block;width:100%;border:0;background:transparent;color:inherit;font-family:inherit;font-size:inherit;text-align:left;padding:0;cursor:pointer}.asset-open:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .asset-detail-preview{min-height:260px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--bd);border-radius:9px;overflow:hidden}.asset-detail-preview img{display:block;width:100%!important;max-height:460px;object-fit:contain;border-radius:0!important;box-shadow:none!important}.asset-code{margin:0;max-height:390px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:#f6f8fa;border:1px solid var(--bd);border-radius:8px;padding:12px;font:11.5px/1.45 ui-monospace,Menlo,monospace}
+.forge-image{position:relative;isolation:isolate;width:100%;height:100%;overflow:hidden;background:#eef1f4;color:#586574;font-size:12px;font-weight:400}
+.forge-image>img[data-preview-image]{position:absolute;inset:0;display:block;width:100%;height:100%;box-sizing:border-box;object-fit:contain;opacity:0}
+.forge-image[data-image-state="ready"]>img{opacity:1}
+.forge-image-loading,.forge-image-error{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:8px;font:12px/1.4 system-ui,sans-serif}
+.forge-image-loading{background:linear-gradient(110deg,#edf0f3 25%,#f8f9fb 45%,#edf0f3 65%);background-size:240% 100%;animation:forge-image-shimmer 1.8s ease-in-out infinite}
+.forge-image-error{display:none;background:#f5f6f8;color:#596474}
+.forge-image[data-image-state="ready"]>.forge-image-loading,.forge-image[data-image-state="error"]>.forge-image-loading{display:none}
+.forge-image[data-image-state="error"]>.forge-image-error{display:flex}
+.forge-image-retry{font-size:11px;padding:4px 10px}
+.forge-art-image{height:auto;aspect-ratio:1.25;border-radius:5px}
+.forge-art-image>img[data-preview-image]{object-fit:cover;padding:0}
+.asset-detail-image{height:360px;border:1px solid var(--bd);border-radius:9px}
+.asset-detail-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:22px}
+.asset-skeleton{border:1px solid var(--bd);border-radius:9px;overflow:hidden;min-width:0;background:#fff}
+.asset-skeleton .forge-image{height:132px}.asset-skeleton-lines{padding:12px}.asset-skeleton-lines i{display:block;height:10px;background:#edf0f3;border-radius:4px;margin:4px 0 10px}.asset-skeleton-lines i:last-child{width:65%}
+.forge-art-library .asset-skeleton .forge-image{height:auto;aspect-ratio:1.25}
+@keyframes forge-image-shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){.forge-image-loading{animation:none}}
+@media(max-width:700px){.asset-detail-layout{grid-template-columns:minmax(0,1fr)}.asset-detail-image{height:280px}.asset-skeleton .forge-image{height:105px}}
 @media(max-width:700px){.asset-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.asset-preview{height:105px}.asset-cats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* history */
 .commit{display:flex;gap:14px;padding:14px 16px;border:1px solid var(--bd);border-radius:8px;margin-bottom:10px;cursor:pointer}
@@ -3149,18 +3171,83 @@ function desArtLibraryRecord(path){return(DES?.artLibrary?.assets||[]).find(reco
 function desArtReleaseIfUnused(path){if(!path||!DES.pendingAssets?.[path]||(DES.printings||[]).some(printing=>printing.art===path)||DES.layout?.back?.art===path)return;URL.revokeObjectURL(DES.pendingAssets[path].preview_url);delete DES.pendingAssets[path];DES.artLibrary.assets=(DES.artLibrary.assets||[]).filter(record=>record.path!==path);}
 function desArtFamilyPrintings(){const ids=new Set(desFamilyCards(G(DES.slug)).map(card=>card.id));return(DES.printings||[]).filter(printing=>ids.has(printing.card_id));}
 function desArtTargetIds(){const allowed=new Set(desArtFamilyPrintings().map(printing=>printing.id)),current=desSelectedPrinting();let ids=[...(DES.artTargetIds||[])].filter(id=>allowed.has(id));if(!ids.length&&current)ids=[current.id];DES.artTargetIds=ids;return ids;}
-function desArtSetTargets(mode){const current=desSelectedPrinting();if(mode==="current")DES.artTargetIds=current?[current.id]:[];else if(mode==="selected"){const cards=new Set(desGridSelectedIds());DES.artTargetIds=desArtFamilyPrintings().filter(printing=>cards.has(printing.card_id)&&desSelectedPrinting(DES.cards.find(card=>card.id===printing.card_id))?.id===printing.id).map(printing=>printing.id);}desArtLibraryOpen(DES.artQuery||"");}
-function desArtToggleTarget(id,checked){const ids=new Set(desArtTargetIds());if(checked)ids.add(id);else ids.delete(id);DES.artTargetIds=[...ids];const count=document.getElementById("des-art-target-count");if(count)count.textContent=`${DES.artTargetIds.length} printing${DES.artTargetIds.length===1?"":"s"} selected`;document.querySelectorAll("[data-art-use]").forEach(button=>{button.disabled=!DES.artTargetIds.length;button.textContent=`Use on ${DES.artTargetIds.length||0}`;});}
-function desArtTagsSet(encoded,value){const path=decodeURIComponent(encoded),tags=[...new Set(String(value||"").split(",").map(tag=>tag.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")).filter(Boolean))].slice(0,24);if(tags.some(tag=>tag.length>40)){toast("Artwork tags can be at most 40 characters.",5000);return;}DES.artLibrary??={format:"forge-art-library",version:1,assets:[]};const existing=desArtLibraryRecord(path);if(existing)existing.tags=tags;else DES.artLibrary.assets.push({path,tags});const item=(DES.assetItems||[]).find(candidate=>candidate.path===path);if(item)item.tags=tags;desRefreshStudioChrome();desArtLibraryOpen(DES.artQuery||"");toast("Tags staged locally. They enter the repository only with the reviewed change.",3500);}
-async function desLoadArtItems(){
-  let items=DES.assetItems;
-  if(!items){
-    const [assetsResponse,rightsResponse]=await Promise.all([fetch(`/api/games/${encodeURIComponent(DES.slug)}/repository/assets`,{headers:authHdr()}),fetch(`/api/games/${encodeURIComponent(DES.slug)}/rights`,{headers:authHdr()})]),assetsData=await assetsResponse.json(),rightsData=await rightsResponse.json().catch(()=>({files:[]}));if(!assetsResponse.ok)throw new Error(assetsData.error||"Could not read assets");
-    const rightsByPath=new Map((rightsData.files||[]).map(file=>[file.path,file])),tagsByPath=new Map((DES.artLibrary?.assets||[]).map(record=>[record.path,record.tags||[]])),declared=new Set([...(DES.artLibrary?.assets||[]).map(record=>record.path),...(DES.printings||[]).map(printing=>printing.art).filter(Boolean),DES.layout?.back?.art].filter(Boolean));DES.assetItems=assetsData.items.filter(item=>item.kind==="image"&&(item.path.startsWith("assets/art/")||item.path.startsWith("assets/card-art/")||declared.has(item.path))).map(item=>({...item,tags:tagsByPath.get(item.path)||item.tags||[],rights:rightsByPath.get(item.path)||null}));items=DES.assetItems;
+function desArtSetTargets(mode){const current=desSelectedPrinting();if(mode==="current")DES.artTargetIds=current?[current.id]:[];else if(mode==="selected"){const cards=new Set(desGridSelectedIds());DES.artTargetIds=desArtFamilyPrintings().filter(printing=>cards.has(printing.card_id)&&desSelectedPrinting(DES.cards.find(card=>card.id===printing.card_id))?.id===printing.id).map(printing=>printing.id);}desArtPickerTargets(DES._artPicker);}
+function desArtToggleTarget(id,checked){const ids=new Set(DES.artTargetIds||[]);if(checked)ids.add(id);else ids.delete(id);DES.artTargetIds=[...ids];desArtPickerTargets(DES._artPicker);}
+function desArtTagsSet(encoded,value){
+  if(!DES?.family)return;const path=decodeURIComponent(encoded),tags=[...new Set(String(value||"").split(",").map(tag=>tag.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")).filter(Boolean))].slice(0,24);if(tags.some(tag=>tag.length>40)){toast("Artwork tags can be at most 40 characters.",5000);return;}
+  DES.artLibrary??={format:"forge-art-library",version:1,assets:[]};const existing=desArtLibraryRecord(path);if(existing)existing.tags=tags;else DES.artLibrary.assets.push({path,tags});const item=(DES.assetItems||[]).find(candidate=>candidate.path===path);if(item)item.tags=tags;
+  const picker=DES._artPicker;if(desArtPickerCurrent(picker)){const tile=picker.tiles.get(path),badges=tile?.querySelector(".forge-art-tags");if(badges)badges.innerHTML=desArtPickerTags(tags);desArtPickerDirty(picker);}
+  desRefreshStudioChrome();toast("Tags staged locally. They enter the repository only with the reviewed change.",3500);
+}
+async function desLoadArtItems(state=DES){
+  if(!state)throw new Error("The Studio session has closed.");
+  if(!state.assetItems){
+    if(!state._artItemsLoading){
+      const slug=state.slug,ref=state.sourceRef;
+      state._artItemsLoading=(async()=>{
+        const [assetsResponse,rightsResponse]=await Promise.all([fetch(`/api/games/${encodeURIComponent(slug)}/repository/assets`,{headers:authHdr()}),fetch(`/api/games/${encodeURIComponent(slug)}/rights`,{headers:authHdr()})]);
+        const [assetsData,rightsData]=await Promise.all([assetsResponse.json(),rightsResponse.json()]);
+        if(!assetsResponse.ok)throw new Error(assetsData.error||"Could not read assets");if(!rightsResponse.ok)throw new Error(rightsData.error||"Could not read artwork rights");
+        if(!Array.isArray(assetsData.items)||!Array.isArray(rightsData.files))throw new Error("The artwork library response was incomplete. Try again.");
+        if(state.slug!==slug||state.sourceRef!==ref)throw new Error("The Studio version changed. Open the artwork library again.");
+        const rightsByPath=new Map(rightsData.files.map(file=>[file.path,file])),tagsByPath=new Map((state.artLibrary?.assets||[]).map(record=>[record.path,record.tags||[]])),declared=new Set([...(state.artLibrary?.assets||[]).map(record=>record.path),...(state.printings||[]).map(printing=>printing.art).filter(Boolean),state.layout?.back?.art].filter(Boolean));
+        state.assetItems=assetsData.items.filter(item=>item.kind==="image"&&(item.path.startsWith("assets/art/")||item.path.startsWith("assets/card-art/")||declared.has(item.path))).map(item=>({...item,tags:tagsByPath.get(item.path)||item.tags||[],rights:rightsByPath.get(item.path)||null}));
+      })();
+    }
+    const pending=state._artItemsLoading;try{await pending;}finally{if(state._artItemsLoading===pending)state._artItemsLoading=null;}
   }
-  const known=new Set(items.map(item=>item.path));for(const staged of Object.values(DES.pendingAssets||{}))if(!known.has(staged.path)){items.push({path:staged.path,name:staged.path.split("/").pop(),url:staged.preview_url,category:"Staged artwork",kind:"image",tags:desArtLibraryRecord(staged.path)?.tags||[],rights:{license:staged.license,status:staged.status,copyright:[staged.creator]},creator:staged.creator,staged:true});known.add(staged.path);}
+  const items=state.assetItems,known=new Set(items.map(item=>item.path));for(const staged of Object.values(state.pendingAssets||{}))if(!known.has(staged.path)){items.push({path:staged.path,name:staged.path.split("/").pop(),url:staged.preview_url,category:"Staged artwork",kind:"image",tags:(state.artLibrary?.assets||[]).find(record=>record.path===staged.path)?.tags||[],rights:{license:staged.license,status:staged.status,copyright:[staged.creator]},creator:staged.creator,staged:true});known.add(staged.path);}
   return items;
 }
+function desArtPickerCurrent(picker){return !!(picker&&DES===picker.state&&DES.slug===picker.slug&&DES.sourceRef===picker.ref&&location.hash===picker.route&&DES._artPicker===picker&&picker.host.isConnected&&document.getElementById("modal")?.classList.contains("on"));}
+function desArtPickerTags(tags){return(tags||[]).map(tag=>`<span>${esc(tag)}</span>`).join("")||"<span>untagged</span>";}
+function desArtPickerDirty(picker){const note=picker?.host.querySelector("[data-art-dirty]");if(note){const dirty=desArtLibraryDirty();note.textContent=dirty?"Tag changes staged":"Tags saved in this game";note.classList.toggle("dirty",dirty);}}
+function desArtPickerTargets(picker){
+  if(!desArtPickerCurrent(picker)||picker.back)return;const ids=DES.artTargetIds||[],count=picker.host.querySelector("#des-art-target-count");if(count)count.textContent=`${ids.length} printing${ids.length===1?"":"s"} selected`;
+  picker.host.querySelectorAll("[data-art-target]").forEach(input=>{input.checked=ids.includes(input.dataset.artTarget);});picker.host.querySelectorAll("[data-art-use]").forEach(button=>{button.disabled=!ids.length;button.textContent=`Use on ${ids.length}`;});
+  const upload=picker.host.querySelector("[data-art-upload]");if(upload)upload.disabled=!ids.length;
+}
+function desArtPickerShell(state,back){
+  const body=document.getElementById("mbody"),selectedCards=back?[]:desGridSelectedIds(),targets=back?[]:desArtTargetIds(),cardById=new Map((state.cards||[]).map(card=>[card.id,card]));
+  const targetCards=back?"":desArtFamilyPrintings().map(printing=>{const card=cardById.get(printing.card_id);return`<label class="forge-art-target"><input type="checkbox" data-art-target="${desAttr(printing.id)}" ${targets.includes(printing.id)?"checked":""} onchange="desArtToggleTarget(this.dataset.artTarget,this.checked)"><span><b>${esc(card?.name||printing.card_id)}</b><span>${esc(printing.variant||printing.collector_number||printing.id)}</span></span></label>`;}).join("");
+  body.style.maxWidth=back?"960px":"1040px";body.style.display="block";
+  body.innerHTML=`<section class="forge-art-picker" data-art-face="${back?"back":"front"}" data-art-state="loading"><div style="display:flex;justify-content:space-between;gap:14px;align-items:start"><div><h2 style="margin:0 0 6px">${back?"Choose shared back artwork":"Choose artwork"}</h2><div class="mut">${back?"This artwork will be used on the shared card back.":"Choose the printings to update. Their existing crops are preserved."}</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div>${back?"":`<div class="forge-art-targets"><div class="forge-art-target-head"><b id="des-art-target-count">${targets.length} printing${targets.length===1?"":"s"} selected</b><div><button class="btn" onclick="desArtSetTargets('current')">Current printing</button> <button class="btn" ${selectedCards.length?"":"disabled"} onclick="desArtSetTargets('selected')">Selected table cards (${selectedCards.length})</button></div></div><div class="forge-art-target-list">${targetCards}</div></div>`}<div class="forge-data-table-toolbar"><input id="${back?"des-back-art-filter":"des-art-filter"}" type="search" value="${desAttr(back?state.backArtQuery:state.artQuery)}" aria-label="Filter artwork" placeholder="Filter by filename, path, or tag…" oninput="desArtPickerFilter(this.value)">${back?"":`<span class="forge-art-library-note" data-art-dirty></span>`}<button class="btn primary" ${back?"":`data-art-upload ${targets.length?"":"disabled"}`} onclick="${back?"desBackArtUpload()":"desArtUpload()"}">${back?"Upload back artwork":"Upload artwork"}</button></div><div class="forge-art-picker-status" role="status" aria-live="polite">Loading artwork…</div><div class="forge-art-library" aria-busy="true">${assetSkeletons(8)}</div></section>`;
+  document.getElementById("modal").classList.add("on");
+  const picker={state,slug:state.slug,ref:state.sourceRef,route:location.hash,back,host:body.querySelector(".forge-art-picker"),tiles:new Map(),items:null,loading:false};state._artPicker=picker;desArtPickerDirty(picker);
+  const input=picker.host.querySelector('input[type="search"]');input.focus();input.setSelectionRange(input.value.length,input.value.length);return picker;
+}
+function desArtPickerFilter(query){const picker=DES?._artPicker;if(!desArtPickerCurrent(picker))return;DES[picker.back?"backArtQuery":"artQuery"]=String(query||"");if(picker.items)desArtPickerRender(picker);}
+function desArtPickerTile(item,picker){
+  const tile=document.createElement("article"),encoded=desAttr(encodeURIComponent(item.path).replace(/'/g,"%27"));tile.className="forge-art-item";tile.dataset.artPath=item.path;
+  tile.innerHTML=`${assetImage(item.url,item.name,'forge-art-image')}<b>${esc(item.name)}</b><small>${item.staged?"staged · ":""}${item.rights?`${esc(item.rights.license)} · ${esc(item.rights.status)}`:"rights not cleared"}</small><div class="forge-art-tags">${desArtPickerTags(item.tags)}</div>${picker.back?"":`<div class="forge-art-tag-editor"><input aria-label="Tags for ${desAttr(item.name)}" value="${desAttr((item.tags||[]).join(", "))}" placeholder="portrait, location" onkeydown="if(event.key==='Enter'){event.preventDefault();desArtTagsSet('${encoded}',this.value)}"><button class="btn" onclick="desArtTagsSet('${encoded}',this.previousElementSibling.value)">Save</button></div>`}<div class="forge-art-item-actions">${picker.back?`<button class="btn primary" data-back-art-use onclick="desBackAssignArt('${encoded}')">Use as back</button>`:`<button class="btn primary" data-art-use onclick="desAssignArt('${encoded}')">Use on ${(DES.artTargetIds||[]).length}</button>`}</div>`;return tile;
+}
+function desArtPickerRender(picker){
+  if(!desArtPickerCurrent(picker))return;const grid=picker.host.querySelector(".forge-art-library"),status=picker.host.querySelector(".forge-art-picker-status"),needle=String(picker.state[picker.back?"backArtQuery":"artQuery"]||"").trim().toLowerCase();
+  const matches=picker.items.filter(item=>!needle||`${item.path} ${item.name} ${item.category||""} ${(item.tags||[]).join(" ")}`.toLowerCase().includes(needle)).sort((a,b)=>Number(!!b.staged)-Number(!!a.staged)||a.path.localeCompare(b.path)),shown=matches.slice(0,160),paths=new Set(shown.map(item=>item.path));
+  const scrollTop=grid.scrollTop,scrollLeft=grid.scrollLeft;
+  if(picker.host.dataset.artState!=="ready")grid.replaceChildren();picker.host.dataset.artState="ready";grid.setAttribute("aria-busy","false");
+  for(const [path,tile] of picker.tiles)tile.hidden=!paths.has(path);
+  let cursor=grid.firstElementChild;
+  for(const item of shown){
+    let tile=picker.tiles.get(item.path);if(!tile)tile=desArtPickerTile(item,picker);tile.hidden=false;
+    // Preserve nodes while keeping keyboard navigation in the displayed order.
+    if(tile!==cursor)grid.insertBefore(tile,cursor);else cursor=cursor.nextElementSibling;
+    picker.tiles.delete(item.path);picker.tiles.set(item.path,tile);
+  }
+  // Keep one previous page warm without accumulating an entire large library.
+  for(const [path,tile] of picker.tiles){if(picker.tiles.size<=320)break;if(!paths.has(path)){tile.remove();picker.tiles.delete(path);}}
+  grid.scrollTop=scrollTop;grid.scrollLeft=scrollLeft;
+  status.textContent=matches.length?`${shown.length===matches.length?matches.length:`Showing ${shown.length} of ${matches.length}`} artwork file${matches.length===1?"":"s"}${matches.length>160?". Refine your filter to find more.":""}`:picker.items.length?"No artwork matches this filter.":"No reusable artwork yet. Upload artwork to get started.";
+  desArtPickerTargets(picker);desArtPickerDirty(picker);
+}
+async function desArtPickerLoad(picker){
+  if(!desArtPickerCurrent(picker)||picker.loading)return;picker.loading=true;const grid=picker.host.querySelector(".forge-art-library"),status=picker.host.querySelector(".forge-art-picker-status");
+  picker.host.dataset.artState="loading";grid.setAttribute("aria-busy","true");status.textContent="Loading artwork…";if(!grid.children.length)grid.innerHTML=assetSkeletons(8);
+  try{const items=await desLoadArtItems(picker.state);if(!desArtPickerCurrent(picker))return;picker.items=items;desArtPickerRender(picker);}
+  catch(error){if(!desArtPickerCurrent(picker))return;picker.host.dataset.artState="error";grid.setAttribute("aria-busy","false");grid.replaceChildren();status.innerHTML=`Could not load artwork. ${esc(error.message||"Check your connection and try again.")} <button class="btn" onclick="desArtPickerRetry()">Retry</button>`;}
+  finally{picker.loading=false;}
+}
+function desArtPickerRetry(){const picker=DES?._artPicker;if(desArtPickerCurrent(picker))void desArtPickerLoad(picker);}
 function desAssignArt(encoded){
   const path=decodeURIComponent(encoded),targetIds=desArtTargetIds();if(!targetIds.length||!path.startsWith("assets/")||path.includes(".."))return;
   const targets=(DES.printings||[]).filter(printing=>targetIds.includes(printing.id)),previous=targets.map(printing=>printing.art).filter(Boolean),item=(DES.assetItems||[]).find(candidate=>candidate.path===path),creator=item?.creator||null;
@@ -3169,16 +3256,10 @@ function desAssignArt(encoded){
 }
 function desClearArt(){const printing=desSelectedPrinting();if(!printing)return;const path=printing.art;delete printing.art;delete printing.art_crop;desArtReleaseIfUnused(path);desRenderFull();}
 async function desArtLibraryOpen(query=""){
-  if(!DES?.family)return;DES.artQuery=String(query||"");let items;
-  if(!DES.assetItems){
-    $("#mbody").style.maxWidth="1040px";$("#mbody").style.display="block";$("#mbody").innerHTML=`<div class="emptystate">Reading this game's versioned artwork…</div>`;$("#modal").classList.add("on");
-    try{items=await desLoadArtItems();}catch(error){$("#mbody").innerHTML=`<div class="emptystate">Could not open the art library.<br><small>${esc(error.message)}</small></div>`;return;}
-  }
-  else items=await desLoadArtItems();
-  const selectedCards=desGridSelectedIds(),targets=desArtTargetIds(),printingById=new Map(desArtFamilyPrintings().map(printing=>[printing.id,printing])),cardById=new Map((DES.cards||[]).map(card=>[card.id,card]));
-  const needle=DES.artQuery.trim().toLowerCase(),shown=items.filter(item=>!needle||`${item.path} ${item.name} ${item.category} ${(item.tags||[]).join(" ")}`.toLowerCase().includes(needle)).sort((a,b)=>Number(!!b.staged)-Number(!!a.staged)||a.path.localeCompare(b.path)).slice(0,160);
-  const targetCards=desArtFamilyPrintings().map(printing=>{const card=cardById.get(printing.card_id);return`<label class="forge-art-target"><input type="checkbox" ${targets.includes(printing.id)?"checked":""} onchange="desArtToggleTarget('${desAttr(printing.id)}',this.checked)"><span><b>${esc(card?.name||printing.card_id)}</b><span>${esc(printing.variant||printing.collector_number||printing.id)}</span></span></label>`;}).join("");
-  $("#mbody").style.maxWidth="1040px";$("#mbody").style.display="block";$("#mbody").innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;align-items:start"><div><div class="badge">VERSIONED ART LIBRARY</div><h2 style="margin:8px 0 3px">Reuse art across exact printings</h2><div class="mut">Files, searchable tags, assignments, artist credit, rights, and per-printing crops remain separate versioned facts.</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div><div class="forge-art-targets"><div class="forge-art-target-head"><b id="des-art-target-count">${targets.length} printing${targets.length===1?"":"s"} selected</b><div><button class="btn" onclick="desArtSetTargets('current')">Current printing</button> <button class="btn" ${selectedCards.length?"":"disabled"} onclick="desArtSetTargets('selected')">Selected table cards (${selectedCards.length})</button></div></div><div class="forge-art-target-list">${targetCards}</div><div class="forge-art-library-note">Assignment changes only these checked printing IDs. Each existing crop is preserved and remains editable afterward.</div></div><div class="forge-data-table-toolbar"><input id="des-art-filter" type="search" value="${desAttr(DES.artQuery)}" placeholder="Filter by filename, path, or tag…" oninput="desArtLibraryOpen(this.value)"><span class="forge-art-library-note${desArtLibraryDirty()?" dirty":""}">${desArtLibraryDirty()?"● tag changes staged":"Tags are at the opened Git version"}</span><button class="btn primary" onclick="desArtUpload()">+ Upload with rights</button></div><div class="forge-art-library">${shown.map(item=>`<article class="forge-art-item"><img loading="lazy" src="${esc(item.url)}" alt=""><b>${esc(item.name)}</b><small>${item.staged?"staged · ":""}${item.rights?`${esc(item.rights.license)} · ${esc(item.rights.status)}`:"rights not cleared"}</small><div class="forge-art-tags">${(item.tags||[]).map(tag=>`<span>${esc(tag)}</span>`).join("")||"<span>untagged</span>"}</div><div class="forge-art-tag-editor"><input aria-label="Tags for ${desAttr(item.name)}" value="${desAttr((item.tags||[]).join(", "))}" placeholder="portrait, location" onkeydown="if(event.key==='Enter'){event.preventDefault();desArtTagsSet('${encodeURIComponent(item.path)}',this.value)}"><button class="btn" onclick="desArtTagsSet('${encodeURIComponent(item.path)}',this.previousElementSibling.value)">Save</button></div><div class="forge-art-item-actions"><button class="btn primary" data-art-use ${targets.length?"":"disabled"} onclick="desAssignArt('${encodeURIComponent(item.path)}')">Use on ${targets.length}</button></div></article>`).join("")||`<div class="emptystate">No reusable artwork matches.</div>`}</div>`;$("#modal").classList.add("on");const input=document.getElementById("des-art-filter");if(input&&document.activeElement?.id!=="des-art-filter"){input.focus();input.setSelectionRange(input.value.length,input.value.length);}
+  if(!DES?.family)return;const state=DES;state.artQuery=String(query||"");let picker=state._artPicker;
+  if(!desArtPickerCurrent(picker)||picker.back)picker=desArtPickerShell(state,false);
+  else{const input=picker.host.querySelector("#des-art-filter");if(input.value!==state.artQuery)input.value=state.artQuery;}
+  if(picker.items){desArtPickerRender(picker);return;}await desArtPickerLoad(picker);
 }
 function desBytesBase64(bytes){let binary="",view=new Uint8Array(bytes),chunk=0x8000;for(let i=0;i<view.length;i+=chunk)binary+=String.fromCharCode(...view.subarray(i,i+chunk));return btoa(binary);}
 function desArtUpload(){
@@ -3202,21 +3283,22 @@ function desBackArtPreviewUrl(){
   const path=DES.layout?.back?.art||"",staged=DES.pendingAssets?.[path];if(staged)return staged.preview_url;if(path.startsWith("assets/")&&typeof LIVE!=="undefined"&&LIVE)return`/api/games/${encodeURIComponent(DES.slug)}/assets/${path.slice(7).split("/").map(encodeURIComponent).join("/")}`;return path;
 }
 async function desBackArtLibraryOpen(query=""){
-  DES.backArtQuery=String(query||"");$("#mbody").style.maxWidth="960px";$("#mbody").style.display="block";$("#mbody").innerHTML=`<div class="emptystate">Reading this game's versioned artwork…</div>`;$("#modal").classList.add("on");let items;try{items=await desLoadArtItems();}catch(error){$("#mbody").innerHTML=`<div class="emptystate">Could not open the art library.<br><small>${esc(error.message)}</small></div>`;return;}
-  const needle=DES.backArtQuery.trim().toLowerCase(),shown=items.filter(item=>!needle||`${item.path} ${item.name} ${item.category} ${(item.tags||[]).join(" ")}`.toLowerCase().includes(needle)).sort((a,b)=>Number(!!b.staged)-Number(!!a.staged)||a.path.localeCompare(b.path)).slice(0,160);
-  $("#mbody").innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;align-items:start"><div><div class="badge">SHARED BACK · VERSIONED ART LIBRARY</div><h2 style="margin:8px 0 3px">Choose one back for every card</h2><div class="mut">The file, rights record, crop behavior, back layout, and all-family impact enter one review.</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div><div class="forge-data-table-toolbar"><input id="des-back-art-filter" type="search" value="${desAttr(DES.backArtQuery)}" placeholder="Filter by filename, path, or tag…" oninput="desBackArtLibraryOpen(this.value)"><button class="btn primary" onclick="desBackArtUpload()">+ Upload back art with rights</button></div><div class="forge-art-library">${shown.map(item=>`<article class="forge-art-item"><img loading="lazy" src="${esc(item.url)}" alt=""><b>${esc(item.name)}</b><small>${item.staged?"staged · ":""}${item.rights?`${esc(item.rights.license)} · ${esc(item.rights.status)}`:"rights not cleared"}</small><div class="forge-art-tags">${(item.tags||[]).map(tag=>`<span>${esc(tag)}</span>`).join("")||"<span>untagged</span>"}</div><div class="forge-art-item-actions"><button class="btn primary" data-back-art-use onclick="desBackAssignArt('${encodeURIComponent(item.path)}')">Use as back</button></div></article>`).join("")||`<div class="emptystate">No reusable artwork matches.</div>`}</div>`;const input=document.getElementById("des-back-art-filter");if(input&&document.activeElement?.id!=="des-back-art-filter"){input.focus();input.setSelectionRange(input.value.length,input.value.length);}
+  if(!DES?.family)return;const state=DES;state.backArtQuery=String(query||"");let picker=state._artPicker;
+  if(!desArtPickerCurrent(picker)||!picker.back)picker=desArtPickerShell(state,true);
+  else{const input=picker.host.querySelector("#des-back-art-filter");if(input.value!==state.backArtQuery)input.value=state.backArtQuery;}
+  if(picker.items){desArtPickerRender(picker);return;}await desArtPickerLoad(picker);
 }
 function desBackArtUpload(){
   const input=document.createElement("input");input.type="file";input.accept="image/png,image/jpeg,image/webp,image/svg+xml";input.onchange=async()=>{const file=input.files?.[0];if(!file)return;if(file.size>10*1024*1024){toast("Studio uploads are capped at 10 MB per artwork.",6000);return;}const extension=(file.name.split(".").pop()||"png").toLowerCase().replace("jpeg","jpg");if(!["png","jpg","webp","svg"].includes(extension)){toast("Use PNG, JPG, WebP, or a safe SVG.",5000);return;}const rights=await assetRightsForm("Credit the shared card-back artwork",{creator:ME?.handle||"",license:G(DES.slug)?.license||"CC-BY-4.0",status:"original",redistribution:"allowed"});if(!rights)return;const path=`assets/card-art/shared-back-${Date.now().toString(36)}.${extension}`,bytes=await file.arrayBuffer(),preview_url=URL.createObjectURL(file);DES.pendingAssets??={};DES.pendingAssets[path]={path,content_base64:desBytesBase64(bytes),preview_url,creator:rights.creator,license:rights.license,status:rights.status,redistribution:rights.redistribution,source:rights.source||undefined,size:file.size};DES.assetItems=null;desBackAssignArt(encodeURIComponent(path));toast("Back artwork, credit, and rights are staged locally. Nothing enters Git until review.",6000);};input.click();
 }
 function desBackArtworkHtml(){
-  const path=DES.layout?.back?.art||"",url=desBackArtPreviewUrl(),staged=DES.pendingAssets?.[path];return`<div class="forge-art-panel" style="margin-bottom:13px"><div class="forge-art-head"><b>Shared back artwork</b>${path?`<button class="btn" onclick="desBackClearArt()">Remove</button>`:""}</div><div class="forge-art-thumb">${url?`<img src="${esc(url)}" alt="Current shared back artwork">`:"No back artwork assigned"}</div><div class="forge-art-actions"><button class="btn" onclick="desBackArtLibraryOpen()">Choose back artwork</button><button class="btn" onclick="desBackArtUpload()">Upload back art</button></div>${path?`<div class="forge-art-rights${staged?" ready":""}">${esc(path)}${staged?`<br>${esc(staged.creator)} · ${esc(staged.license)} · ${esc(staged.status)} · rights included in review`:" · existing repository asset"}</div>`:""}<div class="forge-effect-note">One versioned surface is reused by every family, print sheet, tabletop export, and release.</div></div>`;
+  const path=DES.layout?.back?.art||"",url=desBackArtPreviewUrl(),staged=DES.pendingAssets?.[path];return`<div class="forge-art-panel" style="margin-bottom:13px"><div class="forge-art-head"><b>Shared back artwork</b>${path?`<button class="btn" onclick="desBackClearArt()">Remove</button>`:""}</div><div class="forge-art-thumb">${url?assetImage(url,"Current shared back artwork","",true):"No back artwork assigned"}</div><div class="forge-art-actions"><button class="btn" onclick="desBackArtLibraryOpen()">Choose back artwork</button><button class="btn" onclick="desBackArtUpload()">Upload back art</button></div>${path?`<div class="forge-art-rights${staged?" ready":""}">${esc(path)}${staged?`<br>${esc(staged.creator)} · ${esc(staged.license)} · ${esc(staged.status)} · rights included in review`:" · existing repository asset"}</div>`:""}<div class="forge-effect-note">One versioned surface is reused by every family, print sheet, tabletop export, and release.</div></div>`;
 }
 function desPrintingInspectorHtml(g,card){
   const list=(DES.printings||[]).filter(printing=>printing.card_id===card.id),printing=desSelectedPrinting(card);if(!printing)return`<div class="forge-art-panel"><div class="forge-art-head"><b>Production printing</b><button class="btn" onclick="desAddPrinting()">+ Add</button></div><div class="mut" style="font-size:10px">This card has no physical printing yet.</div></div>`;
   const crop=printing.art_crop||{fit:"cover",focal_x:.5,focal_y:.5,zoom:1},artUrl=desArtPreviewUrl(printing),staged=DES.pendingAssets?.[printing.art],sets=(g.sets||[]).map(set=>({value:set.id,label:set.name||set.title||set.id}));
   return `<div class="forge-art-panel"><div class="forge-art-head"><b>Production printing</b><button class="btn" onclick="desAddPrinting()">+ Variant</button></div>${list.length>1?`<div class="fld"><label>Printing<select onchange="desPrintingSelect(this.value)">${list.map(item=>`<option value="${desAttr(item.id)}" ${item.id===printing.id?"selected":""}>${esc(item.variant||item.collector_number||item.id)}</option>`).join("")}</select></label></div>`:""}<div class="mut mono" style="font-size:9px;margin-bottom:8px">${esc(printing.id)}</div>${sets.length?desPrintingControl("Set","set_id",printing.set_id,"string",sets):""}<div class="component-pair">${desPrintingControl("Card number","collector_number",printing.collector_number||"")}${desPrintingControl("Copies","quantity",printing.quantity||1,"number")}</div>${desPrintingControl("Artist / credit","artist",printing.artist||"")}${desPrintingControl("Flavor text","flavor_text",printing.flavor_text||"","longstring")}${desPrintingControl("Variant label","variant",printing.variant||"")}
-    <div class="forge-art-head" style="margin-top:12px"><b>Artwork & crop</b>${printing.art_crop?`<button class="btn" onclick="desCropReset()">Reset crop</button>`:""}</div>${staged?`<div class="forge-art-staged">● New file staged · ${(staged.size/1048576).toFixed(2)} MB · rights included in review</div>`:""}<div class="forge-art-thumb">${artUrl?`<img src="${esc(artUrl)}" alt="Current raw artwork">`:"No raw artwork assigned"}</div><div class="forge-art-actions"><button class="btn" onclick="desArtLibraryOpen()">Choose library</button><button class="btn" onclick="desArtUpload()">Upload new</button></div>${printing.art?`<div class="forge-art-rights${staged?" ready":""}">${esc(printing.art)}${staged?`<br>${esc(staged.creator)} · ${esc(staged.license)} · ${esc(staged.status)}`:" · existing repository asset"}</div><div class="fld"><label>Fit<select onchange="desCropSet('fit',this.value)"><option value="cover" ${crop.fit!=="contain"?"selected":""}>Fill frame (cover)</option><option value="contain" ${crop.fit==="contain"?"selected":""}>Show whole art (contain)</option></select></label></div><div class="forge-art-crop"><label>Horizontal focus<input type="range" min="0" max="1" step="0.01" value="${crop.focal_x??.5}" oninput="desCropSet('focal_x',this.value)"></label><output id="des-crop-focal_x-out">${Math.round((crop.focal_x??.5)*100)}%</output><label>Vertical focus<input type="range" min="0" max="1" step="0.01" value="${crop.focal_y??.5}" oninput="desCropSet('focal_y',this.value)"></label><output id="des-crop-focal_y-out">${Math.round((crop.focal_y??.5)*100)}%</output><label>Zoom<input type="range" min="1" max="4" step="0.05" value="${crop.zoom??1}" oninput="desCropSet('zoom',this.value)"></label><output id="des-crop-zoom-out">${Number(crop.zoom??1).toFixed(2)}×</output></div><button class="btn" style="width:100%;margin-top:8px;color:#ffaaa4" onclick="desClearArt()">Remove raw-art assignment</button>`:""}</div>`;
+    <div class="forge-art-head" style="margin-top:12px"><b>Artwork & crop</b>${printing.art_crop?`<button class="btn" onclick="desCropReset()">Reset crop</button>`:""}</div>${staged?`<div class="forge-art-staged">● New file staged · ${(staged.size/1048576).toFixed(2)} MB · rights included in review</div>`:""}<div class="forge-art-thumb">${artUrl?assetImage(artUrl,"Current raw artwork","",true):"No raw artwork assigned"}</div><div class="forge-art-actions"><button class="btn" onclick="desArtLibraryOpen()">Choose library</button><button class="btn" onclick="desArtUpload()">Upload new</button></div>${printing.art?`<div class="forge-art-rights${staged?" ready":""}">${esc(printing.art)}${staged?`<br>${esc(staged.creator)} · ${esc(staged.license)} · ${esc(staged.status)}`:" · existing repository asset"}</div><div class="fld"><label>Fit<select onchange="desCropSet('fit',this.value)"><option value="cover" ${crop.fit!=="contain"?"selected":""}>Fill frame (cover)</option><option value="contain" ${crop.fit==="contain"?"selected":""}>Show whole art (contain)</option></select></label></div><div class="forge-art-crop"><label>Horizontal focus<input type="range" min="0" max="1" step="0.01" value="${crop.focal_x??.5}" oninput="desCropSet('focal_x',this.value)"></label><output id="des-crop-focal_x-out">${Math.round((crop.focal_x??.5)*100)}%</output><label>Vertical focus<input type="range" min="0" max="1" step="0.01" value="${crop.focal_y??.5}" oninput="desCropSet('focal_y',this.value)"></label><output id="des-crop-focal_y-out">${Math.round((crop.focal_y??.5)*100)}%</output><label>Zoom<input type="range" min="1" max="4" step="0.05" value="${crop.zoom??1}" oninput="desCropSet('zoom',this.value)"></label><output id="des-crop-zoom-out">${Number(crop.zoom??1).toFixed(2)}×</output></div><button class="btn" style="width:100%;margin-top:8px;color:#ffaaa4" onclick="desClearArt()">Remove raw-art assignment</button>`:""}</div>`;
 }
 function desContentInspectorHtml(){
   const g=G(DES.slug),card=desCard();if(!card)return`<div class="forge-studio-empty"><b>No card selected</b>Choose a card from the project list.</div>`;
@@ -4109,16 +4191,26 @@ function designSpecimen(g,family){
     || g.cards.find(card=>cardDesignMatch(card,family.match));
 }
 async function designFamilyEdit(slug,familyId,previewCardId=null){
-  const g=G(slug),family=g?.card_design?.families?.find(item=>item.id===familyId);if(!g||!family)return;
-  if(typeof LIVE!=="undefined"&&LIVE&&!ME){_afterAuth=()=>designFamilyEdit(slug,familyId);authOpen();return;}
-  if(DES?.family&&DES._draftReady)await desDraftFlush().catch(()=>{});
-  prNote(`Opening ${family.label||family.id} in the visual editor…`);
+  const intent=Symbol(),route=location.hash;designFamilyEdit._intent=intent;
+  const stillRequested=()=>designFamilyEdit._intent===intent&&location.hash===route;
+  if(typeof LIVE!=="undefined"&&LIVE&&!ME){_afterAuth=()=>{if(stillRequested())void designFamilyEdit(slug,familyId,previewCardId);};authOpen();return;}
+  const actor=desDraftActor(),current=()=>stillRequested()&&desDraftActor()===actor;
   try{
+    // Authentication refreshes the catalog before the selected project's full
+    // design data arrives. Join that load before looking up its family.
+    let g=G(slug);
+    if(!g||g._summary||!g.card_design){await loadProjectView(slug);if(!current())return;g=G(slug);}
+    const family=g?.card_design?.families?.find(item=>item.id===familyId);
+    if(!family)throw new Error("Could not load this design. Return to Design and try opening Studio again.");
+    if(DES?.family&&DES._draftReady)await desDraftFlush().catch(()=>{});
+    if(!current())return;
+    prNote(`Opening ${family.label||family.id} in the visual editor…`);
     const [sourceResponse,accessResponse]=await Promise.all([
       fetch(`/api/games/${encodeURIComponent(slug)}/design/svg/${encodeURIComponent(familyId)}`,{headers:authHdr()}),
       fetch(`/api/games/${encodeURIComponent(slug)}/access`,{headers:authHdr()})
     ]);
     const source=await sourceResponse.json().catch(()=>({})),access=await accessResponse.json().catch(()=>({canWrite:false,authed:!!ME}));
+    if(!current())return;
     if(!sourceResponse.ok)throw new Error(source.error||"Could not create an SVG working copy for this family");
     // Use the family compiled from the same immutable ref as the SVG working
     // copy. This matters in local development, where the broad page payload may
@@ -4131,17 +4223,18 @@ async function designFamilyEdit(slug,familyId,previewCardId=null){
       selRegion:null,selRegions:[],undo:[],access,view:"fit",face:"front",rawOpen:false,showGallery:false,_addFontOpen:false,leftTab:"cards",rightTab:"content",compare:false,
       family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null,_draftReady:false};
     prNote(`${family.label||family.id} ready · changes stay local until review`);
+    const opened=DES;
     await desDraftOfferRestore();
-    if(!DES_DRAFT_OFFER)desRenderFull();
-  }catch(error){prNote(error.message||"Could not open family editor",true);}
+    if(current()&&DES===opened&&!DES_DRAFT_OFFER)desRenderFull();
+  }catch(error){if(current())prNote(error.message||"Could not open family editor",true);}
 }
 function designMatchText(match){
   return Object.entries(match||{}).map(([key,value])=>`${key.replace("attributes.","")} = ${Array.isArray(value)?value.join(" or "):value}`).join(" · ");
 }
 async function designOpenAsset(slug,path){
   const g=G(slug); if(!g)return;
-  await assets(g);
-  const state=ASSET_LIB[slug], item=state?.data?.items?.find(candidate=>candidate.path===path);
+  const state=await assets(g);if(!state)return;
+  const item=state.data.items.find(candidate=>candidate.path===path);
   if(item) assetDetail(slug,encodeURIComponent(path));
   else toast(`Could not find ${esc(path)} in this version.`,5000);
 }
@@ -5559,18 +5652,35 @@ function filterCards(slug){
 
 /* ---------- reusable assets: every non-card production input is game source ---------- */
 const ASSET_LIB={};
+function assetImage(url,name,extraClass="",eager=false){
+  return `<div class="forge-image ${desAttr(extraClass)}" data-image-state="loading" aria-busy="true" role="group" aria-label="${desAttr(name)} preview"><img data-preview-image data-image-src="${desAttr(url)}" loading="${eager?"eager":"lazy"}" decoding="async" src="${desAttr(url)}" alt="" onload="assetImageLoaded(this)" onerror="assetImageFailed(this)"><span class="forge-image-loading">Loading preview…</span><span class="forge-image-error"><span>Preview unavailable</span><button type="button" class="btn forge-image-retry" aria-label="Retry preview for ${desAttr(name)}" onclick="event.stopPropagation();assetImageRetry(this)">Retry</button></span></div>`;
+}
+async function assetImageLoaded(img){
+  const frame=img.closest(".forge-image"),attempt=img._previewAttempt||0;if(!frame)return;
+  try{await img.decode();if((img._previewAttempt||0)!==attempt)return;if(!img.naturalWidth)throw new Error("Empty image");frame.dataset.imageState="ready";frame.setAttribute("aria-busy","false");}
+  catch{if((img._previewAttempt||0)===attempt)assetImageFailed(img);}
+}
+function assetImageFailed(img){const frame=img.closest(".forge-image");if(!frame)return;frame.dataset.imageState="error";frame.setAttribute("aria-busy","false");}
+function assetImageRetry(button){
+  const frame=button.closest(".forge-image"),img=frame.querySelector("img");img._previewAttempt=(img._previewAttempt||0)+1;frame.dataset.imageState="loading";frame.setAttribute("aria-busy","true");
+  const url=new URL(img.dataset.imageSrc,location.href);if(["http:","https:"].includes(url.protocol))url.searchParams.set("preview_retry",`${Date.now()}-${img._previewAttempt}`);img.src=url.href;
+}
+function assetSkeletons(count=8){return Array.from({length:count},()=>`<article class="asset-skeleton" aria-hidden="true"><div class="forge-image"><span class="forge-image-loading"></span></div><div class="asset-skeleton-lines"><i></i><i></i></div></article>`).join("");}
 const fmtBytes=n=>n==null?"—":n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(n<10240?1:0)} KB`:`${(n/1048576).toFixed(1)} MB`;
 const assetIcon=item=>item.kind==="font"?"Aa":item.kind==="template"?"{ }":item.kind==="text"?"¶":item.kind==="audio"?"♫":item.kind==="model"?"3D":item.kind==="native-source"?"⬡":"◇";
 const sourcePackageIcon=kind=>["miniature","model-3d"].includes(kind)?"3D":kind==="rulebook"?"¶":kind==="card-design"?"▧":kind==="table-setup"?"◇":"⬡";
 async function assets(g){
-  const pane=$("#pane");
+  const pane=$("#pane"),route=location.hash,request={};pane._assetRequest=request;delete pane._assetState;
+  const current=()=>pane.isConnected&&$("#pane")===pane&&pane._assetRequest===request&&location.hash===route;
   if(!LIVE){pane.innerHTML="<div class='emptystate'>The asset repository needs the live Forge server.<br><span style='font-size:13px'>It inventories the actual Git tree, not a baked copy.</span></div>";return;}
-  pane.innerHTML="<div class='emptystate'>Reading reusable game source…</div>";
+  pane.innerHTML=`<div class="asset-loading"><h2>Reusable game source</h2><p role="status">Loading artwork and source files…</p><div class="asset-grid" aria-busy="true">${assetSkeletons(12)}</div></div>`;
   try{
     const r=await fetch(`/api/games/${encodeURIComponent(g.slug)}/repository/assets`,{headers:edToken()});
     const data=await r.json(); if(!r.ok)throw new Error(data.error||`request failed (${r.status})`);
-    ASSET_LIB[g.slug]={data,q:"",category:"",limit:80}; renderAssets(g.slug);
-  }catch(e){pane.innerHTML=`<div class='emptystate'>Could not read this game's assets.<br><span style='font-size:13px'>${esc(e.message)}</span></div>`;}
+    if(!current())return;
+    // Keep ownership on the view so cached metadata does not retain old image grids.
+    const state=ASSET_LIB[g.slug]={data,q:"",category:"",limit:80};pane._assetState=state;renderAssets(g.slug);return state;
+  }catch(e){if(current())pane.innerHTML=`<div class='emptystate' role="alert">Could not read this game's assets.<br><span style='font-size:13px'>${esc(e.message)}</span><p><button class="btn" onclick="assets(G('${g.slug}'))">Retry</button></p></div>`;}
 }
 function assetAccess(slug,access){
   if(access.can_write)return `<div class="chg" style="margin:0;color:var(--grn)"><b>✓ You can commit here.</b> Every edit becomes a named version in this game's history.</div>`;
@@ -5578,7 +5688,8 @@ function assetAccess(slug,access){
   return `<div class="chg" style="margin:0"><b>Browsing is public.</b> Sign in and create an edition to change a file without touching the source game. <button class="btn" style="margin-left:8px" onclick="authOpen()">Sign in</button></div>`;
 }
 function renderAssets(slug){
-  const state=ASSET_LIB[slug]; if(!state)return;
+  const state=ASSET_LIB[slug],pane=$("#pane");if(!state||pane?._assetState!==state)return;
+  if(pane.querySelector("#asset-results")){assetUpdateResults(slug);return;}
   const {data}=state, q=state.q.toLowerCase();
   let filtered=data.items.filter(item=>(!state.category||item.category===state.category)&&(!q||`${item.path} ${item.category} ${item.kind}`.toLowerCase().includes(q)));
   const shown=filtered.slice(0,state.limit);
@@ -5588,28 +5699,50 @@ function renderAssets(slug){
       <div class="asset-flow"><span>Browse source</span><i>→</i><span>Inspect usage & history</span><i>→</i><span>Edit or replace</span><i>→</i><span>Git commit</span><i>→</i><span>Visual PR</span></div></div>
     <div class="box"><div class="bb">${assetAccess(slug,data.access)}</div></div>
     ${sourcePackages.length?`<div class="box"><div class="bh">Production source packages <span class="count">${sourceSummary.ready}/${sourceSummary.total} ready</span></div><div class="bb"><p style="font-size:13px;color:var(--mut);margin:0 0 12px">These are the authoritative editable packages behind the game—not just loose downloads. Their tool, direction, source files, release targets, and exact input hash travel with every fork and pull request.</p><div class="asset-cats" style="margin:0">${sourcePackages.map(pack=>`<div class="asset-cat ${pack.ready?"on":""}" style="cursor:default;text-align:left;min-width:210px"><b>${sourcePackageIcon(pack.kind)} ${esc(pack.label)}</b><span>${esc(pack.adapter.application||pack.adapter.id)} · ${esc(pack.adapter.direction)}</span><span>${pack.source_files.length} source file${pack.source_files.length===1?"":"s"} · ${esc(pack.distribution)}</span><span style="color:${pack.ready?"var(--grn)":"var(--red)"}">${pack.ready?"✓ inputs present":`${pack.issues.length} issue${pack.issues.length===1?"":"s"}`}</span></div>`).join("")}</div>${sourceSummary.three_d?`<div style="font-size:12px;color:var(--mut);margin-top:10px">${sourceSummary.three_d} optional 3D package${sourceSummary.three_d===1?"":"s"}; model files remain rights-gated source and are never executed by Forge.</div>`:""}</div></div>`:""}
-    <div class="asset-cats"><button class="asset-cat ${state.category?"":"on"}" onclick="assetCategory('${slug}','')"><b>All source</b><span>${data.count} files</span></button>${data.categories.map(cat=>`<button class="asset-cat ${state.category===cat.name?"on":""}" onclick="assetCategory('${slug}','${encodeURIComponent(cat.name)}')"><b>${esc(cat.name)}</b><span>${cat.count} file${cat.count===1?"":"s"}</span></button>`).join("")}</div>
-    <div class="filterbar"><input id="assetq" type="search" name="forge-asset-filter" autocomplete="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="${esc(state.q)}" placeholder="Find a frame, icon, font, template, or source path…" oninput="if(this.matches(':-webkit-autofill')){this.value='';return}assetSearch('${slug}',this.value)"><span style="align-self:center;color:var(--mut);font-size:12px">Showing ${shown.length} of ${filtered.length}</span>${data.access.can_write?`<button class="btn primary" onclick="assetUpload('${slug}')">+ Add asset</button>`:`<button class="btn" onclick="${data.access.signed_in?`forkGame('${slug}')`:`authOpen()`}">⑂ Create an editable edition</button>`}</div>
-    <div class="asset-grid">${shown.map(item=>assetTile(slug,item)).join("")}</div>
-    ${!filtered.length?"<div class='emptystate'>No reusable files match this filter.</div>":filtered.length>shown.length?`<div style="text-align:center;margin-top:18px"><button class="btn" onclick="assetMore('${slug}')">Show ${Math.min(80,filtered.length-shown.length)} more</button></div>`:""}`;
+    <div class="asset-cats"><button class="asset-cat ${state.category?"":"on"}" data-asset-category="" onclick="assetCategory('${slug}','')"><b>All source</b><span>${data.count} files</span></button>${data.categories.map(cat=>`<button class="asset-cat ${state.category===cat.name?"on":""}" data-asset-category="${desAttr(cat.name)}" onclick="assetCategory('${slug}','${encodeURIComponent(cat.name)}')"><b>${esc(cat.name)}</b><span>${cat.count} file${cat.count===1?"":"s"}</span></button>`).join("")}</div>
+    <div class="filterbar"><input id="assetq" type="search" name="forge-asset-filter" autocomplete="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="${desAttr(state.q)}" placeholder="Find a frame, icon, font, template, or source path…" oninput="if(this.matches(':-webkit-autofill')){this.value='';return}assetSearch('${slug}',this.value)"><span style="align-self:center;color:var(--mut);font-size:12px">Showing ${shown.length} of ${filtered.length}</span>${data.access.can_write?`<button class="btn primary" onclick="assetUpload('${slug}')">+ Add asset</button>`:`<button class="btn" onclick="${data.access.signed_in?`forkGame('${slug}')`:`authOpen()`}">⑂ Create an editable edition</button>`}</div>
+    <div id="asset-results" class="asset-grid">${shown.map(item=>assetTile(slug,item)).join("")}</div>
+    <div id="asset-empty" class="emptystate" ${filtered.length?"hidden":""}>No reusable files match this filter.</div><div style="text-align:center;margin-top:18px"><button id="asset-more" class="btn" ${filtered.length>shown.length?"":"hidden"} onclick="assetMore('${slug}')">Show ${Math.min(80,filtered.length-shown.length)} more</button></div>`;
+  pane.querySelector("#assetq").nextElementSibling.id="asset-result-count";
+}
+function assetUpdateResults(slug){
+  const state=ASSET_LIB[slug],pane=$("#pane");if(!state||pane?._assetState!==state)return;
+  const grid=pane.querySelector("#asset-results"),q=state.q.toLowerCase(),filtered=state.data.items.filter(item=>(!state.category||item.category===state.category)&&(!q||`${item.path} ${item.category} ${item.kind}`.toLowerCase().includes(q))),shown=filtered.slice(0,state.limit);
+  const existing=new Map([...grid.children].map(node=>[node.dataset.assetPath,node])),wanted=new Set(shown.map(item=>item.path));
+  for(const [path,node] of existing)if(!wanted.has(path))node.remove();
+  shown.forEach((item,index)=>{let node=existing.get(item.path);if(!node){const template=document.createElement("template");template.innerHTML=assetTile(slug,item);node=template.content.firstElementChild;}if(grid.children[index]!==node)grid.insertBefore(node,grid.children[index]||null);});
+  pane.querySelector("#asset-result-count").textContent=`Showing ${shown.length} of ${filtered.length}`;
+  pane.querySelector("#asset-empty").hidden=!!filtered.length;const more=pane.querySelector("#asset-more");more.hidden=filtered.length<=shown.length;more.textContent=`Show ${Math.min(80,filtered.length-shown.length)} more`;
+  pane.querySelectorAll("[data-asset-category]").forEach(button=>button.classList.toggle("on",button.dataset.assetCategory===state.category));
 }
 function assetTile(slug,item){
-  const preview=item.kind==="image"?`<img loading="lazy" src="${esc(item.url)}" alt="">`:`<span ${item.kind==="font"?`style="font-family:serif"`:""}>${esc(assetIcon(item))}</span>`;
-  return `<article class="asset-tile" onclick="assetDetail('${slug}','${encodeURIComponent(item.path)}')"><div class="asset-preview">${preview}</div><div class="asset-info"><div class="asset-name" title="${esc(item.name)}">${esc(item.name)}</div><div class="asset-path" title="${esc(item.path)}">${esc(item.path)}</div><div class="asset-meta"><span>${esc(item.category)}</span><span>·</span><span>${fmtBytes(item.size)}</span>${item.packages.length?`<span>· ${item.packages.length} package${item.packages.length===1?"":"s"}</span>`:item.used_by.length?`<span>· used by ${item.used_by.length}</span>`:`<span>· unreferenced</span>`}</div></div></article>`;
+  const encoded=encodeURIComponent(item.path).replace(/'/g,"%27");
+  const preview=item.kind==="image"?assetImage(item.url,item.name):`<span ${item.kind==="font"?`style="font-family:serif"`:""}>${esc(assetIcon(item))}</span>`;
+  return `<article class="asset-tile" data-asset-path="${desAttr(item.path)}" onclick="assetDetail('${slug}','${encoded}')"><div class="asset-preview">${preview}</div><div class="asset-info"><button type="button" class="asset-name asset-open" title="${desAttr(item.name)}" aria-label="Open ${desAttr(item.name)}">${esc(item.name)}</button><div class="asset-path" title="${desAttr(item.path)}">${esc(item.path)}</div><div class="asset-meta"><span>${esc(item.category)}</span><span>·</span><span>${fmtBytes(item.size)}</span>${item.packages.length?`<span>· ${item.packages.length} package${item.packages.length===1?"":"s"}</span>`:item.used_by.length?`<span>· used by ${item.used_by.length}</span>`:`<span>· unreferenced</span>`}</div></div></article>`;
 }
-function assetSearch(slug,value){const state=ASSET_LIB[slug];if(!state)return;state.q=value;state.limit=80;renderAssets(slug);const q=$("#assetq");if(q){q.focus();q.setSelectionRange(value.length,value.length);}}
+function assetSearch(slug,value){const state=ASSET_LIB[slug];if(!state)return;state.q=value;state.limit=80;renderAssets(slug);}
 function assetCategory(slug,encoded){const state=ASSET_LIB[slug];if(!state)return;state.category=decodeURIComponent(encoded);state.limit=80;renderAssets(slug);}
 function assetMore(slug){const state=ASSET_LIB[slug];if(!state)return;state.limit+=80;renderAssets(slug);}
 async function assetDetail(slug,encoded){
   const path=decodeURIComponent(encoded), state=ASSET_LIB[slug], item=state?.data.items.find(x=>x.path===path); if(!item)return;
-  const [historyRes,fileRes]=await Promise.all([fetch(`/api/games/${encodeURIComponent(slug)}/repository/history/${path.split("/").map(encodeURIComponent).join("/")}`),item.editable?fetch(item.url):Promise.resolve(null)]);
-  const history=historyRes.ok?(await historyRes.json()).history:[];
-  const textBody=fileRes&&fileRes.ok?await fileRes.text():null;
-  const visual=item.kind==="image"?`<div class="asset-detail-preview"><img src="${esc(item.url)}" alt="${esc(item.name)}"></div>`:item.kind==="audio"?`<div class="asset-detail-preview"><audio controls src="${esc(item.url)}"></audio></div>`:textBody!=null?`<pre class="asset-code">${esc(textBody.slice(0,50000))}${textBody.length>50000?"\n… preview truncated":""}</pre>`:`<div class="asset-detail-preview" style="font-size:72px;color:var(--acc);font-weight:650">${esc(assetIcon(item))}</div>`;
+  const visual=item.kind==="image"?assetImage(item.url,item.name,"asset-detail-image",true):item.kind==="audio"?`<div class="asset-detail-preview"><audio controls src="${desAttr(item.url)}"></audio></div>`:item.editable?`<div class="asset-code" data-asset-text role="status">Loading source preview…</div>`:`<div class="asset-detail-preview" style="font-size:72px;color:var(--acc);font-weight:650">${esc(assetIcon(item))}</div>`;
   const canWrite=state.data.access.can_write;
   $("#mbody").style.maxWidth="980px";$("#mbody").style.display="block";
-  $("#mbody").innerHTML=`<div style="display:flex;justify-content:flex-end;margin:-10px -10px 8px"><button class="btn" aria-label="Close asset details" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div><div style="display:grid;grid-template-columns:minmax(280px,1.35fr) minmax(250px,1fr);gap:22px"><div>${visual}</div><div><div class="badge">${esc(item.category)}</div><h2 style="margin-top:8px">${esc(item.name)}</h2><div class="asset-path" style="white-space:normal;font-size:12px;word-break:break-all">${esc(item.path)}</div><div style="margin:14px 0"><div class="kv"><b>Size</b>${fmtBytes(item.size)}</div><div class="kv"><b>Version</b><code>${esc(state.data.commit)}</code></div><div class="kv"><b>Source package</b>${item.packages.length?item.packages.map(pack=>`${esc(pack.label)} (${esc(pack.role)})`).join(", "):"Not declared"}</div><div class="kv"><b>Used by</b>${item.used_by.length?item.used_by.map(esc).join(", "):"No exact repository reference found"}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="${esc(item.url)}" download="${esc(item.name)}">⤓ Download</a>${canWrite&&item.editable?`<button class="btn primary" onclick="assetEditText('${slug}','${encoded}')">✎ Edit source</button>`:""}${canWrite&&path.startsWith("assets/")?`<button class="btn" onclick="assetUpload('${slug}','${encoded}')">↻ Replace file</button>`:""}</div><h4 style="margin:20px 0 7px">File history <span class="count">${history.length}</span></h4>${history.slice(0,8).map(h=>`<div class="activity"><span class="mono">${esc(h.sha)}</span><div><b>${esc(h.subject)}</b><br><span class="mut">${esc(h.author)} · ${esc(h.date)}</span></div></div>`).join("")||"<div class='mut' style='font-size:13px'>No earlier commit found for this path.</div>"}</div></div>`;
-  $("#modal").classList.add("on");
+  $("#mbody").innerHTML=`<section id="asset-detail-content"><div style="display:flex;justify-content:flex-end;margin:-10px -10px 8px"><button class="btn" aria-label="Close asset details" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div><div class="asset-detail-layout"><div>${visual}</div><div><div class="badge">${esc(item.category)}</div><h2 style="margin-top:8px">${esc(item.name)}</h2><div class="asset-path" style="white-space:normal;font-size:12px;word-break:break-all">${esc(item.path)}</div><div style="margin:14px 0"><div class="kv"><b>Size</b>${fmtBytes(item.size)}</div><div class="kv"><b>Version</b><code>${esc(state.data.commit)}</code></div><div class="kv"><b>Source package</b>${item.packages.length?item.packages.map(pack=>`${esc(pack.label)} (${esc(pack.role)})`).join(", "):"Not declared"}</div><div class="kv"><b>Used by</b>${item.used_by.length?item.used_by.map(esc).join(", "):"No exact repository reference found"}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="${desAttr(item.url)}" download="${desAttr(item.name)}">⤓ Download</a>${canWrite&&item.editable?`<button class="btn primary" onclick="assetEditText('${slug}','${encoded}')">✎ Edit source</button>`:""}${canWrite&&path.startsWith("assets/")?`<button class="btn" onclick="assetUpload('${slug}','${encoded}')">↻ Replace file</button>`:""}</div><h4 style="margin:20px 0 7px">File history <span class="count" data-history-count></span></h4><div data-asset-history role="status">Loading file history…</div></div></div></section>`;
+  $("#modal").classList.add("on");assetDetailRead(slug,encoded,$("#asset-detail-content"));
+}
+async function assetDetailRead(slug,encoded,root){
+  const item=ASSET_LIB[slug]?.data.items.find(candidate=>candidate.path===decodeURIComponent(encoded));if(!item||!root)return;
+  const route=location.hash,request={};root._assetRead=request;const current=()=>root.isConnected&&root._assetRead===request&&location.hash===route&&$("#modal").classList.contains("on");
+  const historyNode=root.querySelector("[data-asset-history]"),textNode=root.querySelector("[data-asset-text]");historyNode.textContent="Loading file history…";if(textNode)textNode.textContent="Loading source preview…";
+  const retry=()=>`<button class="btn" onclick="assetDetailRead('${slug}','${encoded}',this.closest('#asset-detail-content'))">Retry</button>`;
+  await Promise.allSettled([
+    (async()=>{try{
+      const response=await fetch(`/api/games/${encodeURIComponent(slug)}/repository/history/${item.path.split("/").map(encodeURIComponent).join("/")}`,{headers:edToken()});if(!response.ok)throw new Error("History unavailable");const data=await response.json();if(!current())return;
+      const history=data.history||[];root.querySelector("[data-history-count]").textContent=history.length;historyNode.innerHTML=history.slice(0,8).map(h=>`<div class="activity"><span class="mono">${esc(h.sha)}</span><div><b>${esc(h.subject)}</b><br><span class="mut">${esc(h.author)} · ${esc(h.date)}</span></div></div>`).join("")||"<div class='mut' style='font-size:13px'>No earlier commit found for this path.</div>";
+    }catch{if(current())historyNode.innerHTML=`Could not load file history. ${retry()}`;}})(),
+    (async()=>{if(!textNode)return;try{const response=await fetch(item.url,{headers:edToken()});if(!response.ok)throw new Error("Source unavailable");const content=await response.text();if(current())textNode.textContent=content.slice(0,50000)+(content.length>50000?"\n… preview truncated":"");}catch{if(current())textNode.innerHTML=`Could not load source preview. ${retry()}`;}})()
+  ]);
 }
 async function assetEditText(slug,encoded){
   const path=decodeURIComponent(encoded),state=ASSET_LIB[slug],item=state?.data.items.find(x=>x.path===path);if(!item)return;

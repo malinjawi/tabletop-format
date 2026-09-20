@@ -312,7 +312,9 @@ export function createLocalStore({ root, gamesDir, lfsUrl = null, includeFixture
         // them through UTF-8 can corrupt bytes, while the default buffer makes
         // larger valid assets look absent. Keep this path byte-for-byte and
         // explicitly bounded to the accepted per-asset size.
-        return Buffer.from(execFileSync("git", ["-C", root, "show", `${ref}:${rel(slug)}/${relPath}`], {
+        // Require a blob: `git show` also succeeds for directories and would
+        // expose a tree listing where this file-only API promises null.
+        return Buffer.from(execFileSync("git", ["-C", root, "cat-file", "blob", `${ref}:${rel(slug)}/${relPath}`], {
           encoding: null,
           maxBuffer: MAX_ASSET_BYTES + 64 * 1024,
           stdio: ["ignore", "pipe", "ignore"],

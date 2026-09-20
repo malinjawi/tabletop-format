@@ -123,11 +123,13 @@ for t in tools/*.mjs tools/lib/*.mjs; do node --check "$t" 2>/dev/null || bad "s
 ok "all .mjs tools pass node --check"
 check "source-overlay editor field contract" node tools/source-overlay-field-audit.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "versioned adapter contracts" node tools/check-adapters.mjs
+check "production journey event fixtures remain open without changing the clock" node tools/test-journey-jams.mjs
 check "ownerless project access fails closed; only explicit public sandboxes open" node tools/test-project-access.mjs
 check "protected project identity and sandbox metadata fail closed" node tools/test-project-ref.mjs
 check "trusted project ownership is restored during repository reindex" node tools/test-project-reindex.mjs
 check "hosted renames and identity conflicts reconcile safely" node tools/test-hosted-project-reindex.mjs
 check "private artifact caches and stale game indexes fail closed" node tools/test-private-cache-and-stale-index.mjs
+check "repository file previews read exact blobs without project materialization" node tools/test-repository-file.mjs
 check "local private preview serves pinned assets without public access" node tools/test-local-private-preview.mjs
 check "Forgejo privacy and repository-bound identity reconciliation" node tools/test-store1-forgejo.mjs
 check "immutable release bytes survive cache loss and reject corruption" node tools/test-release-vault.mjs

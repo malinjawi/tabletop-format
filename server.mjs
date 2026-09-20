@@ -2631,22 +2631,22 @@ gw.route("GET", "/api/games/:slug/repository/file/*", async (ctx) => {
   const path = ctx.params["*"];
   if (!isReviewablePath(path)) return ctx.send(404, { error: "not a reviewable game source file" });
   const ref = ctx.url.searchParams.get("ref");
-  let buf = null, cleanup = null;
-  try {
-    if (!ref || ref === "HEAD") {
-      buf = path.startsWith("assets/") ? await store.getAsset(slug, path) : await store.readFile(slug, path);
-    } else {
-      const materialized = await store.materialize(slug, ref);
-      cleanup = materialized.cleanup;
-      const full = join(materialized.dir, path);
-      if (existsSync(full) && statSync(full).isFile()) buf = readFileSync(full);
-    }
-    if (!buf) return ctx.send(404, { error: "no such file at this version" });
-    const ext = repoExt(path);
-    ctx.sendRaw(200, buf, { "content-type": MIME[ext] ?? "application/octet-stream",
-      "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE),
-      "content-disposition": `inline; filename="${path.split("/").pop().replace(/[\"\\]/g, "")}"` });
-  } finally { if (cleanup) cleanup(); }
+  let buf;
+  if (!ref || ref === "HEAD") {
+    buf = path.startsWith("assets/") ? await store.getAsset(slug, path) : await store.readFile(slug, path);
+  } else {
+    // A thumbnail needs one blob, not an extracted copy of every project file.
+    // Resolve first to preserve project-scoped refs and release-tag aliases;
+    // getAssetAt also resolves only the requested asset's LFS pointer.
+    const exactRef = await store.resolveRef(slug, ref);
+    buf = path.startsWith("assets/") ? await store.getAssetAt(slug, exactRef, path)
+      : await store.fileAt(slug, exactRef, path);
+  }
+  if (!buf) return ctx.send(404, { error: "no such file at this version" });
+  const ext = repoExt(path);
+  ctx.sendRaw(200, buf, { "content-type": MIME[ext] ?? "application/octet-stream",
+    "cache-control": await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE),
+    "content-disposition": `inline; filename="${path.split("/").pop().replace(/[\"\\]/g, "")}"` });
 }, "serve a reusable file from current HEAD or an exact historical ref");
 
 gw.route("PUT", "/api/games/:slug/repository/file/*", async (ctx) => {

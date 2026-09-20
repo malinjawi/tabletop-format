@@ -273,6 +273,7 @@ start_gateway(){
     --publish "127.0.0.1:$gateway_port:8420" --read-only --tmpfs /tmp:size=536870912,mode=1777 \
     --volume "$volume:/app/data" --volume "$vault_volume:/app/vault" \
     --volume "$secret_volume:/run/secrets:ro" \
+    --volume "$scratch/jams:/app/jams:ro" \
     --env STORE1=forgejo --env FORGE_URL="http://$forgejo_host:3000" \
     --env DB=postgres --env PGHOST="$database_host" --env PGPORT=5432 \
     --env PGDATABASE=platform --env PGUSER=platform \
@@ -322,6 +323,12 @@ if ! admin_create_output="$(docker exec --user 1000 "$source_forgejo" forgejo ad
 fi
 printf '  ✓ disposable administrator created\n'
 source_journey_log="$scratch/source-journey.log"
+if [ -n "$gateway_image" ]; then
+  # The real production clock must remain enabled. Supply isolated event data
+  # with a current window rather than relying on the sample jam's fixed dates.
+  # Both source and restored containers receive the same read-only fixture.
+  node "$repo_dir/tools/journey-jams.mjs" "$scratch/jams"
+fi
 if [ -n "$gateway_image" ]; then
   source_gateway_token="$(mint_forge_token "$source_origin" source-gateway)"
   [ -n "$source_gateway_token" ] || { printf 'could not mint source gateway token\n' >&2; exit 1; }
