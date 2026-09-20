@@ -56,6 +56,7 @@ run "account-scoped local draft discovery and export" node tools/ui-draft-recove
 run "artwork loading, retry, and navigation" node tools/ui-artwork-loading.mjs
 run "truthful Sheets setup and recovery" node tools/ui-sheets-connector.mjs
 run "selected downloads through sign-in and retry" node tools/ui-export-selection.mjs
+run "private title-only creation and optional brief" node tools/ui-simple-start.mjs
 run "responsive Explore browser smoke" node tools/ui-smoke.mjs
 run "functional integration" ./e2e.sh
 run "local two-user golden journey" ./journey.sh

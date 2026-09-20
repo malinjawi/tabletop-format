@@ -1203,7 +1203,7 @@ gw.route("GET", "/api/me/export", async (ctx) => {
     ...data });
 }, "download the authenticated participant's allowlisted account and activity data");
 /** @param {any} u @param {string} title @param {string|undefined} csv @param {string} authorStr
- * @param {{brief?: any, license?: string, csvImport?: any}} [options] */
+ * @param {{brief?: any, license?: string, csvImport?: any, empty?: boolean}} [options] */
 async function hostGame(u, title, csv, authorStr, options = {}) {
   const { brief, license = "CC-BY-4.0", csvImport = null } = options;
   const effectiveCsvImport = csv?.trim() ? (csvImport ?? prepareCsvImport(csv)) : null;
@@ -1217,11 +1217,11 @@ async function hostGame(u, title, csv, authorStr, options = {}) {
   const tmp = mkdtempSync(join(tmpdir(), "csv-"));
   try {
     let imp;
-    if (brief && !csv?.trim()) {
-      writeFileSync(join(tmp, "brief.json"), JSON.stringify(brief, null, 2) + "\n");
+    if (options.empty || (brief && !csv?.trim())) {
+      if (brief) writeFileSync(join(tmp, "brief.json"), JSON.stringify(brief, null, 2) + "\n");
       imp = spawnSync(process.execPath,
         [join(ROOT, "tools/new-game.mjs"), join(tmp, "game"), "--title", title.trim(),
-          "--license", license, "--brief", join(tmp, "brief.json")],
+          "--license", license, ...(brief ? ["--brief", join(tmp, "brief.json")] : [])],
         { encoding: "utf8" });
     } else {
       writeFileSync(join(tmp, "in.csv"), csv ?? "name,type,text\nFirst Card,card,Hello world.");
@@ -1264,7 +1264,7 @@ async function hostGame(u, title, csv, authorStr, options = {}) {
     if (v.status !== 0) return { error: { code: 422, body: { error: "imported game failed validation", report: v.stdout.split("\n") } } };
     const commitMessage = brief
       ? `start game: ${title.trim()}\n\nDesign anchor: ${brief.starting_point}\nFirst playable slice: ${brief.mvp?.playable_slice || "not specified"}`
-      : `new game: ${title.trim()} (${u.handle}/${repoSlug})\n\nimported from CSV via platform`;
+      : `new game: ${title.trim()} (${u.handle}/${repoSlug})\n\n${options.empty ? "empty project" : "imported from CSV"} via platform`;
     const { sha } = await store.createGame(storageKey, join(tmp, "game"),
       commitMessage, authorStr);
     await reindexGames();
@@ -1289,7 +1289,9 @@ gw.route("POST", "/api/games", async (ctx) => {
   // THE HOSTING VERB: start from intent or bring structured components; both
   // leave as a hosted, owned, validated, versioned game.
   const u = await requireAuth(ctx); if (!u) return;
-  const { title, csv, csv_mapping: csvMapping, brief, license } = await json(ctx);
+  const { title, csv, csv_mapping: csvMapping, brief, license, empty = false } = await json(ctx);
+  if (typeof empty !== "boolean" || (empty && (csv != null || brief != null)))
+    return ctx.send(422, { error: "empty must be a boolean and cannot be combined with CSV or a design brief" });
   if (!title?.trim()) return ctx.send(422, { error: "title required" });
   if (brief != null && (typeof brief !== "object" || Array.isArray(brief)))
     return ctx.send(422, { error: "brief must be an object" });
@@ -1299,7 +1301,7 @@ gw.route("POST", "/api/games", async (ctx) => {
     if (!csvImport.can_import) return ctx.send(422, { error: "CSV mapping is not ready", report: csvImport.errors });
     normalizedCsv = csvImport.normalized_csv;
   }
-  const r = await hostGame(u, title.trim(), normalizedCsv, await authorOf(ctx), { brief, license, csvImport });
+  const r = await hostGame(u, title.trim(), normalizedCsv, await authorOf(ctx), { brief, license, csvImport, empty });
   if (r.error) return ctx.send(r.error.code, r.error.body);
   ctx.send(201, { slug: r.slug, repo_slug: r.repo_slug, namespace: r.namespace,
     project_id: r.project_id, owner: u.handle, commit: r.sha,
