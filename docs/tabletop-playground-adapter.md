@@ -28,7 +28,9 @@ The ZIP contains:
 
 Forge's export worker also publishes `ttpg-manifest.json` next to the ZIP. A
 release records both files' sizes and SHA-256 values at the immutable source
-commit, using the same derived-cache recovery rules as other adapters.
+commit. Published bytes and receipts are sealed in the durable release vault;
+a missing or corrupt published artifact is refused, never silently re-rendered
+from the disposable cache.
 
 ## Mapping
 

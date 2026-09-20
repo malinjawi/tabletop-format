@@ -46,8 +46,29 @@ docker run --rm --read-only --tmpfs /tmp:size=67108864,mode=1777 \
   "$image_id" /bin/sh -ec 'node --version && chromium --version && git --version && python3 --version && python3 tools/test_print_ready.py'
 
 printf '\n== Qualify exact gateway image with real stores and synchronized recovery ==\n'
+qualification_log="$(mktemp "${TMPDIR:-/tmp}/forge-image-qualification.XXXXXX")"
+trap 'rm -f "$qualification_log"' EXIT
 FORGE_GATEWAY_TEST_IMAGE="$image_id" \
-  "$root/tools/disposable-restore-drill.sh"
+  "$root/tools/disposable-restore-drill.sh" | tee "$qualification_log"
+
+if [ -n "${FORGE_QUALIFICATION_RECEIPT_PATH:-}" ]; then
+  node --input-type=module - "$qualification_log" "$candidate_revision" "$image_id" "$FORGE_QUALIFICATION_RECEIPT_PATH" <<'NODE'
+import {readFileSync,writeFileSync} from "node:fs";
+const [log,commit,imageId,output]=process.argv.slice(2);
+const prefix="FORGE_RESTORE_ARTIFACT_RECEIPT ";
+const lines=readFileSync(log,"utf8").split("\n").filter(line=>line.startsWith(prefix));
+if(lines.length!==1)throw new Error("Expected exactly one restored-artifact receipt");
+const restored=JSON.parse(lines[0].slice(prefix.length));
+if(restored.format!=="forge-restore-artifact-receipt"||!restored.artifacts?.length
+  ||restored.artifacts.some(a=>!Number.isSafeInteger(a.bytes)||a.bytes<=0||!/^[a-f0-9]{64}$/.test(a.sha256)))
+  throw new Error("Invalid restored-artifact evidence");
+const ciRun=process.env.GITHUB_RUN_ID
+  ?`${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`:null;
+writeFileSync(output,JSON.stringify({format:"forge-qualification-receipt",version:1,
+  source_commit:commit,ci_run:ciRun,local_image_id:imageId,registry_reference:null,
+  image_recovery_passed:true,product_gate_passed:null,restored_fixture:restored},null,2)+"\n",{flag:"wx",mode:0o600});
+NODE
+fi
 
 printf '\nPRODUCTION IMAGE QUALIFIED — %s records %s and reproduced the frozen release after restore.\n' \
   "$image_id" "$candidate_revision"

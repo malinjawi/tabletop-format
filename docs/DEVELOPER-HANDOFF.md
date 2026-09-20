@@ -1,30 +1,43 @@
 # Forge developer team handoff
 
-This document gives a five-person engineering team a shared starting point. It records a historical qualified software baseline on **2026-09-11**, the boundaries that must survive changes, and five proposed first-week slices. The slices are assignments to agree on, not completed work. These five developers are separate from the five independent creators required for the product pilot.
+Updated **2026-09-20** for the v1 private-pilot candidate. The five-person
+engineering team is separate from the five independent creators required for
+the product pilot. The active scope and evidence gates are in [V1-PLAN](V1-PLAN.md).
 
-Forge has a substantial design-to-release workflow and a qualified published image. It is not yet a demonstrated public service: complete publication reconciliation, actual-host evidence, native/physical output checks, and independent-user evidence remain open.
+Forge can create, review, collaborate on and release an exact game version.
+This milestone improves the reliability of that workflow: stable artwork loading,
+saved home-print recipes, account-scoped draft export, whole-publication auditing,
+bounded verified downloads, title-only private projects and interrupted-release
+recovery. Actual-host, native-app, printer and independent-user evidence remain
+open. A qualified image is not a deployed service or proof of adoption.
 
-The [v1 execution plan](V1-PLAN.md) tracks the accepted scope, ordered engineering
-slices, and remaining evidence gates from September 20 onward. Use its execution
-record for current work; the qualification receipts below remain historical.
+## Start from qualified source
 
-## Start from the recorded baseline
+Use protected `main` from [malinjawi/tabletop-format](https://github.com/malinjawi/tabletop-format).
+Before calling a checkout qualified, find its exact commit in the
+[qualification runs](https://github.com/malinjawi/tabletop-format/actions/workflows/quality.yml)
+and require both **Product and protocol gate** and **Exact image and recovery
+gate** to pass. A main run also publishes the same recovered image to GHCR.
+The `qualification-receipt-<commit>` artifact connects the source commit, CI run,
+local image ID, immutable registry deployment reference and actual restored-file
+hashes. Fixture output hashes describe the rights-cleared Tidepool journey, not
+a user's Netrunner release. PR receipts have no registry deployment reference.
 
-Use the repository's current protected `main` for new branches and inspect its [latest qualification runs](https://github.com/malinjawi/tabletop-format/actions/workflows/quality.yml). The following is the prior qualified baseline beneath this developer-onboarding work, not a claim that `e2f0618` remains the latest commit or image after this handoff merges:
+Work entered through PRs [#6](https://github.com/malinjawi/tabletop-format/pull/6)
+(artwork), [#7](https://github.com/malinjawi/tabletop-format/pull/7) (printing),
+[#8](https://github.com/malinjawi/tabletop-format/pull/8) (draft discovery),
+[#9](https://github.com/malinjawi/tabletop-format/pull/9) (publication inventory),
+[#10](https://github.com/malinjawi/tabletop-format/pull/10) (simple start),
+[#11](https://github.com/malinjawi/tabletop-format/pull/11) (download delivery),
+and [#12](https://github.com/malinjawi/tabletop-format/pull/12) (release recovery
+and integration). PR status and its exact checks govern acceptance; this list
+alone does not establish that the running service includes them.
 
-| Evidence | Recorded identity or result |
-| --- | --- |
-| Repository | [malinjawi/tabletop-format](https://github.com/malinjawi/tabletop-format) |
-| Source commit | [`e2f06188056e965f551574cde15d0ad5b5a7e146`](https://github.com/malinjawi/tabletop-format/commit/e2f06188056e965f551574cde15d0ad5b5a7e146) |
-| Change at the recorded baseline | [PR #4: creator workflow and connector outcome cleanup](https://github.com/malinjawi/tabletop-format/pull/4), following [PR #3: preview assets and launch checks](https://github.com/malinjawi/tabletop-format/pull/3) and [PR #2: authoring and durable releases](https://github.com/malinjawi/tabletop-format/pull/2) |
-| Qualification run | [34592469112](https://github.com/malinjawi/tabletop-format/actions/runs/34592469112), a push to `main`; product/protocol, exact-image/recovery, and image publication all succeeded |
-| Registry deployment reference | `ghcr.io/malinjawi/forge-platform@sha256:dca97049319c977993aa0cf980295108b175c27e946b2415ff84ed820f1d3004` |
-| Qualified local image ID in that run | `sha256:0712deabfd203e6e8dc44a443c82eb07a054e5d6a7ccf73ba3e6464195770b60` |
-| CI toolchain | Node **24.20.0**, Python **3.11**, locked dependencies; production dependency image digests in [qualified-images.env](../deploy/qualified-images.env) |
-
-The registry digest and local image ID identify different layers of the image system; do not substitute one for the other. The workflow checks the image's OCI source revision, preserves the image used for recovery, and publishes those same bytes after both gates pass. A later commit needs its own qualification and image receipt. Image publication does not deploy Forge.
-
-The recorded run passed **207 functional checks**, the full browser workflow, focused preview/Sheets/download browser checks, **109 local journey assertions**, **112 protocol-mock journey assertions**, and **111 storage checks on each of SQLite and PostgreSQL**. The separate exact-image job ran a real Forgejo journey and **64 restore checks**, serving the fixture's frozen release files from the restored vault with an empty disposable cache. These counts describe separate suites; they are not interchangeable coverage measures.
+Keep Node **24.20.0**, Python **3.11** and locked dependencies. Production service
+image pins live in [qualified-images.env](../deploy/qualified-images.env).
+Registry digests and local image IDs identify different layers; never substitute
+one for the other. Historical milestone reports remain useful history, but their
+counts and digests do not qualify new code.
 
 Follow [Development setup](DEVELOPMENT.md), starting with the Node **24.20.0** pin in [.nvmrc](../.nvmrc), then `npm run setup:dev` and `npm run dev`. The development launcher binds to loopback on port **8420** and uses an ignored, isolated `data/dev` runtime seeded with Ember only. Each developer should have their own checkout and runtime, rather than a shared live authoring store.
 
@@ -68,54 +81,32 @@ The server and browser template are large files. Extract a narrow module when ne
 - Read related authored state from one exact snapshot, validate the candidate, then recheck its baseline inside the write boundary. A dry run writes no game source. Related content, design, assets, rights, and setup changes land together.
 - Preserve card/printing IDs, project identity, provenance, and contributor credit across imports, editions, reviews, and releases.
 - Cover both a maintainer's direct save and a contributor's no-write-access path when changing authoring. A proposal must not silently overwrite the upstream edition.
-- Browser recovery is account/project/version scoped. Exact-base drafts may restore; older drafts currently remain keep/discard copies. Do not silently apply one over newer source or expose it to another signed-in account.
+- Browser recovery is account/project/version scoped. Exact-base drafts may restore; older drafts can be found and exported through account-menu Recovery with their original base and staged assets. Do not silently apply one over newer source or expose it to another signed-in account.
 - The loopback private-fixture preview exception is development-only and read-only. It does not make normal private projects public. Production refuses internal test fixtures, and restricted historical assets remain `private, no-store`.
 - Preserve the release order: **exact exports → sealed vault → pending publication journal → protected Git tag → finalized records**. Retries use original sealed evidence and publisher identity. Broken or mixed evidence refuses service.
 - Keep cache and vault separate. A backup needs coordinated Git/Forgejo, both application/Forgejo databases, LFS object storage, the release vault, and separately protected installation identity. A source bundle is not a complete product backup.
 
 ## Five proposed ownership areas
 
-Agree on one owner and one reviewer for each slice. These are first-week outcomes; broader ownership does not authorize unrelated rewrites. Coordinate edits to `server.mjs`, the browser template, migrations, and CI before working concurrently.
+Agree on an owner and reviewer for each area. Coordinate edits to the large
+server and browser template. These assignments maintain and validate the
+implemented milestone; they do not authorize deployment or unrelated rewrites.
 
-### 1. Studio draft recovery
+| Owner | First useful outcome | Evidence to record |
+| --- | --- | --- |
+| Creator experience | Observe a newcomer creating a private project, reviewing a card and downloading a proof; fix the highest-impact friction. | Completion, assistance, failure/retry behavior, keyboard and small-screen checks. |
+| Print and adapters | Verify saved dimensions, shared cuts and calibration on the actual printer; smoke-test the selected native app. | Measured sheet/card sizes, printer/app version and exact artifact hashes; update only support claims actually proved. |
+| Recovery and integrity | Exercise account-menu draft export and interrupted-release resume; operate the whole-publication audit. | Original base/art retained, no cross-account disclosure, unchanged sealed bytes, stopped-writer source/restored inventories. |
+| Runtime and deployment | Prepare the single supported private deployment within the zero-spend constraint; measure representative concurrent jobs on that host. | Access/TLS, resource and disk budgets, contacts, off-host backup/restore ownership and actual host latency/memory. No paid activation or invitations without authorization. |
+| Integration and pilot | Reproduce clean setup and the original-game two-person flow; keep the current receipt and coordinate the independent creator cohort. | Accepted commit and both gates, image/output hashes, second-developer setup result, pilot completion/assistance/repeat-use outcomes. |
 
-**Own:** Studio recovery functions in the browser template and their focused browser coverage. Consult the authoring reviewer before changing save semantics.
-
-**First-week outcome:** a discoverable list of this account's retained Studio drafts, including older versions, with a usable recovery export and an explicit explanation of the original base. Preserve staged artwork and metadata. Keep replay into newer source out of this first slice unless a reviewed conflict design is agreed.
-
-**Accept when:** an interrupted session's older draft can be found and exported without developer tools; another account cannot see it; listing/exporting writes no game source; existing exact-base restoration still passes. The interface must continue to say that exporting an old draft has not applied it.
-
-### 2. First-project and spreadsheet workflow
-
-**Own:** new-game onboarding, column mapping and the creator guidance around those actions. Coordinate with the Sheets contract owner rather than changing sync semantics as a UX shortcut.
-
-**First-week outcome:** shorten the idea path so creating a named private project does not require completing the entire design brief first. Keep the existing brief editor and preserve existing brief data. Retain explicit CSV mapping and the attach → review → commit sequence for Sheets.
-
-**Accept when:** a new creator can create the project, build one card system, save it and download a first proof; existing CSV/XLSX imports and failed Sheet attachment remain recoverable; no success message claims cards were committed merely because a project or connection exists. Record where a person unfamiliar with Forge needs help, without treating that one session as a completed pilot.
-
-### 3. Publication reconciliation and recovery
-
-**Own:** release-vault/Store-2 reconciliation, release publication routes and backup/restore integration. Another backend developer reviews every change affecting immutable evidence.
-
-**First-week outcome:** a read-only inventory report comparing finalized and pending publication records, all sealed vault manifests and required blobs, and corresponding Git/tag identities. Classify missing, contradictory, recoverable and unreferenced states explicitly. Establish an interface the recovery UI can consume later.
-
-**Accept when:** fixtures cover finalized-with-missing-blob, pending-but-sealed, sealed-before-journal, wrong tag/manifest binding and healthy publication on both DB drivers. The report never invents replacement bytes or deletes orphans. This closes the public-launch blocker only after the same audit is required before accepting a backup and after restore, and the resulting exact image passes recovery qualification.
-
-### 4. Large release-download delivery
-
-**Own:** one exact-release download path through the vault and gateway, its integrity checks, and performance measurement.
-
-**First-week outcome:** establish a reproducible large-PDF benchmark, then replace whole-file synchronous buffering on that path with bounded delivery while preserving receipt verification and access checks. Scope cancellation and range behavior explicitly; unsupported ranges must have deliberate HTTP behavior.
-
-**Accept when:** memory and unrelated-request latency are measured against the baseline with a representative large file; valid complete/range responses have correct bytes and headers; cancellation closes resources; unauthorized or corrupt content is refused. Do not gain speed by skipping hash verification or treating a disposable cache entry as publication authority.
-
-### 5. Integration and qualification
-
-**Own:** clean-clone onboarding verification, focused browser/contract suites, CI receipts and the team's integration checklist. Review the release and download slices with their owners.
-
-**First-week outcome:** reproduce the README setup on a clean machine/checkout with the qualified toolchain, run one original-game two-user workflow, and maintain a compact receipt linking the accepted commit, CI run, image digest and tested outputs. Add a focused failure case for any new user-visible path, rather than relying only on a successful API response.
-
-**Accept when:** a second developer follows the documented setup without inherited local files; decoded image/font failures fail preview checks; Sheets and selected downloads survive sign-in/failure as specified; the merged candidate passes both protected gates. Record actual-host, native-app, printer and cohort checks as pending until their specific evidence exists. This role does not authorize production deployment.
+Use [Draft recovery in the creator guide](CREATOR-GUIDE.md),
+[Release recovery](RELEASE-RECOVERY.md), [Publication inventory](PUBLICATION-INVENTORY.md),
+[Verified download delivery](DOWNLOAD-DELIVERY.md) and [Home printing](HOME-PRINTING.md)
+for the implemented contracts. Reopening a completed slice requires a concrete
+failure or new acceptance need. Preserve the current Node/Python architecture;
+consider a narrow Rust worker only after a measured bottleneck and compatibility
+proof justify it.
 
 ## Choose validation for the changed boundary
 
@@ -134,14 +125,34 @@ The deployed preview preflight checks one selected public card project, samples 
 
 ## Open evidence and product boundaries
 
-1. **Complete publication reconciliation remains unfinished engineering.** The deployment runbook explicitly blocks public deployment until the all-release audit passes on backup and restore. The existing single-fixture image restore does not prove a whole production inventory is consistent.
-2. **Actual-host readiness is separate.** Stable DNS/TLS, database/object/vault configuration, operator and support/rights contacts, off-host backups, restore ownership and anonymous public-preview evidence still need a real deployment record.
-3. **Private Sheets needs deployment-specific proof.** A historical private-Sheet commit worked through a disposable tunnel. The operator's pinned add-on on the stable origin must repeat an attributed commit before that deployment is qualified. Controlled-response UI tests do not replace Google-hosted evidence.
-4. **Native clients and physical outputs still need smoke tests.** Record app/version, exact artifact hash and result for TTPG/TTS, selected external editors and printer proofs. TTPG packages are file handoffs, not mod.io publishing; TGC presets do not publish or order through an account.
-5. **Creator adoption is unproven.** No completed five-unaffiliated-creator cohort is established by the current records. Use [the pilot protocol](CONTROLLED-ALPHA-PILOT.md) and measure completion, assistance and a second iteration.
-6. **Retained drafts and interrupted releases lack complete discovery/reapply UI.** Preservation exists, but keep/discard is not finished recovery and retrying a known release tag is not a discoverable recovery center.
-7. **Large-PDF serving still buffers and verifies whole files synchronously.** See the vault's `readArtifact` path and the server's released-artifact response path before making performance claims.
-8. **Documentation/catalog history needs care.** Older reports contain superseded counts and statuses. The adapter catalog omits a standalone TTPG entry and has some older fidelity descriptions; inspect the actual exporter and its contract. Use the [September 11 UX review](FORGE-UX-REVIEW-2026-09-11.md) for completed UX fixes, so the old retrospective's Sheets-success and hardcoded-card-count findings are not reopened as new work.
-9. **Fixture presence is not permission to distribute it.** Third-party fixtures remain in the currently tracked source as well as repository history. Cloning the repository grants no additional permission for their content. Use the Ember development seed or other rights-cleared original material for public demonstrations; inspect each asset's own terms. Excluding fixtures from the production image isolates them but does not resolve their distribution or historical rights questions.
+1. **Actual-host readiness:** stable HTTPS, private access, durable stores,
+   operator/support/rights contacts, off-host backups and a demonstrated restore
+   need a deployment record. A passing disposable restore is engineering
+   evidence; repeat the mandatory whole-publication audit on the real backup.
+2. **Private Sheets:** repeat an attributed private-Sheet commit using the
+   pinned add-on against the deployed origin. Controlled-response tests and a
+   historical tunnel session do not qualify a new deployment.
+3. **Native apps and printing:** record target version, exact artifact hash and
+   result. TTPG is a beta file handoff, not mod.io publishing; TGC presets do not
+   publish or order through an account. PDF geometry cannot establish physical
+   printer accuracy or sleeve fit.
+4. **Creator adoption:** no completed five-independent-creator cohort is claimed.
+   Use [the pilot protocol](CONTROLLED-ALPHA-PILOT.md), including a second
+   iteration, rather than equating developer tests with user success.
+5. **Recovery limits:** old draft export preserves evidence without applying it
+   to newer source. Release resume requires the original publisher and verified
+   seal. Contradictory, missing and legacy evidence can require operator work;
+   the UI never silently repairs it with a new render.
+6. **Capacity limits:** download snapshots and vault workers are bounded per
+   process. Local benchmark numbers are not host guarantees. Small synchronous
+   metadata/Git operations still exist; profile actual workloads before claiming
+   every request is nonblocking or considering an architecture rewrite.
+7. **Rights:** third-party fixtures remain in tracked source and history. Their
+   presence grants no distribution permission. Use Ember or original,
+   rights-cleared material for demonstrations. Excluding fixtures from a
+   production image does not resolve the terms of content elsewhere in the repo.
 
-Use [FORGE-HANDOFF.md](FORGE-HANDOFF.md) for recovered decisions and source lineage, [the retrospective](FORGE-RETROSPECTIVE-2026-09-11.md) for why these gaps matter, and [deploy/DEPLOY.md](../deploy/DEPLOY.md) for operations. Record each completed slice with its concrete behavior, acceptance evidence and remaining limit. Do not carry an older commit's green result forward to new code.
+Use [FORGE-HANDOFF.md](FORGE-HANDOFF.md) for source lineage and older decisions,
+[the retrospective](FORGE-RETROSPECTIVE-2026-09-11.md) for earlier findings,
+and [deploy/DEPLOY.md](../deploy/DEPLOY.md) for operations. Older findings must
+be checked against the current implementation before reopening them.

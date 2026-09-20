@@ -122,6 +122,7 @@ assert(release.print_deliveries?.length===1
   "exact printer delivery and immutable approval evidence survived PostgreSQL restore",
   release.print_deliveries);
 
+const verifiedArtifacts=[];
 const verifyArtifact=async(name,label=name)=>{
   const expected=release.artifacts.find(item=>item.name===name&&item.status==="ready");
   assert(!!expected,`${label} remains declared in the frozen release`);
@@ -133,6 +134,7 @@ const verifyArtifact=async(name,label=name)=>{
     sha256:Buffer.isBuffer(result.data)?sha256(result.data):null};
   assert(Buffer.isBuffer(result.data)&&actual.bytes===expected.bytes&&actual.sha256===expected.sha256,
     `${label} bytes match the pre-backup release receipt exactly`,{expected,actual,status:result.response.status});
+  verifiedArtifacts.push({name,...actual});
 };
 const projectName=release.artifacts.find(item=>item.name.endsWith(".forge-project.zip"))?.name;
 assert(release.artifacts.some(item=>item.name==="tidepool-ttc.zip")&&projectName
@@ -150,3 +152,10 @@ assert(meAlice.games.includes("tidepool")&&meBob.games.includes("tidepool-bob")
   {alice:meAlice,bob:meBob});
 
 console.log(`\nRESTORE VERIFIED — ${checks} checks, exact released artifacts recovered from the durable vault with Store 3 empty.`);
+
+// Public disposable fixture evidence only: no session tokens or user records.
+console.log("FORGE_RESTORE_ARTIFACT_RECEIPT "+JSON.stringify({
+  format:"forge-restore-artifact-receipt",version:1,game:"tidepool",tag:release.tag,
+  source_sha:release.sha,manifest_sha256:release.vault.manifest_sha256,
+  artifacts:verifiedArtifacts,
+}));

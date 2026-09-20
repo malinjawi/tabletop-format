@@ -1,6 +1,6 @@
 [
   {
-    "id": "csv-cards", "name": "CSV card snapshot", "version": 2, "stage": "snapshot-import", "status": "stable",
+    "id": "csv-cards", "name": "CSV card snapshot", "version": 3, "stage": "snapshot-import", "status": "stable",
     "capabilities": ["inspect", "import", "export"], "components": ["cards", "printings"], "tested_upstream": "RFC 4180-compatible CSV",
     "deterministic": true, "fidelity": { "level": "canonical", "limitations": ["One-file imports model one primary printing per card; use a Forge project or Sheets Printings tab for multiple printings."] },
     "credentials": { "required": false, "kind": null, "storage": "none" }, "network": [],
@@ -110,6 +110,51 @@
     "deterministic": true, "fidelity": { "level": "artifact-only", "limitations": ["Private-project hosted textures require an authenticated Forge session; publish a release before sharing a mod.", "Setup counter initial values become native TTS counters; declared minimum and maximum remain provenance metadata rather than scripted enforcement.", "Custom-art dice fail closed until a validated atlas and face rotation map are supplied.", "The v4 staged-object expansion has automated contract coverage but still requires a human import smoke in the proprietary TTS client before promotion to stable."] },
     "credentials": { "required": false, "kind": null, "storage": "none" }, "network": ["immutable Forge artifact URLs for shared saves"],
     "limits": { "max_bytes": 536870912, "timeout_ms": 180000 }, "provenance": "embedded", "entrypoint": "POST /api/games/:slug/export/tts"
+  },
+  {
+    "id": "tabletop-playground",
+    "name": "Tabletop Playground staged package",
+    "version": 1,
+    "stage": "artifact-export",
+    "status": "beta",
+    "capabilities": [
+      "export"
+    ],
+    "components": [
+      "cards",
+      "backs",
+      "decks",
+      "setup",
+      "tokens",
+      "counters",
+      "tiles",
+      "dials",
+      "boards",
+      "standees"
+    ],
+    "tested_upstream": "Official object-template schema revision 6ec22130a465096b3ae0808e746a9634fd92f0ca; native-client import not yet qualified",
+    "deterministic": true,
+    "fidelity": {
+      "level": "artifact-only",
+      "limitations": [
+        "Actual import in the proprietary Tabletop Playground client still requires a recorded human smoke test.",
+        "Generic components use flat Card models; custom dice fail closed without native model and rotation support.",
+        "Counter initial values are staged; bounds are metadata, not scripted enforcement.",
+        "Local package handoff only; no mod.io account publication or native-editor round trip."
+      ]
+    },
+    "credentials": {
+      "required": false,
+      "kind": null,
+      "storage": "none"
+    },
+    "network": [],
+    "limits": {
+      "max_bytes": 536870912,
+      "timeout_ms": 180000
+    },
+    "provenance": "manifest",
+    "entrypoint": "POST /api/games/:slug/export/ttpg"
   },
   {
     "id": "tabletop-club", "name": "Tabletop Club package", "version": 1, "stage": "artifact-export", "status": "stable",
