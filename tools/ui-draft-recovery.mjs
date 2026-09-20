@@ -105,12 +105,21 @@ try {
       slug:"ember",ref:"a".repeat(40),saved_at:"2026-01-01T00:00:00Z",state:{pieces:[{id:"counter",name:"Retained piece"}],design:{families:[]},setup:{id:"original-setup"}}}));
   });
   await page.locator(".account-menu summary").click();
+  await page.waitForFunction(()=>{const r=document.querySelector(".account-popover").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;});
+  const menuBounds=await page.locator(".account-popover").boundingBox();
+  assert.ok(menuBounds.x>=0&&menuBounds.x+menuBounds.width<=390,"the account menu stays inside the mobile viewport");
   await page.getByRole("link",{name:"Local drafts",exact:true}).click();
+  assert.equal(await page.locator(".account-menu").getAttribute("open"),null,"navigation closes the account menu");
   await page.locator("#recovery-list").waitFor();
   assert.equal(await page.locator("[data-recovery-export]").count(),2);
   assert.ok(!(await page.locator("#view").innerText()).includes("Other account private"));
   assert.ok((await page.locator("#view").innerText()).includes(record.ref));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  if(process.env.FORGE_RECOVERY_EVIDENCE_DIR){
+    const evidence=resolve(process.env.FORGE_RECOVERY_EVIDENCE_DIR);mkdirSync(evidence,{recursive:true});
+    await page.locator("#hubtoast").waitFor({state:"hidden"});
+    await page.screenshot({path:join(evidence,"local-drafts-mobile.png"),fullPage:true});
+  }
   const beforeFiles=git("status","--porcelain");
   const downloadPromise=page.waitForEvent("download");
   await page.locator('[data-recovery-export="0"]').focus();await page.keyboard.press("Enter");
@@ -125,6 +134,16 @@ try {
   await page.locator('[data-recovery-export="1"]').click();
   const pieceDownload=await pieceDownloadPromise;await pieceDownload.saveAs(target);
   assert.equal(JSON.parse(readFileSync(target,"utf8")).draft.state.setup.id,"original-setup");
+  // A server-side logout in another tab cannot authorize a stale export button.
+  let lateDownloads=0;page.on("download",()=>lateDownloads++);
+  const loggedOut=await page.request.post(`${origin}/api/auth/logout`,{headers:{"x-forge-browser":"1"}});
+  assert.equal(loggedOut.ok(),true);
+  await page.locator('[data-recovery-export="0"]').click();
+  await page.getByText("Sign in to see this account’s drafts in this browser.",{exact:true}).waitFor();
+  assert.equal(lateDownloads,0,"stale signed-in UI cannot export after server session loss");
+  await page.locator("#authArea").getByRole("button",{name:"Sign in",exact:true}).click();
+  await page.locator("#amHandle").fill("export-test");await page.locator("#amPass").fill("export-password-123");await page.locator("#amSubmit").click();
+  await page.locator("#recovery-list").waitFor();
   // A slow storage response must not overwrite later navigation.
   await page.evaluate(()=>{window.realDraftAll=desDraftAll;desDraftAll=()=>new Promise(resolve=>{window.releaseDraftRead=async()=>resolve(await realDraftAll());});void recoveryPage();});
   await page.waitForFunction(()=>!!window.releaseDraftRead);

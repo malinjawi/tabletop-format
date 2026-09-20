@@ -356,11 +356,16 @@ async function refreshLive(){
     renderAuthArea(); render();
   } catch{}
 }
+function accountMenuPosition(menu){
+  if(!menu.open)return;const popover=menu.querySelector(".account-popover");
+  popover.style.left="auto";popover.style.right="0";
+  if(popover.getBoundingClientRect().left<14){popover.style.left="0";popover.style.right="auto";}
+}
 function renderAuthArea(){
   const el=document.getElementById("authArea");
   if(!LIVE){ el.innerHTML='<a class="btn" href="#recovery">Local drafts</a>'; return; }
   el.innerHTML = ME
-    ? `<details class="account-menu"><summary>@${esc(ME.handle)} ▾</summary><div class="account-popover"><a href="#recovery">Local drafts</a><a href="/api/me/export">Download my data</a><button onclick="signOut()">Sign out</button></div></details>`
+    ? `<details class="account-menu" ontoggle="accountMenuPosition(this)"><summary>@${esc(ME.handle)} ▾</summary><div class="account-popover"><a href="#recovery" onclick="this.closest('details').open=false">Local drafts</a><a href="/api/me/export">Download my data</a><button onclick="signOut()">Sign out</button></div></details>`
     : `<button class="btn" style="background:#e0632f;color:#fff;border:none" onclick="authOpen()">Sign in</button>`;
 }
 function authOpen(mode){ authMode(mode||"login"); document.getElementById("authModal").style.display="flex"; }
