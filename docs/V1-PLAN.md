@@ -33,11 +33,11 @@ workflow in [CONTRIBUTING](../CONTRIBUTING.md).
 | --- | --- | --- | --- |
 | V1-01 | Merged and image published | Finish existing artwork loading and exact-file preview changes | Reserved image geometry; decoded pixels before ready; retry for missing/corrupt images; keyboard/mobile/reduced-motion coverage; filtering preserves focus and images; late responses cannot overwrite navigation; historical blobs and LFS preserve access/version boundaries. |
 | V1-02 | Merged and main qualification passed; physical proof open | Repeatable home printing | Persisted, reviewed print recipe with actual insert dimensions distinct from sleeve exterior size, A4/Letter, gutters/shared cuts, fronts/duplex as supported, and calibration output. Verify exported geometry, frozen recipe identity, and a physical proof. Extend existing print infrastructure rather than adding a competing renderer. |
-| V1-03 | Draft discovery merged; release discovery pending | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
-| V1-04 | Merged; main qualification pending | Complete publication reconciliation | Read-only inventory across finalized/pending database publications, every sealed manifest/blob, and Git tag/source identity. Classify missing, contradictory, recoverable and unreferenced states. Both database drivers and failure fixtures pass; require the audit for backup acceptance and after restore; qualify the exact resulting image. |
-| V1-05 | Pending | Responsive long operations | Measure representative large-download memory, first-byte time and unrelated-request latency. Bound verification/delivery without serving unverified/corrupt bytes. Deliberate range/cancellation behavior, bounded concurrent jobs, and remaining request-time blocking work moved off HTTP handling. Show truthful progress/failure/retry. |
-| V1-06 | Locally verified; protected integration pending | Simple first useful workflow | A named private project does not require a full design brief. A newcomer imports/reviews/commits cards, adds credited artwork, and downloads a proof. Preserve brief data, explicit import review, and Sheet attach versus commit distinctions. |
-| V1-07 | Pending | Integrate and qualify candidate | Clean-checkout setup; original-game two-user journey; current functional, type, browser and relevant storage/protocol tests; both protected CI gates; pinned commit, CI run, image digest, and output hashes in one receipt. Update maintained docs/catalog to match tested support. |
+| V1-03 | Implemented; exact candidate qualification required | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
+| V1-04 | Merged; main qualification passed | Complete publication reconciliation | Read-only inventory across finalized/pending database publications, every sealed manifest/blob, and Git tag/source identity. Classify missing, contradictory, recoverable and unreferenced states. Both database drivers and failure fixtures pass; require the audit for backup acceptance and after restore; qualify the exact resulting image. |
+| V1-05 | Implemented; exact candidate qualification required | Responsive long operations | Measure representative large-download memory, first-byte time and unrelated-request latency. Bound verification/delivery without serving unverified/corrupt bytes. Deliberate range/cancellation behavior, bounded concurrent jobs, and remaining request-time blocking work moved off HTTP handling. Show truthful progress/failure/retry. |
+| V1-06 | Merged; main qualification passed | Simple first useful workflow | A named private project does not require a full design brief. A newcomer imports/reviews/commits cards, adds credited artwork, and downloads a proof. Preserve brief data, explicit import review, and Sheet attach versus commit distinctions. |
+| V1-07 | Gate and receipt implemented; green merged-image run required | Integrate and qualify candidate | Clean-checkout setup; original-game two-user journey; current functional, type, browser and relevant storage/protocol tests; both protected CI gates; pinned commit, CI run, image digest, and output hashes in one receipt. Update maintained docs/catalog to match tested support. |
 
 ## V1 evidence gates beyond local engineering
 
@@ -196,3 +196,32 @@ selected; PDF geometry and actual physical fit are separate evidence.
   starting option. It now verifies the new empty-game default and hidden optional
   brief. A fresh full product run is required; the prior image pass alone does
   not qualify the new commit.
+
+### V1-03 / V1-05 / V1-07 — final engineering integration
+
+- Release recovery discovers owner-visible interruptions through a read-only
+  inventory worker and resumes only the original publisher's exact sealed
+  manifest. Browser tests cover source advancing, absent/corrupt evidence,
+  account isolation, original bytes, mobile layout and stale navigation. The
+  complete creator browser workflow also passed locally.
+- Download delivery verifies before serving, streams bounded snapshots, handles
+  cancellation and overload, and isolates whole-release work in bounded workers.
+  See [the contract and measured fixture results](DOWNLOAD-DELIVERY.md).
+- Publication inventory main run `35511932458` passed and published its image.
+  Simple-start PR #10 passed run `35512103087` and merged as `a1dc8a7`.
+- A later CI functional run hit an occupied random port: Forge moved to the next
+  port, while the harness still queried the old one. The harness now follows
+  only its own child's announced port before health checks. This is a test
+  reliability fix; no failed run is counted as a qualification pass.
+- The adapter catalog now records the TTPG beta file contract and CSV receipt
+  version 3. The handoff describes implemented work and remaining external
+  evidence. CI receipts retain actual restored artifact hashes alongside the
+  exact source/image identities. Fresh integrated gates are required before
+  this candidate can be marked qualified; public launch remains outside this
+  engineering milestone.
+
+- Simple-start main run `35512711224` passed both gates and image publication.
+  Release-recovery PR run `35512865578` passed both gates before the final
+  handoff/receipt changes; those additions require a fresh run. The plan's state
+  table records implementation, while the downloadable receipt qualifies one
+  exact commit. It must not be inferred from the table alone.

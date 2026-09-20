@@ -60,7 +60,15 @@ jobs:
       - name: Build and recover through the exact image
         env:
           FORGE_REQUIRE_CLEAN_TREE: "1"
+          FORGE_QUALIFICATION_RECEIPT_PATH: ${{ runner.temp }}/recovery-receipt.json
         run: ./tools/qualify-production-image.sh
+      - name: Preserve exact recovery evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: recovery-receipt-${{ github.sha }}
+          path: ${{ runner.temp }}/recovery-receipt.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Package the qualified image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
@@ -103,6 +111,11 @@ jobs:
         with:
           name: qualified-image-${{ github.sha }}
           path: ${{ runner.temp }}/qualified-image
+      - name: Retrieve exact recovery evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: recovery-receipt-${{ github.sha }}
+          path: ${{ runner.temp }}/qualification
       - name: Verify and load the qualified image
         shell: bash
         run: |
@@ -155,6 +168,18 @@ jobs:
           fi
           docker manifest inspect "${image}@${digest}" >/dev/null
 
+          node --input-type=module - "$RUNNER_TEMP/qualification" "$GITHUB_SHA" "$local_image_id" "${image}@${digest}" <<'NODE'
+          import {readFileSync,writeFileSync} from "node:fs";
+          import {join} from "node:path";
+          const [directory,commit,imageId,registry]=process.argv.slice(2);
+          const receipt=JSON.parse(readFileSync(join(directory,"recovery-receipt.json"),"utf8"));
+          if(receipt.source_commit!==commit||receipt.local_image_id!==imageId||receipt.image_recovery_passed!==true)
+            throw new Error("Recovery receipt does not identify the promoted image");
+          receipt.product_gate_passed=true;
+          receipt.registry_reference=registry;
+          writeFileSync(join(directory,"qualification-receipt.json"),JSON.stringify(receipt,null,2)+"\n",{flag:"wx"});
+          NODE
+
           {
             printf '### Qualified Forge image published\n\n'
             printf -- '- Commit: `%s`\n' "$GITHUB_SHA"
@@ -162,3 +187,10 @@ jobs:
             printf -- '- Convenience commit tag: `%s`\n' "$target"
             printf '\nThis workflow promotes an image only; it does not deploy Forge.\n'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve complete qualification receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: qualification-receipt-${{ github.sha }}
+          path: ${{ runner.temp }}/qualification/qualification-receipt.json
+          if-no-files-found: error
+          retention-days: 90

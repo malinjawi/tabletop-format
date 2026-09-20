@@ -80,10 +80,16 @@ check_fails(){ # inverse: command MUST exit nonzero
   local name="$1"; shift
   if "$@" >/dev/null 2>&1; then bad "$name" "expected failure, got success"; else ok "$name"; fi
 }
-wait_server(){ # wait_server <port> <log>; startup performs migrations + repository indexing
-  local port="$1" log="$2"
+wait_server(){ # wait_server <requested-port> <log> <port-variable>
+  local port="$1" log="$2" port_variable="$3" bound_port=""
   for _ in $(seq 1 120); do
-    curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && return 0
+    # The development gateway can move to the next port on EADDRINUSE.
+    # Probe only the port announced by this child, never an unrelated listener.
+    bound_port=$(sed -nE 's/^forge-platform gateway on http:\/\/localhost:([0-9]+)$/\1/p' "$log" 2>/dev/null | tail -1)
+    if [ -n "$bound_port" ] && curl -fsS "http://127.0.0.1:$bound_port/healthz" >/dev/null 2>&1; then
+      printf -v "$port_variable" '%s' "$bound_port"
+      return 0
+    fi
     sleep .25
   done
   say "server on :$port did not become healthy; log tail:"
@@ -439,7 +445,7 @@ say "== platform server (Block G v0) =="
 PORT=$(( (RANDOM % 2000) + 18000 ))
 node server.mjs --port $PORT > "$SCRATCH/srv.log" 2>&1 &
 SRVPID=$!
-wait_server "$PORT" "$SCRATCH/srv.log" || bad "platform server startup"
+wait_server "$PORT" "$SCRATCH/srv.log" PORT || bad "platform server startup"
 NGAMES=$(curl -s "localhost:$PORT/api/games" | python3 -c "import json,sys;d=json.load(sys.stdin);slugs={g['slug'] for g in d};assert {'ember','harbor-nine'}<=slugs;assert 'netrunner-urbp' not in slugs;print(len(d))" 2>/dev/null)
 [ -n "$NGAMES" ] && ok "catalog shows rights-cleared demos and hides unverified imports ($NGAMES public games)" || bad "server discovery" "public/private rights boundary is wrong"
 curl -s "localhost:$PORT/api/games/secret-hitler/repository/assets" | python3 -c "
@@ -485,7 +491,7 @@ say "== beta hardening =="
 PORT2=$(( (RANDOM % 2000) + 21000 ))
 node server.mjs --port $PORT2 --readonly > "$SCRATCH/ro.log" 2>&1 &
 ROPID=$!
-wait_server "$PORT2" "$SCRATCH/ro.log" || bad "readonly server startup"
+wait_server "$PORT2" "$SCRATCH/ro.log" PORT2 || bad "readonly server startup"
 ROCODE=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'content-type: application/json' -d '[]' "localhost:$PORT2/api/games/ember/cards")
 [ "$ROCODE" = "403" ] && ok "readonly mode blocks writes (403)" || bad "readonly mode" "got $ROCODE"
 GETCODE=$(curl -s -o /dev/null -w '%{http_code}' "localhost:$PORT2/api/games")
@@ -498,7 +504,7 @@ SECPORT=$(( (RANDOM % 2000) + 22500 ))
 SECDB="$SCRATCH/security.db"
 DB_PATH="$SECDB" node server.mjs --port $SECPORT > "$SCRATCH/security.log" 2>&1 &
 SECPID=$!
-wait_server "$SECPORT" "$SCRATCH/security.log" || bad "security server startup"
+wait_server "$SECPORT" "$SCRATCH/security.log" SECPORT || bad "security server startup"
 if node tools/security-check.mjs "http://127.0.0.1:$SECPORT" "$SECDB" > "$SCRATCH/security-check.log" 2>&1; then
   ok "headers, CORS, cookies, private visibility, media admission, token storage, revocation, and rate limits"
 else
@@ -569,7 +575,7 @@ say "== asset pipeline over HTTP (server → LFS/portable → commit → render)
 APORT=$(( (RANDOM % 2000) + 26000 ))
 LFS_URL="http://localhost:$LPORT" node server.mjs --port $APORT > "$SCRATCH/asrv.log" 2>&1 &
 APID=$!
-wait_server "$APORT" "$SCRATCH/asrv.log" || bad "asset server startup"
+wait_server "$APORT" "$SCRATCH/asrv.log" APORT || bad "asset server startup"
 python3 -c "
 from PIL import Image
 Image.new('RGB',(200,120),(30,120,200)).save('$SCRATCH/blue.png')"
@@ -627,7 +633,7 @@ say "== Store 2 slice 1: auth, stars, claims, games index (real SQL via node:sql
 SPORT=$(( (RANDOM % 2000) + 30000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $SPORT > "$SCRATCH/s2.log" 2>&1 &
 SPID2=$!
-wait_server "$SPORT" "$SCRATCH/s2.log" || bad "Store 2 server startup"
+wait_server "$SPORT" "$SCRATCH/s2.log" SPORT || bad "Store 2 server startup"
 REG=$(curl -s -X POST -H 'content-type: application/json' -d '{"handle":"linja","email":"l@example.com","password":"hunter2hunter2"}' "localhost:$SPORT/api/auth/register")
 TOKEN=$(echo "$REG" | python3 -c "import json,sys;print(json.load(sys.stdin).get('token',''))")
 [ ${#TOKEN} = 64 ] && ok "register → session token" || bad "register" "$REG"
@@ -658,7 +664,7 @@ CPORT3=$(( (RANDOM % 2000) + 32000 ))
 export CACHE_DIR="$SCRATCH/cache"
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $CPORT3 > "$SCRATCH/s3.log" 2>&1 &
 SPID3=$!
-wait_server "$CPORT3" "$SCRATCH/s3.log" || bad "Store 3 server startup"
+wait_server "$CPORT3" "$SCRATCH/s3.log" CPORT3 || bad "Store 3 server startup"
 SHA0=$(git rev-parse HEAD)
 EXP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" "localhost:$CPORT3/api/games/ember/export/tts?wait=1")
 echo "$EXP" | grep -q "\"ref\": \"$SHA0\"" && ok "export keyed by current sha ($SHA0)" || bad "export sha key" "$EXP"
@@ -695,7 +701,7 @@ say "== FEATURE: live editor → Save → git commit (complete loop) =="
 EPORT=$(( (RANDOM % 2000) + 34000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $EPORT > "$SCRATCH/ed.log" 2>&1 &
 EPID=$!
-wait_server "$EPORT" "$SCRATCH/ed.log" || bad "editor server startup"
+wait_server "$EPORT" "$SCRATCH/ed.log" EPORT || bad "editor server startup"
 ETOK=$(mint $EPORT)
 curl -s "localhost:$EPORT/edit/ember?raw" > "$SCRATCH/live-editor.html"
 grep -q "saveToServer" "$SCRATCH/live-editor.html" && grep -q '"live_slug": "ember"' "$SCRATCH/live-editor.html" \
@@ -732,7 +738,7 @@ say "== FEATURE: hub auth UI + live stars =="
 HPORT=$(( (RANDOM % 2000) + 36000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $HPORT > "$SCRATCH/hub2.log" 2>&1 &
 HPID=$!
-wait_server "$HPORT" "$SCRATCH/hub2.log" || bad "hub server startup"
+wait_server "$HPORT" "$SCRATCH/hub2.log" HPORT || bad "hub server startup"
 curl -s "localhost:$HPORT/" > "$SCRATCH/live-hub.html"
 curl -s -H 'Accept-Encoding: gzip' "localhost:$HPORT/" > "$SCRATCH/live-hub.html.gz"
 [ "$(wc -c < "$SCRATCH/live-hub.html.gz" | tr -d ' ')" -lt 256000 ] \
@@ -788,7 +794,7 @@ say "== FEATURE: one-click fork with attribution =="
 FPORT=$(( (RANDOM % 2000) + 38000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $FPORT > "$SCRATCH/fork2.log" 2>&1 &
 FPID=$!
-wait_server "$FPORT" "$SCRATCH/fork2.log" || bad "fork server startup"
+wait_server "$FPORT" "$SCRATCH/fork2.log" FPORT || bad "fork server startup"
 node -e "
 (async () => {
   const base='http://localhost:$FPORT';
@@ -833,7 +839,7 @@ say "== FEATURE: pull requests across forks (the remix loop) =="
 PRPORT=$(( (RANDOM % 2000) + 36000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $PRPORT > "$SCRATCH/pr.log" 2>&1 &
 PRPID=$!
-wait_server "$PRPORT" "$SCRATCH/pr.log" || bad "PR server startup"
+wait_server "$PRPORT" "$SCRATCH/pr.log" PRPORT || bad "PR server startup"
 node -e "
 (async () => {
   const base='http://localhost:$PRPORT';
@@ -925,7 +931,7 @@ say "== ACCESS CONTROL: owner/collaborator matrix + edit-as-PR =="
 AZPORT=$(( (RANDOM % 2000) + 32000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $AZPORT > "$SCRATCH/az.log" 2>&1 &
 AZPID=$!
-wait_server "$AZPORT" "$SCRATCH/az.log" || bad "authorization server startup"
+wait_server "$AZPORT" "$SCRATCH/az.log" AZPORT || bad "authorization server startup"
 node -e "
 (async () => {
   const base='http://localhost:$AZPORT';
@@ -991,7 +997,7 @@ say "== FEATURE: issues + threaded comments (the community layer) =="
 ISPORT=$(( (RANDOM % 2000) + 30000 ))
 DB_PATH="$SCRATCH/platform.db" node server.mjs --port $ISPORT > "$SCRATCH/iss.log" 2>&1 &
 ISPID=$!
-wait_server "$ISPORT" "$SCRATCH/iss.log" || bad "issues server startup"
+wait_server "$ISPORT" "$SCRATCH/iss.log" ISPORT || bad "issues server startup"
 node -e "
 (async () => {
   const base='http://localhost:$ISPORT';
@@ -1039,7 +1045,7 @@ SHEETPID=$!
 DB_PATH="$SCRATCH/sheet-sync.db" CACHE_DIR="$SCRATCH/sheet-sync-cache" \
   node server.mjs --port $SYNCPORT > "$SCRATCH/sheet-sync-server.log" 2>&1 &
 SYNCPID=$!
-wait_server "$SYNCPORT" "$SCRATCH/sheet-sync-server.log" || bad "Sheets server startup"
+wait_server "$SYNCPORT" "$SCRATCH/sheet-sync-server.log" SYNCPORT || bad "Sheets server startup"
 if node tools/sync-check.mjs "http://127.0.0.1:$SYNCPORT" "http://127.0.0.1:$SHEETPORT/sheet.csv" > "$SCRATCH/sheet-sync-check.log" 2>&1; then
   ok "Sheets: stable ids → candidate token → validation/render payload → three-way merge → stale-review guards → all exports"
 else

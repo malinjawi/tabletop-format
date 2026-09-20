@@ -4982,6 +4982,22 @@ gw.route("GET", "/api/games/:slug/releases/preflight", async (ctx) => {
       warnings: result.rights.warnings, file_count: result.rights.files.length,
       manifest_sha256: result.rights.manifest_sha256 } });
 }, "fast release readiness: permission + exact source validation + license + per-file rights, before render work starts");
+gw.route("GET", "/api/games/:slug/releases/recovery", async ctx=>{
+  const u=await requireAuth(ctx);if(!u)return;
+  const slug=requireGame(ctx);if(!slug)return;
+  if(!await canAdmin(u,slug,{releases:true}))return ctx.send(403,{error:"only the game's owner can inspect interrupted releases"});
+  ctx.setHeader("cache-control","private, no-store");
+  const env=Object.fromEntries(["DB","PG_URL","PGHOST","PGPORT","PGDATABASE","PGUSER","PGPASSWORD",
+    "FORGE_URL","FORGE_TOKEN"].filter(key=>process.env[key]!=null).map(key=>[key,process.env[key]]));
+  Object.assign(env,{STORE1,DB_PATH:resolve(process.env.DB_PATH??join(ROOT,"data","platform.db")),
+    RELEASE_VAULT_DIR,LOCAL_STORE_ROOT,GAMES_DIR});
+  try{
+    const report=await runReleaseVaultTask("publicationRecovery",{env,slug,actorId:u.id});
+    if(!await refreshedReleaseAuthority(ctx,slug,u.id))return ctx.send(403,{error:"release access changed during the check"});
+    ctx.send(200,report);
+  }catch(error){ctx.send(503,{error:"Saved release state could not be checked. Retry or ask the host operator to run the publication inventory.",
+    code:String(error.code||"RELEASE_INVENTORY_UNAVAILABLE").slice(0,80)});}
+},"owner-only read-only check of interrupted publications; never rebuilds or publishes");
 gw.route("GET", "/api/games/:slug/releases/:tag", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const r = await q.releaseByTag(db, slug, ctx.params.tag);
@@ -5129,7 +5145,10 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   const u = await requireAuth(ctx); if (!u) return;
   const slug = requireGame(ctx); if (!slug) return;
   if (!await canAdmin(u, slug, { releases: true })) return ctx.send(403, { error: "only the game's owner can cut a release; fork a public sandbox into an owned edition before releasing" });
-  const { tag, title, base_ref: suppliedBaseRef } = await json(ctx);
+  const { tag, title, base_ref: suppliedBaseRef, resume_only:resumeOnly=false,
+    recovery_manifest_sha256:recoveryDigest } = await json(ctx);
+  if(typeof resumeOnly!=="boolean"||(resumeOnly&&!/^[a-f0-9]{64}$/.test(recoveryDigest||"")))
+    return ctx.send(422,{error:"recovery requires the exact saved manifest identity",written:false});
   if (!tag || !TAG_RE.test(tag)) return ctx.send(422, { error: "tag must start with v and a number, for example v1.0" });
   let releaseTitle;
   try {
@@ -5151,6 +5170,8 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
       }
     }
     if(orphan){
+      if(resumeOnly&&orphan.manifestSha256!==recoveryDigest)
+        return ctx.send(409,{error:"the saved release identity changed; refresh its recovery check",written:false});
       if(orphan.manifest.version!==RELEASE_VAULT_NATIVE_VERSION){
         ctx.setHeader("cache-control","private, no-store");
         return ctx.send(503,{error:"this interrupted legacy release predates automatic recovery; operator reconciliation is required",
@@ -5180,7 +5201,10 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
         integrity_code:"RELEASE_PENDING_NOT_FOUND",written:false});
     }
   }
+  if(resumeOnly&&!pending)return ctx.send(409,{error:"the saved interrupted release is no longer available; no new release was built",written:false});
   if(pending){
+    if(resumeOnly&&(pending.vault_manifest_sha256!==recoveryDigest||pending.author_id!==u.id))
+      return ctx.send(409,{error:"this recovery does not match the original release identity and publisher",written:false});
     let payload;
     try{payload=await pendingReleasePayload(slug,tag,pending);}
     catch(error){

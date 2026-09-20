@@ -59,6 +59,14 @@ retag packages outside this workflow, so retain the workflow receipt and apply
 organization retention controls where available. Image promotion does not
 deploy a host, alter DNS, configure R2, or establish operator readiness.
 
+The main run also retains `qualification-receipt-<commit>` for 90 days. Its JSON
+connects the exact source commit, workflow run, local image ID, registry digest
+and the restored Tidepool fixture's measured artifact hashes. Download and keep
+that receipt with the deployment record before CI retention expires. The
+`recovery-receipt-<commit>` artifact from a PR or manual run proves only its
+image/recovery job; it deliberately has no registry reference or product-gate
+pass claim. Neither receipt represents a backup of your installation.
+
 GHCR package visibility is separate from repository visibility. Before booting
 the host, either make this one container package public or configure a
 read-only package credential on the host. Prove that the deployment identity
