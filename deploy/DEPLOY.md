@@ -459,7 +459,8 @@ FORGE_BACKUP_ACK_DOWNTIME=1 ./backup.sh "$FORGE_BACKUP_DESTINATION"
 ```
 
 The script takes a fail-closed lock for the Compose project, then stops the
-gateway and Forgejo, semantically audits and snapshots every regular file
+gateway and Forgejo, reconciles every publication against both databases,
+frozen Git tag/source identities and the complete vault, then snapshots every regular file
 in the dedicated release-artifact vault, snapshots every object in the dedicated
 R2 LFS bucket, creates a Forgejo repository archive, makes independent
 custom-format dumps of both PostgreSQL databases, and validates every layer.
@@ -471,11 +472,11 @@ a way that bypasses traps, inspect the exact lock path and recorded PID printed
 by the next attempt; remove that one lock only after proving the process is gone.
 Copy the completed directory to encrypted storage away from the host.
 
-Current qualification boundary: these checks validate each durable store, but
-do not yet reconcile every finalized and interrupted Store-2 publication against
-the complete vault inventory in one report. Keep public deployment blocked until
-that all-release reconciliation is automated and passes on both backup and
-restore. The recovery-critical Forgejo keys listed in `RESTORE-DRILL.md` also
+The read-only [publication inventory](../docs/PUBLICATION-INVENTORY.md) must
+pass before a backup is accepted and again against restored stores before either
+writer starts. Keep public deployment blocked until the exact candidate passes
+the image recovery gate and actual-host restore evidence is recorded. The
+recovery-critical Forgejo keys listed in `RESTORE-DRILL.md` also
 remain a separately protected encrypted backup input; the backup script does not
 copy secret values into its artifact.
 

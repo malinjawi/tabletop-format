@@ -27,6 +27,8 @@ try {
   mkdirSync(fakeBin); mkdirSync(secrets); mkdirSync(destination);
   writeFileSync(join(secrets, "r2-access-key"), "access-for-backup-guard\n");
   writeFileSync(join(secrets, "r2-secret-key"), "secret-for-backup-guard\n");
+  writeFileSync(join(secrets, "forge-db-password"), "disposable-forge-db\n");
+  writeFileSync(join(secrets, "platform-db-password"), "disposable-platform-db\n");
   writeFileSync(envPath, [
     "R2_ACCOUNT_ID=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "R2_LFS_BUCKET=forge-test-lfs",
@@ -41,6 +43,7 @@ printf '%s\\n' "$*" >> "$FAKE_DOCKER_LOG"
 case "$*" in
   *" ps --status running --services") printf 'db\\nforgejo\\ngateway\\n' ;;
   *" ps -q gateway") printf 'fake-gateway\\n' ;;
+  *" ps -q forgejo") printf 'fake-forgejo\\n' ;;
   *"{{range .Mounts}}"*) printf 'forge-release-vault-guard\\n' ;;
   *"{{.Image}}"*) printf 'sha256:%s\\n' "$(printf a%.0s $(seq 1 64))" ;;
   *" stop gateway forgejo")
@@ -80,8 +83,13 @@ esac
   assert.equal(existsSync(join(scratch, "second-stop")), false,
     "a rejected concurrent backup must not touch service state");
   const completedFirst = await firstResult;
-  assert.notEqual(completedFirst.status, 0, "the fake snapshot intentionally ends the first backup");
+  assert.notEqual(completedFirst.status, 0, "the failing inventory intentionally ends the first backup");
   assert.equal(existsSync(firstRestart), true, "the failed backup must restart writers");
+  const firstLog=readFileSync(join(scratch,"docker.log"),"utf8");
+  assert.ok(firstLog.indexOf("stop gateway forgejo")<firstLog.indexOf("tools/publication-audit.mjs"),
+    "the publication inventory runs only after both writers have stopped");
+  assert.ok(firstLog.includes("STORE1=forgejo-offline")&&!firstLog.includes("release-vault-snapshot.mjs backup"),
+    "an unsuccessful cross-store inventory cannot reach backup snapshot acceptance");
 
   const partialStop = join(scratch, "partial-stop"), partialRestart = join(scratch, "partial-restart");
   const partial = spawnSync("bash", ["deploy/backup.sh", destination], {

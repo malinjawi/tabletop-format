@@ -82,18 +82,49 @@ permission state, and at least one LFS-backed release all work together.
    UID/GID 1000 (`.ssh` mode `0700`); otherwise the container entrypoint may see
    the restored parent ownership, skip its recursive repair, and then create
    root-owned runtime directories that Forgejo cannot use.
-5. Start Forgejo with the recorded image. Run
+5. Keep both writers stopped. Create their containers without starting them, then run
+   the publication inventory against the restored databases, bare repositories
+   and vault. Use the same Compose project/env arguments as all preceding steps:
+
+   ```sh
+   restore_compose() {
+     docker compose --project-name "${FORGE_COMPOSE_PROJECT:?Set the isolated drill project name}" \
+       --env-file ./.env -f docker-compose.prod.yml "$@"
+   }
+   test -z "$(restore_compose ps --status running --services gateway forgejo)"
+   restore_compose create forgejo gateway
+   restored_forgejo_id="$(restore_compose ps --all -q forgejo)"
+   restored_git_volume="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}' "$restored_forgejo_id")"
+   test -n "$restored_git_volume"
+   restore_compose run --rm --no-deps -T \
+     --volume "$restored_git_volume:/audit-forgejo:ro" \
+     --volume "$FORGE_SECRET_DIR/forge-db-password:/run/secrets/forge_db_password:ro" \
+     --env STORE1=forgejo-offline --env FORGE_GIT_ROOT=/audit-forgejo/git/repositories \
+     --env FORGEJO_PGHOST=db --env FORGEJO_PGDATABASE=forgejo --env FORGEJO_PGUSER=forgejo \
+     gateway /bin/sh -ec '
+       export PGPASSWORD="$(cat /run/secrets/platform_db_password)"
+       export FORGEJO_PGPASSWORD="$(cat /run/secrets/forge_db_password)"
+       exec node tools/publication-audit.mjs
+     ' > restored-publication-inventory.json
+   ```
+
+   Require exit 0 and inspect the classifications described in
+   [the inventory contract](../docs/PUBLICATION-INVENTORY.md). Preserve both
+   reports; a recoverable interrupted publication must retain its original seal
+   and identity. Any missing, contradictory or unverifiable evidence is a stop
+   condition. Do not accept the backup's old report as proof of the new restore.
+6. Start Forgejo with the recorded image. Run
    `forgejo doctor check --all --log-file /tmp/doctor.log`, create a new scoped
    platform token, place it in the drill secret file, then start the gateway.
-6. Run `node tools/alpha-readiness.mjs <drill-origin> --production`, sign in as
+7. Run `node tools/alpha-readiness.mjs <drill-origin> --production`, sign in as
    a copied pilot account, and execute the disposable two-person journey.
-7. Verify one known project has the expected HEAD SHA and attribution, one
+8. Verify one known project has the expected HEAD SHA and attribution, one
    discussion/review and role assignment exist, and an LFS-backed art asset can
    be fetched. Download an existing release's exact PnP plus portable-project
    artifact from the restored release vault and compare both with their frozen
    receipt. Then clear only Store 3 and repeat the downloads to prove the vault,
    rather than a surviving cache file, supplied the published bytes.
-8. Record date, backup ID, image IDs, checks, elapsed recovery time, and any
+9. Record date, backup ID, image IDs, inventory reports, checks, elapsed recovery time, and any
    manual intervention. Destroy only the explicitly named disposable project,
    volumes, credentials, and drill bucket after the evidence is retained.
 

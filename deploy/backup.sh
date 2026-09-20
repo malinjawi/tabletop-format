@@ -44,8 +44,8 @@ case "$secret_setting" in
   /*) secret_dir="$secret_setting" ;;
   *) secret_dir="$deploy_dir/$secret_setting" ;;
 esac
-for secret in r2-access-key r2-secret-key; do
-  [ -f "$secret_dir/$secret" ] || { printf 'missing object-store credential file: %s\n' "$secret_dir/$secret" >&2; exit 2; }
+for secret in r2-access-key r2-secret-key forge-db-password platform-db-password; do
+  [ -f "$secret_dir/$secret" ] || { printf 'missing backup credential file: %s\n' "$secret_dir/$secret" >&2; exit 2; }
 done
 mkdir -p "$destination"
 destination="$(cd "$destination" && pwd)"
@@ -108,6 +108,8 @@ for service in db forgejo gateway; do
   fi
 done
 gateway_container_id="$("${compose[@]}" ps -q gateway)"
+forgejo_container_id="$("${compose[@]}" ps -q forgejo)"
+forgejo_volume_name="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}' "$forgejo_container_id")"
 vault_volume_name="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/vault"}}{{.Name}}{{end}}{{end}}' "$gateway_container_id")"
 gateway_image_id="$(docker inspect --format '{{.Image}}' "$gateway_container_id")"
 if [ -z "$vault_volume_name" ] || [[ ! "$vault_volume_name" =~ ^[A-Za-z0-9_.-]+$ ]]; then
@@ -116,6 +118,10 @@ if [ -z "$vault_volume_name" ] || [[ ! "$vault_volume_name" =~ ^[A-Za-z0-9_.-]+$
 fi
 if [[ ! "$gateway_image_id" =~ ^sha256:[0-9a-f]{64}$ ]]; then
   printf 'could not resolve the running gateway image ID\n' >&2
+  exit 1
+fi
+if [ -z "$forgejo_volume_name" ] || [[ ! "$forgejo_volume_name" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+  printf 'running Forgejo does not have a safe named /data volume\n' >&2
   exit 1
 fi
 
@@ -138,6 +144,21 @@ work_dir="$(mktemp -d "$destination/.forge-backup-$stamp.XXXXXX")"
 printf 'Stopping Forge writes for a synchronized backup…\n'
 services_stop_attempted=1
 "${compose[@]}" stop gateway forgejo >/dev/null
+
+# Both source writers remain stopped throughout inventory and snapshotting.
+# Read the existing PostgreSQL records, bare Git tag objects/protection rules,
+# and every sealed manifest/blob through the exact deployed application image.
+# No server startup, migrations, network Git fetch, or repair is involved.
+FORGE_GATEWAY_IMAGE="$gateway_image_id" "${compose[@]}" run --rm --no-deps -T \
+  --volume "$forgejo_volume_name:/audit-forgejo:ro" \
+  --volume "$secret_dir/forge-db-password:/run/secrets/forge_db_password:ro" \
+  --env STORE1=forgejo-offline --env FORGE_GIT_ROOT=/audit-forgejo/git/repositories \
+  --env FORGEJO_PGHOST=db --env FORGEJO_PGDATABASE=forgejo --env FORGEJO_PGUSER=forgejo \
+  gateway /bin/sh -ec '
+    export PGPASSWORD="$(cat /run/secrets/platform_db_password)"
+    export FORGEJO_PGPASSWORD="$(cat /run/secrets/forge_db_password)"
+    exec node tools/publication-audit.mjs
+  ' > "$work_dir/publication-inventory.json"
 
 # Release artifacts are not a disposable cache. Snapshot the dedicated vault
 # through the exact deployed gateway image after every writer has stopped. An
@@ -184,6 +205,7 @@ unzip -tqq "$work_dir/forgejo.zip"
 {
   printf 'created_utc=%s\n' "$stamp"
   printf 'compose_project=%s\n' "$project_name"
+  printf 'publication_inventory=publication-inventory.json\n'
   printf 'source_commit=%s\n' "$(git -C "$deploy_dir/.." rev-parse HEAD 2>/dev/null || printf unknown)"
   printf 'release_vault_files=%s\n' "$(node -e 'process.stdout.write(String(require(process.argv[1]).files.length))' "$work_dir/release-vault/manifest.json")"
   printf 'release_vault_bytes=%s\n' "$(node -e 'process.stdout.write(String(require(process.argv[1]).total_bytes))' "$work_dir/release-vault/manifest.json")"
@@ -197,9 +219,9 @@ unzip -tqq "$work_dir/forgejo.zip"
 
 node "$deploy_dir/s3-snapshot.mjs" verify --input "$work_dir/object-store"
 if command -v sha256sum >/dev/null 2>&1; then
-  (cd "$work_dir" && sha256sum forgejo.zip platform.dump forgejo.dump object-store/manifest.json release-vault/manifest.json manifest.txt > SHA256SUMS)
+  (cd "$work_dir" && sha256sum forgejo.zip platform.dump forgejo.dump object-store/manifest.json release-vault/manifest.json publication-inventory.json manifest.txt > SHA256SUMS)
 else
-  (cd "$work_dir" && shasum -a 256 forgejo.zip platform.dump forgejo.dump object-store/manifest.json release-vault/manifest.json manifest.txt > SHA256SUMS)
+  (cd "$work_dir" && shasum -a 256 forgejo.zip platform.dump forgejo.dump object-store/manifest.json release-vault/manifest.json publication-inventory.json manifest.txt > SHA256SUMS)
 fi
 
 restart_services

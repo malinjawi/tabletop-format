@@ -23,6 +23,8 @@
     "test:adapters": "node tools/check-adapters.mjs",
     "test:security": "node tools/security-check.mjs",
     "test:project-access": "node tools/test-project-access.mjs",
+    "audit:publications": "node tools/publication-audit.mjs",
+    "test:publication-inventory": "node tools/test-publication-inventory.mjs && node tools/test-publication-offline-forgejo.mjs",
     "test:project-ref": "node tools/test-project-ref.mjs",
     "test:project-reindex": "node tools/test-project-reindex.mjs",
     "test:hosted-project-reindex": "node tools/test-hosted-project-reindex.mjs",

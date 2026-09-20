@@ -22,12 +22,14 @@ trap 'exit 143' TERM
 
 echo "== leg 1: dev driver (node:sqlite) =="
 node tools/store2-conformance.mjs
+node tools/test-publication-inventory.mjs
 
 node -e "require.resolve('pg')" 2>/dev/null || { echo "installing pg (deploy-time dep, --no-save)…"; npm i pg --no-save --silent; }
 
 if [ -n "${FORGE_CONFORMANCE_PG_URL:-}" ]; then
   echo "== leg 2: PRODUCTION driver (caller-supplied dedicated PostgreSQL) =="
   DB=postgres PG_URL="$FORGE_CONFORMANCE_PG_URL" node tools/store2-conformance.mjs
+  FORGE_INVENTORY_TEST_DISPOSABLE=1 FORGE_INVENTORY_TEST_PG_URL="$FORGE_CONFORMANCE_PG_URL" node tools/test-publication-inventory.mjs
   echo ""
   echo "STORE-2 GREEN ON BOTH DRIVERS — the Postgres swap is a config change."
   exit 0
@@ -60,6 +62,7 @@ if command -v docker >/dev/null 2>&1; then
       exit 1
     fi
     DB=postgres PG_URL="postgres://postgres:confpass@127.0.0.1:$PGPORT/platform" node tools/store2-conformance.mjs
+    FORGE_INVENTORY_TEST_DISPOSABLE=1 FORGE_INVENTORY_TEST_PG_URL="postgres://postgres:confpass@127.0.0.1:$PGPORT/platform" node tools/test-publication-inventory.mjs
     echo ""
     echo "STORE-2 GREEN ON BOTH DRIVERS — the Postgres swap is a config change."
     exit 0
@@ -89,6 +92,7 @@ echo "== leg 2: PRODUCTION driver (isolated native PostgreSQL 16 on :$PGPORT) ==
 LOCAL_PG_STARTED=1
 "$PG_BIN/createdb" -h 127.0.0.1 -p "$PGPORT" platform
 DB=postgres PG_URL="postgres://$(id -un)@127.0.0.1:$PGPORT/platform" node tools/store2-conformance.mjs
+FORGE_INVENTORY_TEST_DISPOSABLE=1 FORGE_INVENTORY_TEST_PG_URL="postgres://$(id -un)@127.0.0.1:$PGPORT/platform" node tools/test-publication-inventory.mjs
 
 echo ""
 echo "STORE-2 GREEN ON BOTH DRIVERS — the Postgres swap is a config change."
