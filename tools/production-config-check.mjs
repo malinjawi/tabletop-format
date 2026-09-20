@@ -128,7 +128,7 @@ ok(imageGate.includes("deploy/qualified-images.env")
 const workflowActions=[...workflow.matchAll(/^\s*uses:\s*([^@\s]+)@([^\s#]+)/gm)];
 const trustedActions=new Set(["actions/checkout", "actions/setup-node", "actions/setup-python",
   "actions/upload-artifact", "actions/download-artifact"]);
-ok(workflowActions.length===7
+ok([...trustedActions].every(required=>workflowActions.some(([,action])=>action===required))
   && workflowActions.every(([, action, revision])=>trustedActions.has(action) && /^[a-f0-9]{40}$/.test(revision)),
   "CI uses only allowlisted first-party actions pinned to immutable commit SHAs");
 const publisher=workflow.slice(workflow.indexOf("  publish-image:"));
@@ -142,6 +142,14 @@ ok(workflow.includes("needs: [product-gate, release-image]")
   && publisher.includes("docker load")
   && !publisher.includes("docker build"),
   "GHCR promotion is main-push-only, reuses the qualified image, and refuses mismatched commit tags");
+ok(imageGate.includes("FORGE_RESTORE_ARTIFACT_RECEIPT ")
+  && imageGate.includes("source_commit:commit") && imageGate.includes("local_image_id:imageId")
+  && workflow.includes("name: recovery-receipt-${{ github.sha }}")
+  && publisher.includes("receipt.source_commit!==commit||receipt.local_image_id!==imageId")
+  && publisher.includes("receipt.product_gate_passed=true")
+  && publisher.includes("receipt.registry_reference=registry")
+  && publisher.includes("name: qualification-receipt-${{ github.sha }}"),
+  "qualification receipts retain restored hashes and bind promotion to the exact recovered source and image");
 ok(workflow.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
   && workflow.includes("github.event_name == 'pull_request' && github.ref || github.sha"),
   "only superseded pull-request checks may cancel; main release runs are isolated by commit");
