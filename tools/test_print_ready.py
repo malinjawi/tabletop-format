@@ -9,6 +9,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 from pypdf import PdfReader
+from pypdf.generic import ContentStream
 from reportlab.lib.pagesizes import A4, LETTER
 from reportlab.lib.units import mm
 from jsonschema import Draft202012Validator
@@ -329,7 +330,7 @@ def assert_custom_home_geometry(folder):
     Image.new("RGB", (660, 909), "#487664").save(front)
     def matrices(page):
         current, result = None, []
-        for operands, operator in page.get_contents().operations:
+        for operands, operator in ContentStream(page.get_contents(), page.pdf).operations:
             if operator == b"cm":
                 current = [float(value) for value in operands]
             if operator == b"Do":
@@ -368,7 +369,7 @@ def assert_custom_home_geometry(folder):
     page = PdfReader(proof).pages[0]
     lengths = []
     start = None
-    for operands, operator in page.get_contents().operations:
+    for operands, operator in ContentStream(page.get_contents(), page.pdf).operations:
         if operator == b"m": start = [float(value) for value in operands]
         if operator == b"l" and start:
             end = [float(value) for value in operands]

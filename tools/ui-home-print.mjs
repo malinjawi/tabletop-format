@@ -156,8 +156,9 @@ try {
   const result = JSON.parse(execFileSync(join(ROOT, ".venv/bin/python"), ["-c", `
 import json,sys
 from pypdf import PdfReader
+from pypdf.generic import ContentStream
 r=PdfReader(sys.argv[1]);current=None;boxes=[]
-for values,op in r.pages[0].get_contents().operations:
+for values,op in ContentStream(r.pages[0].get_contents(), r).operations:
  if op==b'cm':current=[float(v) for v in values]
  if op==b'Do':boxes.append(current)
 print(json.dumps({'page':[float(r.pages[0].mediabox.width),float(r.pages[0].mediabox.height)],'cards':boxes,'calibration':PdfReader(sys.argv[2]).pages[0].extract_text()}))
