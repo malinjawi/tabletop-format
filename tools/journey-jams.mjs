@@ -1,6 +1,6 @@
 // Production-mode qualification uses real time and isolated jam content. Never
 // change the production clock or extend the actual repository's event dates.
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import yaml from "js-yaml";
@@ -19,6 +19,13 @@ export function createJourneyJams(destination, at = Date.now()) {
   jam.judging_ends_at = date(14);
   jam.results_at = date(15);
   writeFileSync(path, yaml.dump(jam, { lineWidth: -1 }));
+  // The drill protects secrets with umask 077; this separate, non-secret
+  // content mount must still be readable by the production container's UID.
+  chmodSync(output, 0o755);
+  for (const entry of readdirSync(output, { withFileTypes: true })) {
+    if (!entry.isFile()) throw new Error("journey jams must contain only regular content files");
+    chmodSync(join(output, entry.name), 0o644);
+  }
   return jam;
 }
 
