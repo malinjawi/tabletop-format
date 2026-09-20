@@ -91,3 +91,8 @@ human evidence with a passing automated test.
   **same** pinned digest (including amd64 and arm64 manifests); the registry
   location is corrected without changing image bytes. Fresh CI qualification
   remains required; the failed run is not a recovery pass.
+- The next image run reached the real Forgejo journey and exposed an expired
+  sample-jam window. The drill now mounts an isolated, current-dated copy of
+  jam content into both production-mode containers. Production clock guards
+  and actual repository event dates remain intact; the restored copy uses the
+  exact same fixture. A future-date regression covers this test setup.
