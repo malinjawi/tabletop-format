@@ -31,8 +31,8 @@ workflow in [CONTRIBUTING](../CONTRIBUTING.md).
 
 | ID | State | Deliverable | Acceptance evidence |
 | --- | --- | --- | --- |
-| V1-01 | Merged; main qualification running | Finish existing artwork loading and exact-file preview changes | Reserved image geometry; decoded pixels before ready; retry for missing/corrupt images; keyboard/mobile/reduced-motion coverage; filtering preserves focus and images; late responses cannot overwrite navigation; historical blobs and LFS preserve access/version boundaries. |
-| V1-02 | Focused checks passed; integration in progress | Repeatable home printing | Persisted, reviewed print recipe with actual insert dimensions distinct from sleeve exterior size, A4/Letter, gutters/shared cuts, fronts/duplex as supported, and calibration output. Verify exported geometry, frozen recipe identity, and a physical proof. Extend existing print infrastructure rather than adding a competing renderer. |
+| V1-01 | Merged and image published | Finish existing artwork loading and exact-file preview changes | Reserved image geometry; decoded pixels before ready; retry for missing/corrupt images; keyboard/mobile/reduced-motion coverage; filtering preserves focus and images; late responses cannot overwrite navigation; historical blobs and LFS preserve access/version boundaries. |
+| V1-02 | Merged; main image qualification running; physical proof open | Repeatable home printing | Persisted, reviewed print recipe with actual insert dimensions distinct from sleeve exterior size, A4/Letter, gutters/shared cuts, fronts/duplex as supported, and calibration output. Verify exported geometry, frozen recipe identity, and a physical proof. Extend existing print infrastructure rather than adding a competing renderer. |
 | V1-03 | Draft discovery implemented; release discovery pending | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
 | V1-04 | Pending | Complete publication reconciliation | Read-only inventory across finalized/pending database publications, every sealed manifest/blob, and Git tag/source identity. Classify missing, contradictory, recoverable and unreferenced states. Both database drivers and failure fixtures pass; require the audit for backup acceptance and after restore; qualify the exact resulting image. |
 | V1-05 | Pending | Responsive long operations | Measure representative large-download memory, first-byte time and unrelated-request latency. Bound verification/delivery without serving unverified/corrupt bytes. Deliberate range/cancellation behavior, bounded concurrent jobs, and remaining request-time blocking work moved off HTTP handling. Show truthful progress/failure/retry. |
@@ -97,7 +97,7 @@ human evidence with a passing automated test.
   and actual repository event dates remain intact; the restored copy uses the
   exact same fixture. A future-date regression covers this test setup.
 
-### V1-02 — home printing in progress
+### V1-02 — home printing merged
 
 - Extend the existing saved print profile with optional orientation and explicit
   custom insert dimensions. See [Home printing](HOME-PRINTING.md) for the user
@@ -111,8 +111,13 @@ human evidence with a passing automated test.
   bytes, and bundled help. Python PDF checks and strict JavaScript schema
   validation pass. A4/Letter cards and calibration sheets were rendered and
   visually inspected, including the last A4 card sheet.
-- Broader local gate and protected CI remain required. Physical printing and
-  sleeve fit remain pending human evidence.
+- PR #7 passed both protected gates at `772a13d` (run `35509702979`) and
+  merged as `bdf4aaaaab608b5d8b7181048ffb85522e896aec`. Main run
+  `35510245242` qualifies its own image. Local evidence: 209 functional tests,
+  full creator browser flow, both journeys, performance checks, and 111 checks
+  on each database driver. The local Docker PostgreSQL fixture exited early;
+  conformance passed on an isolated native PostgreSQL 16 instance.
+- Physical printing and sleeve fit remain pending human evidence.
 
 ## Format compatibility and release identity
 
@@ -131,7 +136,9 @@ selected; PDF geometry and actual physical fit are separate evidence.
 
 - V1-01: PR #6 merged as `f1d61953cc7c7da9b5a10fd229931cca9c60c79c`.
   Both protected PR checks passed at `e012250`; main run `35509157013`
-  independently requalifies and publishes the resulting main image.
+  passed and published `ghcr.io/malinjawi/forge-platform` at digest
+  `sha256:e8b63c97f93f9c9e86e1b3d4f2eb286d0364bc0acabfabe245b7da1873c6da1e`.
+  This receipt qualifies that artwork commit, not newer source or a live host.
 ### V1-03 — retained draft discovery
 
 - The account menu opens a browser-local recovery list for the signed-in account,
@@ -147,3 +154,8 @@ selected; PDF geometry and actual physical fit are separate evidence.
   mobile use, stale navigation, storage failure/retry and no source writes.
 - Interrupted-release discovery depends on the cross-store inventory in V1-04.
   It remains open; this draft slice does not complete V1-03.
+
+- V1-03 local browser qualification also passed the complete creator workflow,
+  including exact-base restoration and stale-base refusal. The focused test
+  verifies expired-session refusal and keeps the account menu within a phone
+  viewport. Integration with current main still requires protected CI.
