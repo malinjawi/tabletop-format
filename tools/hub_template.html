@@ -489,7 +489,7 @@ async function forkGame(slug){
     else{err.style.display="";err.textContent=d.error||`fork failed (${r.status})`;btn.disabled=false;btn.textContent="⑂ Create my edition";}
   };
 }
-refreshLive();
+const startupIdentityReady=refreshLive();
 const $ = s => document.querySelector(s);
 const esc = s => (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;");
 const G = slug => DATA.games.find(g=>g.slug===slug);
@@ -3459,10 +3459,10 @@ async function desCardStarterCommit(){
 function desGalleryHtml(g){
   if(!g.cards.length)return `<div class="card-system-empty">
     <div class="badge">FIRST CARD SYSTEM</div><h2>Put the first playable cards on the table</h2>
-    <p>Forge will create stable card rows, the fields your rules need, one reusable front, a shared back, physical trim and bleed, and home-print settings. You review the exact result before one commit.</p>
+    <p>Choose a size and layout, add a few card names, then review the fronts and back before saving.</p>
     <div class="card-system-steps"><span><b>1</b> Choose size and fields</span><span><b>2</b> Review fronts and back</span><span><b>3</b> Commit, then edit live</span></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="desCardStarterOpen()">Build the first card system</button><button class="btn" onclick="componentStudioOpen('${esc(g.slug)}')">Start with pieces instead</button></div>
-    <small>No YAML or coordinates required. Start with cards or physical pieces; the generated source stays portable and versioned.</small>
+    <small>You can change the cards and their shared design after saving.</small>
   </div>`;
   const kinds=[["classic","Classic TCG frame","art window, title bar, cost badge, stat row, rules text box"],
                ["minimal","Minimal","just a title and rules text — nothing to configure"],
@@ -6192,10 +6192,7 @@ function exportModal(slug){
   box.querySelectorAll("[data-fmt]").forEach(b=>b.onclick=()=>{const fmt=b.dataset.fmt;close();doExport(slug,fmt,labelOf[fmt]);});
   box.querySelector("[data-fmt]").focus();
 }
-/* ================= NEW GAME: intent -> MVP -> optional components =================
- * The first durable object is a design brief, not a spreadsheet. A designer can
- * start from experience, mechanism, or theme; existing CSV/Sheet components are
- * an optional accelerator and enter the same versioned project. */
+/* ================= NEW GAME: empty project, optional brief or import ================= */
 const CSV_HINT = "Header row: name,type,text,cost,… — name is required. type, text, subtypes, keywords, deck_limit, set, collector_number, quantity, artist and flavor_text are recognized columns; anything else (like cost) becomes a custom card attribute.";
 const CSV_EXAMPLE = `name,type,text,cost
 Spark,unit,Deal 1 damage to a target.,1
@@ -6247,14 +6244,15 @@ const CSV_TARGETS=[
   ["collector_number","Collector number"],["quantity","Print quantity"],
   ["artist","Artist credit"],["flavor_text","Flavor text"],
 ];
-let NG_CSV_PREVIEW=null,NG_WORKBOOK=null;
+let NG_CSV_PREVIEW=null,NG_WORKBOOK=null,NG_CSV_REVIEW_ID=0;
 function ngCsvSet(value,keepWorkbook=false){
   const el=document.getElementById("ng-csv"); if(!el)return;
   if(!keepWorkbook){NG_WORKBOOK=null;const tabs=document.getElementById("ng-workbook-tabs");if(tabs)tabs.style.display="none";}
   el.value=String(value||""); ngCsvChanged();
 }
 function ngCsvChanged(){
-  NG_CSV_PREVIEW=null;
+  NG_CSV_PREVIEW=null;NG_CSV_REVIEW_ID++;
+  const review=document.getElementById("ng-csv-review");if(review){review.disabled=false;review.textContent="Review columns";}
   const host=document.getElementById("ng-csv-preview");
   if(host)host.innerHTML=`<span class="mut">Review the columns before Forge can create the first commit.</span>`;
   const button=document.getElementById("ng-ok");
@@ -6288,23 +6286,27 @@ function ngCsvRender(preview){
     <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--bd);font-size:11.5px"><b>${preview.identity_safe?"✓ Permanent IDs will survive renames":"△ Forge will generate IDs from names"}</b>${preview.identity_safe?"":" — add the generated IDs to your working sheet before a later re-import."}${errors}${warnings}</div>
     ${cards?`<div style="overflow:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="text-align:left">ID</th><th style="text-align:left">Name</th><th style="text-align:left">Type</th><th style="text-align:left">Custom fields</th></tr></thead><tbody>${cards}</tbody></table></div>`:""}`;
   const button=document.getElementById("ng-ok");
-  if(button){button.disabled=!preview.can_import;button.textContent=preview.can_import?"Import reviewed cards as first commit":"Fix mapping to continue";}
+  if(button&&document.querySelector('input[name="ng-mode"]:checked')?.value==="csv"){button.disabled=!preview.can_import;button.textContent=preview.can_import?"Import reviewed cards as first commit":"Fix mapping to continue";}
 }
 async function ngCsvReview(targets=null,skipStored=false){
   const raw=(document.getElementById("ng-csv")?.value||"").trim(), review=document.getElementById("ng-csv-review"), host=document.getElementById("ng-csv-preview");
+  const reviewId=++NG_CSV_REVIEW_ID;
+  const current=()=>reviewId===NG_CSV_REVIEW_ID&&host===document.getElementById("ng-csv-preview")&&raw===(document.getElementById("ng-csv")?.value||"").trim();
   if(!raw){if(host)host.innerHTML=`<span style="color:var(--red)">Paste CSV, upload a file, or load an example first.</span>`;return null;}
   if(review){review.disabled=true;review.textContent="Checking…";}
   if(host)host.innerHTML=`<span class="mut">Mapping columns and validating the exact import…</span>`;
   try{
     const response=await fetch("/api/imports/csv/preview",{method:"POST",headers:authHdr(),body:JSON.stringify({csv:raw,...(targets?{mapping:targets}:{})})});
     const data=await response.json().catch(()=>({}));
+    if(!current())return null;
     if(!response.ok)throw new Error(data.error||`preview failed (${response.status})`);
     if(!targets&&!skipStored){const stored=ngCsvStoredTargets(data.mapping||[]);if(stored)return await ngCsvReview(stored,true);}
     NG_CSV_PREVIEW=data;if(data.can_import)ngCsvRemember(data);ngCsvRender(data);return data;
   }catch(error){
+    if(!current())return null;
     NG_CSV_PREVIEW=null;if(host)host.innerHTML=`<span style="color:var(--red)">${esc(error.message||"Could not review this CSV")}</span>`;
     const button=document.getElementById("ng-ok");if(button){button.disabled=true;button.textContent="Review CSV to continue";}return null;
-  }finally{if(review){review.disabled=false;review.textContent="Review columns";}}
+  }finally{if(review&&current()){review.disabled=false;review.textContent="Review columns";}}
 }
 function ngCsvMappingChanged(){
   const selects=[...document.querySelectorAll("[data-ng-csv-target]")].sort((a,b)=>Number(a.dataset.index)-Number(b.dataset.index));
@@ -6343,29 +6345,35 @@ function ngMode(mode){
   if(csv)csv.style.display=mode==="csv"?"":"none";
   if(sheet)sheet.style.display=mode==="sheet"?"":"none";
   if(button){
-    button.textContent=mode==="idea"?"Create game and build first test":mode==="csv"?(NG_CSV_PREVIEW?.can_import?"Import reviewed cards as first commit":"Review CSV to continue"):"Create game and connect Sheet";
+    button.textContent=mode==="idea"?"Create game":mode==="csv"?(NG_CSV_PREVIEW?.can_import?"Import reviewed cards as first commit":"Review CSV to continue"):"Create game and connect Sheet";
     button.disabled=mode==="csv"&&!NG_CSV_PREVIEW?.can_import;
   }
   document.querySelectorAll("[data-ng-mode]").forEach(label=>label.style.borderColor=label.querySelector("input")?.checked?"var(--acc)":"var(--bd)");
 }
-function newGameModal(){
-  if(typeof LIVE==="undefined" || !LIVE){ toast("Creating a game needs the live platform — run <code>node server.mjs</code>."); return; }
+async function newGameModal(){
+  await startupIdentityReady;
+  if(typeof LIVE==="undefined" || !LIVE){ toast("This preview is read-only. Open your running Forge workspace to create a game."); return; }
+  if(document.getElementById("ngModal")){document.getElementById("ng-title")?.focus();return;}
   if(!ME){ _afterAuth=newGameModal; authOpen(); return; }
-  NG_CSV_PREVIEW=null;NG_WORKBOOK=null;
+  NG_CSV_PREVIEW=null;NG_WORKBOOK=null;NG_CSV_REVIEW_ID++;
+  const returnFocus=document.activeElement;
   const ov=document.createElement("div"); ov.id="ngModal";
   ov.style.cssText="position:fixed;inset:0;background:rgba(18,22,28,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px";
   const box=document.createElement("div");
+  box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");box.setAttribute("aria-labelledby","ng-heading");
   box.style.cssText="background:#fff;border-radius:14px;padding:22px 24px;max-width:680px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)";
   box.innerHTML=`
-    <h3 style="margin:0 0 4px;font-size:19px;font-weight:650">Start or bring a game</h3>
+    <h3 id="ng-heading" style="margin:0 0 4px;font-size:19px;font-weight:650">Start or bring a game</h3>
     <p style="margin:0 0 15px;color:var(--mut);font-size:13px;line-height:1.5">Choose what you already have. Every path creates one owned, versioned game; nothing is published or opened for remixing unless you choose that license.</p>
-    <div id="ngErr" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:#fff0f0;border:1px solid #ffd7d7;border-radius:8px;padding:8px 10px"></div>
+    <div id="ngErr" role="alert" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:#fff0f0;border:1px solid #ffd7d7;border-radius:8px;padding:8px 10px"></div>
     <div role="radiogroup" aria-label="How are you starting?" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px">
-      ${[["idea","Start from an idea","Describe the smallest test"],["csv","Import CSV / XLSX","Bring an existing card table"],["sheet","Connect Google Sheet","Keep drafting in Sheets"]].map(([v,l,h],i)=>`<label data-ng-mode class="btn" style="cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;${i===0?"border-color:var(--acc)":""}"><span><input type="radio" name="ng-mode" value="${v}" ${i===0?"checked":""} onchange="ngMode(this.value)"> <b>${l}</b></span><span style="font-size:11px;color:var(--mut);font-weight:400">${h}</span></label>`).join("")}
+      ${[["idea","Empty game","Name it and start building"],["csv","Import CSV / XLSX","Bring an existing card table"],["sheet","Connect Google Sheet","Keep drafting in Sheets"]].map(([v,l,h],i)=>`<label data-ng-mode class="btn" style="cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;${i===0?"border-color:var(--acc)":""}"><span><input type="radio" name="ng-mode" value="${v}" ${i===0?"checked":""} onchange="ngMode(this.value)"> <b>${l}</b></span><span style="font-size:11px;color:var(--mut);font-weight:400">${h}</span></label>`).join("")}
     </div>
     <label style="display:block;margin-bottom:15px;font-size:13px;color:var(--mut)">Working title
       <input id="ng-title" placeholder="e.g. Wildfire Duel" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
     <div id="ng-brief-fields">
+    <label style="display:block;margin-bottom:15px;font-size:13px"><input id="ng-add-brief" type="checkbox" onchange="document.getElementById('ng-brief-details').hidden=!this.checked"> Add a design brief (optional)</label>
+    <div id="ng-brief-details" hidden>
     <div style="font-size:13px;color:var(--mut);margin-bottom:6px">What sparked it?</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px">
       ${[["experience","An experience","How players should feel"],["mechanism","A mechanism","Something interesting players do"],["theme","A theme","A world or story worth inhabiting"],["existing_prototype","Existing prototype","Something already on your table"]].map(([v,l,h],i)=>`<label class="btn" style="cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;${i===0?"border-color:var(--acc)":""}"><span><input type="radio" name="ng-anchor" value="${v}" ${i===0?"checked":""}> <b>${l}</b></span><span style="font-size:11px;color:var(--mut);font-weight:400">${h}</span></label>`).join("")}
@@ -6378,6 +6386,7 @@ function newGameModal(){
       <textarea id="ng-mvp" placeholder="e.g. one room, three tactical choices, and one relationship consequence afterward" style="display:block;width:100%;min-height:62px;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit;line-height:1.45"></textarea></label>
     <label style="display:block;margin-bottom:16px;font-size:13px;color:var(--mut)">What question should that test answer? <span style="font-weight:400">(optional)</span>
       <input id="ng-question" placeholder="e.g. Does the relationship consequence make the dungeon choice matter?" style="display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;box-sizing:border-box;font:inherit"></label>
+    </div>
     </div>
     <div id="ng-csv-fields" style="display:none;border:1px solid var(--bd);background:var(--bg);border-radius:9px;padding:12px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:650;margin-bottom:3px">Import a card table</div>
@@ -6400,20 +6409,30 @@ function newGameModal(){
       <span style="display:block;font-size:11.5px;margin-top:4px">You can open the work deliberately; Forge will not silently license your idea.</span></label>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" data-x>Cancel</button>
-      <button class="btn primary" id="ng-ok">Create game and build first test</button>
+      <button class="btn primary" id="ng-ok">Create game</button>
     </div>`;
   ov.appendChild(box); document.body.appendChild(ov);
-  const close=()=>ov.remove();
+  const close=()=>{document.removeEventListener("keydown",onKey,true);ov.remove();if(returnFocus?.isConnected)returnFocus.focus();};
   box.querySelector("[data-x]").onclick=close;
+  box.querySelectorAll("a[href]").forEach(link=>link.addEventListener("click",close));
   ov.addEventListener("mousedown",e=>{if(e.target===ov)close();});
   document.getElementById("ng-ok").onclick=()=>ngSubmit(close);
-  box.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+  const onKey=e=>{
+    if(e.key==="Escape"){e.preventDefault();e.stopPropagation();close();}
+    if(e.key==="Tab"){
+      const focusable=[...box.querySelectorAll('button,input,textarea,select,a[href]')].filter(el=>!el.disabled&&el.getClientRects().length);
+      const target=e.shiftKey?focusable.at(-1):focusable[0];
+      if(!box.contains(document.activeElement)||(e.shiftKey&&document.activeElement===focusable[0])||(!e.shiftKey&&document.activeElement===focusable.at(-1))){e.preventDefault();target?.focus();}
+    }
+  };
+  document.addEventListener("keydown",onKey,true);
   setTimeout(()=>{const f=document.getElementById("ng-title"); if(f)f.focus();},30);
 }
 async function ngSubmit(close){
   const btn=document.getElementById("ng-ok"); if(!btn) return;
   const errEl=document.getElementById("ngErr"); errEl.style.display="none";
   const mode=document.querySelector('input[name="ng-mode"]:checked')?.value||"idea";
+  const includeBrief=mode==="idea"&&document.getElementById("ng-add-brief")?.checked;
   const title=(document.getElementById("ng-title").value||"").trim();
   const spark=(document.getElementById("ng-spark").value||"").trim();
   const experience=(document.getElementById("ng-experience").value||"").trim();
@@ -6424,9 +6443,9 @@ async function ngSubmit(close){
   const raw=(document.getElementById("ng-csv")?.value||"").trim();
   const sheetUrl=(document.getElementById("ng-sheet")?.value||"").trim();
   if(!title){ errEl.textContent="Title is required."; errEl.style.display=""; return; }
-  if(mode==="idea"&&!spark){ errEl.textContent="Get the idea out of your head first — one rough sentence is enough."; errEl.style.display=""; return; }
-  if(mode==="idea"&&!experience){ errEl.textContent="Describe how players should feel. This is the filter for later decisions."; errEl.style.display=""; return; }
-  if(mode==="idea"&&!mvp){ errEl.textContent="Name the smallest thing you could put on a table and test."; errEl.style.display=""; return; }
+  if(includeBrief&&!spark){ errEl.textContent="Describe your idea to include a design brief, or uncheck the optional brief to start with an empty game."; errEl.style.display=""; return; }
+  if(includeBrief&&!experience){ errEl.textContent="Describe how players should feel, or uncheck the optional brief."; errEl.style.display=""; return; }
+  if(includeBrief&&!mvp){ errEl.textContent="Describe the smallest test, or uncheck the optional brief."; errEl.style.display=""; return; }
   if(mode==="csv"&&!raw){ errEl.textContent="Paste card CSV, upload a .csv file, or load one of the examples."; errEl.style.display=""; return; }
   if(mode==="csv"&&!NG_CSV_PREVIEW?.can_import){ errEl.textContent="Review the CSV columns and resolve the mapping first."; errEl.style.display=""; await ngCsvReview(); return; }
   if(mode==="sheet"&&!/^https:\/\/docs\.google\.com\/spreadsheets\//i.test(sheetUrl)){
@@ -6435,12 +6454,13 @@ async function ngSubmit(close){
   const was=btn.textContent; btn.disabled=true; btn.textContent="Creating…";
   try{
     let brief=null;
-    if(mode==="idea"){
+    if(includeBrief){
       brief={schema_version:1,status:"idea",starting_point:anchor,spark,
         design_intent:{player_experience:experience},mvp:{playable_slice:mvp}};
       if(question)brief.mvp.question=question;
     }
     const body={title,license}; if(brief)body.brief=brief; if(mode==="csv"){body.csv=raw;body.csv_mapping=NG_CSV_PREVIEW.mapping.map(item=>item.target);}
+    else if(!brief)body.empty=true;
     const r=await fetch("/api/games",{method:"POST",headers:authHdr(),body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(r.status===201){
@@ -6461,11 +6481,11 @@ async function ngSubmit(close){
       close();
       if(sheetOutcome)toast(esc(sheetOutcome.message),9000);
       else{
-        const outcome=mode==="idea"?"First direction committed":`${d.cards} card${d.cards===1?"":"s"} imported as one commit`;
-        toast(`<b>✓ ${esc(outcome)}</b><br>${mode==="idea"?"Now build only what the first test needs.":"Review the cards, choose a design, then invite a collaborator."}`);
+        const outcome=mode==="idea"?(brief?"Design brief saved":"Game created"):`${d.cards} card${d.cards===1?"":"s"} imported as one commit`;
+        toast(`<b>✓ ${esc(outcome)}</b><br>${mode==="idea"?"Add your first cards when you're ready.":"Review the cards, choose a design, then invite a collaborator."}`);
       }
       const destination=d.url||`#/g/${d.slug}`;
-      setTimeout(()=>{ location.href=`/?t=${Date.now()}${destination}${mode==="idea"?"":"/cards"}`; },1100); // reload -> hub rebakes with the new game
+      setTimeout(()=>{ location.href=`/?t=${Date.now()}${destination}${mode==="idea"?(brief?"":"/design"):"/cards"}`; },1100); // reload -> hub rebakes with the new game
     } else if(r.status===401){
       close(); _afterAuth=newGameModal; authOpen();
     } else if(r.status===409 || r.status===422){

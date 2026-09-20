@@ -8,7 +8,7 @@ Sign in and choose **New game**. Give it a working title and choose how to begin
 
 | Starting point | What to do |
 | --- | --- |
-| An idea | Choose **Start from an idea**. Describe the idea, how players should feel, and the smallest version you can play. |
+| A new game | Choose **Empty game** and enter a working title. **Create game** opens Design with no placeholder cards. **Add a design brief** is optional; use it if you want to record the idea, intended experience and smallest playable test now. |
 | A spreadsheet | Choose **Import CSV / XLSX**. Upload a file or paste CSV. For a workbook, select its card tab. Choose **Review columns**, check the field mapping and preview, and fix any errors before creating the game. |
 | A published Google Sheet | Choose **Connect Google Sheet** and supply the published tab URL. This creates the project and attaches the Sheet; the cards remain pending until you review and commit them from **Cards**. For a private Sheet, create the project first and use the separately installed Sheets add-on. See [Connectors](CONNECTORS.md). |
 
