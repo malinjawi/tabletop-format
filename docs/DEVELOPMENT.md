@@ -67,6 +67,8 @@ npm run test:quick
 npm run test:dev
 # For browser workflow changes:
 npm run test:ui
+# For artwork loading, retries, filtering, and navigation:
+npm run test:ui-artwork
 # For schemas, platform behavior, rendering, or tools:
 ./e2e.sh
 ```

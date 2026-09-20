@@ -532,7 +532,7 @@ w.save(p)
     "art bytes, credit, and non-destructive crop stay local until the combined review");
   const artBatch=await page.evaluate(()=>{const current=desCard(),other=desFamilyCards(G(DES.slug)).find(card=>card.id!==current.id);DES.gridSelection=[current.id,other.id];return{cards:DES.gridSelection,current:desSelectedPrinting(current)?.id,other:desSelectedPrinting(other)?.id};});
   await page.getByRole("button",{name:"Choose library",exact:true}).click();
-  await page.getByRole("heading",{name:"Reuse art across exact printings"}).waitFor();
+  await page.getByRole("heading",{name:"Choose artwork",exact:true}).waitFor();
   await page.getByRole("button",{name:"Selected table cards (2)",exact:true}).click();
   await page.getByText("2 printings selected",{exact:true}).waitFor();
   let stagedArt=page.locator(".forge-art-item").filter({hasText:"staged"}).first();
@@ -540,7 +540,7 @@ w.save(p)
   await stagedArt.getByRole("button",{name:"Save",exact:true}).click();
   stagedArt=page.locator(".forge-art-item").filter({hasText:"staged"}).first();
   assert(await stagedArt.getByText("portrait",{exact:true}).isVisible()
-    && await page.getByText("tag changes staged",{exact:false}).isVisible(),
+    && await page.getByText("Tag changes staged",{exact:true}).isVisible(),
     "project artwork gets portable, versioned search tags instead of browser-only folders");
   await stagedArt.getByRole("button",{name:"Use on 2",exact:true}).click();
   const artAssignment=await page.evaluate(ids=>{const printings=ids.map(id=>DES.printings.find(printing=>printing.id===id));return{paths:printings.map(printing=>printing?.art),artists:printings.map(printing=>printing?.artist),tags:DES.artLibrary.assets};},[artBatch.current,artBatch.other]);
@@ -705,7 +705,7 @@ w.save(p)
     &&await page.getByRole("button",{name:"Upload back art",exact:true}).isVisible(),
     "the shared back exposes the same approachable rights-aware artwork path as card fronts");
   await page.getByRole("button",{name:"Choose back artwork",exact:true}).click();
-  await page.getByRole("heading",{name:"Choose one back for every card",exact:true}).waitFor();
+  await page.getByRole("heading",{name:"Choose shared back artwork",exact:true}).waitFor();
   await page.locator("[data-back-art-use]").first().click();
   await page.evaluate(()=>desSelectRegion("back_title",{individual:true}));
   const backX=page.locator("#des-ix");

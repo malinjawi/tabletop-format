@@ -51,6 +51,7 @@ run "print-ready output contracts" npm run test:print-ready
 run "staged Tabletop Simulator component contracts" npm run test:tts-components
 run "portable project server round-trip" node tools/test-forge-project-server.mjs
 run "decoded preview artwork, symbols, and fonts" node tools/ui-preview-assets.mjs
+run "artwork loading, retry, and navigation" node tools/ui-artwork-loading.mjs
 run "truthful Sheets setup and recovery" node tools/ui-sheets-connector.mjs
 run "selected downloads through sign-in and retry" node tools/ui-export-selection.mjs
 run "responsive Explore browser smoke" node tools/ui-smoke.mjs
