@@ -11,6 +11,7 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
+import { pipeline } from "node:stream/promises";
 
 export function createGateway({ name = "gateway", version = "0", allowedOrigins = [], production = false,
   https = false, host = undefined, health = {} } = {}) {
@@ -57,8 +58,11 @@ export function createGateway({ name = "gateway", version = "0", allowedOrigins 
         ...(https ? { "strict-transport-security": "max-age=31536000; includeSubDomains" } : {}),
         "x-request-id": requestId,
       };
+      const responseAbort=new AbortController();
+      res.once("close",()=>{if(!res.writableFinished)responseAbort.abort();});
       const ctx = {
         req, res, url, params: {},
+        signal:responseAbort.signal,
         body: null,
         sent: false,
         requestId,
@@ -81,6 +85,14 @@ export function createGateway({ name = "gateway", version = "0", allowedOrigins 
               "access-control-allow-headers": "content-type, authorization, x-forge-browser" } : {}) });
           res.end(payload);
           console.log(`${requestId} ${req.method} ${url.pathname} ${code} ${Date.now() - t0}ms`);
+        },
+        async sendStream(code,stream,headers) {
+          if(ctx.sent||responseAbort.signal.aborted){stream.destroy();return;}
+          ctx.sent=true;
+          res.writeHead(code,{...securityHeaders,...ctx.headers,
+            ...(corsOrigin?{"access-control-allow-origin":corsOrigin,"access-control-allow-credentials":"true","vary":"Origin"}:{}),...headers});
+          try{await pipeline(stream,res,{signal:responseAbort.signal});}
+          finally{console.log(`${requestId} ${req.method} ${url.pathname} ${code} ${Date.now()-t0}ms`);}
         },
         sendRaw(code, buf, headers) {
           if (ctx.sent) return; ctx.sent = true;

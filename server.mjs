@@ -29,6 +29,8 @@ import { isDeepStrictEqual, promisify } from "node:util";
 import yaml from "js-yaml";
 import YAML from "yaml";
 import { createGateway, readBody } from "./platform/gateway.mjs";
+import { createVerifiedDownloads } from "./platform/verified-download.mjs";
+import { createReleaseVaultTasks } from "./platform/release-vault-tasks.mjs";
 import { createReleaseVault, isReleaseVaultVersionSupported,
   RELEASE_VAULT_NATIVE_VERSION } from "./platform/release-vault.mjs";
 import { createOrJoinExportJob } from "./platform/export-job-race.mjs";
@@ -152,6 +154,9 @@ if (pathContains(CANONICAL_CACHE_DIR, RELEASE_VAULT_DIR) || pathContains(RELEASE
   throw new Error("RELEASE_VAULT_DIR and CACHE_DIR must be separate, non-overlapping stores");
 const releaseVault = createReleaseVault({ root: RELEASE_VAULT_DIR });
 releaseVault.initialize();
+const runReleaseVaultTask=createReleaseVaultTasks({root:RELEASE_VAULT_DIR});
+const verifiedDownloads=createVerifiedDownloads({directory:join(cache.CACHE_DIR,"download-snapshots"),
+  maxBytes:cache.EXPORT_BUDGET.max_output_bytes});
 
 /* ---------- stores ---------- */
 // Store 2 — driver behind the same q surface: node:sqlite (dev) or Postgres (prod)
@@ -848,12 +853,24 @@ const privateDigitalArtifactBlocked=(slug,file)=>{
   const kind=publishedArtifactKind(slug,file);
   return kind==="tts"||(kind==="vtt"&&file!==cache.vttArtifactName("vtt"));
 };
-const verifiedArtifactBytes=(path,expected)=>{
-  if(!existsSync(path)||!lstatSync(path).isFile())return null;
-  const bytes=readFileSync(path);
-  return bytes.length===expected.bytes&&createHash("sha256").update(bytes).digest("hex")===expected.sha256?bytes:null;
+const artifactMatchesReceipt=async(path,expected,signal)=>{
+  try{const snapshot=await verifiedDownloads.prepare(path,expected,{signal});await snapshot.dispose();return true;}
+  catch(error){if(["ENOENT","ENOTDIR","ELOOP","ARTIFACT_INTEGRITY"].includes(error.code))return false;throw error;}
 };
-const artifactMatchesReceipt=(path,expected)=>!!verifiedArtifactBytes(path,expected);
+async function sendVerifiedArtifact(ctx,path,expected,headers){
+  let snapshot;
+  try{
+    snapshot=await verifiedDownloads.prepare(path,expected,{signal:ctx.signal});
+    // Range is deliberately ignored: only the fully verified complete object
+    // is served. Browser cancellation releases both disk and concurrency slots.
+    await ctx.sendStream(200,snapshot.stream(),{"accept-ranges":"none",
+      "content-length":String(snapshot.bytes),...headers});
+  }catch(error){
+    if(ctx.signal.aborted)return;
+    if(error.code==="DOWNLOAD_BUSY")ctx.setHeader("retry-after","2");
+    throw error;
+  }finally{if(snapshot)await snapshot.dispose();}
+}
 const INTERNAL_EXPORT_FILES=new Set(["forge-export-manifest.json"]);
 function safeArtifactPath(file){
   return typeof file==="string"&&file.length>0&&file.length<=512&&!file.startsWith("/")&&!file.includes("\\")
@@ -904,17 +921,17 @@ async function releaseArtifactEvidence(slug,ref,file){
   // exact URL. Legacy cache-backed releases remain readable during migration.
   return matches.find(match=>match.release.vault_manifest_sha256)||matches[0];
 }
-function readVaultedReleaseArtifact(slug,release,expected,file){
+function vaultedReleaseArtifactSource(slug,release,expected,file){
   if(!isReleaseVaultVersionSupported(Number(release.vault_format_version)))
     throw Object.assign(new Error("the release uses an unsupported vault format"),{code:"VAULT_FORMAT"});
-  const preserved=releaseVault.readArtifact({slug,tag:release.tag,sourceSha:release.sha,name:file});
+  const preserved=releaseVault.artifactSource({slug,tag:release.tag,sourceSha:release.sha,name:file});
   if(preserved.manifest.version!==Number(release.vault_format_version))
     throw Object.assign(new Error("the database and vault format versions disagree"),{code:"VAULT_FORMAT"});
   if(preserved.manifestSha256!==String(release.vault_manifest_sha256).toLowerCase())
     throw Object.assign(new Error("the database and vault manifest digests disagree"),{code:"VAULT_BINDING"});
   if(preserved.receipt.bytes!==expected.bytes||preserved.receipt.sha256!==expected.sha256)
     throw Object.assign(new Error("the database and vault artifact receipts disagree"),{code:"VAULT_RECEIPT"});
-  return preserved.bytes;
+  return preserved.path;
 }
 async function exportJobArtifactEvidence(slug,ref,file){
   const matches=(await q.succeededExportJobsForRef(db,slug,ref))
@@ -955,8 +972,8 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
     try{
       const {release,expected}=releaseEvidence;
       await requireNativeReleaseTagBinding(slug,release);
-      const bytes=readVaultedReleaseArtifact(slug,release,expected,file);
-      return ctx.sendRaw(200,bytes,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
+      const path=vaultedReleaseArtifactSource(slug,release,expected,file);
+      return await sendVerifiedArtifact(ctx,path,expected,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
         "cache-control":await projectCacheControl(slug)});
     }catch(error){
       console.error(`Release vault verification failed for ${slug}/${releaseEvidence.release.tag}/${file}: ${error.code||error.message}`);
@@ -966,7 +983,7 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
     }
   }
   let expected=releaseEvidence?.expected||null;
-  if(releaseEvidence&&!artifactMatchesReceipt(fp,expected)) {
+  if(releaseEvidence&&!await artifactMatchesReceipt(fp,expected,ctx.signal)) {
     // Store 3 is derived. Rebuild a missing or corrupt published artifact only
     // from its frozen release receipt and exact Store-1 source SHA.
     const {release,artifacts}=releaseEvidence;
@@ -998,8 +1015,8 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
         // before any sibling can take the ordinary existing-file fast path.
         const family=artifacts.filter(item=>item.status==="ready"
           &&publishedArtifactKind(slug,item.name)===kind);
-        const mismatch=family.find(item=>!artifactMatchesReceipt(
-          cache.pathOf(cache.exportKey(slug,ref,item.name)),item));
+        let mismatch;
+        for(const item of family){if(!await artifactMatchesReceipt(cache.pathOf(cache.exportKey(slug,ref,item.name)),item,ctx.signal)){mismatch=item;break;}}
         if(mismatch){
           discardRegeneratedKind(slug,ref,kind,artifacts);
           return ctx.send(503,{error:"published artifact family could not be reproduced byte-for-byte",
@@ -1010,19 +1027,17 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
       return ctx.send(503,{error:"published artifact regeneration failed",detail:String(error.message||error).slice(0,500)});
     }
     if(!existsSync(fp))return ctx.send(503,{error:"published artifact regeneration produced no requested file"});
-    const reproduced=readFileSync(fp);
-    const digest=createHash("sha256").update(reproduced).digest("hex");
-    if(reproduced.length!==expected.bytes||digest!==expected.sha256){
+    if(!await artifactMatchesReceipt(fp,expected,ctx.signal)){
       rmSync(fp,{force:true});
       return ctx.send(503,{error:"published artifact could not be reproduced byte-for-byte",
-        expected:{bytes:expected.bytes,sha256:expected.sha256},actual:{bytes:reproduced.length,sha256:digest}});
+        expected:{bytes:expected.bytes,sha256:expected.sha256}});
     }
   }
   if(!releaseEvidence){
     let jobEvidence=await exportJobArtifactEvidence(slug,ref,file);
     if(jobEvidence?.error)return ctx.send(503,{error:jobEvidence.error});
     if(!jobEvidence)return ctx.send(404,{error:"artifact is not declared by a frozen release or successful export job"});
-    if(!artifactMatchesReceipt(fp,jobEvidence.expected)){
+    if(!await artifactMatchesReceipt(fp,jobEvidence.expected,ctx.signal)){
       // Store-2 evidence authorizes recovery, but the regenerated bytes must
       // themselves be declared by the newly successful job before serving.
       discardJobEvidence(slug,ref,jobEvidence);
@@ -1031,14 +1046,12 @@ gw.route("GET", "/cache/exports/:slug/:ref/*", async (ctx) => {
         detail:String(error.message||error).slice(0,500)});}
       jobEvidence=await exportJobArtifactEvidence(slug,ref,file);
       if(jobEvidence?.error)return ctx.send(503,{error:jobEvidence.error});
-      if(!jobEvidence||!artifactMatchesReceipt(fp,jobEvidence.expected))
+      if(!jobEvidence||!await artifactMatchesReceipt(fp,jobEvidence.expected,ctx.signal))
         return ctx.send(503,{error:"export artifact could not be reproduced from its successful job receipt"});
     }
     expected=jobEvidence.expected;
   }
-  const bytes=verifiedArtifactBytes(fp,expected);
-  if(!bytes)return ctx.send(503,{error:"artifact integrity verification failed"});
-  ctx.sendRaw(200, bytes, { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
+  await sendVerifiedArtifact(ctx,fp,expected, { "content-type": MIME[fp.split(".").pop()] ?? "application/octet-stream",
     "cache-control": await projectCacheControl(slug) });
 }, "frozen export artifact (sha or release tag)");
 
@@ -1063,8 +1076,8 @@ gw.route("GET", "/cache/releases/:slug/:tag/*", async (ctx) => {
     return ctx.send(404,{error:"this legacy release has no tag-addressed byte vault; use its exact SHA download"});
   try{
     await requireNativeReleaseTagBinding(slug,release);
-    const bytes=readVaultedReleaseArtifact(slug,release,matches[0],file);
-    return ctx.sendRaw(200,bytes,{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
+    const path=vaultedReleaseArtifactSource(slug,release,matches[0],file);
+    return await sendVerifiedArtifact(ctx,path,matches[0],{"content-type":MIME[file.split(".").pop()]??"application/octet-stream",
       "cache-control":await projectCacheControl(slug)});
   }catch(error){
     console.error(`Release vault verification failed for ${slug}/${tag}/${file}: ${error.code||error.message}`);
@@ -4821,7 +4834,7 @@ async function ensureProtectedReleaseTag({slug,tag,sha,message,tagAuthor}){
       {status:500,code:"RELEASE_TAG_VERIFY_FAILED"});
   return verified;
 }
-function pendingReleasePayload(slug,tag,pending){
+async function pendingReleasePayload(slug,tag,pending){
   if(pending.vault_binding_kind!=="tag-manifest"
     ||!isReleaseVaultVersionSupported(Number(pending.vault_format_version)))
     throw Object.assign(new Error("pending release uses unsupported vault evidence"),
@@ -4842,7 +4855,7 @@ function pendingReleasePayload(slug,tag,pending){
   if(!ready.length||ready.some(item=>!validArtifactReceipt(item,item.name)))
     throw Object.assign(new Error("pending release artifact receipt is invalid"),
       {code:"RELEASE_PENDING_CORRUPT"});
-  const preserved=releaseVault.readRelease({slug,tag,sourceSha:pending.source_sha});
+  const preserved=await runReleaseVaultTask("readRelease",{slug,tag,sourceSha:pending.source_sha});
   if(preserved.manifest.version!==Number(pending.vault_format_version)
     ||preserved.manifestSha256!==pending.vault_manifest_sha256)
     throw Object.assign(new Error("pending release and vault manifest disagree"),
@@ -5128,7 +5141,7 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   let pending=await q.pendingReleasePublication(db,slug,tag);
   if(!pending){
     let orphan=null;
-    try{orphan=releaseVault.readRelease({slug,tag});}
+    try{orphan=await runReleaseVaultTask("readRelease",{slug,tag});}
     catch(error){
       if(error?.code!=="VAULT_MISSING"){
         console.error(`Sealed release recovery lookup failed for ${slug}/${tag}: ${error.code||error.message}`);
@@ -5169,7 +5182,7 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
   }
   if(pending){
     let payload;
-    try{payload=pendingReleasePayload(slug,tag,pending);}
+    try{payload=await pendingReleasePayload(slug,tag,pending);}
     catch(error){
       console.error(`Pending release recovery failed for ${slug}/${tag}: ${error.code||error.message}`);
       return ctx.send(503,{error:"the interrupted release could not be verified from its sealed bytes",
@@ -5269,10 +5282,10 @@ gw.route("POST", "/api/games/:slug/releases", async (ctx) => {
     event:{id:eventId,kind:"release",actor_id:u.id},publisher:{name:u.handle,email:u.email}};
   let vaultSeal;
   try{
-    vaultSeal=releaseVault.publishNativeRelease({slug,tag,sourceSha:sha,sourceDir:exportDir,
+    vaultSeal=await runReleaseVaultTask("publishNativeRelease",{slug,tag,sourceSha:sha,sourceDir:exportDir,
       artifacts:artifacts.filter(item=>item.status==="ready"),publication:publicationEnvelope});
   }catch(error){
-    return ctx.send(error?.code==="VAULT_CONFLICT"?409:500,
+    return ctx.send(error?.code==="VAULT_CONFLICT"?409:(error.status||500),
       {error:"release bytes and recoverable publication evidence could not be sealed in the durable vault; no tag or release was created",
         integrity_code:String(error.code||"VAULT_SEAL_FAILED").slice(0,80)});
   }

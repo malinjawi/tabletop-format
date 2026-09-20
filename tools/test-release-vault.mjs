@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { createReleaseVaultTasks } from "../platform/release-vault-tasks.mjs";
 import {
   createReleaseVault, isReleaseVaultVersionSupported, RELEASE_VAULT_FORMAT,
   RELEASE_VAULT_NATIVE_VERSION, RELEASE_VAULT_SUPPORTED_VERSIONS, RELEASE_VAULT_VERSION,
@@ -95,6 +96,13 @@ try {
   const nativeRead=vault.readRelease({slug:"alice~demo-game",tag:"v1.1",sourceSha:fullSha});
   assert.equal(nativeRead.manifestSha256,native.manifestSha256);
   assert.deepEqual(nativeRead.manifest.publication,nativePublication);
+  const runTask=createReleaseVaultTasks({root,concurrency:1});
+  const reading=runTask("readRelease",{slug:"alice~demo-game",tag:"v1.1",sourceSha:fullSha});
+  await assert.rejects(runTask("readRelease",{slug:"alice~demo-game",tag:"v1.1"}),{code:"VAULT_BUSY"});
+  assert.deepEqual(await reading,nativeRead,"worker verification preserves canonical metadata and digest");
+  assert.equal((await runTask("publishNativeRelease",{slug:"alice~demo-game",tag:"v1.1",sourceSha:fullSha,
+    sourceDir:source,artifacts,publication:nativePublication})).idempotent,true);
+  await assert.rejects(runTask("readRelease",{slug:"alice~demo-game",tag:"v404"}),{code:"VAULT_MISSING"});
   const nativeRepeat=vault.publishNativeRelease({slug:"alice~demo-game",tag:"v1.1",sourceSha:fullSha,
     sourceDir:source,artifacts:[...artifacts].reverse(),publication:nativePublication});
   assert.equal(nativeRepeat.idempotent,true);
