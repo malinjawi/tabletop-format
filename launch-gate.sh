@@ -62,6 +62,7 @@ run "functional integration" ./e2e.sh
 run "local two-user golden journey" ./journey.sh
 run "Forge protocol journey" ./journey-forgejo.sh
 run "bounded performance and concurrency" ./perf.sh
+run "verified large downloads and cancellation" node tools/test-verified-download.mjs
 run "production deployment contract" node tools/production-config-check.mjs
 run "single-use pilot admission and account recovery" node tools/test-pilot-invite-registration.mjs
 run "SQLite/PostgreSQL Store-2 conformance" ./store2-pg-test.sh

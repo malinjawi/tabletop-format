@@ -55,6 +55,7 @@
     "test:production-config": "node tools/production-config-check.mjs",
     "release:vault": "node tools/release-vault.mjs",
     "test:release-vault": "node tools/test-release-vault.mjs",
+    "test:verified-download": "node tools/test-verified-download.mjs",
     "test:release-vault-cli": "node tools/test-release-vault-cli.mjs",
     "test:release-vault-snapshot": "node tools/test-release-vault-snapshot.mjs",
     "test:backup-guards": "node tools/test-backup-guards.mjs",

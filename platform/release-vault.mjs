@@ -356,6 +356,38 @@ function readRegular(path, label) {
   } finally { if (fd != null) closeSync(fd); }
 }
 
+function digestRegular(path,label){
+  let fd;
+  try{
+    const stat=lstatOrNull(path);
+    if(!stat)fail("VAULT_MISSING",`${label} is missing`);
+    if(stat.isSymbolicLink())fail("VAULT_SYMLINK",`${label} must not be a symbolic link`);
+    if(!stat.isFile())fail("VAULT_CORRUPT",`${label} is not a regular file`);
+    fd=openSync(path,FS.O_RDONLY|(FS.O_NOFOLLOW||0)|(FS.O_NONBLOCK||0));
+    if(!fstatSync(fd).isFile())fail("VAULT_CORRUPT",`${label} is not a regular file`);
+    const hash=createHash("sha256"),buffer=Buffer.allocUnsafe(COPY_BUFFER_BYTES);let bytes=0;
+    while(true){const count=readSync(fd,buffer,0,buffer.length,null);if(!count)break;bytes+=count;hash.update(buffer.subarray(0,count));}
+    return {bytes,sha256:hash.digest("hex")};
+  }finally{if(fd!=null)closeSync(fd);}
+}
+
+function sameRegularFiles(left,right){
+  let a,b;
+  try{
+    a=openSync(left,FS.O_RDONLY|(FS.O_NOFOLLOW||0));b=openSync(right,FS.O_RDONLY|(FS.O_NOFOLLOW||0));
+    const as=fstatSync(a),bs=fstatSync(b);if(!as.isFile()||!bs.isFile()||as.size!==bs.size)return false;
+    const x=Buffer.allocUnsafe(COPY_BUFFER_BYTES),y=Buffer.allocUnsafe(COPY_BUFFER_BYTES);
+    let offset=0;
+    while(offset<as.size){
+      const size=Math.min(x.length,as.size-offset);let nx=0,ny=0;
+      while(nx<size){const n=readSync(a,x,nx,size-nx,offset+nx);if(!n)return false;nx+=n;}
+      while(ny<size){const n=readSync(b,y,ny,size-ny,offset+ny);if(!n)return false;ny+=n;}
+      if(!x.subarray(0,size).equals(y.subarray(0,size)))return false;offset+=size;
+    }
+    return true;
+  }finally{if(a!=null)closeSync(a);if(b!=null)closeSync(b);}
+}
+
 function assertContained(root, path) {
   const rel = relative(root, path);
   if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
@@ -442,8 +474,9 @@ export function createReleaseVault({ root } = {}) {
   const blobKey = digest => `blobs/sha256/${digest.slice(0, 2)}/${digest}`;
   const blobPath = digest => join(vaultRoot, blobKey(digest));
 
-  const verifyFileReceipt = (path, receipt, label) => {
-    const bytes = readRegular(path, label), actual = { bytes: bytes.length, sha256: sha256(bytes) };
+  const verifyFileReceipt = (path, receipt, label, retainBytes=true) => {
+    const bytes=retainBytes?readRegular(path,label):null;
+    const actual=bytes?{bytes:bytes.length,sha256:sha256(bytes)}:digestRegular(path,label);
     if (actual.bytes !== receipt.bytes || actual.sha256 !== receipt.sha256)
       fail("VAULT_CORRUPT", `${label} does not match its immutable receipt`, { expected: receipt, actual });
     return bytes;
@@ -513,9 +546,9 @@ export function createReleaseVault({ root } = {}) {
       linkSync(stage, target); created = true; fsyncDirectory(dirname(target));
     } catch (error) {
       if (error?.code !== "EEXIST") throw error;
-      const current = verifyFileReceipt(target, receipt, label);
-      const staged = verifyFileReceipt(stage, receipt, "release vault staging object");
-      if (!current.equals(staged)) fail("VAULT_CONFLICT", `${label} already exists with different bytes`);
+      verifyFileReceipt(target, receipt, label, false);
+      verifyFileReceipt(stage, receipt, "release vault staging object", false);
+      if (!sameRegularFiles(target,stage)) fail("VAULT_CONFLICT", `${label} already exists with different bytes`);
     } finally {
       if (lstatOrNull(stage)) { unlinkSync(stage); fsyncDirectory(stagingRoot); }
     }
@@ -545,7 +578,7 @@ export function createReleaseVault({ root } = {}) {
       for (const receipt of manifest.artifacts) {
         const prefix = join(shaRoot, receipt.sha256.slice(0, 2));
         assertDirectory(prefix, `release vault blob prefix '${receipt.sha256.slice(0, 2)}'`);
-        verifyFileReceipt(blobPath(receipt.sha256), receipt, `release vault blob '${receipt.sha256}'`);
+        verifyFileReceipt(blobPath(receipt.sha256), receipt, `release vault blob '${receipt.sha256}'`, false);
       }
     }
     return { manifest, manifestSha256: digest, manifestKey: manifestKey(slug, tag) };
@@ -612,8 +645,10 @@ export function createReleaseVault({ root } = {}) {
   const readManifest = ({ slug, tag, sourceSha = undefined } = {}) =>
     loadManifest({ slug, tag, sourceSha });
 
+  // Metadata and path only: callers MUST verify the complete receipt before
+  // serving bytes. The async download path uses a private verified snapshot.
   /** @param {ReadArtifactInput} [input] */
-  const readArtifact = ({ slug, tag, sourceSha = undefined, name } = {}) => {
+  const artifactSource = ({ slug, tag, sourceSha = undefined, name } = {}) => {
     name = validArtifactName(name);
     const release = loadManifest({ slug, tag, sourceSha });
     const receipt = release.manifest.artifacts.find(item => item.name === name);
@@ -621,8 +656,14 @@ export function createReleaseVault({ root } = {}) {
     assertDirectory(blobsRoot, "release vault blobs directory");
     assertDirectory(shaRoot, "release vault SHA-256 directory");
     assertDirectory(join(shaRoot, receipt.sha256.slice(0, 2)), `release vault blob prefix '${receipt.sha256.slice(0, 2)}'`);
-    const bytes = verifyFileReceipt(blobPath(receipt.sha256), receipt, `release vault blob '${receipt.sha256}'`);
-    return { ...release, receipt, bytes };
+    return { ...release, receipt, path:blobPath(receipt.sha256) };
+  };
+
+  /** @param {ReadArtifactInput} [input] */
+  const readArtifact = (input = {}) => {
+    const {path,...source}=artifactSource(input);
+    const bytes=verifyFileReceipt(path,source.receipt,`release vault blob '${source.receipt.sha256}'`);
+    return {...source,bytes};
   };
 
   const treeItems = (base, prefix = "") => {
@@ -701,9 +742,9 @@ export function createReleaseVault({ root } = {}) {
         continue;
       }
       try {
-        const path = join(shaRoot, item.path), bytes = readRegular(path, `release vault blob '${match[2]}'`), digest = sha256(bytes);
+        const path=join(shaRoot,item.path),actual=digestRegular(path,`release vault blob '${match[2]}'`),digest=actual.sha256;
         if (digest !== match[2]) corrupt(`blobs/sha256/${item.path}`, "digest-mismatch", `blob hashes to ${digest}`);
-        else validBlobs.set(match[2], { path: `blobs/sha256/${item.path}`, bytes: bytes.length });
+        else validBlobs.set(match[2], { path: `blobs/sha256/${item.path}`, bytes: actual.bytes });
       } catch (error) { corrupt(`blobs/sha256/${item.path}`, error.code || "invalid", error.message); }
     }
     for (const manifest of report.manifests) {
@@ -734,7 +775,7 @@ export function createReleaseVault({ root } = {}) {
     return report;
   };
 
-  return Object.freeze({ initialize, publishRelease, publishNativeRelease, readManifest, readRelease, readArtifact, audit });
+  return Object.freeze({ initialize, publishRelease, publishNativeRelease, readManifest, readRelease, artifactSource, readArtifact, audit });
 }
 
 export const RELEASE_VAULT_FORMAT = FORMAT;

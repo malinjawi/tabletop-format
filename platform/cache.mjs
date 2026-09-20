@@ -19,7 +19,7 @@
  */
 import { execFile, execFileSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, cpSync, readdirSync,
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, rmSync, cpSync, readdirSync,
          statSync, utimesSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -249,7 +249,9 @@ export async function ensureExport(gameRel, gameSlug, ref, kind, { publicOrigin 
       const actual = new Map(staged.map(item => [item.name, item]));
       for (const file of manifest.files || []) {
         const item = actual.get(file.name); if (!item) throw new Error(`worker manifest file missing: ${file.name}`);
-        const sha = createHash("sha256").update(readFileSync(item.file)).digest("hex");
+        const hash=createHash("sha256");
+        for await(const chunk of createReadStream(item.file,{highWaterMark:256*1024}))hash.update(chunk);
+        const sha=hash.digest("hex");
         if (sha !== file.sha256 || item.stat.size !== file.bytes) throw new Error(`worker manifest mismatch: ${file.name}`);
       }
       if (!actual.has(done)) throw new Error(`worker did not produce required artifact '${done}'`);
