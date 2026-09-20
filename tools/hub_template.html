@@ -358,9 +358,9 @@ async function refreshLive(){
 }
 function renderAuthArea(){
   const el=document.getElementById("authArea");
-  if(!LIVE){ el.innerHTML='<div class="av" title="you"></div>'; return; }
+  if(!LIVE){ el.innerHTML='<a class="btn" href="#recovery">Local drafts</a>'; return; }
   el.innerHTML = ME
-    ? `<details class="account-menu"><summary>@${esc(ME.handle)} ▾</summary><div class="account-popover"><a href="/api/me/export">Download my data</a><button onclick="signOut()">Sign out</button></div></details>`
+    ? `<details class="account-menu"><summary>@${esc(ME.handle)} ▾</summary><div class="account-popover"><a href="#recovery">Local drafts</a><a href="/api/me/export">Download my data</a><button onclick="signOut()">Sign out</button></div></details>`
     : `<button class="btn" style="background:#e0632f;color:#fff;border:none" onclick="authOpen()">Sign in</button>`;
 }
 function authOpen(mode){ authMode(mode||"login"); document.getElementById("authModal").style.display="flex"; }
@@ -1804,6 +1804,52 @@ function desDraftSnapshot(){
 async function desDraftDeleteKeys(keys){for(const key of [...new Set((keys||[]).filter(Boolean))])await desDraftStore("readwrite",store=>store.delete(key));}
 async function desDraftClearCurrent(){clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;const key=desDraftKey();if(key)await desDraftDeleteKeys([key]);}
 async function desDraftAll(){return await desDraftStore("readonly",store=>store.getAll())||[];}
+// Recovery exports preserve the original envelope and staged bytes. They are
+// deliberately not an import command or a replay over a newer repository ref.
+let RECOVERY_VIEW=null;
+async function recoveryActorCurrent(actor){
+  if(actor!==desDraftActor()||(LIVE&&!ME))return false;
+  if(!LIVE)return true;
+  const response=await fetch("/api/me",{headers:authHdr()});
+  const account=response.ok?await response.json():null;
+  if(actor!==desDraftActor()||actor!==`user:${account?.id}`){void refreshLive();return false;}
+  return true;
+}
+async function recoveryPage(){
+  const view={actor:desDraftActor(),route:location.hash,records:[]};RECOVERY_VIEW=view;
+  const current=()=>RECOVERY_VIEW===view&&view.actor===desDraftActor()&&location.hash===view.route;
+  $("#view").innerHTML='<div class="wrap help-page"><h1>Local drafts</h1><p role="status">Loading recovery copies…</p></div>';
+  if(LIVE&&!ME){$("#view").innerHTML='<div class="wrap help-page"><h1>Local drafts</h1><p>Sign in to see this account’s drafts in this browser.</p><button class="btn primary" onclick="authOpen()">Sign in</button></div>';return;}
+  try{
+    if(!await recoveryActorCurrent(view.actor)||!current())return;
+    await desDraftFlush();await componentDraftFlush();
+    const records=await desDraftAll();if(!current())return;
+    view.records=records.filter(record=>record?.actor===view.actor&&record.dirty&&record.key&&record.ref)
+      .sort((a,b)=>String(b.saved_at||"").localeCompare(String(a.saved_at||"")));
+    $("#view").innerHTML=`<div class="wrap help-page"><h1>Local drafts</h1><p>Uncommitted card and piece work retained for ${LIVE?`@${esc(ME.handle)}`:"this offline workspace"} in this browser. These copies are separate from saved project source and server backups.</p><p>Export keeps the original version, staged artwork, and metadata together. It does not apply changes or create a release. To resume an exact-base draft, open its project’s Design page. Older drafts require comparison against their original version.</p><div id="recovery-note" role="status" aria-live="polite"></div><div id="recovery-list">${view.records.map((record,index)=>{
+      const pieces=record.kind===COMPONENT_DRAFT_KIND,state=record.state||{},count=pieces?(state.pieces||[]).length:(state.cards||[]).length;
+      const saved=new Date(record.saved_at),when=Number.isNaN(saved.getTime())?"Unknown save time":saved.toLocaleString();
+      return `<article class="chg" style="margin:14px 0;overflow-wrap:anywhere"><h2 style="margin:0 0 6px;font-size:18px">${esc(record.slug)} · ${pieces?"Piece Studio":`Card Studio${record.family?` · ${esc(record.family)}`:""}`}</h2><p>${esc(when)} · ${count} ${pieces?"piece types":"card records"}${pieces?"":` · ${Object.keys(state.pendingAssets||{}).length} staged art files`}</p><p>Original base: <code>${esc(record.ref)}</code></p><button class="btn" data-recovery-export="${index}" style="min-height:44px" onclick="recoveryExport(${index})" aria-label="Export recovery copy ${index+1} for ${esc(record.slug)}">Export recovery copy</button> <a class="btn" style="min-height:44px" href="#g/${encodeURIComponent(record.slug)}/design">Open project design</a></article>`;
+    }).join("")||'<p>No retained drafts for this account in this browser.</p>'}</div><p class="mut">Clearing browser storage removes these local copies. Export anything you need before clearing it. Recovery files can contain private game content; store them with your project backups.</p></div>`;
+  }catch(error){if(current())$("#view").innerHTML='<div class="wrap help-page"><h1>Local drafts</h1><p role="alert">Browser recovery storage could not be read. Your saved project source has not changed.</p><button class="btn" onclick="recoveryPage()">Retry</button></div>';}
+}
+async function recoveryExport(index){
+  const view=RECOVERY_VIEW,listed=view?.records[index];if(!listed)return;
+  const current=()=>RECOVERY_VIEW===view&&view.actor===desDraftActor()&&location.hash===view.route;
+  try{
+    if(!await recoveryActorCurrent(view.actor)||!current())return;
+    const record=await desDraftStore("readonly",store=>store.get(listed.key));
+    if(!current())return;
+    if(!record||record.actor!==view.actor||record.key!==listed.key)throw new Error("This recovery copy is no longer available. Refresh the list.");
+    const data={format:"forge-local-draft-recovery",version:1,exported_at:new Date().toISOString(),
+      notice:"Uncommitted recovery copy. Export does not apply this draft to project source.",draft:record};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)+"\n"],{type:"application/json"}));
+    const link=document.createElement("a");link.href=url;
+    link.download=`${String(record.slug).replace(/[^a-z0-9_-]/gi,"-")}-${record.kind===COMPONENT_DRAFT_KIND?"pieces":"cards"}-${String(record.ref).slice(0,10)}-draft.json`;
+    document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    $("#recovery-note").textContent="Recovery copy exported. Nothing has been applied or committed.";
+  }catch(error){if(current())$("#recovery-note").textContent=error.message||"Could not export the recovery copy. Try again.";}
+}
 async function desDraftPersist(snapshot=desDraftSnapshot()){
   if(!snapshot)return;
   if(!snapshot.dirty){await desDraftDeleteKeys([snapshot.key]);return;}
@@ -1862,7 +1908,7 @@ async function desDraftResolve(action){
 function desDraftOfferHtml(offer){
   const record=offer.record,saved=record.saved_at?new Date(record.saved_at).toLocaleString():"an earlier session",state=record.state||{},cards=(state.cards||[]).filter((card,index)=>JSON.stringify(card)!==JSON.stringify(DES.origCards?.[index])).length,art=Object.keys(state.pendingAssets||{}).length;
   if(offer.kind==="exact")return `<div class="badge">BROWSER-LOCAL DRAFT · EXACT BASE</div><h2 style="margin:8px 0 4px">Restore local Studio draft?</h2><p class="mut" style="line-height:1.55">Forge found uncommitted work from ${esc(saved)} on the exact repository version <code>${esc(record.ref.slice(0,10))}</code>. It has not been applied or uploaded.</p><div class="chg"><b>Recovery copy</b><br>${cards} changed card${cards===1?"":"s"} · ${art} staged art file${art===1?"":"s"} · layout, card back, crops, tags, credit, and rights kept together in this browser.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" onclick="desDraftResolve('discard')">Discard draft</button><button class="btn primary" onclick="desDraftResolve('restore')">Restore draft</button></div>`;
-  return `<div class="badge">BROWSER-LOCAL DRAFT · OLDER BASE</div><h2 style="margin:8px 0 4px">Local draft belongs to an older version</h2><p class="mut" style="line-height:1.55">The repository moved from <code>${esc(record.ref.slice(0,10))}</code> to <code>${esc(String(DES.sourceRef||"").slice(0,10))}</code>. Forge will not apply the older work over newer cards or design files.</p><div class="warn"><b>Nothing was overwritten.</b><br>Keep the recovery copy for later, or discard it here. Reapplying it requires an intentional comparison against its original base.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn primary" onclick="desDraftResolve('keep')">Keep for later</button><button class="btn" onclick="desDraftResolve('discard')">Discard older draft${offer.records.length===1?"":"s"}</button></div>`;
+  return `<div class="badge">BROWSER-LOCAL DRAFT · OLDER BASE</div><h2 style="margin:8px 0 4px">Local draft belongs to an older version</h2><p class="mut" style="line-height:1.55">The repository moved from <code>${esc(record.ref.slice(0,10))}</code> to <code>${esc(String(DES.sourceRef||"").slice(0,10))}</code>. Forge will not apply the older work over newer cards or design files.</p><div class="warn"><b>Nothing was overwritten.</b><br>Keep the recovery copy, export it from Local drafts, or discard it here. Reapplying it requires an intentional comparison against its original base.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn primary" onclick="desDraftResolve('keep')">Keep for later</button><button class="btn" onclick="desDraftResolve('keep').then(()=>go('recovery'))">Find and export drafts</button><button class="btn" onclick="desDraftResolve('discard')">Discard older draft${offer.records.length===1?"":"s"}</button></div>`;
 }
 async function desDraftOfferRestore(){
   const identity=desDraftIdentity();if(!identity){if(DES)DES._draftReady=true;return;}
@@ -5230,6 +5276,7 @@ function render(){
   else if (jamId) jamPage(jamId);
   else if (h === "jams") jamsPage();
   else if (parts[0] === "help") creatorHelpPage(parts[1]);
+  else if (parts[0] === "recovery") void recoveryPage();
   else if (userName) profilePage(decodeURIComponent(userName));
   else explorePage();
   // Chrome/password managers occasionally mistake filter boxes for the login

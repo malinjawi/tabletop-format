@@ -33,7 +33,7 @@ workflow in [CONTRIBUTING](../CONTRIBUTING.md).
 | --- | --- | --- | --- |
 | V1-01 | Merged; main qualification running | Finish existing artwork loading and exact-file preview changes | Reserved image geometry; decoded pixels before ready; retry for missing/corrupt images; keyboard/mobile/reduced-motion coverage; filtering preserves focus and images; late responses cannot overwrite navigation; historical blobs and LFS preserve access/version boundaries. |
 | V1-02 | Focused checks passed; integration in progress | Repeatable home printing | Persisted, reviewed print recipe with actual insert dimensions distinct from sleeve exterior size, A4/Letter, gutters/shared cuts, fronts/duplex as supported, and calibration output. Verify exported geometry, frozen recipe identity, and a physical proof. Extend existing print infrastructure rather than adding a competing renderer. |
-| V1-03 | Pending | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
+| V1-03 | Draft discovery implemented; release discovery pending | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
 | V1-04 | Pending | Complete publication reconciliation | Read-only inventory across finalized/pending database publications, every sealed manifest/blob, and Git tag/source identity. Classify missing, contradictory, recoverable and unreferenced states. Both database drivers and failure fixtures pass; require the audit for backup acceptance and after restore; qualify the exact resulting image. |
 | V1-05 | Pending | Responsive long operations | Measure representative large-download memory, first-byte time and unrelated-request latency. Bound verification/delivery without serving unverified/corrupt bytes. Deliberate range/cancellation behavior, bounded concurrent jobs, and remaining request-time blocking work moved off HTTP handling. Show truthful progress/failure/retry. |
 | V1-06 | Pending | Simple first useful workflow | A named private project does not require a full design brief. A newcomer imports/reviews/commits cards, adds credited artwork, and downloads a proof. Preserve brief data, explicit import review, and Sheet attach versus commit distinctions. |
@@ -132,3 +132,18 @@ selected; PDF geometry and actual physical fit are separate evidence.
 - V1-01: PR #6 merged as `f1d61953cc7c7da9b5a10fd229931cca9c60c79c`.
   Both protected PR checks passed at `e012250`; main run `35509157013`
   independently requalifies and publishes the resulting main image.
+### V1-03 — retained draft discovery
+
+- The account menu opens a browser-local recovery list for the signed-in account,
+  including older card-family and Piece Studio records. Exports retain the
+  original envelope, exact base, source hash when present, staged artwork bytes,
+  credit/rights metadata, card/layout data and piece/setup state.
+- Recovery JSON is an uncommitted copy, not an automatic import or a shared
+  project commit. Original records remain intact. Older-base replay still needs
+  a deliberate comparison; exact-base Studio restoration remains the existing
+  explicit action.
+- Focused browser evidence covers account isolation, real original-base card
+  drafts, export byte/metadata preservation, piece/setup state, keyboard and
+  mobile use, stale navigation, storage failure/retry and no source writes.
+- Interrupted-release discovery depends on the cross-store inventory in V1-04.
+  It remains open; this draft slice does not complete V1-03.

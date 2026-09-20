@@ -52,6 +52,7 @@ run "staged Tabletop Simulator component contracts" npm run test:tts-components
 run "portable project server round-trip" node tools/test-forge-project-server.mjs
 run "decoded preview artwork, symbols, and fonts" node tools/ui-preview-assets.mjs
 run "saved home print settings, exact dimensions, and calibration" node tools/ui-home-print.mjs
+run "account-scoped local draft discovery and export" node tools/ui-draft-recovery.mjs
 run "artwork loading, retry, and navigation" node tools/ui-artwork-loading.mjs
 run "truthful Sheets setup and recovery" node tools/ui-sheets-connector.mjs
 run "selected downloads through sign-in and retry" node tools/ui-export-selection.mjs
