@@ -259,8 +259,10 @@ try {
   fixtureOwner.close();
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator(".hero").getByRole("button", { name: "New game", exact:true }).click();
-  assert(await page.getByRole("radio", { name: /Start from an idea/ }).isChecked(),
-    "new game opens on the guided idea path");
+  assert(await page.getByRole("radio", { name: /Empty game/ }).isChecked()
+    && !await page.getByLabel("Add a design brief (optional)").isChecked()
+    && !await page.locator("#ng-spark").isVisible(),
+    "new game starts with a title and keeps the design brief optional");
   await page.getByRole("radio", { name: /Import CSV/ }).check();
   assert(await page.getByLabel("CSV card data").isVisible() && !await page.getByLabel("What should players feel?").isVisible(),
     "CSV path shows only import-relevant fields");
