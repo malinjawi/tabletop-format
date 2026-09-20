@@ -32,9 +32,9 @@ workflow in [CONTRIBUTING](../CONTRIBUTING.md).
 | ID | State | Deliverable | Acceptance evidence |
 | --- | --- | --- | --- |
 | V1-01 | Merged and image published | Finish existing artwork loading and exact-file preview changes | Reserved image geometry; decoded pixels before ready; retry for missing/corrupt images; keyboard/mobile/reduced-motion coverage; filtering preserves focus and images; late responses cannot overwrite navigation; historical blobs and LFS preserve access/version boundaries. |
-| V1-02 | Merged; main image qualification running; physical proof open | Repeatable home printing | Persisted, reviewed print recipe with actual insert dimensions distinct from sleeve exterior size, A4/Letter, gutters/shared cuts, fronts/duplex as supported, and calibration output. Verify exported geometry, frozen recipe identity, and a physical proof. Extend existing print infrastructure rather than adding a competing renderer. |
-| V1-03 | Draft discovery implemented; release discovery pending | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
-| V1-04 | Pending | Complete publication reconciliation | Read-only inventory across finalized/pending database publications, every sealed manifest/blob, and Git tag/source identity. Classify missing, contradictory, recoverable and unreferenced states. Both database drivers and failure fixtures pass; require the audit for backup acceptance and after restore; qualify the exact resulting image. |
+| V1-02 | Merged and main qualification passed; physical proof open | Repeatable home printing | Persisted, reviewed print recipe with actual insert dimensions distinct from sleeve exterior size, A4/Letter, gutters/shared cuts, fronts/duplex as supported, and calibration output. Verify exported geometry, frozen recipe identity, and a physical proof. Extend existing print infrastructure rather than adding a competing renderer. |
+| V1-03 | Draft discovery merged; release discovery pending | Discoverable recovery | This account's retained drafts can be found and exported with original base and staged artwork/metadata. Another account cannot see them; export changes no source. Exact-base restoration survives. Interrupted release states are visible with safe, evidence-based next steps. No silent replay of old drafts over newer source. |
+| V1-04 | Implemented; exact-image qualification pending | Complete publication reconciliation | Read-only inventory across finalized/pending database publications, every sealed manifest/blob, and Git tag/source identity. Classify missing, contradictory, recoverable and unreferenced states. Both database drivers and failure fixtures pass; require the audit for backup acceptance and after restore; qualify the exact resulting image. |
 | V1-05 | Pending | Responsive long operations | Measure representative large-download memory, first-byte time and unrelated-request latency. Bound verification/delivery without serving unverified/corrupt bytes. Deliberate range/cancellation behavior, bounded concurrent jobs, and remaining request-time blocking work moved off HTTP handling. Show truthful progress/failure/retry. |
 | V1-06 | Pending | Simple first useful workflow | A named private project does not require a full design brief. A newcomer imports/reviews/commits cards, adds credited artwork, and downloads a proof. Preserve brief data, explicit import review, and Sheet attach versus commit distinctions. |
 | V1-07 | Pending | Integrate and qualify candidate | Clean-checkout setup; original-game two-user journey; current functional, type, browser and relevant storage/protocol tests; both protected CI gates; pinned commit, CI run, image digest, and output hashes in one receipt. Update maintained docs/catalog to match tested support. |
@@ -159,3 +159,19 @@ selected; PDF geometry and actual physical fit are separate evidence.
   including exact-base restoration and stale-base refusal. The focused test
   verifies expired-session refusal and keeps the account menu within a phone
   viewport. Integration with current main still requires protected CI.
+
+### V1-04 — complete publication inventory candidate
+
+- Read-only audit joins finalized and pending database records to every sealed
+  manifest/blob and exact Git source/tag evidence, including original publisher,
+  event identity, protected tag object and original publication metadata.
+- Frozen Forgejo mode reads its existing PostgreSQL schema and bare repositories
+  while both writers remain stopped. Production backup requires this audit;
+  the exact-image restore drill repeats it before either restored writer starts.
+- Local evidence: 21 inventory checks passed on SQLite and PostgreSQL; existing
+  storage conformance passed 111 checks per driver. Real bare-Git adapter checks,
+  backup failure/restart guards, and static types passed. Real Forgejo/image
+  qualification is still required; these checks do not prove a deployed host.
+- Draft recovery PR #8 passed both protected gates at `f73ddbc` (run
+  `35510379101`) and merged as `bc12e59eae99802bbc5fd813a1ebc64a4bc290d5`.
+  Main qualification is separate. Print main run `35510245242` passed.

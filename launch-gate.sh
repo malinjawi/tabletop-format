@@ -64,6 +64,7 @@ run "bounded performance and concurrency" ./perf.sh
 run "production deployment contract" node tools/production-config-check.mjs
 run "single-use pilot admission and account recovery" node tools/test-pilot-invite-registration.mjs
 run "SQLite/PostgreSQL Store-2 conformance" ./store2-pg-test.sh
+run "frozen Forgejo publication identity" node tools/test-publication-offline-forgejo.mjs
 
 deploy_preflight=0
 if [ -n "${FORGE_DEPLOY_ENV:-}" ]; then
