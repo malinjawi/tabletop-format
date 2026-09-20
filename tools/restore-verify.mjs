@@ -116,7 +116,7 @@ assert(release.build?.format==="forge-release-build"&&release.build?.public_orig
 assert(release.print_deliveries?.length===1
   &&release.print_deliveries[0].status==="approved"
   &&release.print_deliveries[0].release.sha===release.sha
-  &&release.print_deliveries[0].artifact.name==="print-ready.zip"
+  &&/^(?:v[1-9][0-9]*-)?print-ready\.zip$/.test(release.print_deliveries[0].artifact.name)
   &&release.print_deliveries[0].decision.evidence_sha256==="2".repeat(64)
   &&release.print_deliveries[0].trust.independently_verified===false,
   "exact printer delivery and immutable approval evidence survived PostgreSQL restore",

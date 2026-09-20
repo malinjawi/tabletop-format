@@ -4,11 +4,14 @@
 import tempfile
 import hashlib
 import os
+import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw
 from pypdf import PdfReader
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, LETTER
+from reportlab.lib.units import mm
+from jsonschema import Draft202012Validator
 
 from export_print_ready import (
     corner_crop_marks,
@@ -22,6 +25,9 @@ from export_print_ready import (
     inspect_pdfx1a_candidate,
     press_pdf,
     print_at_home_pdf,
+    calibration_pdf,
+    home_page_size,
+    sleeve_profile_spec,
     sleeve_fitted_png,
     write_pdfx1a_candidate,
 )
@@ -318,6 +324,81 @@ def assert_named_tgc_handoff(folder):
         assert "requires 63.5 x 88.9 mm trim" in str(error)
 
 
+def assert_custom_home_geometry(folder):
+    front = folder / "geometry-front.jpg"
+    Image.new("RGB", (660, 909), "#487664").save(front)
+    def matrices(page):
+        current, result = None, []
+        for operands, operator in page.get_contents().operations:
+            if operator == b"cm":
+                current = [float(value) for value in operands]
+            if operator == b"Do":
+                result.append(current)
+        return result
+    for paper in (A4, LETTER):
+        landscape = home_page_size(paper, "landscape")
+        output = folder / "custom-grid.pdf"
+        print_at_home_pdf(output, landscape, [front] * 9, {front.name: front}, front,
+                          66, 90.892, "Exact insert", "test-ref", "", fronts_only=True)
+        reader = PdfReader(output)
+        assert len(reader.pages) == 2
+        assert str(reader.trailer["/Root"]["/ViewerPreferences"]["/PrintScaling"]) == "/None"
+        boxes = matrices(reader.pages[0])
+        assert len(boxes) == 8
+        assert all(abs(box[0] / mm - 66) < 1e-5 and abs(box[3] / mm - 90.892) < 1e-5 for box in boxes)
+        assert abs(boxes[0][4] + boxes[0][0] - boxes[1][4]) < .001, "shared vertical cuts have no gaps"
+        assert abs(boxes[4][5] + boxes[4][3] - boxes[0][5]) < .001, "shared horizontal cuts have no gaps"
+        assert len(matrices(reader.pages[1])) == 1, "partial last sheet preserves exact quantity"
+    for orientation in ("portrait", "landscape"):
+        size = home_page_size(A4, orientation)
+        output = folder / "duplex-geometry.pdf"
+        print_at_home_pdf(output, size, [front] * 3, {front.name: front}, front,
+                          66, 90.892, "Duplex", "test-ref", "")
+        pages = PdfReader(output).pages
+        assert len(pages) == 2
+        for face, back in zip(matrices(pages[0]), matrices(pages[1])):
+            if orientation == "portrait":
+                assert abs(face[4] + back[4] + face[0] - size[0]) < .001
+                assert abs(face[5] - back[5]) < .001
+            else:
+                assert abs(face[5] + back[5] + face[3] - size[1]) < .001
+                assert abs(face[4] - back[4]) < .001
+    proof = folder / "calibration.pdf"
+    calibration_pdf(proof, home_page_size(A4, "landscape"), (66, 90.892), "Proof", "test-ref")
+    page = PdfReader(proof).pages[0]
+    lengths = []
+    start = None
+    for operands, operator in page.get_contents().operations:
+        if operator == b"m": start = [float(value) for value in operands]
+        if operator == b"l" and start:
+            end = [float(value) for value in operands]
+            lengths.append(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** .5 / mm)
+    assert sum(abs(length - 50) < 1e-4 for length in lengths) == 2
+    assert "66 x 90.892 mm" in page.extract_text()
+
+
+def assert_custom_home_validation():
+    schema = json.loads((Path(__file__).resolve().parents[1] / "schemas/print-profile.schema.json").read_text())
+    from export_print_ready import DEFAULT_PRINT_PROFILE
+    profile = json.loads(json.dumps(DEFAULT_PRINT_PROFILE))
+    validator = Draft202012Validator(schema)
+    assert validator.is_valid(profile)
+    profile["home"].update(sleeve_profile="custom", orientation="landscape", insert_mm={"w_mm": 66, "h_mm": 90.892})
+    assert validator.is_valid(profile)
+    assert sleeve_profile_spec("custom", profile["home"])["insert_mm"] == (66, 90.892)
+    for dimensions in ({"w_mm": 0, "h_mm": 90}, {"w_mm": 66}, {"w_mm": 66, "h_mm": 210}):
+        profile["home"]["insert_mm"] = dimensions
+        assert not validator.is_valid(profile)
+        try:
+            sleeve_profile_spec("custom", profile["home"])
+            raise AssertionError("invalid custom dimensions were accepted")
+        except ValueError:
+            pass
+    profile["home"]["insert_mm"] = {"w_mm": 66, "h_mm": 90}
+    profile["home"]["sleeve_profile"] = "none"
+    assert not validator.is_valid(profile), "inactive dimensions must not masquerade as the active cut size"
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="forge-print-ready-") as temp:
         folder = Path(temp)
@@ -333,6 +414,8 @@ def main():
         assert_real_icc_conversion_when_supplied(folder)
         assert_versioned_profile_and_embedded_pdf_font(folder)
         assert_named_tgc_handoff(folder)
+        assert_custom_home_geometry(folder)
+        assert_custom_home_validation()
     print("print-ready profile, named TGC handoff, embedded font, edge extension, and face-selective crop marks: ok")
 
 

@@ -1,16 +1,16 @@
-"""Bundle the two maintained creator guides into live and offline Forge help."""
+"""Bundle maintained creator guides into live and offline Forge help."""
 import html
 import posixpath
 import re
 from urllib.parse import quote
 
-GUIDES = {"creator": "CREATOR-GUIDE.md", "connectors": "CONNECTORS.md"}
+GUIDES = {"creator": "CREATOR-GUIDE.md", "connectors": "CONNECTORS.md", "printing": "HOME-PRINTING.md"}
 
 
 def help_link(target):
     for key, filename in GUIDES.items():
         if target == filename:
-            return "#help" if key == "creator" else "#help/connectors"
+            return "#help" if key == "creator" else f"#help/{key}"
     path = posixpath.normpath(posixpath.join("docs", target))
     if path.startswith("../") or ":" in target or target.startswith("/"):
         return None

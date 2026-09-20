@@ -14,7 +14,7 @@ export const CARD_STARTER_FIELDS = {
 const TEMPLATES = new Set(["classic", "minimal", "party"]);
 export const DEFAULT_CARD_PRINT_PROFILE = Object.freeze({ schema_version: 1, preset: "balanced-duplex",
   selection: { card_ids: [] }, home: { fronts_only: false, gutter_mm: 0, crop_marks: "grid", crop_mark_sides: "both",
-    sleeve_profile: "none", sleeve_fit: "contain" },
+    sleeve_profile: "none", sleeve_fit: "contain", orientation: "portrait" },
   press: { target: "generic-srgb", include_back: true, crop_marks: "outside-bleed", crop_mark_sides: "both", color_space: "sRGB", pdf_standard: "none",
     dieline: { enabled: false } } });
 export const defaultCardPrintProfile = () => structuredClone(DEFAULT_CARD_PRINT_PROFILE);
