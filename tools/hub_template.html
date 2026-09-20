@@ -7483,12 +7483,15 @@ function releaseComponentDownloads(g,release,readyNames){
   return`<div class="release-component-downloads" data-release-component-downloads style="border:1px solid #b8d9cb;border-radius:9px;background:#f4fbf7;padding:11px 12px;margin-top:10px"><div style="display:flex;gap:9px;align-items:start;flex-wrap:wrap"><div style="flex:1;min-width:210px"><b style="font-size:12.5px">Playable component production</b><div class="mut" style="font-size:11.5px;line-height:1.45;margin-top:3px">Printable pieces and the table diagrams needed to set up this exact version.</div></div><div style="display:flex;gap:7px;flex-wrap:wrap">${component?link(component,"Component kit",'data-release-component-kit'):""}${maps.map(file=>link(file,`Setup map · ${releaseSetupMapName(file)}`,'data-release-setup-map')).join("")}</div></div></div>`;
 }
 async function liveReleases(g){
+  const pane=$("#pane"),openingHash=location.hash;
+  const current=()=>pane?.isConnected&&pane===$("#pane")&&location.hash===openingHash;
   let rels,preflight;
   try{
     const [rr,pr]=await Promise.all([fetch(`/api/games/${g.slug}/releases`),fetch(`/api/games/${g.slug}/releases/preflight`)]);
     rels=await rr.json();preflight=await pr.json();
     if(!rr.ok||!pr.ok)throw new Error(preflight.error||`request failed (${rr.status}/${pr.status})`);
-  }catch(error){$("#pane").innerHTML=`<div class="emptystate">Could not check releases.<br><span class="mut">${esc(error.message)}</span></div>`;return;}
+  }catch(error){if(current())pane.innerHTML=`<div class="emptystate">Could not check releases.<br><span class="mut">${esc(error.message)}</span></div>`;return;}
+  if(!current())return;
   if(!Array.isArray(rels)) return;
   const labels={validation:"Game source",license:"License & attribution",rights:"File rights"};
   const checks=(preflight.checks||[]).filter(check=>check.key!=="components").map(check=>`<div class="kv"><b>${check.pass?'✓':'○'} ${esc(labels[check.key]||check.key)}</b><span style="color:${check.pass?'var(--grn)':'#9a6700'}">${esc(check.detail)}</span></div>`).join("")+releaseComponentPreflight(preflight);
@@ -7511,7 +7514,51 @@ async function liveReleases(g){
     <div style="color:var(--mut);font-size:12px;margin-top:8px">Frozen forever — content-addressed by sha, these bytes never change.</div>
     <div style="border-top:1px solid var(--bd);margin-top:11px;padding-top:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:12.5px">Printer evidence</b>${access.can_release&&printArtifacts.length?`<button class="btn" style="margin-left:auto" onclick="printDeliveryStart('${esc(g.slug)}','${esc(r.tag)}','${encodeURIComponent(JSON.stringify(printArtifacts))}')">Record exact handoff</button>`:""}</div>${printDeliveryHtml(g.slug,r,access.can_release)}</div></div>`;}).join("")
     :"<div class='emptystate'>No releases yet — cut one to freeze a citable version.</div>";
-  $("#pane").innerHTML=readiness+body;
+  pane.innerHTML=readiness+(access.can_release?`<section class="box" style="margin-bottom:16px"><div class="bh">Interrupted releases</div><div class="bb" id="release-recovery" aria-live="polite">Checking saved release state…</div></section>`:"")+body;
+  if(access.can_release)void loadReleaseRecovery(g,pane.querySelector("#release-recovery"));
+}
+async function loadReleaseRecovery(g,host){
+  if(!host?.isConnected)return;
+  const sequence=String(Number(host.dataset.request||0)+1);host.dataset.request=sequence;
+  const current=()=>host.isConnected&&host.dataset.request===sequence;
+  host.textContent="Checking saved release state…";
+  try{
+    const response=await fetch(`/api/games/${encodeURIComponent(g.slug)}/releases/recovery`),data=await response.json();
+    if(!current())return;
+    if(!response.ok)throw new Error(data.error||"Saved release state could not be checked.");
+    const items=data.items||[];
+    host.innerHTML=`<p class="mut" style="font-size:12px;margin-top:0">A live check of saved publication evidence. A release still being published may appear here.</p>`+
+      (items.length?items.map((item,index)=>`<div style="padding:12px 0;border-top:1px solid var(--bd)">
+        <b>${esc(item.tag)}${item.title?` · ${esc(item.title)}`:""}</b>
+        <div style="font-size:12px;margin:6px 0;overflow-wrap:anywhere">Saved version <code>${esc(item.source_sha||"unverified")}</code></div>
+        ${item.can_resume?`<p style="font-size:13px">The saved files and original publication details are verified. Resume to finish publishing this exact release.</p><button class="btn primary" data-resume-release="${index}">Resume this release</button>`:
+        `<p style="font-size:13px">${item.classification==="recoverable"?"The original publisher must finish this release. Ask the host operator if that account is unavailable.":"This release needs an operator check before it can continue. Its preserved files have not been replaced."}</p><details style="font-size:12px"><summary>Check details</summary><p>${esc(item.classification)} · ${esc((item.findings||[]).join(", "))}</p></details>`}
+      </div>`).join(""):(data.project_storage_issue?"<p role=\"alert\">Saved release evidence needs an operator check. Recovery cannot be confirmed.</p>":"<p>No interrupted releases found for this game.</p>"))+
+      (items.length&&data.project_storage_issue?`<p role="alert">Additional saved release evidence needs an operator check.</p>`:"")+
+      (data.storage_attention?`<p role="status">The storage check also found unfinished work. Ask the host operator to inspect it before accepting a backup.</p>`:"")+
+      `<button class="btn" data-recovery-refresh>Check again</button>`;
+    host.querySelectorAll("[data-resume-release]").forEach(button=>button.onclick=()=>resumeInterruptedRelease(g,items[Number(button.dataset.resumeRelease)],host,button));
+  }catch(error){
+    if(!current())return;
+    host.innerHTML=`<p role="alert">${esc(error.message||"Could not reach Forge. Your saved evidence has not been changed.")}</p><button class="btn" data-recovery-refresh>Retry check</button>`;
+  }
+  if(current())host.querySelector("[data-recovery-refresh]").onclick=()=>loadReleaseRecovery(g,host);
+}
+async function resumeInterruptedRelease(g,item,host,button){
+  button.disabled=true;button.textContent="Finishing saved release…";
+  const openingHash=location.hash;
+  try{
+    const response=await fetch(`/api/games/${encodeURIComponent(g.slug)}/releases`,{method:"POST",headers:authHdr(),
+      body:JSON.stringify({tag:item.tag,resume_only:true,recovery_manifest_sha256:item.manifest_sha256})});
+    const data=await response.json();
+    if(!host.isConnected||location.hash!==openingHash)return;
+    if(response.status===201){toast(`Released ${esc(data.tag)} from its saved version.`);void liveReleases(g);return;}
+    throw new Error(data.error||"Could not finish this release. Check its saved state before retrying.");
+  }catch(error){
+    if(!host.isConnected||location.hash!==openingHash)return;
+    host.innerHTML=`<p role="alert">${esc(error.message||"Completion could not be confirmed. Check saved state before retrying.")}</p><button class="btn" data-recovery-refresh>Check saved state</button>`;
+    host.querySelector("[data-recovery-refresh]").onclick=()=>loadReleaseRecovery(g,host);
+  }
 }
 function releaseBlockerPath(message){
   const path=String(message||"").split(":",1)[0].trim();

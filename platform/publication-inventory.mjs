@@ -26,6 +26,7 @@ export async function readPublicationInventoryPostgres(db) {
   const client = await db.connect();
   try {
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    /** @type {Record<string, any[]>} */
     const result = {};
     for (const [name, sql] of Object.entries(queries)) result[name] = (await client.query(sql)).rows;
     await client.query("COMMIT"); return result;

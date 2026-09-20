@@ -38,6 +38,7 @@
     "test:ui-exports": "node tools/ui-export-selection.mjs",
     "test:ui-simple-start": "node tools/ui-simple-start.mjs",
     "test:ui-recovery": "node tools/ui-draft-recovery.mjs",
+    "test:ui-release-recovery": "node tools/ui-release-recovery.mjs",
     "test:ui-artwork": "node tools/ui-artwork-loading.mjs",
     "test:csv-mapping": "node tools/test-csv-mapping.mjs",
     "test:nandeck": "node tools/test-nandeck-layout.mjs",
