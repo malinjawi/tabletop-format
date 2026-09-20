@@ -267,6 +267,41 @@ write_gateway_secrets(){
       chmod 0400 /secrets/forge-token /secrets/platform-db-password
     '
 }
+audit_publications(){
+  local database_host="$1" database_port="$2" git_volume="$3" vault_source="$4" report="$5"
+  if [ -n "$gateway_image" ]; then
+    docker run --rm --read-only --network "$network" --cap-drop ALL \
+      --security-opt no-new-privileges:true \
+      --volume "$git_volume:/audit-forgejo:ro" --volume "$vault_source:/app/vault:ro" \
+      --volume "$secret_volume:/run/secrets:ro" \
+      --env DB=postgres --env PGHOST="$database_host" --env PGDATABASE=platform --env PGUSER=platform \
+      --env STORE1=forgejo-offline --env FORGE_GIT_ROOT=/audit-forgejo/git/repositories \
+      --env FORGEJO_PGHOST="$database_host" --env FORGEJO_PGDATABASE=forgejo --env FORGEJO_PGUSER=forgejo \
+      --env RELEASE_VAULT_DIR=/app/vault \
+      "$gateway_image" /bin/sh -ec '
+        export PGPASSWORD="$(cat /run/secrets/platform-db-password)"
+        export FORGEJO_PGPASSWORD="$(cat /run/secrets/forgejo-db-password)"
+        exec node tools/publication-audit.mjs
+      ' > "$report"
+  else
+    # Native tests inspect a private copy of the frozen bare repositories.
+    local git_copy="$scratch/$(basename "$report" .json)-git"
+    mkdir "$git_copy"
+    docker run --detach --name "$restore_helper" --volume "$git_volume:/data:ro" \
+      "$utility_image" sleep 300 >/dev/null
+    docker cp "$restore_helper:/data/git/repositories/." "$git_copy/"
+    docker rm --force "$restore_helper" >/dev/null
+    DB=postgres PG_URL="postgres://platform:$platform_password@127.0.0.1:$database_port/platform" \
+      STORE1=forgejo-offline FORGE_GIT_ROOT="$git_copy" \
+      FORGEJO_PG_URL="postgres://forgejo:$forgejo_password@127.0.0.1:$database_port/forgejo" \
+      RELEASE_VAULT_DIR="$vault_source" node "$repo_dir/tools/publication-audit.mjs" > "$report"
+  fi
+  node -e '
+    const report=require(process.argv[1]);
+    if(!report.ok||!report.counts.healthy||report.counts.recoverable)
+      throw Error("The completed journey must have healthy, fully finalized publications");
+  ' "$report"
+}
 start_gateway(){
   local container="$1" volume="$2" vault_volume="$3" database_host="$4" forgejo_host="$5"
   docker run --detach --name "$container" --network "$network" \
@@ -368,6 +403,10 @@ if [ -n "$gateway_image" ]; then
   docker volume rm "$source_gateway_volume" >/dev/null
 fi
 docker stop "$source_forgejo" >/dev/null
+audit_publications "$source_pg" "$source_pg_port" "$source_forgejo_volume" \
+  "$([ -n "$gateway_image" ] && printf '%s' "$source_vault_volume" || printf '%s' "$scratch/source-release-vault")" \
+  "$scratch/backup/publication-inventory.json"
+printf '  ✓ every publication agrees across the frozen database, Git tags, and vault\n'
 
 # The journey's gateway is now stopped, so no process can append to the release
 # vault while it is copied. With a production image, the durable vault is a
@@ -431,7 +470,7 @@ docker exec -i "$source_pg" pg_restore --list < "$scratch/backup/forgejo.dump" >
     printf '%s_sha256=%s\n' "$(basename "$secret")" "$(shasum -a 256 "$secret" | awk '{print $1}')"
   done
 } > "$scratch/backup/manifest.txt"
-snapshot_manifests=(release-vault/manifest.json)
+snapshot_manifests=(release-vault/manifest.json publication-inventory.json)
 [ -z "$s3_image" ] || snapshot_manifests+=(object-store/manifest.json)
 (cd "$scratch/backup" && shasum -a 256 forgejo.zip platform.dump forgejo.dump manifest.txt "${snapshot_manifests[@]}" > SHA256SUMS)
 (cd "$scratch/backup" && shasum -a 256 -c SHA256SUMS >/dev/null)
@@ -488,6 +527,14 @@ if [ -n "$s3_image" ]; then
     --access-key-file "$scratch/secrets/s3-access-key" --secret-key-file "$scratch/secrets/s3-secret-key" \
     --input "$scratch/backup/object-store" --create-bucket
 fi
+audit_publications "$restore_pg" "$restore_pg_port" "$restore_forgejo_volume" \
+  "$([ -n "$gateway_image" ] && printf '%s' "$restore_vault_volume" || printf '%s' "$scratch/restored-release-vault")" \
+  "$scratch/restored-publication-inventory.json"
+node -e '
+  const assert=require("node:assert/strict"),before=require(process.argv[1]),after=require(process.argv[2]);
+  assert.deepEqual(after.publications,before.publications,"Restored publication inventory changed");
+' "$scratch/backup/publication-inventory.json" "$scratch/restored-publication-inventory.json"
+printf '  ✓ restored publication inventory matches before either writer starts\n'
 start_forgejo "$restore_forgejo" "$restore_forgejo_volume" "$restore_pg" "$restore_origin" "$restore_forgejo_port" "$([ -n "$s3_image" ] && printf '%s' "$restore_s3" || true)"
 if ! doctor_output="$(docker exec --user 1000 "$restore_forgejo" forgejo doctor check --all \
   --config /data/gitea/conf/app.ini --log-file /tmp/doctor.log 2>&1)"; then
