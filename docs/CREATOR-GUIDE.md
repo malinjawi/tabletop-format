@@ -19,12 +19,22 @@ For a first spreadsheet, useful columns are `id`, `name`, `type`, and `text`, fo
 ## Build and edit cards
 
 1. Open **Design**. For an empty project, choose **Build the first card system**. Select a starting layout, physical card size, copies, fields, and a few card names. Choose **Review first component**, inspect the fronts and shared back, then **Commit first component**.
-2. Open **Forge Studio** and select a card. **Content** changes that card's words and values. **Design** changes the shared layout used by its card family. Check **Affected cards** when moving or styling a shared element.
+2. Open **Forge Studio** and select a card. **Content** changes that card's words and values. **Layout** changes the shared layout used by its card family. Check **Affected cards** when moving or styling a shared element.
 3. Use **Table** for several rows at once. Paste cells from a spreadsheet, duplicate a card, or add a card. Keep permanent IDs intact; use a new card when you intend a new identity.
 4. Add artwork through the art picker and record its creator and rights. Inspect the crop on the card. Use **Front / Back** to inspect both faces.
 5. Use **Longest** to inspect long rules text, **Original** to compare with the saved version, and **Proof** to inspect the family. Check readable text, symbols, art, card edges, and the shared back.
 
 Projects with different card types can use several families. Start with one family unless the cards need different layouts. Non-card components have their own **Piece Studio** for quantities, dimensions, shared styling, and cut sheets.
+
+## Set colors from your own card data
+
+In **Forge Studio → Colors**, choose **Color cards by**: card type or one of your game's fields (for example, category or faction). Assign a color to each value and choose a fallback for empty or unmapped values. Existing values appear automatically; **Add a value for future cards** lets you prepare another category. **Reset** returns a value to the fallback.
+
+Choose an element in **Layers → Layout** and set its fill, background, or text color to **Card color**. Fixed colors stay fixed. Select cards with different values to check the result, then **Review changes → Commit reviewed candidate**. The color rules are shared across all card families, so inspect other families too. Existing frame textures are preserved.
+
+Netrunner uses this same mechanism: `attributes.faction` selects its color. Card-family matching is separate: the card type (and sometimes another field) chooses a layout. Starter games create one family for you; authoring additional family matching rules and custom frame textures still requires the versioned design files. See [Card design families](card-design-families.md).
+
+The **Cards** gallery shows 12 cards per page. Each page appears after its images and fonts are ready. Search and type filters cover the whole game; **Previous / Next** browse the matches. If a required asset fails, use **Retry preview** rather than treating a partial card as a finished proof. Deliberately unassigned artwork still uses its placeholder.
 
 ## Review and save
 

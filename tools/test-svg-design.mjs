@@ -63,6 +63,25 @@ assert.deepEqual(backProposal.changes.map(change => [change.id, change.path]), [
 assert.deepEqual(backProposal.affected_families, built.manifest.families.map(family => family.family));
 assert.match(backProposal.files.find(file => file.path.endsWith("system.yaml")).content, /back:\n  text: NETRUNNER/);
 
+const colorBound = program.replace('data-forge-region="program_name"', `data-forge-region="program_name" data-forge-colors="${encoded({ color: "palette" })}"`);
+assert.deepEqual(analyzeSvgDesignImport(fixture, colorBound).changes.map(change=>[change.id,change.path,change.after]), [["program_name","color","palette"]]);
+assert.throws(()=>parseSvgDesign(program.replace('data-forge-region="program_name"', `data-forge-region="program_name" data-forge-colors="${encoded({ color: "url(https://example.invalid)" })}"`)),/invalid Forge color bindings/);
+
+const recoloredPalette = { ...parsed.palette, map: { ...parsed.palette.map, anarch: "#112233" } };
+const recolored = program.replace(/(data-forge-palette=")[^"]*(")/, `$1${encoded(recoloredPalette)}$2`);
+const colorProposal = analyzeSvgDesignImport(fixture, recolored);
+assert.equal(colorProposal.ok, true);
+assert.deepEqual(colorProposal.changes.map(change => change.id), ["$palette"]);
+assert.deepEqual(colorProposal.affected_families, built.manifest.families.map(family => family.family));
+assert.deepEqual(colorProposal.changes[0].after.motifs, parsed.palette.motifs, "Color edits preserve authored motifs");
+assert.deepEqual(analyzeSvgDesignImport(fixture, program).files, [], "Review leaves source untouched");
+for (const invalid of [null, [], { by: "type", map: [] }, { by: "type", map: { spell: {} } }, { by: "type", map: {}, surprise: true }]) {
+  assert.throws(() => parseSvgDesign(program.replace(/(data-forge-palette=")[^"]*(")/, `$1${encoded(invalid)}$2`)), /invalid Forge palette/);
+}
+const oldMeta = { ...parsed.meta }; delete oldMeta.palette;
+const oldSvg = program.replace(/ data-forge-palette="[^"]*"/, "").replace(/(<metadata id="forge-design-metadata">)[^<]+/, `$1${encoded(oldMeta)}`);
+assert.deepEqual(analyzeSvgDesignImport(fixture, oldSvg).files, [], "Older version-1 SVGs preserve palette rules");
+
 const edited = program.replace('data-forge-region="program_name"', 'data-forge-region="program_name" transform="translate(0.5,0)"');
 assert.notEqual(edited, program);
 const proposed = analyzeSvgDesignImport(fixture, edited);
@@ -92,6 +111,15 @@ assert.throws(() => parseSvgDesign(program.replace('data-forge-region="program_n
 const arbitrary = inspectSvgCandidate('<svg xmlns="http://www.w3.org/2000/svg" width="63mm" height="88mm" viewBox="0 0 63 88"><rect x="0" y="0" width="63" height="88"/></svg>');
 assert.equal(arbitrary.objects, 1);
 assert.deepEqual(arbitrary.view_box, [0, 0, 63, 88]);
+
+const systemPath = join(scratch, "templates/card-design/system.yaml");
+const systemSource = readFileSync(systemPath, "utf8");
+writeFileSync(systemPath, colorProposal.files.find(file => file.path.endsWith("system.yaml")).content);
+assert.deepEqual(analyzeSvgDesignImport(scratch, recolored).files, [], "Applying identical color rules is idempotent");
+assert.deepEqual(analyzeSvgDesignImport(scratch, oldSvg).files, [], "Old exports cannot reset newly saved colors");
+const divergent = program.replace(/(data-forge-palette=")[^"]*(")/, `$1${encoded({ ...recoloredPalette, default: "#abcdef" })}$2`);
+assert.deepEqual(analyzeSvgDesignImport(scratch, divergent).conflicts.map(conflict => conflict.id), ["$palette"]);
+writeFileSync(systemPath, systemSource);
 
 rmSync(scratch, { recursive: true });
 console.log("SVG family adapter: 11 families + deterministic export + no-op/edit/group/effect/text-style/shared/conflict merge + bounded parsing passed");

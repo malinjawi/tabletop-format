@@ -64,3 +64,11 @@ For example, moving program strength changes `families/program.yaml`; correcting
 a shared cost dial changes a component used by the declared families. Forge's
 Assets tab exposes each file's history and normal fork/PR workflow, while the
 Card design tab renders one real specimen for every resolved family.
+
+## Editing shared color rules in Studio
+
+The Colors panel edits `system.yaml`'s `palette.by`, `palette.map`, and `palette.default`. Region fill/background/text values that use palette tokens resolve against that field; literal colors are unchanged. Existing `motifs` and `default_motif` are preserved. Changes use the combined Studio review and atomic commit path and report every family as affected.
+
+The version-1 SVG working-copy contract now includes optional `palette` baseline metadata and a `data-forge-palette` root attribute. Import validates the palette against the existing layout schema and performs a three-way merge against the current shared system. A divergent concurrent edit conflicts; an already-applied palette is a no-op. Older version-1 SVGs without either field preserve the current palette. No game-format migration is required.
+
+Explicit Studio changes to layer color bindings use optional `data-forge-colors` metadata. Only fill, stroke, color, and background can be changed; values are bounded literal colors, known palette tokens, or null to remove an override. This keeps editor-only SVG placeholder colors from accidentally replacing dynamic bindings. These layer changes use the same source-origin and concurrent-edit checks as other region edits.

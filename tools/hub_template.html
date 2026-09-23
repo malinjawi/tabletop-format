@@ -13,6 +13,10 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 #top{background:var(--h);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 24px;min-height:54px}
 #top .logo{font-weight:750;font-size:16px;color:#fff;display:flex;gap:7px;align-items:center;white-space:nowrap}
 #top .brand-note{opacity:.5;font-weight:400;font-size:12px}
+.card-paint{position:relative;min-height:120px}.card-paint[data-card-state="loading"]>.card-paint-content,.card-paint[data-card-state="error"]>.card-paint-content{visibility:hidden}.card-paint-status{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center;background:var(--bg,#f6f8fa);color:var(--mut,#687078);border:1px solid var(--bd,#d0d7de);border-radius:8px;box-sizing:border-box}.card-page-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}.card-page-controls button{min-height:44px}.card-paint-content>.cgrid{margin:0}.card-paint-content{min-width:0}
+.forge-studio input.forge-palette-color{width:64px;height:42px;min-height:42px;padding:3px;flex:none}
+.des-cardhost .card-paint-status{pointer-events:auto;z-index:30}
+#des-stage-inner:has(.des-cardhost[data-card-state="loading"])>.des-overlay,#des-stage-inner:has(.des-cardhost[data-card-state="error"])>.des-overlay{visibility:hidden;pointer-events:none}
 #top input,#top textarea{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:7px;color:#fff;padding:6px 11px;width:clamp(180px,24vw,320px);height:32px;font-family:inherit;font-size:13px;line-height:18px;resize:none;overflow:hidden}
 #top input::placeholder,#top textarea::placeholder{color:#aab}
 #top .nl{color:#d6dae0;font-size:14px}#top .nl:hover{color:#fff;text-decoration:none}
@@ -800,10 +804,10 @@ function layEnsureFonts(g, layout){
       document.head.insertAdjacentHTML("beforeend", `<style>@font-face{font-family:'${family}';src:url('${esc(src)}');font-weight:${f.weight||400};font-style:${f.style||"normal"};font-display:block}</style>`);
     });
     const grouped=new Map();
-    need.filter(f=>!f.asset_data&&!f.asset&&!f.local_asset).forEach(f=>{if(!grouped.has(f.family))grouped.set(f.family,new Set());grouped.get(f.family).add(f.weight||400);});
+    need.filter(f=>!f.asset_data&&!f.asset&&!f.local_asset&&!/^(Arial|Helvetica|Times New Roman|Times|Courier New|Courier|Verdana|Georgia|Tahoma|Trebuchet MS|serif|sans-serif|monospace|system-ui)$/i.test(f.family)).forEach(f=>{if(!grouped.has(f.family))grouped.set(f.family,new Set());grouped.get(f.family).add(f.weight||400);});
     if(!grouped.size)return;
     const q=[...grouped].map(([family,weights])=>`family=${encodeURIComponent(family).replace(/%20/g,"+")}:wght@${[...weights].sort().join(";")}`).join("&");
-    document.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${q}&display=swap">`);
+    document.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" data-forge-card-fonts="${esc([...grouped.keys()].join('|'))}" href="https://fonts.googleapis.com/css2?${q}&display=swap">`);
   }catch(e){}
 }
 
@@ -2212,8 +2216,8 @@ function desStageInnerHtml(){
   const original=DES.compare?'<div class="forge-studio-original">ORIGINAL · READ ONLY</div>':"";
   return `${original}<div class="des-cardhost">${cardHtml}</div><div class="des-overlay">${boxes}</div>${readout}`;
 }
-function desRenderCanvasOnly(){ const stage=document.getElementById("des-stage"),geom=desGeom();if(stage){stage.style.width=`${Math.round(geom.pxW)}px`;stage.style.height=`${Math.round(geom.pxH)}px`;}const host=document.getElementById("des-stage-inner"); if(host) host.innerHTML=desStageInnerHtml(); desQueuePreflight(); desDraftQueue(); }
-function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desRightPanelHtml(); const label=document.getElementById("des-properties-selection"),count=desSelectionIds().length;if(label)label.textContent=DES.rightTab==="content"&&desFace()==="front"?(desCard()?.name||"SELECT A CARD"):(count>1?`${count} ELEMENTS`:DES.selRegion?desFriendlyRegionName(desRegion(DES.selRegion)):"SELECT AN ELEMENT"); }
+function desRenderCanvasOnly(){ const stage=document.getElementById("des-stage"),geom=desGeom();if(stage){stage.style.width=`${Math.round(geom.pxW)}px`;stage.style.height=`${Math.round(geom.pxH)}px`;}const host=document.getElementById("des-stage-inner"); if(host){host.innerHTML=desStageInnerHtml();void cardPaintReady(host.querySelector(".des-cardhost"));} desQueuePreflight(); desDraftQueue(); }
+function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desRightPanelHtml(); const label=document.getElementById("des-properties-selection"),count=desSelectionIds().length;if(label)label.textContent=DES.rightTab==="content"&&desFace()==="front"?(desCard()?.name||"SELECT A CARD"):(count>1?`${count} ELEMENTS`:DES.selRegion?desFriendlyRegionName(desRegion(DES.selRegion)):"SELECT AN ELEMENT");if(DES.family)desUpdatePanelTabs(); }
 function desRefreshToolbar(){
   const g=G(DES.slug); if(!g) return;
   if(DES.family){desRefreshStudioChrome();return;}
@@ -2757,25 +2761,62 @@ function desPickColorAttr(g){
   return null;
 }
 function desEnsurePalette(){
-  if(DES.layout.palette && DES.layout.palette.by) return;
-  const g=G(DES.slug);
-  DES.layout.palette = desPickColorAttr(g) || {by:"attributes.faction", map:{}, default:"#4a4a4a"};
-  toast("Created a starter palette bound to "+esc(DES.layout.palette.by)+" — fine-tune its color map in the raw-YAML view.",5000);
+  if(DES.layout.palette?.by)return;
+  DES.layout.palette=desPickColorAttr(G(DES.slug))||{by:"type",map:{},default:"#4a4a4a"};
+}
+function desPaletteFields(){
+  const fields=new Map([["type","Card type"]]);
+  for(const field of G(DES.slug).schema||[])if(!["array","object"].includes(field.type))fields.set(`attributes.${field.key}`,field.label||field.key);
+  for(const card of DES.cards||G(DES.slug).cards||[])for(const [key,value] of Object.entries(card.attributes||{}))if(value==null||["string","number","boolean"].includes(typeof value))fields.set(`attributes.${key}`,key);
+  const by=DES.layout.palette?.by;if(by&&!fields.has(by))fields.set(by,by);
+  return [...fields];
+}
+function desPaletteValues(){
+  const palette=DES.layout.palette,values=new Set(Object.keys(palette?.map||{}));
+  for(const card of DES.cards||G(DES.slug).cards||[]){const value=layResolve({card},palette?.by||"type");if(value!=null&&["string","number","boolean"].includes(typeof value))values.add(String(value));}
+  return [...values].sort();
+}
+function desPaletteHex(value){return /^#[0-9a-f]{6}$/i.test(value||"")?value:/^#[0-9a-f]{3}$/i.test(value||"")?"#"+[...value.slice(1)].map(c=>c+c).join(""):"#4a4a4a";}
+function desPaletteHtmlRules(){
+  const palette=DES.layout.palette||{},by=palette.by||"type",values=desPaletteValues();
+  return `<h3 style="margin-top:0">Colors from card data</h3><p class="mut">Choose a field, then assign a color to each value. These rules are shared by every card family in this game.</p>
+    <div class="fld"><label for="des-palette-by">Color cards by</label><select id="des-palette-by" onchange="desPaletteChangeField(this.value)">${desPaletteFields().map(([path,label])=>`<option value="${esc(path)}" ${by===path?'selected':''}>${esc(label)}</option>`).join('')}</select></div>
+    <div class="fld"><label for="des-palette-default">Fallback color · empty or unmapped values</label><input id="des-palette-default" class="forge-palette-color" type="color" value="${desPaletteHex(palette.default)}" onchange="desPaletteColor(-1,this.value)"></div>
+    ${values.map((value,index)=>`<div class="fld"><label for="des-palette-${index}">${esc(value||'(empty)')}${Object.hasOwn(palette.map||{},value)?'':' · fallback'}</label><div style="display:flex;gap:8px"><input id="des-palette-${index}" class="forge-palette-color" type="color" value="${desPaletteHex(palette.map?.[value]||palette.default)}" onchange="desPaletteColor(${index},this.value)"><button class="btn" ${Object.hasOwn(palette.map||{},value)?'':'disabled'} onclick="desPaletteColor(${index},null)" aria-label="Use fallback for ${esc(value)}">Reset</button></div></div>`).join('')}
+    <div class="fld"><label for="des-palette-new">Add a value for future cards</label><div style="display:flex;gap:8px"><input id="des-palette-new" placeholder="e.g. ocean"><button class="btn" onclick="desPaletteAdd()">Add</button></div></div>
+    <p class="mut">Choose another card to check its color. In Layout, set an element’s fill, background, or text color to “Card color” to use these rules. Fixed colors stay fixed.</p>
+    <p class="mut">Card types choose layout families. This field chooses colors within those layouts. Use <b>Review changes</b> to check and save the shared rules.</p>`;
+}
+function desPaletteChanged(pre){DES.compare=false;desCommitChange(pre);desRenderCanvasOnly();desRenderInspectorOnly();desRefreshToolbar();desUpdatePanelTabs();}
+function desPaletteChangeField(by){
+  if(!desPaletteFields().some(([path])=>path===by))return;
+  const pre=desBeginChange();desEnsurePalette();DES.layout.palette.by=by;desPaletteChanged(pre);
+}
+function desPaletteColor(index,color){
+  const key=desPaletteValues()[index],pre=desBeginChange();desEnsurePalette();
+  if(index===-1)DES.layout.palette.default=color;
+  else if(key!==undefined){const map={...DES.layout.palette.map};if(color===null)delete map[key];else Object.defineProperty(map,key,{value:color,enumerable:true,configurable:true,writable:true});DES.layout.palette.map=map;}
+  desPaletteChanged(pre);
+}
+function desPaletteAdd(){
+  const input=document.getElementById('des-palette-new'),value=input?.value.trim();if(!value)return;
+  const pre=desBeginChange();desEnsurePalette();DES.layout.palette.map=Object.fromEntries([...Object.entries(DES.layout.palette.map||{}),[value,DES.layout.palette.default||"#4a4a4a"]]);desPaletteChanged(pre);
 }
 function desColorFieldHtml(r, prop, label){
   const val=r[prop];
-  const isPalette=val==="palette";
+  const isPalette=typeof val==="string"&&/^palette(?:-|$)/.test(val);
   const hasPaletteBlock=!!(DES.layout.palette && DES.layout.palette.by);
   const hex=(typeof val==="string" && /^#[0-9a-fA-F]{3,8}$/.test(val)) ? val.slice(0,7) : "#000000";
   const mode = val==null ? "none" : (isPalette ? "palette" : "color");
   return `<div class="fld"><label>${esc(label)}</label>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select onchange="desColorMode('${prop}',this.value)" style="width:auto">
+      <select aria-label="${esc(label)} color source" onchange="desColorMode('${prop}',this.value)" style="width:auto">
         <option value="none" ${mode==="none"?"selected":""}>none</option>
         <option value="color" ${mode==="color"?"selected":""}>color</option>
-        <option value="palette" ${mode==="palette"?"selected":""}>palette</option>
+        <option value="palette" ${mode==="palette"?"selected":""}>Card color${isPalette&&val!=="palette"?` (${esc(val.slice(8))})`:""}</option>
       </select>
       ${mode==="color"?`<input type="color" value="${esc(hex)}" onchange="desInspSet('${prop}',this.value)" style="width:44px;padding:2px">`:""}
+      ${mode==="palette"&&DES.family?`<button class="btn" onclick="desRightPanelTab('colors')">Edit color rules</button>`:""}
       ${mode==="palette" && !hasPaletteBlock?`<span style="font-size:11px;color:var(--org)">no palette yet — one will be created</span>`:""}
     </div>
   </div>`;
@@ -2958,7 +2999,7 @@ function desGeomFieldsHtml(r){
 function desFamilyInspectorHtml(r){
   const g=G(DES.slug),source=desFace()==="back"?(g.card_design?.system_path||DES.family?.source||"versioned design system"):(DES.family?.origins?.[r.id]||DES.family?.source||"versioned family source");
   const affected=desFace()==="back"?(g.card_design?.families||[]).length:((g.card_design?.families||[]).filter(family=>family.origins?.[r.id]===source).length||1);
-  const flatColor=value=>/^(?:#[0-9a-f]{3}|#[0-9a-f]{6}|none|transparent)$/i.test(String(value||""));
+  const flatColor=value=>/^(?:#[0-9a-f]{3}|#[0-9a-f]{6}|none|transparent|palette(?:-[a-z-]+)?)$/i.test(String(value||""));
   const styled=layStyledRegion(DES.layout,r),fonts=DES.layout.fonts||[];
   let h=`<div style="margin-bottom:12px"><div style="font-weight:750;font-size:15px">${esc(desFriendlyRegionName(r))}</div><div class="mut" style="font-size:11px;margin-top:3px">${esc(r.type)} element</div></div>
     <div class="chg" style="font-size:11.5px;margin-bottom:12px"><b>${affected>1?`Shared across ${affected} families`:`Used by this family`}</b><br><span class="mut">Changes stay local until you review the rendered diff.</span></div>`;
@@ -3373,8 +3414,9 @@ function desContentInspectorHtml(){
   h+=`<details class="forge-studio-tech"><summary>Why the ID is locked</summary><code>${esc(card.id)}</code><div style="margin-top:7px">The stable ID anchors history, printings, decks, rulebook references, diffs, and external working copies.</div></details>`;
   return h;
 }
-function desRightPanelHtml(){return DES?.family&&DES.rightTab==="content"&&desFace()==="front"?desContentInspectorHtml():desInspectorHtml();}
-function desRightPanelTab(tab){if(tab==="content"&&desFace()==="back")return;DES.rightTab=tab;if(tab==="content"){DES.selRegion=null;DES.selRegions=[];}desRenderCanvasOnly();desRenderInspectorOnly();}
+function desRightPanelHtml(){if(DES?.rightTab==="colors")return desPaletteHtmlRules();return DES?.family&&DES.rightTab==="content"&&desFace()==="front"?desContentInspectorHtml():desInspectorHtml();}
+function desRightPanelTab(tab){if(tab==="content"&&desFace()==="back")return;DES.rightTab=tab;if(tab==="content"){DES.selRegion=null;DES.selRegions=[];}desRenderCanvasOnly();desRenderInspectorOnly();desUpdatePanelTabs();}
+function desUpdatePanelTabs(){for(const button of document.querySelectorAll("[data-inspector-tab]")){const selected=button.dataset.inspectorTab===DES.rightTab;button.classList.toggle("on",selected);button.setAttribute("aria-pressed",String(selected));}if(DES.rightTab==="colors"){const label=document.getElementById("des-properties-selection");if(label)label.textContent="ALL CARD FAMILIES";}}
 function desRefreshStudioChrome(){
   const card=desCard(),status=document.querySelector(".forge-studio-status");
   if(status){status.textContent=desDirtyLabel();status.classList.toggle("dirty",desAnyDirty());}
@@ -3569,6 +3611,7 @@ function desYamlStringify(layout){
     out.push(`  by: ${desYVal(L.palette.by)}`);
     if(L.palette.map) out.push(`  map: ${desYFlowMapRaw(L.palette.map)}`);
     if(L.palette.default!==undefined) out.push(`  default: ${desYVal(L.palette.default)}`);
+    for(const key of ["motifs","default_motif"])if(L.palette[key]!==undefined)out.push(`  ${key}: ${desYVal(L.palette[key])}`);
     out.push("");
   }
   out.push("regions:");
@@ -3790,6 +3833,7 @@ function desMetaB64(value){return btoa(unescape(encodeURIComponent(JSON.stringif
 function desFamilySvgText(){
   const parsed=new DOMParser().parseFromString(DES.svgSource,"image/svg+xml");
   if(parsed.querySelector("parsererror"))throw new Error("Forge could not reopen this family's SVG working copy");
+  if(JSON.stringify(DES.layout.palette||{})!==JSON.stringify(DES.orig.palette||{}))parsed.documentElement.setAttribute("data-forge-palette",desMetaB64(DES.layout.palette||{}));
   if(JSON.stringify(DES.layout.text_styles||{})!==JSON.stringify(DES.orig.text_styles||{}))parsed.documentElement.setAttribute("data-forge-text-styles",desMetaB64(DES.layout.text_styles||{}));
   if(JSON.stringify(DES.layout.back||{})!==JSON.stringify(DES.orig.back||{}))parsed.documentElement.setAttribute("data-forge-back",desMetaB64(DES.layout.back||{}));
   const elements=new Map([...parsed.querySelectorAll("[data-forge-region]")].map(element=>[element.getAttribute("data-forge-region"),element]));
@@ -3818,6 +3862,8 @@ function desFamilySvgText(){
     }
     if(changed(region.stroke_w_mm,before.stroke_w_mm)&&region.stroke_w_mm!=null)element.setAttribute("stroke-width",String(region.stroke_w_mm));
     if(changed(region.opacity,before.opacity)&&region.opacity!=null)element.setAttribute("opacity",String(region.opacity));
+    const colorBindings=Object.fromEntries(["fill","stroke","color","bg"].filter(key=>changed(region[key],before[key])).map(key=>[key,region[key]??null]));
+    if(Object.keys(colorBindings).length)element.setAttribute("data-forge-colors",desMetaB64(colorBindings));
     if(changed(region.group,before.group))element.setAttribute("data-forge-group",region.group||"");
     if(changed(region.text_style,before.text_style))element.setAttribute("data-forge-text-style",region.text_style||"");
     if(changed(region.border,before.border))element.setAttribute("data-forge-border",desMetaB64(region.border||null));
@@ -4157,7 +4203,7 @@ function desStudioHtml(g){
         ${desStudioImpactHtml(g)}
       </main>
       <aside class="forge-studio-right">
-        <div class="forge-studio-panel-head"><div class="forge-studio-panel-tabs" role="group" aria-label="Inspector panel"><button aria-pressed="${DES.rightTab==="content"&&desFace()==="front"}" class="${DES.rightTab==="content"&&desFace()==="front"?"on":""}" ${desFace()==="back"?"disabled":""} onclick="desRightPanelTab('content')">Content</button><button aria-pressed="${DES.rightTab!=="content"||desFace()==="back"}" class="${DES.rightTab!=="content"||desFace()==="back"?"on":""}" onclick="desRightPanelTab('design')">Layout</button></div><span id="des-properties-selection" style="font-size:9px;color:#737a86">${DES.rightTab==="content"&&desFace()==="front"?esc(c?.name||"SELECT A CARD"):(DES.selRegion?esc(desFriendlyRegionName(desRegion(DES.selRegion))):"SELECT AN ELEMENT")}</span></div>
+        <div class="forge-studio-panel-head"><div class="forge-studio-panel-tabs" role="group" aria-label="Inspector panel"><button data-inspector-tab="content" aria-pressed="${DES.rightTab==="content"&&desFace()==="front"}" class="${DES.rightTab==="content"&&desFace()==="front"?"on":""}" ${desFace()==="back"?"disabled":""} onclick="desRightPanelTab('content')">Content</button><button data-inspector-tab="design" aria-pressed="${DES.rightTab==="design"}" class="${DES.rightTab==="design"?"on":""}" onclick="desRightPanelTab('design')">Layout</button><button data-inspector-tab="colors" aria-pressed="${DES.rightTab==="colors"}" class="${DES.rightTab==="colors"?"on":""}" onclick="desRightPanelTab('colors')">Colors</button></div><span id="des-properties-selection" style="font-size:9px;color:#737a86">${DES.rightTab==="content"&&desFace()==="front"?esc(c?.name||"SELECT A CARD"):(DES.selRegion?esc(desFriendlyRegionName(desRegion(DES.selRegion))):"SELECT AN ELEMENT")}</span></div>
         <div class="box des-col-inspector"><div class="bb" id="des-inspector">${desRightPanelHtml()}</div></div>
       </aside>
     </div>
@@ -4209,6 +4255,8 @@ function desRenderFull(){
   desQueuePreflight();
   desDraftQueue();
   desQueueFitToViewport();
+  void cardPaintReady(document.querySelector("#des-stage-inner .des-cardhost"));
+  desUpdatePanelTabs();
 }
 
 /* ---- entry point: dispatched from repoPage() same as cards/rules/play. Route
@@ -5681,6 +5729,46 @@ async function syncPull(slug,dry){
       : `<div style="color:var(--red)">Could not confirm whether the changes were committed. Reload Cards to check the latest version before trying again.</div><button class="btn" onclick="location.reload()" style="margin-top:8px">Reload Cards</button>`;
   }finally{syncBusy(slug,false);}
 }
+// Reveal a complete preview only after its own images, backgrounds and fonts
+// decode. Kept outside layoutCard so headless print/export keeps its contract.
+const CARD_PAINTS=new WeakMap(),CARD_PAINT_ACTIVE=new Set();
+window.addEventListener('hashchange',()=>{for(const task of CARD_PAINT_ACTIVE)task.abort();});
+async function cardPaintReady(host,{label="Preparing complete preview…",retry=null}={}){
+  if(!host)return;CARD_PAINTS.get(host)?.abort();
+  const prior=host.querySelector(':scope > .card-paint-content');if(prior)host.replaceChildren(...prior.childNodes);
+  const task=new AbortController(),signal=task.signal;CARD_PAINTS.set(host,task);CARD_PAINT_ACTIVE.add(task);
+  const content=document.createElement('div');content.className='card-paint-content';content.append(...host.childNodes);
+  const status=document.createElement('div');status.className='card-paint-status';status.setAttribute('role','status');status.textContent=label;
+  host.replaceChildren(content,status);host.classList.add('card-paint');host.dataset.cardState='loading';host.setAttribute('aria-busy','true');content.setAttribute('aria-hidden','true');content.inert=true;
+  const current=()=>host.isConnected&&CARD_PAINTS.get(host)===task&&!signal.aborted;
+  const imageReady=async image=>{image.loading='eager';await image.decode();if(!image.naturalWidth)throw Error('Image could not be decoded');};
+  let timer;
+  try{
+    const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Preview timed out')),15000);signal.addEventListener('abort',()=>reject(Error('Preview replaced')),{once:true});});
+    const prepare=async()=>{
+      const images=[...content.querySelectorAll('img')],backgrounds=new Set(),fonts=new Map();
+      for(const node of content.querySelectorAll('*')){
+        const style=getComputedStyle(node);
+        for(const match of style.backgroundImage.matchAll(/url\(["']?([^"')]+)["']?\)/g))backgrounds.add(match[1]);
+        if(node.childNodes.length&&[...node.childNodes].some(child=>child.nodeType===3&&child.textContent.trim())){
+          const font=`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          fonts.set(font,(fonts.get(font)||'')+node.textContent);
+        }
+      }
+      for(const src of backgrounds){const image=new Image();image.src=src;images.push(image);}
+      const sheets=[...document.querySelectorAll('link[data-forge-card-fonts]')].filter(link=>link.dataset.forgeCardFonts.split('|').some(family=>[...fonts.keys()].some(font=>font.includes(family))));
+      const fontReady=Promise.all(sheets.map(link=>link.sheet?Promise.resolve():new Promise((resolve,reject)=>{link.addEventListener('load',resolve,{once:true,signal});link.addEventListener('error',()=>reject(Error('Font stylesheet unavailable')),{once:true,signal});}))).then(()=>Promise.all([...fonts].map(([font,text])=>document.fonts.load(font,[...new Set(text)].join('')))));
+      await Promise.all([...images.map(imageReady),fontReady]);
+      if(!current())return;layMeasureAndFit(content);
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+    };
+    await Promise.race([prepare(),deadline]);if(!current())return;
+    host.dataset.cardState='ready';host.setAttribute('aria-busy','false');content.removeAttribute('aria-hidden');content.inert=false;status.remove();
+  }catch(error){
+    if(!current())return;host.dataset.cardState='error';host.setAttribute('aria-busy','false');status.textContent='Could not finish this preview. Check your connection and try again.';
+    const button=document.createElement('button');button.type='button';button.className='btn';button.textContent='Retry preview';button.onclick=()=>{if(retry)retry();else{for(const image of content.querySelectorAll('img'))if(!image.naturalWidth){image.style.removeProperty('display');image.src=image.src;}host.replaceChildren(...content.childNodes);void cardPaintReady(host,{label});}host.tabIndex=-1;host.focus({preventScroll:true});};status.append(button);
+  }finally{clearTimeout(timer);CARD_PAINT_ACTIVE.delete(task);task.abort();}
+}
 function cards(g, mode){
   if(!g.cards.length) return cardsEmpty(g);
   if(mode==="edit") return cardsEdit(g);
@@ -5701,7 +5789,7 @@ function cards(g, mode){
       <select id="cardt" onchange="filterCards('${g.slug}')"><option value="">All types</option>${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select>
       ${g.scans&&Object.keys(g.scans).length?`<button class="btn" id="face-mode" onclick="toggleCardFaces('${g.slug}')">Show Forge community frame</button>`:""}
       <button class="btn primary" style="margin-left:auto" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>
-    </div><div class="cgrid" id="cgrid"></div>`;
+    </div><nav class="card-page-controls" id="card-pages" aria-label="Card pages"></nav><div id="cgrid"></div>`;
   filterCards(g.slug);
   liveSync(g.slug);
 }
@@ -5719,16 +5807,24 @@ function toggleCardFaces(slug){
   CARD_FACE_MODE[slug]=current==="production"?"forge":"production";
   filterCards(slug);
 }
-function filterCards(slug){
+const CARD_PAGE_SIZE=12;
+function filterCards(slug,page=0){
+  const host=document.getElementById('cgrid');if(!host)return;
   const g=G(slug), q=($("#cardq")?.value||"").toLowerCase(), t=$("#cardt")?.value||"";
   const list=g.cards.filter(c=>(!t||c.type===t)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
   const hasScans=g.scans&&Object.keys(g.scans).length, faceMode=CARD_FACE_MODE[slug]||(hasScans?"production":"forge");
-  const toggle=$("#face-mode"); if(toggle)toggle.textContent=faceMode==="production"?"Show Forge community frame":"Show source-backed production faces";
-  $("#cgrid").innerHTML=list.map(c=>`
-    <div class="ctile" onclick="cardModal('${slug}','${c.id}')">
-      ${layoutCard(g,c,cfPrinting(g,c),{w:150,sourceBacked:faceMode==="production"})}
-      <div class="cn">${esc(c.name)}</div>
-    </div>`).join("")||"<div class='emptystate'>No cards match.</div>";
+  const toggle=$("#face-mode");if(toggle)toggle.textContent=faceMode==="production"?"Show Forge community frame":"Show source-backed production faces";
+  const pages=Math.max(1,Math.ceil(list.length/CARD_PAGE_SIZE)),current=Math.max(0,Math.min(pages-1,Number(page)||0)),start=current*CARD_PAGE_SIZE;
+  const navigation=document.getElementById('card-pages');if(navigation){
+    const focused=navigation.contains(document.activeElement)?document.activeElement.dataset.page:null;
+    navigation.innerHTML=`<span>${list.length?`${start+1}–${Math.min(start+CARD_PAGE_SIZE,list.length)} of ${list.length} cards`:'No cards match'}</span><div style="display:flex;gap:8px"><button type="button" class="btn" data-page="previous" ${current===0?'disabled':''}>Previous</button><button type="button" class="btn" data-page="next" ${current===pages-1?'disabled':''}>Next</button></div>`;
+    navigation.querySelector('[data-page="previous"]').onclick=()=>filterCards(slug,current-1);
+    navigation.querySelector('[data-page="next"]').onclick=()=>filterCards(slug,current+1);
+    if(focused){const target=navigation.querySelector(`[data-page="${focused}"]:not(:disabled)`)||navigation.querySelector('button:not(:disabled)');target?.focus();}
+  }
+  CARD_PAINTS.get(host)?.abort();host.classList.remove('card-paint');delete host.dataset.cardState;host.removeAttribute('aria-busy');
+  host.innerHTML=list.length?`<div class="cgrid">${list.slice(start,start+CARD_PAGE_SIZE).map(c=>`<div class="ctile" onclick="cardModal('${slug}','${c.id}')">${layoutCard(g,c,cfPrinting(g,c),{w:150,sourceBacked:faceMode==="production"})}<div class="cn">${esc(c.name)}</div></div>`).join('')}</div>`:"<div class='emptystate'>No cards match.</div>";
+  if(list.length)void cardPaintReady(host,{label:'Preparing this page of cards…',retry:()=>filterCards(slug,current)});
 }
 
 /* ---------- reusable assets: every non-card production input is game source ---------- */
@@ -6728,6 +6824,7 @@ function edPreview(){
     ?productionCard(g,c,printing,{w:280,allowUnsupported:true})
     :"";
   host.innerHTML=c?note+(liveSource||liveProduction||layoutCard(g,c,printing,{w:280})):"<div style='color:var(--mut);font-size:13px;text-align:center;padding:40px 10px'>Select a card, or add a new one.</div>";
+  if(c)void cardPaintReady(host);
   edAffinityPreview(c?.id);
 }
 async function edAffinityPreview(cardId){
