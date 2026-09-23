@@ -13,7 +13,7 @@ Maintainers open **Cards → Card setup** to define their team's editing form. T
 
 Existing field keys are permanent. Renaming a field in setup changes its display name without breaking templates, spreadsheet mappings or historical card data. New keys are generated from the display name; creators never have to type a data path.
 
-Open Design, select a text layer or badge, and use **Show value from** to connect a field to print. Form sections do not rearrange the physical card.
+Open Design, select a text layer or badge, and use **Show value from** to connect a field to print. Form sections do not rearrange the physical card. Studio carries field connections through the same reviewed SVG working-copy contract as layout edits. It accepts declared card fields and supported printing text fields, preserves older working copies, and rejects competing binding changes.
 
 ## Persistence and access
 

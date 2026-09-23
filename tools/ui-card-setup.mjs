@@ -136,6 +136,13 @@ try {
   await page.locator('#ef-type').selectOption('ember');assert.equal(await page.locator('#ef-attributes_health').inputValue(),'3.5');
   await page.goto(`${origin}/#g/community/ember/design`);await page.getByRole('button',{name:'Open Forge Studio',exact:true}).click();
   await page.getByRole('button',{name:'Content',exact:true}).click();await page.locator('#des-content-attributes-health').waitFor();assert.equal(await page.locator('#des-content-attributes-power').count(),0);
+  await page.getByRole('button',{name:'Layers',exact:true}).first().click();await page.locator('[data-design-region="title"]').click();
+  await page.getByLabel('Show value from',{exact:true}).selectOption('card.attributes.health');
+  await page.locator('.des-cardhost[data-card-state="ready"]').waitFor();assert.match(await page.locator('.des-cardhost [data-lay-region="title"]').innerText(),/3.5/);
+  await page.getByRole('button',{name:'Review changes',exact:true}).click();await page.locator('#des-studio-commit').waitFor();assert.equal(await page.locator('#des-studio-commit').isEnabled(),true);
+  const bound=page.waitForResponse(r=>r.url().endsWith('/design/studio?commit=1'));await page.locator('#des-studio-commit').click();assert.equal((await bound).status(),200);
+  assert.equal(yaml.load(readFileSync(join(ember,'templates/card-design/families/card.yaml'),'utf8')).regions.find(r=>r.id==='title').src,'card.attributes.health');
+  await page.reload();await page.getByRole('button',{name:'Open Forge Studio',exact:true}).click();await page.getByRole('button',{name:'Layers',exact:true}).first().click();await page.locator('[data-design-region="title"]').click();assert.equal(await page.getByLabel('Show value from',{exact:true}).inputValue(),'card.attributes.health');
   // Independently exercise access, review binding and stale writes through the real endpoint.
   const api=async(path,body)=>page.evaluate(async({path,body})=>{const r=await fetch(path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});return {status:r.status,body:await r.json()};},{path,body});
   const opening=await api('/api/games/ember/card-setup');assert.equal(opening.status,200);

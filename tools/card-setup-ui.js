@@ -116,4 +116,3 @@ async function csSave(){
   }catch(error){toast(esc(error.message),8000);if(button.isConnected){button.disabled=false;button.textContent='Save card setup';}}
 }
 async function csDiscard(){if(!await confirmModal('Discard the unsaved card setup? Existing cards will stay unchanged.','Discard draft'))return;try{sessionStorage.removeItem(csDraftKey());}catch{}CARD_SETUP.setup=structuredClone(CARD_SETUP.original);CARD_SETUP.notice='';CARD_SETUP.review=null;csRender();}
-

@@ -2589,7 +2589,7 @@ function desSrcBindingHtml(r, fields){
   </select></div>`;
   if(r.type!=="image" && r.type!=="background"){
     h+=`<div class="fld"><label>Static text <span style="text-transform:none;font-weight:400">(shown when not bound to a field)</span></label>
-      <input value="${esc(r.text||"")}" onfocus="desFieldFocus()" oninput="desInspLive('text',this.value)" onchange="desFieldCommit()"></div>`;
+      <input value="${desAttr(r.text||"")}" onfocus="desFieldFocus()" oninput="desInspLive('text',this.value)" onchange="desFieldCommit()"></div>`;
   }
   return h;
 }
@@ -3011,6 +3011,7 @@ function desFamilyInspectorHtml(r){
   if(desFace()==="back")h+=desBackArtworkHtml();
   h+=desGroupControlHtml(r);
   h+=desTextStyleControlHtml(r);
+  if(desFace()!=="back"&&["text","richtext","body","badge","pips"].includes(r.type))h+=desSrcBindingHtml(r,desFields(g,desCard(),cfPrinting(g,desCard())).filter(f=>/^(card\.(name|type|text|subtypes|keywords|deck_limit|attributes\.[a-z0-9_]+)|printing\.(flavor_text|artist|collector_number))$/.test(f.path)));
   if(r.type==="rect"){
     if(flatColor(r.fill))h+=desColorFieldHtml(r,"fill","Fill");
     if(flatColor(r.stroke))h+=desColorFieldHtml(r,"stroke","Stroke");
@@ -3866,6 +3867,8 @@ function desFamilySvgText(){
     if(changed(region.opacity,before.opacity)&&region.opacity!=null)element.setAttribute("opacity",String(region.opacity));
     const colorBindings=Object.fromEntries(["fill","stroke","color","bg"].filter(key=>changed(region[key],before[key])).map(key=>[key,region[key]??null]));
     if(Object.keys(colorBindings).length)element.setAttribute("data-forge-colors",desMetaB64(colorBindings));
+    const content={};for(const key of ["src","text"])if(changed(region[key],before[key]))content[key]=region[key]??null;
+    if(Object.keys(content).length)element.setAttribute("data-forge-content",desMetaB64(content));
     if(changed(region.group,before.group))element.setAttribute("data-forge-group",region.group||"");
     if(changed(region.text_style,before.text_style))element.setAttribute("data-forge-text-style",region.text_style||"");
     if(changed(region.border,before.border))element.setAttribute("data-forge-border",desMetaB64(region.border||null));
@@ -6729,15 +6732,10 @@ function edSymbolButtons(g,key,syms=g.symbols||[]){
   if(!syms.length) return "";
   return `<div style="margin-bottom:6px">${syms.map(s=>`<button type="button" class="symbtn" onclick="edInsert('${key}','[${s.key}]')" title="Insert ${esc(s.name||s.key)}">${cfSymHtml(g,s.key,"cf-sym")||esc(s.glyph||s.key)}<span>${esc(s.key)}</span></button>`).join("")}</div>`;
 }
-function edCtl(key,val,opts){
+function edCtl(key,val,opts={}){
   const id="ef-"+key.replace(/\./g,"_");
-  if(opts&&opts.type==="select"){
-    const read=opts.valueType==="integer"||opts.valueType==="number"?"Number(this.value)":opts.valueType==="boolean"?"this.value==='true'":"this.value";
-    return `<select id="${id}" onchange="edSet('${key}',${read})">${opts.options.map(o=>`<option value="${desAttr(String(o))}" ${o===val?'selected':''}>${esc(String(o))}</option>`).join("")}</select>`;
-  }
-  if(opts&&opts.type==="boolean") return `<select id="${id}" onchange="edSet('${key}',this.value==='true')"><option value="true" ${val===true?'selected':''}>true</option><option value="false" ${val===false?'selected':''}>false</option></select>`;
-  const t=opts&&opts.type==="integer"?"number":"text";
-  return `<input id="${id}" type="${t}" value="${desAttr(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})">`;
+  if(opts.type==="select")return `<select id="${id}" onchange="edSet('${key}',this.value)">${opts.options.map(o=>`<option value="${desAttr(o)}" ${o===val?'selected':''}>${esc(o)}</option>`).join("")}</select>`;
+  return `<input id="${id}" type="${opts.type==='integer'?'number':'text'}" value="${desAttr(val??'')}" oninput="edSet('${key}',${opts.type==='integer'?'this.valueAsNumber':'this.value'})">`;
 }
 function edRenderFields(){
   const g=G(ED.slug),c=edCard();if(!c){$("#ed-fields").innerHTML="Select a card, or add a new one.";return;}
