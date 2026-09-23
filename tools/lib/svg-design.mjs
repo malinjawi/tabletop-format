@@ -158,7 +158,7 @@ export function layoutToSvg(layout, options = {}) {
   const objects = regions.map(region => regionElement(region, origins[region.id] || systemFile, specimen.card, specimen.printing)).join("\n    ");
   const labels = regions.map(region => labelElement(region, specimen.card, specimen.printing)).join("\n    ");
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" data-forge-format="${SVG_DESIGN_FORMAT}" data-forge-version="${SVG_DESIGN_VERSION}" data-forge-text-styles="${b64(layout.text_styles || {})}" data-forge-back="${b64(layout.back || {})}" data-forge-palette="${b64(layout.palette || {})}">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" data-forge-format="${SVG_DESIGN_FORMAT}" data-forge-version="${SVG_DESIGN_VERSION}" data-forge-text-styles="${b64(layout.text_styles || {})}" data-forge-back="${b64(layout.back || {})}" ${layout.palette ? `data-forge-palette="${b64(layout.palette)}"` : ""}>
   <metadata id="forge-design-metadata">${b64(meta)}</metadata>
   <rect id="forge-card-boundary" x="0" y="0" width="${w}" height="${h}" fill="#F5F7F8" stroke="#18242D" stroke-width="0.35"/>
   <g inkscape:groupmode="layer" inkscape:label="Forge editable regions" id="forge-editable-regions">

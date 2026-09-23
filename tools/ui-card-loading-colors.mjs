@@ -107,7 +107,13 @@ try {
     blocked = true; await gate.promise;
     await route.fulfill(fail ? { status: 404, body: "missing" } : { status: 200, contentType: "image/png", body: png });
   });
+  const identityGate=deferred(); let identityRequested=false;
+  await page.route(`${origin}/api/me`,async route=>{identityRequested=true;await identityGate.promise;await route.continue();});
   await page.goto(`${origin}/#g/community/ember/cards`, { waitUntil: "domcontentloaded" });
+  await until(()=>identityRequested,"Startup identity request starts");
+  assert.equal(await page.locator('#cgrid').count(),0,"An embedded project cannot be edited before live startup completes");
+  assert.match(await page.locator('#view').innerText(),/Opening Forge/);
+  identityGate.release(); await page.unroute(`${origin}/api/me`);
   await page.locator('#cgrid[data-card-state="loading"]').waitFor();
   assert.equal(await page.locator(".ctile").count(), 12);
   assert.equal(await page.locator(".card-paint-content").first().evaluate(el => getComputedStyle(el).visibility), "hidden");

@@ -4,7 +4,10 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:f
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-import { analyzeSvgDesignImport, buildSvgDesignProject, inspectSvgCandidate, parseSvgDesign } from "./lib/svg-design.mjs";
+import { analyzeSvgDesignImport, buildSvgDesignProject, inspectSvgCandidate, layoutToSvg, parseSvgDesign } from "./lib/svg-design.mjs";
+
+const noPaletteSvg = layoutToSvg({ card: { w_mm: 63, h_mm: 88 }, regions: [] });
+assert.deepEqual(parseSvgDesign(noPaletteSvg).palette, {}, "Legacy layouts without a palette retain valid SVG working copies");
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = resolve(process.argv[2] || join(root, "examples", "_fixtures", "netrunner-sg"));

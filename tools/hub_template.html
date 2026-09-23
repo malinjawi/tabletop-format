@@ -349,7 +349,7 @@ async function refreshLive(){
     POLICY_SET=String(h.policy_set||"");
     if(!LIVE) return;
     const catalog = await (await fetch("/api/catalog?limit=24")).json();
-    const gs = catalog.items||[]; CATALOG_LOADING=false;
+    const gs = catalog.items||[];
     DATA.games=gs;
     window.__catalog=gs;
     for(const g of gs) STARS[g.slug]=g.stars??0;
@@ -358,8 +358,8 @@ async function refreshLive(){
     else { ME=null; MYSTARS=new Set(); }
     await desDraftHandleActorChange();
     await componentDraftHandleActorChange();
-    renderAuthArea(); render();
   } catch{}
+  finally{CATALOG_LOADING=false;renderAuthArea();render();}
 }
 function accountMenuPosition(menu){
   if(!menu.open)return;const popover=menu.querySelector(".account-popover");
@@ -5311,6 +5311,9 @@ window.PagedConfig = {
 function go(hash){ location.hash = hash; }
 window.onhashchange = render;
 function render(){
+  // Do not expose the embedded project before the live identity/catalog replaces
+  // it: a fast click could otherwise open an editor that startup then discards.
+  if(CATALOG_LOADING){$("#view").innerHTML='<div class="wrap"><div class="pane"><div class="emptystate" role="status">Opening Forge…</div></div></div>';return;}
   const h = location.hash.replace(/^#\/?/,"");
   const parts=h.split("/").map(decodeURIComponent),legacyTabs=new Set(["overview","cards","design","rules","playtests","play","community","assets","history","suggestions","issues","releases","banlist","decks"]);
   const looksLegacy=parts[0]==="g"&&(parts.length===2||legacyTabs.has(parts[2]));
