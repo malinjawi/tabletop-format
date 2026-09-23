@@ -70,6 +70,14 @@ const colorBound = program.replace('data-forge-region="program_name"', `data-for
 assert.deepEqual(analyzeSvgDesignImport(fixture, colorBound).changes.map(change=>[change.id,change.path,change.after]), [["program_name","color","palette"]]);
 assert.throws(()=>parseSvgDesign(program.replace('data-forge-region="program_name"', `data-forge-region="program_name" data-forge-colors="${encoded({ color: "url(https://example.invalid)" })}"`)),/invalid Forge color bindings/);
 
+const fieldBound = program.replace('data-forge-region="program_name"', `data-forge-region="program_name" data-forge-content="${encoded({src:"card.attributes.cost"})}"`);
+assert.deepEqual(analyzeSvgDesignImport(fixture,fieldBound).changes.map(change=>[change.id,change.path,change.after]),[["program_name","src","card.attributes.cost"]]);
+for(const src of ["javascript:alert(1)","card.attributes.cost.__proto__","g.secret"])
+  assert.throws(()=>parseSvgDesign(program.replace('data-forge-region="program_name"',`data-forge-region="program_name" data-forge-content="${encoded({src})}"`)),/Invalid Forge field connection/);
+assert.throws(()=>analyzeSvgDesignImport(fixture,program.replace('data-forge-region="program_name"',`data-forge-region="program_name" data-forge-content="${encoded({src:"card.attributes.unknown_field"})}"`)),/undeclared field/);
+const oldBindingMeta=structuredClone(parsed.meta);for(const binding of Object.values(oldBindingMeta.regions)){delete binding.baseline.src;delete binding.baseline.text;delete binding.adapter_baseline.src;delete binding.adapter_baseline.text;}
+const oldBindingSvg=program.replace(/(<metadata id="forge-design-metadata">)[^<]+/,`$1${encoded(oldBindingMeta)}`);
+assert.deepEqual(analyzeSvgDesignImport(fixture,oldBindingSvg).files,[],"Legacy SVGs preserve their field bindings");
 const recoloredPalette = { ...parsed.palette, map: { ...parsed.palette.map, anarch: "#112233" } };
 const recolored = program.replace(/(data-forge-palette=")[^"]*(")/, `$1${encoded(recoloredPalette)}$2`);
 const colorProposal = analyzeSvgDesignImport(fixture, recolored);
@@ -85,6 +93,10 @@ const oldMeta = { ...parsed.meta }; delete oldMeta.palette;
 const oldSvg = program.replace(/ data-forge-palette="[^"]*"/, "").replace(/(<metadata id="forge-design-metadata">)[^<]+/, `$1${encoded(oldMeta)}`);
 assert.deepEqual(analyzeSvgDesignImport(fixture, oldSvg).files, [], "Older version-1 SVGs preserve palette rules");
 
+const bindingScratch=mkdtempSync(join(tmpdir(),"forge-field-binding."));
+try{cpSync(fixture,bindingScratch,{recursive:true});const first=analyzeSvgDesignImport(bindingScratch,fieldBound);for(const file of first.files)writeFileSync(join(bindingScratch,file.path),file.content);assert.deepEqual(analyzeSvgDesignImport(bindingScratch,fieldBound).changes,[],"Same field connection is idempotent");
+const divergentBinding=program.replace('data-forge-region="program_name"',`data-forge-region="program_name" data-forge-content="${encoded({src:"card.attributes.strength"})}"`);assert.deepEqual(analyzeSvgDesignImport(bindingScratch,divergentBinding).conflicts.map(c=>c.path),["src"]);
+}finally{rmSync(bindingScratch,{recursive:true,force:true});}
 const edited = program.replace('data-forge-region="program_name"', 'data-forge-region="program_name" transform="translate(0.5,0)"');
 assert.notEqual(edited, program);
 const proposed = analyzeSvgDesignImport(fixture, edited);

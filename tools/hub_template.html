@@ -273,7 +273,9 @@ blockquote{border-left:3px solid var(--org);margin:10px 0 0;padding:2px 14px;col
    injected into this document's head at load time -- and into the
    print-sheet window -- from that one string, so the editor/modal/
    PR-diff card and the printed card can never drift out of sync. */
-</style></head><body>
+
+/* Shared card forms and maintainer setup. */
+.card-field-group{border:0;border-top:1px solid var(--border,#d8dee4);padding:18px 0 4px;margin:18px 0;min-width:0}.card-field-group legend{font-size:14px;font-weight:700;padding-right:12px}.card-field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}.field-help{font-size:12px;color:var(--mut);line-height:1.5;margin:6px 0}.card-field-grid .fld{margin:0}.card-field-grid label{display:block;font-size:13px!important;text-transform:none!important;letter-spacing:normal!important;margin-bottom:6px}</style></head><body>
 <div id="top">
   <a class="logo" onclick="go('')">⬡ <span>Forge</span><span class="brand-note">where games live</span></a>
   <textarea id="q" rows="1" wrap="off" name="forge-global-search" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search games and cards" placeholder="Search games and cards…" onkeydown="if(event.key==='Enter')event.preventDefault()" oninput="searchAll(this.value)"></textarea>
@@ -2578,15 +2580,16 @@ function desFieldCommit(){
 /* ---- inspector: binding dropdown (never a typed dot-path), region type, font,
  * size_pt, align, color+bg (color inputs or "palette"), show_if builder, z-order,
  * and x/y/w/h numeric inputs kept in sync with dragging in both directions. ---- */
+function desFieldLabel(path){const key=path.replace(/^card\.attributes\./,'');const def=(G(DES.slug).schema||[]).find(d=>d.key===key);return def?.name||({"card.name":"Name","card.type":"Card type","card.text":"Rules text","card.subtypes":"Subtypes","card.keywords":"Keywords","card.deck_limit":"Deck limit","printing.art":"Artwork","printing.artist":"Artist"})[path]||path;}
 function desSrcBindingHtml(r, fields){
-  let h=`<div class="fld"><label>Bound to</label><select onchange="desBindSelect(this.value)">
+  let h=`<div class="fld"><label for="des-value-source">Show value from</label><select id="des-value-source" onchange="desBindSelect(this.value)">
     <option value="" ${!r.src?"selected":""}>— static text below —</option>
-    ${fields.map(f=>`<option value="${esc(f.path)}" ${r.src===f.path?"selected":""}>${esc(f.path)}</option>`).join("")}
+    ${fields.map(f=>`<option value="${esc(f.path)}" ${r.src===f.path?"selected":""}>${esc(desFieldLabel(f.path))}</option>`).join("")}
     ${(r.src && !fields.find(f=>f.path===r.src))?`<option value="${esc(r.src)}" selected>${esc(r.src)} (not on this preview card)</option>`:""}
   </select></div>`;
   if(r.type!=="image" && r.type!=="background"){
     h+=`<div class="fld"><label>Static text <span style="text-transform:none;font-weight:400">(shown when not bound to a field)</span></label>
-      <input value="${esc(r.text||"")}" onfocus="desFieldFocus()" oninput="desInspLive('text',this.value)" onchange="desFieldCommit()"></div>`;
+      <input value="${desAttr(r.text||"")}" onfocus="desFieldFocus()" oninput="desInspLive('text',this.value)" onchange="desFieldCommit()"></div>`;
   }
   return h;
 }
@@ -2601,7 +2604,7 @@ function desCreditHtml(r, fields){
   return `<div class="fld"><label>Credit field <span style="text-transform:none;font-weight:400">(artist caption)</span></label>
     <select onchange="desInspSet('credit',this.value)">
       <option value="" ${!r.credit?"selected":""}>— none —</option>
-      ${fields.map(f=>`<option value="${esc(f.path)}" ${r.credit===f.path?"selected":""}>${esc(f.path)}</option>`).join("")}
+      ${fields.map(f=>`<option value="${esc(f.path)}" ${r.credit===f.path?"selected":""}>${esc(desFieldLabel(f.path))}</option>`).join("")}
     </select></div>`;
 }
 function desFitHtml(r){
@@ -3008,6 +3011,7 @@ function desFamilyInspectorHtml(r){
   if(desFace()==="back")h+=desBackArtworkHtml();
   h+=desGroupControlHtml(r);
   h+=desTextStyleControlHtml(r);
+  if(desFace()!=="back"&&["text","richtext","body","badge","pips"].includes(r.type))h+=desSrcBindingHtml(r,desFields(g,desCard(),cfPrinting(g,desCard())).filter(f=>/^(card\.(name|type|text|subtypes|keywords|deck_limit|attributes\.[a-z0-9_]+)|printing\.(flavor_text|artist|collector_number))$/.test(f.path)));
   if(r.type==="rect"){
     if(flatColor(r.fill))h+=desColorFieldHtml(r,"fill","Fill");
     if(flatColor(r.stroke))h+=desColorFieldHtml(r,"stroke","Stroke");
@@ -3169,6 +3173,7 @@ function desContentSet(path,value,kind="string"){
   desRenderCanvasOnly();
   desRefreshStudioChrome();
 }
+function desGameFieldSet(key,value){const card=desCard();if(!card)return;card.attributes??={};if(value===undefined||value==='')delete card.attributes[key];else card.attributes[key]=value;DES.compare=false;desRenderCanvasOnly();desRefreshStudioChrome();}
 function desContentControl(label,path,value,kind="string",choices=[]){
   const safe=value??"",change=kind==="boolean"||choices.length?"onchange":"oninput",id=`des-content-${path.replace(/[^a-z0-9_-]+/gi,"-")}`;
   let control;
@@ -3406,11 +3411,7 @@ function desContentInspectorHtml(){
   h+=desRichTextControl("Rules text","text",card.text||"");
   h+=desContentControl("Keywords (comma-separated)","keywords",(card.keywords||[]).join(", "),"array");
   if(card.deck_limit!==undefined)h+=desContentControl("Deck limit","deck_limit",card.deck_limit,"number");
-  if((g.schema||[]).length)h+=`<div style="border-top:1px solid #383c45;margin:15px 0 12px;padding-top:11px;color:#c8ccd3;font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em">Game fields</div>`;
-  for(const def of g.schema||[]){
-    const kind=def.type==="integer"||def.type==="number"?"number":def.type==="boolean"?"boolean":"string";
-    h+=desContentControl(def.name||def.key.replaceAll("_"," "),`attributes.${def.key}`,(card.attributes||{})[def.key],kind,def.choices||def.enum||[]);
-  }
+  h+=cardFieldsHtml(g.schema||[],card,'des-content-attributes-',def=>`desGameFieldSet.bind(null,'${def.key}')`);
   h+=desPreflightPanelHtml();
   h+=desPrintingInspectorHtml(g,card);
   h+=`<details class="forge-studio-tech"><summary>Why the ID is locked</summary><code>${esc(card.id)}</code><div style="margin-top:7px">The stable ID anchors history, printings, decks, rulebook references, diffs, and external working copies.</div></details>`;
@@ -3505,7 +3506,7 @@ function desGalleryHtml(g){
     <div class="badge">FIRST CARD SYSTEM</div><h2>Put the first playable cards on the table</h2>
     <p>Choose a size and layout, add a few card names, then review the fronts and back before saving.</p>
     <div class="card-system-steps"><span><b>1</b> Choose size and fields</span><span><b>2</b> Review fronts and back</span><span><b>3</b> Commit, then edit live</span></div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="desCardStarterOpen()">Build the first card system</button><button class="btn" onclick="componentStudioOpen('${esc(g.slug)}')">Start with pieces instead</button></div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="desCardStarterOpen()">Build the first card system</button><button class="btn" onclick="go('${gameRoute(g)}/cards/setup')">Card setup</button><button class="btn" onclick="componentStudioOpen('${esc(g.slug)}')">Start with pieces instead</button></div>
     <small>You can change the cards and their shared design after saving.</small>
   </div>`;
   const kinds=[["classic","Classic TCG frame","art window, title bar, cost badge, stat row, rules text box"],
@@ -3866,6 +3867,8 @@ function desFamilySvgText(){
     if(changed(region.opacity,before.opacity)&&region.opacity!=null)element.setAttribute("opacity",String(region.opacity));
     const colorBindings=Object.fromEntries(["fill","stroke","color","bg"].filter(key=>changed(region[key],before[key])).map(key=>[key,region[key]??null]));
     if(Object.keys(colorBindings).length)element.setAttribute("data-forge-colors",desMetaB64(colorBindings));
+    const content={};for(const key of ["src","text"])if(changed(region[key],before[key]))content[key]=region[key]??null;
+    if(Object.keys(content).length)element.setAttribute("data-forge-content",desMetaB64(content));
     if(changed(region.group,before.group))element.setAttribute("data-forge-group",region.group||"");
     if(changed(region.text_style,before.text_style))element.setAttribute("data-forge-text-style",region.text_style||"");
     if(changed(region.border,before.border))element.setAttribute("data-forge-border",desMetaB64(region.border||null));
@@ -4042,12 +4045,11 @@ function desStablePrintingId(seed){
 }
 function desFamilySeed(name){
   const g=G(DES.slug),card={id:desStableCardId(name),name,type:"card",subtypes:[],text:"",keywords:[],attributes:{},deck_limit:1};
-  for(const def of g.schema||[]){if(!def.required)continue;const choices=def.choices||def.enum||[];card.attributes[def.key]=choices.length?choices[0]:def.type==="boolean"?false:def.type==="integer"||def.type==="number"?0:"";}
   for(const [path,value] of Object.entries(DES.family?.match||{})){
     const selected=Array.isArray(value)?value[0]:value,keys=path.split(".");let target=card;
     for(const key of keys.slice(0,-1))target=target[key]??={};target[keys.at(-1)]=selected;
   }
-  return card;
+  return cardDefaults(g,card);
 }
 async function desAddCard(){
   if(Object.prototype.hasOwnProperty.call(DES.family?.match||{},"id")){toast("This template is pinned to one permanent card ID. Duplicate or create a reusable family before adding cards.",5000);return;}
@@ -4076,7 +4078,7 @@ async function desRemoveCard(id=DES.sel){
 function desAttr(value){return String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function desGridPaths(g){
   const fields=[{path:"name",label:"Name",kind:"string"},{path:"subtypes",label:"Subtypes",kind:"array"},{path:"text",label:"Rules text",kind:"longstring"},{path:"keywords",label:"Keywords",kind:"array"},{path:"deck_limit",label:"Deck limit",kind:"number"}];
-  for(const def of g.schema||[])fields.push({path:`attributes.${def.key}`,label:def.name||def.key.replaceAll("_"," "),kind:def.type==="integer"||def.type==="number"?"number":def.type==="boolean"?"boolean":"string",choices:def.choices||def.enum||[]});
+  for(const def of (g.schema||[]).filter(d=>!d.archived))fields.push({path:`attributes.${def.key}`,label:def.name||def.key.replaceAll("_"," "),kind:def.type==="integer"||def.type==="number"?"number":def.type==="boolean"?"boolean":"string",choices:def.choices||def.enum||[]});
   return fields;
 }
 function desGridValue(card,path){if(path.startsWith("attributes."))return(card.attributes||{})[path.slice(11)]??"";if(path==="subtypes"||path==="keywords")return(card[path]||[]).join(", ");return card[path]??"";}
@@ -5775,6 +5777,7 @@ async function cardPaintReady(host,{label="Preparing complete preview…",retry=
   }finally{clearTimeout(timer);CARD_PAINT_ACTIVE.delete(task);task.abort();}
 }
 function cards(g, mode){
+  if(mode==="setup")return cardSetupLoad(g);
   if(!g.cards.length) return cardsEmpty(g);
   if(mode==="edit") return cardsEdit(g);
   const types=[...new Set(g.cards.map(c=>c.type))].sort();
@@ -5793,7 +5796,7 @@ function cards(g, mode){
       <input id="cardq" type="search" name="forge-card-filter" autocomplete="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Filter cards… (name, text, keyword)" oninput="if(this.matches(':-webkit-autofill')){this.value='';return}filterCards('${g.slug}')">
       <select id="cardt" onchange="filterCards('${g.slug}')"><option value="">All types</option>${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select>
       ${g.scans&&Object.keys(g.scans).length?`<button class="btn" id="face-mode" onclick="toggleCardFaces('${g.slug}')">Show Forge community frame</button>`:""}
-      <button class="btn primary" style="margin-left:auto" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>
+      <button class="btn" style="margin-left:auto" onclick="go('${gameRoute(g)}/cards/setup')">Card setup</button><button class="btn primary" onclick="go('g/${g.slug}/cards/edit')">✎ Edit cards</button>
     </div><nav class="card-page-controls" id="card-pages" aria-label="Card pages"></nav><div id="cgrid"></div>`;
   filterCards(g.slug);
   liveSync(g.slug);
@@ -5802,7 +5805,7 @@ function cardsEmpty(g){
   $("#pane").innerHTML=`<div class="card-system-empty">
     <h2>No cards yet</h2>
     <p>Choose a size and starting layout, add your first cards, then review them before saving.</p>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="go('g/${g.slug}/design')">Build the first card system</button><a class="btn" href="#help/connectors">Import options</a></div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" onclick="go('g/${g.slug}/design')">Build the first card system</button><button class="btn" onclick="go('${gameRoute(g)}/cards/setup')">Card setup</button><a class="btn" href="#help/connectors">Import options</a></div>
   </div>`;
   liveSync(g.slug);
 }
@@ -6019,6 +6022,33 @@ async function doPlay(slug){
 function exportMenu(slug){
   exportModal(slug);
 }
+const fieldActive=(def,type)=>!def.archived&&(!def.applies_to||def.applies_to.includes(type));
+function gameCardTypes(g){return g.card_types||[...new Set([...(g.cards||[]).map(c=>c.type),...Object.keys(g.type_colors||{})])];}
+function cardDefaults(g,card){card.attributes??={};for(const def of g.schema||[])if(fieldActive(def,card.type)&&Object.hasOwn(def,'default')&&!Object.hasOwn(card.attributes,def.key))card.attributes[def.key]=structuredClone(def.default);return card;}
+function fieldControl(def,value,id,handler){
+  const name=desAttr(id), read=def.type==='boolean'?"(this.value===''?undefined:this.value==='true')":['integer','number'].includes(def.type)?"(this.value===''?undefined:Number(this.value))":"this.value";
+  const action=desAttr(`${handler}(${read})`), required=def.required?' aria-required="true"':'';
+  if(def.type==='boolean'||def.choices?.length){
+    const choices=def.choices?.length?def.choices:[true,false];
+    return `<select id="${name}" onchange="${action}"${required}><option value="" ${value===undefined?'selected':''}>Not set</option>${choices.map(v=>`<option value="${desAttr(String(v))}" ${v===value?'selected':''}>${esc(def.type==='boolean'?(v?'Yes':'No'):v)}</option>`).join('')}</select>`;
+  }
+  const numeric=['integer','number'].includes(def.type);
+  return `<input id="${name}" type="${numeric?'number':'text'}" ${numeric?`step="${def.type==='integer'?'1':'any'}"`:''} ${def.minimum!==undefined?`min="${desAttr(def.minimum)}"`:''} ${def.maximum!==undefined?`max="${desAttr(def.maximum)}"`:''} value="${desAttr(value??'')}" oninput="${action}"${required}>`;
+}
+function cardFieldsHtml(defs,card,prefix,handler){
+  const groups=new Map();for(const def of defs.filter(d=>fieldActive(d,card.type))){const group=def.section||'Card details';if(!groups.has(group))groups.set(group,[]);groups.get(group).push(def);}
+  return [...groups].map(([group,fields])=>`<fieldset class="card-field-group"><legend>${esc(group)}</legend><div class="card-field-grid">${fields.map(def=>{
+    const id=`${prefix}${def.key}`;return `<div class="fld"><label for="${desAttr(id)}">${esc(def.name||def.key)}${def.required?' <span aria-label="required">*</span>':''}</label>${fieldControl(def,card.attributes?.[def.key],id,handler(def))}${def.description?`<div class="field-help">${esc(def.description)}</div>`:''}</div>`;
+  }).join('')}</div></fieldset>`).join('');
+}
+let CARD_SETUP_LOAD=null;
+async function cardSetupLoad(g){
+  const host=document.getElementById('pane'),route=location.hash;
+  if(!LIVE){host.innerHTML='<div class="emptystate">Card setup needs a running Forge host.</div>';return;}
+  host.innerHTML='<div class="emptystate" role="status">Opening card setup…</div>';
+  try{if(!CARD_SETUP_LOAD)CARD_SETUP_LOAD=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/card-setup.js';script.onload=resolve;script.onerror=()=>{script.remove();CARD_SETUP_LOAD=null;reject(Error('Check your connection and try again.'));};document.head.append(script);});await CARD_SETUP_LOAD;if(location.hash===route)await cardSetupOpen(g);}
+  catch(error){if(host.isConnected)host.innerHTML=`<div class="emptystate"><p>${esc(error.message)}</p><button class="btn" onclick="cardSetupLoad(G('${g.slug}'))">Try again</button></div>`;}
+}
 /* ================= IN-HUB CARD EDITOR (live preview + commit/propose) ================= */
 let ED=null; // {slug, cards, orig, sel, access, dirty:Set}
 function edToken(){return {};}
@@ -6055,7 +6085,7 @@ async function cardsEdit(g){
     <div class="edhrow">
       <div style="flex:1"><h2 style="margin:0;font-size:19px">✎ Editing cards — ${esc(g.title)}</h2>
         <div id="ed-sub" style="color:var(--mut);font-size:13px;margin-top:2px"></div></div>
-      <button class="btn" onclick="go('${gameRoute(g)}/cards')">← Done editing</button>
+      <button class="btn" onclick="edOpenSetup()">Card setup</button><button class="btn" onclick="go('${gameRoute(g)}/cards')">← Done editing</button>
     </div>
     <div class="edwrap">
       <div class="edside">
@@ -6159,10 +6189,11 @@ function edValidationErrors(){
     const attrs=card.attributes||{};
     for(const def of defs){
       const value=attrs[def.key], choices=def.choices||def.enum||[];
-      if(def.required&&value===undefined){errors.push(`${card.name||card.id}: ${def.name||def.key} is required`);continue;}
+      if(def.required&&fieldActive(def,card.type)&&value===undefined){errors.push(`${card.name||card.id}: ${def.name||def.key} is required`);continue;}
       if(value===undefined)continue;
       const typed=def.type==="integer"?Number.isInteger(value):def.type==="number"?typeof value==="number"&&!Number.isNaN(value):typeof value===def.type;
       if(!typed)errors.push(`${card.name||card.id}: ${def.name||def.key} must be ${def.type}`);
+      else if(typeof value==="number"&&((def.minimum!==undefined&&value<def.minimum)||(def.maximum!==undefined&&value>def.maximum)))errors.push(`${card.name||card.id}: ${def.name||def.key} is outside its allowed range`);
       else if(choices.length&&!choices.some(choice=>JSON.stringify(choice)===JSON.stringify(value)))errors.push(`${card.name||card.id}: ${def.name||def.key} must be ${choices.join(" or ")}`);
     }
   }
@@ -6696,53 +6727,27 @@ async function loadSandboxBadge(slug){
   tl.appendChild(b);
 }
 
-function edField(label, key, val, opts){
-  const id="ef-"+key.replace(/\./g,"_");
-  if(opts&&opts.type==="select")
-    return `<div class="fld"><label>${esc(label)}</label><select id="${id}" onchange="edSet('${key}',this.value)">${opts.options.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join("")}</select></div>`;
-  if(opts&&opts.type==="textarea"){
-    const g=G(ED.slug), syms=(g.symbols||[]);
-    const chips=edSymbolButtons(g,key,syms);
-    return `<div class="fld"><label>${esc(label)}</label>${chips}<textarea id="${id}" oninput="edSet('${key}',this.value)">${esc(val||"")}</textarea></div>`;
-  }
-  const t=opts&&opts.type==="integer"?"number":"text";
-  return `<div class="fld"><label>${esc(label)}</label><input id="${id}" type="${t}" value="${esc(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})"></div>`;
-}
+async function edOpenSetup(){if(ED.dirty.size&&!await confirmModal('You have unsaved card edits. Leave them and open card setup?','Leave card edits'))return;go(`${gameRoute(G(ED.slug))}/cards/setup`);}
 function edSymbolButtons(g,key,syms=g.symbols||[]){
   if(!syms.length) return "";
   return `<div style="margin-bottom:6px">${syms.map(s=>`<button type="button" class="symbtn" onclick="edInsert('${key}','[${s.key}]')" title="Insert ${esc(s.name||s.key)}">${cfSymHtml(g,s.key,"cf-sym")||esc(s.glyph||s.key)}<span>${esc(s.key)}</span></button>`).join("")}</div>`;
 }
-function edCtl(key,val,opts){
+function edCtl(key,val,opts={}){
   const id="ef-"+key.replace(/\./g,"_");
-  if(opts&&opts.type==="select"){
-    const read=opts.valueType==="integer"||opts.valueType==="number"?"Number(this.value)":opts.valueType==="boolean"?"this.value==='true'":"this.value";
-    return `<select id="${id}" onchange="edSet('${key}',${read})">${opts.options.map(o=>`<option value="${esc(String(o))}" ${o===val?'selected':''}>${esc(String(o))}</option>`).join("")}</select>`;
-  }
-  if(opts&&opts.type==="boolean") return `<select id="${id}" onchange="edSet('${key}',this.value==='true')"><option value="true" ${val===true?'selected':''}>true</option><option value="false" ${val===false?'selected':''}>false</option></select>`;
-  const t=opts&&opts.type==="integer"?"number":"text";
-  return `<input id="${id}" type="${t}" value="${esc(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})">`;
+  if(opts.type==="select")return `<select id="${id}" onchange="edSet('${key}',this.value)">${opts.options.map(o=>`<option value="${desAttr(o)}" ${o===val?'selected':''}>${esc(o)}</option>`).join("")}</select>`;
+  return `<input id="${id}" type="${opts.type==='integer'?'number':'text'}" value="${desAttr(val??'')}" oninput="edSet('${key}',${opts.type==='integer'?'this.valueAsNumber':'this.value'})">`;
 }
 function edRenderFields(){
-  const g=G(ED.slug), c=edCard();
-  if(!c){$("#ed-fields").innerHTML="<div style='color:var(--mut);padding:8px'>Select a card on the left, or add a new one.</div>";return;}
-  const types=Object.keys(g.type_colors||{}); if(!types.includes(c.type)&&c.type)types.unshift(c.type);
-  const defs=g.schema||[]; const syms=(g.symbols||[]), sourcePaths=new Set(sourceRegionsFor(c,g.source_overlay?.regions||[]).filter(r=>(r.source||"card")==="card").map(r=>r.src));
-  const productionPaths=new Set([...productionBindingsFor(g,c,"card").map(binding=>binding.field),...layoutCardFieldPaths(g,c)]);
-  const nonvisualPaths=new Set(["deck_limit","keywords",...(g.source_overlay?.nonvisual_card_fields||[])]);
-  const framePaths=new Set(g.source_overlay?.frame_defining_card_fields||[]);
-  const nativeOnly=!!cardLayout(g,c)&&!g.production&&!g.source_overlay;
-  const fieldBadge=path=>productionPaths.has(path)?` <span style="color:var(--grn);font-size:10px;text-transform:none">printed by template</span>`:framePaths.has(path)?` <span style="color:#9a6700;font-size:10px;text-transform:none">frame-defining · new template</span>`:sourcePaths.has(path)?` <span style="color:var(--grn);font-size:10px;text-transform:none">source-backed field</span>`:nonvisualPaths.has(path)?` <span style="color:var(--mut);font-size:10px;text-transform:none">versioned · not printed</span>`:nativeOnly?` <span style="color:var(--mut);font-size:10px;text-transform:none">versioned · not on this template</span>`:` <span style="color:var(--red);font-size:10px;text-transform:none">not production-mapped</span>`;
-  const visibleDefs=defs.filter(d=>Object.prototype.hasOwnProperty.call(c.attributes||{},d.key)||sourcePaths.has("attributes."+d.key)||productionPaths.has("attributes."+d.key)||d.required);
-  const chips=edSymbolButtons(g,"text",syms);
-  let h=`<div class="fld name"><label>Name${fieldBadge("name")}</label>${edCtl("name",c.name)}</div>`;
-  h+=`<div class="fld"><div class="row">
-      <div style="flex:1.2"><label>Type${fieldBadge("type")}</label>${types.length?edCtl("type",c.type,{type:"select",options:types}):edCtl("type",c.type)}</div>
-      ${visibleDefs.map(d=>{const path="attributes."+d.key,choices=d.choices||d.enum;return `<div style="flex:1"><label>${esc(d.name||d.key)}${fieldBadge(path)}</label>${edCtl(path,(c.attributes||{})[d.key],choices?.length?{type:"select",options:choices,valueType:d.type}:{type:d.type})}</div>`;}).join("")}
-      <div style="flex:1"><label>Deck limit${fieldBadge("deck_limit")}</label>${edCtl("deck_limit",c.deck_limit,{type:"integer"})}</div>
-    </div></div>`;
-  h+=`<div class="fld"><label>Subtypes${fieldBadge("subtypes")} <span style="text-transform:none;font-weight:400">(comma-separated)</span></label>${edCtl("__subtypes",(c.subtypes||[]).join(", "))}</div>`;
-  h+=`<div class="fld"><label>Rules text${fieldBadge("text")} <span style="text-transform:none;font-weight:400">— symbols like [credit] become official glyphs</span></label>${chips}<textarea id="ef-text" oninput="edSet('text',this.value)">${esc(c.text||"")}</textarea></div>`;
-  h+=`<div class="fld"><label>Keywords${fieldBadge("keywords")} <span style="text-transform:none;font-weight:400">(comma-separated)</span></label>${edCtl("__keywords",(c.keywords||[]).join(", "))}</div>`;
+  const g=G(ED.slug),c=edCard();if(!c){$("#ed-fields").innerHTML="Select a card, or add a new one.";return;}
+  const types=gameCardTypes(g);if(c.type&&!types.includes(c.type))types.unshift(c.type);
+  const syms=g.symbols||[];
+  let h=`<div class="fld name"><label for="ef-name">Name</label>${edCtl("name",c.name)}</div>`;
+  h+=`<div class="fld"><label for="ef-type">Card type</label>${types.length?edCtl("type",c.type,{type:"select",options:types}):edCtl("type",c.type)}</div>`;
+  h+=cardFieldsHtml(g.schema||[],c,'ef-attributes_',def=>`edSet.bind(null,'attributes.${def.key}')`);
+  h+=`<div class="fld"><label for="ef-text">Rules text</label>${syms.length?`<details><summary>Insert a symbol</summary>${edSymbolButtons(g,"text",syms)}</details>`:''}<textarea id="ef-text" oninput="edSet('text',this.value)">${esc(c.text||"")}</textarea></div>`;
+  h+=`<details class="ed-advanced"><summary>Additional card details</summary><div class="fld"><label for="ef-__subtypes">Subtypes (comma-separated)</label>${edCtl("__subtypes",(c.subtypes||[]).join(", "))}</div><div class="fld"><label for="ef-__keywords">Keywords (comma-separated)</label>${edCtl("__keywords",(c.keywords||[]).join(", "))}</div><div class="fld"><label for="ef-deck_limit">Deck limit</label>${edCtl("deck_limit",c.deck_limit,{type:"integer"})}</div></details>`;
+  const bindings=new Set([...productionBindingsFor(g,c,"card").map(binding=>binding.field),...layoutCardFieldPaths(g,c)]);
+  h+=`<details class="ed-advanced"><summary>Printed field connections</summary><p class="field-help">A saved value appears in print when the selected card template uses it.</p><ul>${(g.schema||[]).filter(d=>fieldActive(d,c.type)).map(d=>`<li>${esc(d.name||d.key)}: ${bindings.has('attributes.'+d.key)?'connected to this template':'not connected to this template'}</li>`).join('')}</ul></details>`;
   $("#ed-fields").innerHTML=h;
 }
 function edSet(key,val){
@@ -6753,6 +6758,7 @@ function edSet(key,val){
   else if(key.startsWith("attributes.")){c.attributes=c.attributes||{};const k=key.slice(11);
     if(val===""||val==null||(typeof val==="number"&&isNaN(val)))delete c.attributes[k];else c.attributes[k]=val;}
   else c[key]=val;
+  if(key==="type"){cardDefaults(G(ED.slug),c);edRenderFields();}
   edRefreshDirty();
   edRowSync();      // update only the current sidebar row (no form rebuild = no focus loss)
   edPreview(); edBar();
@@ -6772,8 +6778,8 @@ function edInsert(key,token){const el=document.getElementById("ef-"+key);if(!el)
   el.focus(); el.selectionStart=el.selectionEnd=s+token.length; edSet(key,el.value);}
 function edAdd(){
   let n=1,id; do{id="new_card_"+n++;}while(ED.cards.find(c=>c.id===id));
-  const g=G(ED.slug), t=Object.keys(g.type_colors||{})[0]||"card";
-  ED.cards.push({id,name:"New Card",type:t,subtypes:[],text:"",keywords:[],attributes:{},deck_limit:1});
+  const g=G(ED.slug), t=gameCardTypes(g)[0]||"card";
+  ED.cards.push(cardDefaults(g,{id,name:"New Card",type:t,subtypes:[],text:"",keywords:[],attributes:{},deck_limit:1}));
   edRefreshDirty(); edSelect(id); edBar();
 }
 async function edDelete(){
@@ -6782,12 +6788,7 @@ async function edDelete(){
   ED.cards=ED.cards.filter(x=>x.id!==c.id); edRefreshDirty();
   edSelect(ED.cards[0]?.id); edBar();
 }
-/* ---- the money shot: the live card preview is layoutCard(g, edCard(), printing) ----
- * Same renderer the cards grid, card modal and PR diff use (layoutCard()
- * itself falls back to the plain cardFrame() for games with no
- * templates/layout.yaml) — no iframe shell to boot, no canvas to draw:
- * edSet() just calls this again on every keystroke, so a game with a real
- * layout spec re-renders the ACTUAL print-ready card as you type. */
+// Editing uses the same card renderer as preview and exports.
 function edPreview(){
   const scanHost=document.getElementById("ed-scan");
   if(scanHost){

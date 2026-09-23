@@ -578,6 +578,7 @@ def build_game(gd, route_slug=None, git_rel=None, history_ref="HEAD"):
         "production": production,
         "pnp_package": pnp_package,
         "schema": game.get("attribute_definitions") or [],
+        "card_types": game.get("card_types"),
         "type_colors": game.get("type_colors") or {},
         "faction_colors": game.get("faction_colors") or {},
         "card_style": game.get("card_style"),

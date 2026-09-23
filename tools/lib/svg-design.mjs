@@ -17,7 +17,7 @@ export const MAX_SVG_DESIGN_BYTES = 5 * 1024 * 1024;
 const paletteSchema = JSON.parse(readFileSync(new URL("../../schemas/layout.schema.json", import.meta.url), "utf8")).properties.palette;
 const validPalette = new Ajv({ allErrors: true }).compile(paletteSchema);
 
-const EDITABLE_FIELDS = ["x", "y", "w", "h", "d", "fill", "stroke", "stroke_w_mm", "radius_mm", "opacity", "color", "bg", "group", "text_style", "border", "shadow_spec"];
+const EDITABLE_FIELDS = ["x", "y", "w", "h", "d", "fill", "stroke", "stroke_w_mm", "radius_mm", "opacity", "color", "bg", "group", "text_style", "border", "shadow_spec", "src", "text"];
 const clone = value => value === undefined ? undefined : structuredClone(value);
 const equal = (a, b) => isDeepStrictEqual(a, b);
 const round = value => Math.round(Number(value) * 1000) / 1000;
@@ -97,6 +97,7 @@ function adapterBaseline(region) {
   out.text_style = region.text_style || "";
   out.border = region.border ? clone(region.border) : null;
   out.shadow_spec = region.shadow_spec ? clone(region.shadow_spec) : null;
+  if (["text","richtext","body","badge","pips"].includes(region.type)) { out.src = region.src ?? ""; out.text = region.text ?? ""; }
   return out;
 }
 
@@ -273,6 +274,18 @@ function parsedTextStyles(value) {
   return clone(parsed);
 }
 
+function parsedContentBindings(value, binding) {
+  let parsed; try { parsed=unb64(value); } catch { throw new Error("Invalid Forge field connection"); }
+  if (!parsed || typeof parsed!=="object" || Array.isArray(parsed) || !["text","richtext","body","badge","pips"].includes(binding.type) || binding.adapter_baseline?.src === undefined)
+    throw new Error("Invalid Forge field connection");
+  for (const [key,next] of Object.entries(parsed)) {
+    if (!["src","text"].includes(key) || (next!==null && typeof next!=="string")) throw new Error("Invalid Forge field connection");
+    if (key==="src" && next!==null && !/^(?:card\.(?:name|type|text|subtypes|keywords|deck_limit|attributes\.[a-z0-9_]{1,32})|printing\.(?:flavor_text|artist|collector_number))$/.test(next)) throw new Error("Invalid Forge field connection");
+    if (key==="text" && next?.length>5000) throw new Error("Static text is longer than 5000 characters");
+  }
+  return parsed;
+}
+
 function parsedColorBindings(value) {
   let parsed;
   try { parsed = unb64(value); } catch { throw new Error("SVG has invalid Forge color bindings"); }
@@ -370,8 +383,9 @@ export function parseSvgDesign(input) {
     if (attrs["stroke-width"] !== undefined && adapter.stroke_w_mm !== undefined) proposed.stroke_w_mm = bounded(attrs["stroke-width"], `${id} stroke width`);
     if (attrs.opacity !== undefined && adapter.opacity !== undefined) proposed.opacity = bounded(attrs.opacity, `${id} opacity`);
     const colorBindings = attrs["data-forge-colors"] === undefined ? {} : parsedColorBindings(attrs["data-forge-colors"]);
-    Object.assign(proposed, colorBindings);
-    regions.set(id, { id, proposed, binding, colorBindings });
+    const contentBindings = attrs["data-forge-content"] === undefined ? {} : parsedContentBindings(attrs["data-forge-content"], binding);
+    Object.assign(proposed, colorBindings, contentBindings);
+    regions.set(id, { id, proposed, binding, colorBindings, contentBindings });
   }
   for (const id of Object.keys(meta.regions || {})) if (!regions.has(id)) warnings.push(`${id}: editable object is missing; deletion is ignored and the canonical region is preserved`);
   return { meta, palette, text_styles: textStyles, back, regions, warnings, unsupported, objects: regions.size };
@@ -432,7 +446,11 @@ export function analyzeSvgDesignImport(gameDirValue, input) {
       changes.push({ id: "$palette", path: "palette", before: baselinePalette, after: nextPalette, source_file: systemFile });
     }
   }
-  for (const { id, proposed, binding, colorBindings } of parsed.regions.values()) {
+  for (const { id, proposed, binding, colorBindings, contentBindings } of parsed.regions.values()) {
+    if (contentBindings.src?.startsWith("card.attributes.")) {
+      const key=contentBindings.src.slice(16), definitions=documentAt(gameDir,"game.yaml").attribute_definitions||[];
+      if (!definitions.some(def=>def.key===key)) throw new Error(`Field connection names an undeclared field: ${key}`);
+    }
     if (!binding?.source_file || !binding.baseline) continue;
     const origin = family.origins?.[id];
     if (origin !== binding.source_file) { conflicts.push({ id, path: "source_file", base: binding.source_file, proposed: binding.source_file, current: origin || null }); continue; }
@@ -444,9 +462,9 @@ export function analyzeSvgDesignImport(gameDirValue, input) {
       const baseline = binding.baseline[key], adapter = binding.adapter_baseline?.[key], next = proposed[key];
       if (next === undefined || (adapter === undefined && !Object.hasOwn(colorBindings, key)) || equal(adapter, next) || equal(baseline, next)) continue;
       const now = current[key];
-      if (equal(now, next)) continue;
+      if (equal(now, next) || (now === undefined && next === null)) continue;
       if (!equal(now, baseline)) { conflicts.push({ id, path: key, base: baseline ?? null, proposed: next ?? null, current: now ?? null }); continue; }
-      if ((["group", "text_style"].includes(key) && next === "") || (["border", "shadow_spec", "fill", "stroke", "color", "bg"].includes(key) && next === null)) node.delete(key);
+      if ((["group", "text_style"].includes(key) && next === "") || (["border", "shadow_spec", "fill", "stroke", "color", "bg", "src", "text"].includes(key) && next === null)) node.delete(key);
       else node.set(key, clone(next));
       dirty.add(binding.source_file);
       changes.push({ id, path: key, before: baseline ?? null, after: next ?? null, source_file: binding.source_file });

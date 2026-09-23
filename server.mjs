@@ -55,6 +55,7 @@ import { SOURCE_ASSETS_MANIFEST, loadSourceAssets, sourceAssetMetadata } from ".
 import { ART_LIBRARY_MANIFEST, artLibraryBytes, diffArtLibrary, mergeArtLibrary, parseArtLibrary } from "./tools/lib/art-library.mjs";
 import { COMPONENT_DESIGN_PATH, buildComponentProduction, defaultComponentDesign, loadComponentDesign } from "./tools/lib/component-design.mjs";
 import { analyzeComponentSvgImport, buildComponentSvgProject, MAX_COMPONENT_SVG_BYTES } from "./tools/lib/component-svg.mjs";
+import { buildCardFieldSetup, cardTypes } from "./tools/lib/card-fields.mjs";
 import { buildCardStarter, defaultCardPrintProfile } from "./tools/lib/card-starter.mjs";
 import { newId } from "./platform/db.mjs";
 import { hashPassword, verifyPassword, newToken, tokenDigest, SESSION_TTL_MS, validHandle, validEmail } from "./platform/auth.mjs";
@@ -790,6 +791,10 @@ function normalizePrSnapshot(value, fallbackRef = "HEAD") {
 
 /* ---------- routes: hub + live editor ---------- */
 gw.route("GET", "/", async (ctx) => ctx.send(200, await hubHtml(), "text/html; charset=utf-8"), "hub UI");
+gw.route("GET", "/card-setup.js", async (ctx) => {
+  ctx.setHeader("cache-control", "no-cache");
+  ctx.send(200, readFileSync(join(ROOT,"tools/card-setup-ui.js"),"utf8"), "text/javascript; charset=utf-8");
+}, "on-demand visual card setup interface");
 gw.route("GET", "/policies/:name", async (ctx) => {
   const file = POLICY_FILES[ctx.params.name]; if (!file) return ctx.send(404, { error: "no such policy" });
   const raw = renderPolicy(ctx.params.name);
@@ -2252,6 +2257,58 @@ gw.route("PUT", "/api/games/:slug/prototype", async (ctx) => {
   ctx.send(200, { saved: true, commit: sha, iteration: prototype.iteration || 1,
     materials: (prototype.materials || []).length, brief_status: briefStatus });
 }, "commit a validated runnable prototype and advance the design brief atomically");
+// Card setup edits only the input contract; source art and layout remain intact.
+gw.route("GET", "/api/games/:slug/card-setup", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await requireAuth(ctx); if (!user) return;
+  if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  const ref = await store.headSha(slug), materialized = await store.materialize(slug, ref);
+  try {
+    const game = yaml.load(readFileSync(join(materialized.dir, "game.yaml"), "utf8"));
+    const cards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
+    ctx.setHeader("cache-control", "private, no-store");
+    ctx.send(200, { base_ref: ref, setup: { card_types: cardTypes(game, cards).length ? cardTypes(game, cards) : ["card"],
+      attribute_definitions: game.attribute_definitions || [] }, cards });
+  } finally { materialized.cleanup(); }
+}, "read a maintainer's exact-version card input setup");
+gw.route("POST", "/api/games/:slug/card-setup", async (ctx) => {
+  const slug = requireGame(ctx); if (!slug) return;
+  const user = await requireAuth(ctx); if (!user) return;
+  if (!await canWrite(user, slug)) return denyWrite(ctx, user);
+  const body = await json(ctx, 256 * 1024), commit = ctx.url.searchParams.get("commit") === "1";
+  const ref = await store.headSha(slug);
+  if (!body?.base_ref || body.base_ref !== ref)
+    return ctx.send(409, { error: "The game changed since setup opened. Reload setup and review the newer version.", written: false });
+  const materialized = await store.materialize(slug, ref);
+  try {
+    const originals = Object.fromEntries(["game.yaml", "components/cards.json"].map(path=>[path,readFileSync(join(materialized.dir,path),"utf8")]));
+    let built;
+    try { built = buildCardFieldSetup(yaml.load(originals["game.yaml"]), JSON.parse(originals["components/cards.json"]), body.setup); }
+    catch (error) { return ctx.send(422, { error: error.message, written: false }); }
+    const reviewToken = hashBuffer(Buffer.from(JSON.stringify({ ref, setup: built.setup })));
+    const response = { base_ref: ref, review_token: reviewToken, setup: built.setup,
+      changes: built.changes, filled: built.filled, errors: built.errors, written: false };
+    if (built.errors.length) return ctx.send(422, { ...response, error: "Some existing cards need attention. Adjust the fields or supply a valid default for missing values." });
+    if (commit && body.review_token !== reviewToken)
+      return ctx.send(409, { error: "Review this exact setup before saving it.", written: false });
+    for (const file of built.files) writeFileSync(join(materialized.dir,file.path),file.content);
+    const checked = spawnSync(process.execPath, [join(ROOT,"tools","validate.mjs"),materialized.dir], {encoding:"utf8"});
+    if (checked.status !== 0) return ctx.send(422, { ...response, error:"The updated game did not pass validation.",
+      errors:`${checked.stdout||""}\n${checked.stderr||""}`.trim().split("\n").filter(line=>/✗|error|FAIL/i.test(line)) });
+    if (!commit) return ctx.send(200, { ...response, ok:true });
+    if (await store.headSha(slug) !== ref) return ctx.send(409, { error:"The game changed during review. Reload setup before saving.", written:false });
+    for (const [path,content] of Object.entries(originals)) {
+      if ((await store.readFile(slug,path))?.toString() !== content)
+        return ctx.send(409,{error:"There are source changes outside this review. Save those changes before updating card setup.",written:false});
+    }
+    if (!built.changes.length && !built.filled.length && JSON.stringify(yaml.load(originals["game.yaml"]).card_types)===JSON.stringify(built.setup.card_types))
+      return ctx.send(200,{...response,ok:true,saved:false,message:"Setup already matches"});
+    let sha;
+    try { ({sha}=await store.writeFiles(slug,built.files,"cards: configure card types and editing fields",`${user.handle} <${user.email}>`,store.kind==="local"?{expectedRef:ref}:undefined)); }
+    catch(error){if(error.code==="STORE1_EXPECTED_REF_MISMATCH")return ctx.send(409,{error:"Someone saved a newer version. Reload setup before saving.",written:false});throw error;}
+    ctx.send(200,{...response,ok:true,saved:true,written:true,commit:sha});
+  } finally { materialized.cleanup(); }
+}, "review and save card input setup with non-destructive defaults and exact-version validation");
 gw.route("POST", "/api/games/:slug/design/card-starter", async (ctx) => {
   const slug = requireGame(ctx); if (!slug) return;
   const u = await requireAuth(ctx); if (!u) return;

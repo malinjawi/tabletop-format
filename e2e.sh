@@ -143,6 +143,8 @@ check "concurrent export requests join the winning immutable job" node tools/tes
 check "legacy release receipts migrate without regeneration" node tools/test-release-vault-cli.mjs
 check "release-vault backup and restore preserve exact bytes" node tools/test-release-vault-snapshot.mjs
 check "production backups lock outages and recover partial stops" node tools/test-backup-guards.mjs
+check "card setup interface syntax" node --check tools/card-setup-ui.js
+check "portable card fields and conditional form contract" node tools/test-card-fields.mjs
 check "editor-neutral SVG family round trip" node tools/test-svg-design.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "safe Squib card and layout working copy" node tools/test-squib.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "production host preflight template" node deploy/preflight.mjs --env deploy/.env.example --lint
