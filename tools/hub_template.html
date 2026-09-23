@@ -6725,18 +6725,6 @@ async function loadSandboxBadge(slug){
 }
 
 async function edOpenSetup(){if(ED.dirty.size&&!await confirmModal('You have unsaved card edits. Leave them and open card setup?','Leave card edits'))return;go(`${gameRoute(G(ED.slug))}/cards/setup`);}
-function edField(label, key, val, opts){
-  const id="ef-"+key.replace(/\./g,"_");
-  if(opts&&opts.type==="select")
-    return `<div class="fld"><label>${esc(label)}</label><select id="${id}" onchange="edSet('${key}',this.value)">${opts.options.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join("")}</select></div>`;
-  if(opts&&opts.type==="textarea"){
-    const g=G(ED.slug), syms=(g.symbols||[]);
-    const chips=edSymbolButtons(g,key,syms);
-    return `<div class="fld"><label>${esc(label)}</label>${chips}<textarea id="${id}" oninput="edSet('${key}',this.value)">${esc(val||"")}</textarea></div>`;
-  }
-  const t=opts&&opts.type==="integer"?"number":"text";
-  return `<div class="fld"><label>${esc(label)}</label><input id="${id}" type="${t}" value="${desAttr(val??"")}" oninput="edSet('${key}',${t==='number'?'this.valueAsNumber':'this.value'})"></div>`;
-}
 function edSymbolButtons(g,key,syms=g.symbols||[]){
   if(!syms.length) return "";
   return `<div style="margin-bottom:6px">${syms.map(s=>`<button type="button" class="symbtn" onclick="edInsert('${key}','[${s.key}]')" title="Insert ${esc(s.name||s.key)}">${cfSymHtml(g,s.key,"cf-sym")||esc(s.glyph||s.key)}<span>${esc(s.key)}</span></button>`).join("")}</div>`;
@@ -6802,12 +6790,7 @@ async function edDelete(){
   ED.cards=ED.cards.filter(x=>x.id!==c.id); edRefreshDirty();
   edSelect(ED.cards[0]?.id); edBar();
 }
-/* ---- the money shot: the live card preview is layoutCard(g, edCard(), printing) ----
- * Same renderer the cards grid, card modal and PR diff use (layoutCard()
- * itself falls back to the plain cardFrame() for games with no
- * templates/layout.yaml) — no iframe shell to boot, no canvas to draw:
- * edSet() just calls this again on every keystroke, so a game with a real
- * layout spec re-renders the ACTUAL print-ready card as you type. */
+// Editing uses the same card renderer as preview and exports.
 function edPreview(){
   const scanHost=document.getElementById("ed-scan");
   if(scanHost){
