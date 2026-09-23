@@ -728,6 +728,8 @@ w.save(p)
   const firstSymbol=await page.getByLabel("Insert game symbol",{exact:true}).locator("option").nth(1).getAttribute("value");
   await page.getByLabel("Insert game symbol",{exact:true}).selectOption(firstSymbol);
   const richAfter=await richRules.inputValue();
+  // Card pixels intentionally remain hidden until the new preview is decoded.
+  await page.locator('#des-stage-inner .des-cardhost[data-card-state="ready"]').waitFor();
   assert(richAfter.includes("**")&&richAfter.includes(`[${firstSymbol}]`)
     && await page.locator("#des-stage-inner strong").first().isVisible()
     && await page.getByText("Face preflight",{exact:false}).isVisible(),
