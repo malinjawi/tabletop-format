@@ -85,7 +85,8 @@
     "test:quick": "node tools/fmt.mjs validate examples/ember && node tools/fmt.mjs validate examples/harbor-nine && node tools/fmt.mjs validate examples/netrunner-urbp",
     "vtt:up": "docker compose -f deploy/docker-compose.vtt.yml up -d",
     "vtt:down": "docker compose -f deploy/docker-compose.vtt.yml down",
-    "test:ui-print": "node tools/ui-home-print.mjs"
+    "test:ui-print": "node tools/ui-home-print.mjs",
+    "test:ui-card-colors": "node tools/ui-card-loading-colors.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

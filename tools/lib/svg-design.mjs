@@ -4,6 +4,7 @@ import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 import yaml from "js-yaml";
+import { Ajv } from "ajv";
 import { parseDocument } from "yaml";
 
 import { cardMatchesFamily } from "./card-design.mjs";
@@ -12,6 +13,9 @@ import { currentNandeckSources } from "./nandeck-layout.mjs";
 export const SVG_DESIGN_FORMAT = "forge-svg-family";
 export const SVG_DESIGN_VERSION = 1;
 export const MAX_SVG_DESIGN_BYTES = 5 * 1024 * 1024;
+
+const paletteSchema = JSON.parse(readFileSync(new URL("../../schemas/layout.schema.json", import.meta.url), "utf8")).properties.palette;
+const validPalette = new Ajv({ allErrors: true }).compile(paletteSchema);
 
 const EDITABLE_FIELDS = ["x", "y", "w", "h", "d", "fill", "stroke", "stroke_w_mm", "radius_mm", "opacity", "color", "bg", "group", "text_style", "border", "shadow_spec"];
 const clone = value => value === undefined ? undefined : structuredClone(value);
@@ -142,6 +146,7 @@ export function layoutToSvg(layout, options = {}) {
     format: SVG_DESIGN_FORMAT, version: SVG_DESIGN_VERSION, family, source_hash: sourceHash,
     system_file: systemFile, card: { w_mm: w, h_mm: h },
     specimen: { card_id: specimen.card?.id || null, printing_id: specimen.printing?.id || null },
+    palette: clone(layout.palette || {}),
     text_styles: clone(layout.text_styles || {}),
     back: clone(layout.back || {}),
     regions: Object.fromEntries(regions.map(region => [region.id, {
@@ -153,7 +158,7 @@ export function layoutToSvg(layout, options = {}) {
   const objects = regions.map(region => regionElement(region, origins[region.id] || systemFile, specimen.card, specimen.printing)).join("\n    ");
   const labels = regions.map(region => labelElement(region, specimen.card, specimen.printing)).join("\n    ");
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" data-forge-format="${SVG_DESIGN_FORMAT}" data-forge-version="${SVG_DESIGN_VERSION}" data-forge-text-styles="${b64(layout.text_styles || {})}" data-forge-back="${b64(layout.back || {})}">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" data-forge-format="${SVG_DESIGN_FORMAT}" data-forge-version="${SVG_DESIGN_VERSION}" data-forge-text-styles="${b64(layout.text_styles || {})}" data-forge-back="${b64(layout.back || {})}" ${layout.palette ? `data-forge-palette="${b64(layout.palette)}"` : ""}>
   <metadata id="forge-design-metadata">${b64(meta)}</metadata>
   <rect id="forge-card-boundary" x="0" y="0" width="${w}" height="${h}" fill="#F5F7F8" stroke="#18242D" stroke-width="0.35"/>
   <g inkscape:groupmode="layer" inkscape:label="Forge editable regions" id="forge-editable-regions">
@@ -268,6 +273,24 @@ function parsedTextStyles(value) {
   return clone(parsed);
 }
 
+function parsedColorBindings(value) {
+  let parsed;
+  try { parsed = unb64(value); } catch { throw new Error("SVG has invalid Forge color bindings"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("SVG has invalid Forge color bindings");
+  for (const [key, color] of Object.entries(parsed)) {
+    if (!["fill", "stroke", "color", "bg"].includes(key) || !(color === null || typeof color === "string" && (parsedColor(color) !== null || /^palette(?:-(?:dark|deep|light|soft|paper|metallic|gradient|shell-motif|panel-motif))?$/.test(color))))
+      throw new Error("SVG has invalid Forge color bindings");
+  }
+  return parsed;
+}
+
+function parsedPalette(value) {
+  let parsed;
+  try { parsed = unb64(value); } catch { throw new Error("SVG has invalid Forge palette metadata"); }
+  if (!validPalette(parsed)) throw new Error("SVG has invalid Forge palette metadata");
+  return clone(parsed);
+}
+
 function parsedBack(value) {
   let parsed;
   try { parsed = unb64(value); } catch { throw new Error("SVG has invalid Forge card-back metadata"); }
@@ -313,6 +336,7 @@ export function parseSvgDesign(input) {
   if (meta.format !== SVG_DESIGN_FORMAT || meta.version !== SVG_DESIGN_VERSION) throw new Error(`unsupported Forge SVG format: ${meta.format} v${meta.version}`);
   const rootMatch = source.match(/<svg\b([^>]*)>/i), rootAttrs = rootMatch ? attributes(rootMatch[1]) : {};
   const textStyles = rootAttrs["data-forge-text-styles"] !== undefined ? parsedTextStyles(rootAttrs["data-forge-text-styles"]) : clone(meta.text_styles || {});
+  const palette = rootAttrs["data-forge-palette"] !== undefined ? parsedPalette(rootAttrs["data-forge-palette"]) : clone(meta.palette || {});
   const back = rootAttrs["data-forge-back"] !== undefined ? parsedBack(rootAttrs["data-forge-back"]) : clone(meta.back || {});
   const warnings = [], unsupported = [], regions = new Map();
   const elementPattern = /<(rect|circle)\b([^>]*\bdata-forge-region\s*=\s*(?:"[^"]+"|'[^']+')[^>]*)\/?\s*>/gi;
@@ -345,10 +369,12 @@ export function parseSvgDesign(input) {
     } else unsupported.push({ id, type: tag, reason: `expected ${binding.type === "badge" ? "circle" : "rect"}` });
     if (attrs["stroke-width"] !== undefined && adapter.stroke_w_mm !== undefined) proposed.stroke_w_mm = bounded(attrs["stroke-width"], `${id} stroke width`);
     if (attrs.opacity !== undefined && adapter.opacity !== undefined) proposed.opacity = bounded(attrs.opacity, `${id} opacity`);
-    regions.set(id, { id, proposed, binding });
+    const colorBindings = attrs["data-forge-colors"] === undefined ? {} : parsedColorBindings(attrs["data-forge-colors"]);
+    Object.assign(proposed, colorBindings);
+    regions.set(id, { id, proposed, binding, colorBindings });
   }
   for (const id of Object.keys(meta.regions || {})) if (!regions.has(id)) warnings.push(`${id}: editable object is missing; deletion is ignored and the canonical region is preserved`);
-  return { meta, text_styles: textStyles, back, regions, warnings, unsupported, objects: regions.size };
+  return { meta, palette, text_styles: textStyles, back, regions, warnings, unsupported, objects: regions.size };
 }
 
 function regionNode(document, id) {
@@ -395,7 +421,18 @@ export function analyzeSvgDesignImport(gameDirValue, input) {
       changes.push({ id: "$back", path: "back", before: baselineBack, after: nextBack, source_file: systemFile });
     }
   }
-  for (const { id, proposed, binding } of parsed.regions.values()) {
+  const baselinePalette = parsed.meta.palette || {}, nextPalette = parsed.palette || {}, currentPalette = family.layout.palette || {};
+  if (!equal(nextPalette, baselinePalette) && !equal(nextPalette, currentPalette)) {
+    const systemFile = parsed.meta.system_file;
+    if (!systemFile || systemFile !== sources.systemFile) conflicts.push({ id: "$palette", path: "source_file", base: systemFile || null, proposed: systemFile || null, current: sources.systemFile || null });
+    else if (!equal(currentPalette, baselinePalette)) conflicts.push({ id: "$palette", path: "palette", base: baselinePalette, proposed: nextPalette, current: currentPalette });
+    else {
+      documentFor(systemFile).set("palette", clone(nextPalette));
+      dirty.add(systemFile);
+      changes.push({ id: "$palette", path: "palette", before: baselinePalette, after: nextPalette, source_file: systemFile });
+    }
+  }
+  for (const { id, proposed, binding, colorBindings } of parsed.regions.values()) {
     if (!binding?.source_file || !binding.baseline) continue;
     const origin = family.origins?.[id];
     if (origin !== binding.source_file) { conflicts.push({ id, path: "source_file", base: binding.source_file, proposed: binding.source_file, current: origin || null }); continue; }
@@ -405,11 +442,11 @@ export function analyzeSvgDesignImport(gameDirValue, input) {
     if (!node) { conflicts.push({ id, path: "source", base: binding.source_file, proposed: "edited", current: "region missing" }); continue; }
     for (const key of EDITABLE_FIELDS) {
       const baseline = binding.baseline[key], adapter = binding.adapter_baseline?.[key], next = proposed[key];
-      if (next === undefined || adapter === undefined || equal(adapter, next) || equal(baseline, next)) continue;
+      if (next === undefined || (adapter === undefined && !Object.hasOwn(colorBindings, key)) || equal(adapter, next) || equal(baseline, next)) continue;
       const now = current[key];
       if (equal(now, next)) continue;
       if (!equal(now, baseline)) { conflicts.push({ id, path: key, base: baseline ?? null, proposed: next ?? null, current: now ?? null }); continue; }
-      if ((["group", "text_style"].includes(key) && next === "") || (["border", "shadow_spec"].includes(key) && next === null)) node.delete(key);
+      if ((["group", "text_style"].includes(key) && next === "") || (["border", "shadow_spec", "fill", "stroke", "color", "bg"].includes(key) && next === null)) node.delete(key);
       else node.set(key, clone(next));
       dirty.add(binding.source_file);
       changes.push({ id, path: key, before: baseline ?? null, after: next ?? null, source_file: binding.source_file });
@@ -419,7 +456,7 @@ export function analyzeSvgDesignImport(gameDirValue, input) {
   for (const [path, entry] of docs) if (dirty.has(path)) {
     const content = String(entry.document); if (content !== entry.raw) files.push({ path, content });
   }
-  const systemChanged = changes.some(change => change.id === "$text_styles" || change.id === "$back");
+  const systemChanged = changes.some(change => change.id === "$text_styles" || change.id === "$back" || change.id === "$palette");
   const affectedFamilies = systemChanged ? sources.families.map(candidate => candidate.id)
     : sources.families.filter(candidate => changes.some(change => candidate.origins?.[change.id] === change.source_file)).map(candidate => candidate.id);
   return {
