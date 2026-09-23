@@ -94,14 +94,16 @@ function layoutFor(starter) {
 
 export function buildCardStarter(game, raw) {
   const starter = normalizeCardStarter(raw, game.title);
-  const definitions = starter.fields.map(key => CARD_STARTER_FIELDS[key]);
+  const definitions = [...(game.attribute_definitions || []), ...starter.fields.filter(key=>!(game.attribute_definitions||[]).some(def=>def.key===key)).map(key => CARD_STARTER_FIELDS[key])];
+  const initialType = game.card_types?.[0] || "card";
   const used = new Set(), cards = starter.names.map((name, index) => {
     const root = stableId(name), id = used.has(root) ? `${root}_${index + 1}` : root;used.add(id);
     const attributes = {};
     if (starter.fields.includes("cost")) attributes.cost = index + 1;
     if (starter.fields.includes("power")) attributes.power = index + 1;
     if (starter.fields.includes("category")) attributes.category = "starter";
-    return { id, name, type: "card", subtypes: [], text: index === 0 ? "Describe what this card does." : "Replace this with one testable effect.", keywords: [], attributes, deck_limit: starter.quantity };
+    for (const def of definitions) if (!def.archived && (!def.applies_to || def.applies_to.includes(initialType)) && Object.hasOwn(def,"default")) attributes[def.key] = def.default;
+    return { id, name, type: initialType, subtypes: [], text: index === 0 ? "Describe what this card does." : "Replace this with one testable effect.", keywords: [], attributes, deck_limit: starter.quantity };
   });
   const printings = cards.map((card, index) => ({ id: `p_${card.id}_core`, card_id: card.id, set_id: "core", collector_number: String(index + 1).padStart(3, "0"), quantity: starter.quantity }));
   const nextGame = { ...game, attribute_definitions: definitions };
@@ -110,7 +112,7 @@ export function buildCardStarter(game, raw) {
   const designManifest = { version: 1, name: `${game.title} card design`,
     description: "The shared visual system for every starter card in this game.",
     system: `${designRoot}/system.yaml`, legacy_source: "templates/layout.yaml", components: [],
-    families: [{ id: "card", label: "Card", match: { type: "card" }, source: `${designRoot}/families/card.yaml`, specimens: cards.slice(0, 3).map(card => card.id) }],
+    families: [{ id: "card", label: "Card", match: { type: initialType }, source: `${designRoot}/families/card.yaml`, specimens: cards.slice(0, 3).map(card => card.id) }],
     region_order: layout.regions.map(region => region.id) };
   const designSystem = { card: layout.card, back: layout.back, fonts: layout.fonts, palette: layout.palette };
   const files = [

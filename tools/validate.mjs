@@ -20,6 +20,8 @@ import { RULEBOOK_PUBLICATIONS_MANIFEST, loadRulebookPublication } from "./lib/r
 import { SOURCE_ASSETS_MANIFEST, loadSourceAssets } from "./lib/source-assets.mjs";
 import { ART_LIBRARY_MANIFEST, parseArtLibrary } from "./lib/art-library.mjs";
 
+import { cardFieldErrors } from "./lib/card-fields.mjs";
+
 const SCHEMA_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "schemas");
 const PRINT_TARGETS = new Map(JSON.parse(readFileSync(join(SCHEMA_DIR, "..", "production", "print-targets.json"), "utf8"))
   .targets.map(target => [target.id, target]));
@@ -471,18 +473,9 @@ for (const d of decks) {
 
 // Typed attributes vs game.yaml attribute_definitions
 const defs = new Map((game.attribute_definitions ?? []).map(d => [d.key, d]));
-for (const c of cards) {
-  for (const [k, v] of Object.entries(c.attributes ?? {})) {
-    const d = defs.get(k);
-    if (!d) { warn(`card '${c.id}': attribute '${k}' not declared in game.yaml`); continue; }
-    const t = d.type === "integer" ? Number.isInteger(v) : typeof v === d.type;
-    if (!t) err(`card '${c.id}': attribute '${k}' should be ${d.type}, got ${typeof v} (${JSON.stringify(v)})`);
-    else if (d.choices?.length && !d.choices.some(choice => JSON.stringify(choice) === JSON.stringify(v)))
-      err(`card '${c.id}': attribute '${k}' must be one of ${JSON.stringify(d.choices)}, got ${JSON.stringify(v)}`);
-  }
-  for (const d of defs.values())
-    if (d.required && !(d.key in (c.attributes ?? {}))) err(`card '${c.id}': missing required attribute '${d.key}'`);
-}
+for (const issue of cardFieldErrors(game, cards)) err(issue);
+for (const c of cards) for (const k of Object.keys(c.attributes ?? {}))
+  if (!defs.has(k)) warn(`card '${c.id}': attribute '${k}' not declared in game.yaml`);
 
 // Symbol tags in card text must be declared
 const declaredSymbols = new Set((game.symbols ?? []).map(s => s.key));

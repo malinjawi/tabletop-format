@@ -26,6 +26,14 @@ For a first spreadsheet, useful columns are `id`, `name`, `type`, and `text`, fo
 
 Projects with different card types can use several families. Start with one family unless the cards need different layouts. Non-card components have their own **Piece Studio** for quantities, dimensions, shared styling, and cut sheets.
 
+## Set up your team's card editor
+
+Open **Cards → Card setup**. Define card types, then add fields with names, input types, dropdown choices, and help text. Use **Show on** to choose which card types need a field. Choose sections and move fields into order. The live form preview shows what your team will edit; its sample values do not change any cards.
+
+Use defaults and required fields deliberately. **Review changes** names existing cards that will receive missing default values and flags incompatible values. **Save card setup** saves the reviewed change for the team. **Hide field** keeps its data and printed connections; **Restore field** brings it back. Renaming changes the displayed label, keeping existing connections intact.
+
+The card editor and Studio Content panel follow the same setup. In Design, select a text layer or badge and use **Show value from** to connect a field to the printed card. Adding a card type does not create its visual layout automatically. See [Card input setup](card-input-setup.md) for scope, recovery, and migration details.
+
 ## Set colors from your own card data
 
 In **Forge Studio → Colors**, choose **Color cards by**: card type or one of your game's fields (for example, category or faction). Assign a color to each value and choose a fallback for empty or unmapped values. Existing values appear automatically; **Add a value for future cards** lets you prepare another category. **Reset** returns a value to the fallback.

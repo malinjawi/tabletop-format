@@ -515,17 +515,38 @@ for d in decks:
 
 defs = {d["key"]: d for d in game.get("attribute_definitions") or []}
 TYPES = {"integer": int, "number": (int, float), "string": str, "boolean": bool}
+def field_issue(d, v):
+    ok = isinstance(v, TYPES[d["type"]]) and not (d["type"] in ("integer", "number") and isinstance(v, bool))
+    if not ok: return f"must be {d['type']}"
+    if d.get("choices") and not any(type(v) is type(choice) and v == choice or isinstance(v, (int, float)) and not isinstance(v, bool) and isinstance(choice, (int, float)) and not isinstance(choice, bool) and v == choice for choice in d["choices"]): return "must be one of the declared choices"
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        if "minimum" in d and v < d["minimum"]: return f"must be at least {d['minimum']}"
+        if "maximum" in d and v > d["maximum"]: return f"must be at most {d['maximum']}"
+    return None
+if len(defs) != len(game.get("attribute_definitions") or []): err("Duplicate field keys")
+for d in defs.values():
+    label = d.get("name", d["key"])
+    if d["key"] in ("__proto__", "constructor", "prototype"): err(f"Field key {d['key']} is reserved")
+    if d.get("applies_to") and game.get("card_types") and any(t not in game["card_types"] for t in d["applies_to"]): err(f"{label}: choose existing card types")
+    if "minimum" in d and "maximum" in d and d["minimum"] > d["maximum"]: err(f"{label}: minimum exceeds maximum")
+    if ("minimum" in d or "maximum" in d) and d["type"] not in ("integer", "number"): err(f"{label}: limits require a number field")
+    for value in d.get("choices", []):
+        issue = field_issue({**d, "choices": None}, value)
+        if issue: err(f"{label}: choice {issue}")
+    if "default" in d:
+        issue = field_issue(d, d["default"])
+        if issue: err(f"{label}: default {issue}")
 for c in cards:
+    if game.get("card_types") and c["type"] not in game["card_types"]: err(f"{c['id']}: card type is not in setup")
     for k, v in (c.get("attributes") or {}).items():
         d = defs.get(k)
         if not d:
             warn(f"card '{c['id']}': attribute '{k}' not declared in game.yaml"); continue
-        ok = isinstance(v, TYPES[d["type"]]) and not (d["type"] in ("integer","number") and isinstance(v, bool))
-        if not ok: err(f"card '{c['id']}': attribute '{k}' should be {d['type']}, got {type(v).__name__} ({v!r})")
-        elif d.get("choices") and v not in d["choices"]:
-            err(f"card '{c['id']}': attribute '{k}' must be one of {d['choices']!r}, got {v!r}")
+        issue = field_issue(d, v)
+        if issue: err(f"card '{c['id']}': attribute '{k}' {issue}")
     for d in defs.values():
-        if d.get("required") and d["key"] not in (c.get("attributes") or {}):
+        applies = not d.get("archived") and (not d.get("applies_to") or c.get("type") in d["applies_to"])
+        if d.get("required") and applies and d["key"] not in (c.get("attributes") or {}):
             err(f"card '{c['id']}': missing required attribute '{d['key']}'")
 
 declared_symbols = {s["key"] for s in game.get("symbols") or []}

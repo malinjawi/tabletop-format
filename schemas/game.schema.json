@@ -101,6 +101,7 @@
     "default_provenance": {
       "$ref": "provenance.schema.json"
     },
+    "card_types": {"type": "array", "minItems": 1, "maxItems": 80, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 64}, "description": "Optional declared card types, in editor order. Existing games infer types until setup is saved."},
     "attribute_definitions": {
       "type": "array",
       "description": "Declares the game-specific card attributes (e.g. cost, power) so tools can validate, template-bind, and diff them with types.",
@@ -120,7 +121,13 @@
             "items": { "type": ["string", "number", "boolean"] }
           },
           "required": { "type": "boolean", "default": false },
-          "description": { "type": "string" }
+          "description": { "type": "string" },
+          "applies_to": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}, "description": "Omitted means all types. Values outside this scope are retained; required applies only within scope."},
+          "section": {"type": "string", "maxLength": 80},
+          "default": {"type": ["string", "number", "boolean"]},
+          "archived": {"type": "boolean", "description": "Hide from input forms and disable required checks; keep stored values and template bindings."},
+          "minimum": {"type": "number"},
+          "maximum": {"type": "number"}
         }
       }
     },

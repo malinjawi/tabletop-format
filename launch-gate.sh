@@ -55,6 +55,7 @@ run "saved home print settings, exact dimensions, and calibration" node tools/ui
 run "account-scoped local draft discovery and export" node tools/ui-draft-recovery.mjs
 run "discover and resume exact interrupted releases" node tools/ui-release-recovery.mjs
 run "artwork loading, retry, and navigation" node tools/ui-artwork-loading.mjs
+run "visual card setup and safe field migrations" node tools/ui-card-setup.mjs
 run "complete card loading and shared color rules" node tools/ui-card-loading-colors.mjs
 run "truthful Sheets setup and recovery" node tools/ui-sheets-connector.mjs
 run "selected downloads through sign-in and retry" node tools/ui-export-selection.mjs
