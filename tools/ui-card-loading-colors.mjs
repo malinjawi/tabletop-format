@@ -87,7 +87,7 @@ try {
   assert.equal(registration.status, 201, "Register only a disposable test account");
   browser = await chromium.launch({ executablePath: chrome, headless: true });
 
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage(), errors = [];
   page.on("pageerror", error => errors.push(error.message));
   page.setDefaultTimeout(20000);
@@ -116,6 +116,7 @@ try {
   identityGate.release(); await page.unroute(`${origin}/api/me`);
   await page.locator('#cgrid[data-card-state="loading"]').waitFor();
   assert.equal(await page.locator(".ctile").count(), 12);
+  assert.ok(await page.locator('#cgrid>.card-paint-status').evaluate(el=>{const rect=el.getBoundingClientRect(),style=getComputedStyle(el);return rect.top+parseFloat(style.paddingTop)+24<innerHeight;}),'Loading feedback is above the fold on a narrow screen');
   assert.equal(await page.locator(".card-paint-content").first().evaluate(el => getComputedStyle(el).visibility), "hidden");
   await until(()=>blocked,"A real card image request is pending");
   assert.equal(await page.locator("#cgrid").getAttribute("data-card-state"),"loading");
@@ -150,6 +151,7 @@ try {
   assert.equal(await page.locator('#cgrid').count(),0);
   await page.unroute(`${origin}/api/games/ember/ui`);
   await page.unroute(/\/api\/games\/ember\/assets\//);
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto(`${origin}/#g/community/ember/design`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Open Forge Studio", exact: true }).click();
   await page.locator("#authModal").waitFor({ state: "visible" });
