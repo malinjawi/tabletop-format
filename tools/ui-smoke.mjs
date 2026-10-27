@@ -460,7 +460,7 @@ w.save(p)
   assert(exactStudioAdvance.status===200&&exactStudioAdvance.body.saved,
     "card data can advance after the broad Design page was cached",JSON.stringify(exactStudioAdvance));
   await page.getByRole("button", { name:"Open Forge Studio" }).first().click();
-  await page.getByText("Values belong to this card. Positions are shared by its template.", { exact:true }).waitFor();
+  await page.locator(".forge-studio-content-intro").filter({hasText:"Values belong to this card. Positions are shared by its template."}).waitFor();
   const exactStudioSource=await page.evaluate(id=>({ref:DES.sourceRef,text:DES.cards.find(card=>card.id===id)?.text}),exactStudioAdvance.card);
   assert(exactStudioSource.ref===exactStudioAdvance.body.commit&&exactStudioSource.text.includes(exactStudioAdvance.marker),
     "Studio opens cards, printings, family layout, and Git base from one exact source bundle",JSON.stringify(exactStudioSource));
