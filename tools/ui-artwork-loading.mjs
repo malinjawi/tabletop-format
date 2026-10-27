@@ -165,6 +165,8 @@ try {
     await page.locator("#amHandle").fill("artwork-test");
     await page.locator("#amPass").fill("artwork-password-123");
     await page.locator("#amSubmit").click();
+    await page.getByRole("button", { name: "Artwork", exact: true }).click();
+    await page.getByText("Printing details & advanced artwork", { exact: true }).click();
     await page.getByRole("button", { name: "Choose library", exact: true }).waitFor();
   }
   const settleFrames = page => page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame))));
@@ -308,6 +310,29 @@ try {
     await page.locator("#asset-detail-content").getByRole("heading", { name: items[5].name, exact: true }).waitFor();
     const download = await page.locator("#asset-detail-content a[download]").getAttribute("href");
     assert.ok(decodeURIComponent(new URL(download, origin).pathname).endsWith(items[5].path), "Quoted and apostrophe paths open the correct detail download");
+  });
+
+  await withPage("Integrated artwork tiles contain retry controls and support keyboard selection", async ({ page, network }) => {
+    network.metadata = { ...metadata, items: items.slice(0, 2), count: 2 };
+    network.faults.set(items[0].name, "missing");
+    await openStudio(page);
+    await page.getByRole("button", { name: "Change artwork", exact: true }).click();
+    const grid = page.locator("#des-artwork-results .forge-art-library");
+    await grid.locator("article").first().waitFor();
+    assert.equal(await grid.locator(":scope > *").count(), 2, "Each asset is exactly one complete tile");
+    const first = grid.locator("article").first(), frame = first.locator(".forge-image");
+    await imageState(frame, "error");
+    network.faults.delete(items[0].name);
+    await first.getByRole("button", { name: `Retry preview for ${items[0].name}`, exact: true }).click();
+    await imageState(frame, "ready");
+    assert.equal(await first.getByRole("button", { name: /^Retry preview/ }).isVisible(), false, "Successful thumbnail does not expose a stray Retry tile");
+    const preview = first.getByRole("button", { name: `Preview ${items[0].name}`, exact: true });
+    await preview.focus(); await preview.press("Enter");
+    await page.locator('#des-artwork-use:not([disabled])').waitFor();
+    assert.match(await page.locator("#des-artwork-status").innerText(), /Preview ready/);
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Change artwork", exact: true }).waitFor();
+    assert.equal(await page.locator("#des-artwork-use").count(), 0);
   });
 
   await withPage("Studio library closes while loading and cached front/back filtering keeps focused inputs and decoded images", async ({ page, network, gate }) => {

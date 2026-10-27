@@ -1887,6 +1887,7 @@ async function desDraftFlush(){
   const snapshot=desDraftSnapshot();try{await desDraftPersist(snapshot);}catch(error){desDraftFailure(error,snapshot);throw error;}
 }
 function desDraftResetMemory(){
+  if(DES?._artLibraryOpen&&typeof desArtworkCancel==="function")desArtworkCancel(false);
   clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;desDragDetachListeners();DES_DRAFT_OFFER=null;DES_REVIEW=null;DES_DRAG=null;DES_FIELD_DRAG=null;DES=null;
   document.getElementById("modal")?.classList.remove("on");
 }
@@ -1904,7 +1905,7 @@ function desDraftApply(record){
   if(DES.fieldDraft?.show){DES.selRegion=DES.fieldDraft.regionId;DES.selRegions=DES.selRegion?[DES.selRegion]:[];}
   DES.pendingAssets=Object.fromEntries(Object.entries(state.pendingAssets||{}).map(([path,asset])=>[path,{...structuredClone(asset),preview_url:asset.content_base64?`data:${desDraftAssetMime(path)};base64,${asset.content_base64}`:""}]));
   DES.printingSel=structuredClone(state.printingSel||{});DES.artLibrary=structuredClone(state.artLibrary||{format:"forge-art-library",version:1,assets:[]});
-  DES.sel=DES.cards.some(card=>card.id===state.sel)?state.sel:(DES.cards[0]?.id||null);DES.face=state.face==="back"?"back":"front";DES.leftTab=state.leftTab==="layers"?"layers":"cards";DES.rightTab=state.rightTab==="design"?"design":"content";
+  DES.sel=DES.cards.some(card=>card.id===state.sel)?state.sel:(DES.cards[0]?.id||null);DES.face=state.face==="back"?"back":"front";DES.leftTab=state.leftTab==="layers"?"layers":"cards";DES.rightTab=["design","artwork","colors"].includes(state.rightTab)?state.rightTab:"content";
   DES.gridSelection=(state.gridSelection||[]).filter(id=>DES.cards.some(card=>card.id===id));DES.artTargetIds=state.artTargetIds||[];DES.undo=[];DES.assetItems=null;DES_REVIEW=null;
 }
 async function desDraftResolve(action){
@@ -2111,7 +2112,7 @@ function desQueueFitToViewport(){
     const geom=desGeom(),width=Math.round(geom.pxW),height=Math.round(geom.pxH);
     if(Math.abs(stage.getBoundingClientRect().width-width)<.5&&Math.abs(stage.getBoundingClientRect().height-height)<.5)return;
     stage.style.width=`${width}px`;stage.style.height=`${height}px`;
-    const host=document.getElementById("des-stage-inner");if(host)host.innerHTML=desStageInnerHtml();
+    const host=document.getElementById("des-stage-inner");if(host){host.innerHTML=desStageInnerHtml();void (typeof desArtworkPaint==="function"?desArtworkPaint:cardPaintReady)(host.querySelector(".des-cardhost"));}
   });
 }
 window.addEventListener("resize",desQueueFitToViewport);
@@ -2139,7 +2140,7 @@ function desPromoteBack(){
 }
 function desSetFace(face){
   if(DES.fieldDraft&&face!=="front"){toast("Finish or cancel this field before editing the back.");return;}
-  DES.face=face==="back"?"back":"front";DES.selRegion=null;DES.selRegions=[];DES.compare=false;DES.rightTab="design";DES.leftTab="layers";desRenderFull();
+  if(DES._artLibraryOpen)desArtworkCancel(false);DES.face=face==="back"?"back":"front";DES.selRegion=null;DES.selRegions=[];DES.compare=false;DES.rightTab="design";DES.leftTab="layers";desRenderFull();
 }
 function desSelectedPrinting(card=desCard(),original=false){
   if(!card)return null;const list=original?(DES?.origPrintings||[]):(DES?.printings||[]),wanted=!original&&DES?.printingSel?.[card.id];
@@ -2168,7 +2169,7 @@ function desCardHtml(geom){
   const g=desGhostGame(shownLayout,DES.compare), c=DES.compare?(desOriginalCard()||desCard()):desCard();
   const pxW=Math.max(1,Math.round(geom.pxW));
   if(desFace()==="back")return layoutBackCard(g,shownLayout,{w:pxW});
-  if(!c)return "";const p=cfPrinting(g,c);
+  if(!c)return "";const selected=cfPrinting(g,c),p=typeof desArtworkPreviewPrinting==="function"?desArtworkPreviewPrinting(selected):selected;
   if(DES.layout && desRegions().length)
     return layoutCard(g,c,p,{w:pxW});
   // 0-region layout (blank start, or every region deleted): a bare card shell at
@@ -2220,13 +2221,13 @@ function desReadoutHtml(geom){
 function desStageInnerHtml(){
   const geom=desGeom();
   const cardHtml=desCardHtml(geom);
-  const boxes=DES.compare?"":desRegions().map(r=>desRegionBoxHtml(r,geom,DES.selRegion)).join("");
+  const boxes=DES.compare||DES.rightTab==="artwork"?"":desRegions().map(r=>desRegionBoxHtml(r,geom,DES.selRegion)).join("");
   const readout=DES_DRAG?desReadoutHtml(geom):"";
   const original=DES.compare?'<div class="forge-studio-original">ORIGINAL · READ ONLY</div>':"";
   return `${original}<div class="des-cardhost">${cardHtml}</div><div class="des-overlay">${boxes}</div>${readout}`;
 }
-function desRenderCanvasOnly(){ for(const button of document.querySelectorAll("[data-field-undo]"))button.disabled=!DES.undo.length;if(DES?.fieldDraft?.review){DES.fieldDraft.review=false;DES_REVIEW=null;desRenderInspectorOnly();}const stage=document.getElementById("des-stage"),geom=desGeom();if(stage){stage.style.width=`${Math.round(geom.pxW)}px`;stage.style.height=`${Math.round(geom.pxH)}px`;}const host=document.getElementById("des-stage-inner"); if(host){host.innerHTML=desStageInnerHtml();void cardPaintReady(host.querySelector(".des-cardhost"));} desQueuePreflight(); desDraftQueue(); }
-function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desRightPanelHtml(); const label=document.getElementById("des-properties-selection"),count=desSelectionIds().length;if(label)label.textContent=DES.rightTab==="content"&&desFace()==="front"?(desCard()?.name||"SELECT A CARD"):(count>1?`${count} ELEMENTS`:DES.selRegion?desFriendlyRegionName(desRegion(DES.selRegion)):"SELECT AN ELEMENT");if(DES.family)desUpdatePanelTabs(); }
+function desRenderCanvasOnly(){ for(const button of document.querySelectorAll("[data-field-undo]"))button.disabled=!DES.undo.length;if(DES?.fieldDraft?.review){DES.fieldDraft.review=false;DES_REVIEW=null;desRenderInspectorOnly();}const stage=document.getElementById("des-stage"),geom=desGeom();if(stage){stage.style.width=`${Math.round(geom.pxW)}px`;stage.style.height=`${Math.round(geom.pxH)}px`;}const host=document.getElementById("des-stage-inner"); if(host){host.innerHTML=desStageInnerHtml();void (typeof desArtworkPaint==="function"?desArtworkPaint:cardPaintReady)(host.querySelector(".des-cardhost"));} desQueuePreflight(); desDraftQueue(); }
+function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desRightPanelHtml(); const label=document.getElementById("des-properties-selection"),count=desSelectionIds().length;if(label)label.textContent=["content","artwork"].includes(DES.rightTab)&&desFace()==="front"?(desCard()?.name||"SELECT A CARD"):(count>1?`${count} ELEMENTS`:DES.selRegion?desFriendlyRegionName(desRegion(DES.selRegion)):"SELECT AN ELEMENT");if(DES.family)desUpdatePanelTabs(); }
 function desRefreshToolbar(){
   const g=G(DES.slug); if(!g) return;
   if(DES.family){desRefreshStudioChrome();return;}
@@ -2260,6 +2261,7 @@ function desBoxKeyActivate(e,id){
   e.preventDefault();e.stopPropagation();desSelectRegion(id,{individual:e.altKey,focus:true});
 }
 function desCanvasBgPointerDown(e){
+  if(DES.rightTab==="artwork")return;
   if(DES.fieldDraft?.show&&!e.target.closest('.des-box')){
     if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;
     const r=desRegion(DES.fieldDraft.regionId),stage=document.getElementById('des-stage'),geom=desGeom();
@@ -3251,7 +3253,7 @@ function desUpdatePreflightPanel(){
   const errors=issues.filter(issue=>issue.level==="error").length,warnings=issues.length-errors;panel.className=`forge-preflight ${errors?"bad":warnings?"warn":"ok"}`;const head=panel.querySelector(".forge-preflight-head");if(head)head.innerHTML=`<b>${errors?"✕":warnings?"▲":"✓"} Face preflight</b><span>${errors?`${errors} issue${errors===1?"":"s"}`:warnings?`${warnings} warning${warnings===1?"":"s"}`:"Ready"}</span>`;host.innerHTML=issues.length?issues.slice(0,5).map(issue=>`<div>${issue.level==="error"?"Fix":"Check"} · ${esc(issue.message)}</div>`).join(""):`<div>Symbols resolve and rendered text fits at a readable size.</div>`;
 }
 function desQueuePreflight(){if(!DES?.family)return;const run=()=>requestAnimationFrame(()=>requestAnimationFrame(desUpdatePreflightPanel));if(document.fonts?.ready)document.fonts.ready.then(run,run);else run();}
-function desPrintingSelect(id){const card=desCard();if(!card)return;DES.printingSel??={};DES.printingSel[card.id]=id;DES.compare=false;desRenderFull();}
+function desPrintingSelect(id){if(DES._artLibraryOpen)desArtworkCancel(false);const card=desCard();if(!card)return;DES.printingSel??={};DES.printingSel[card.id]=id;DES.compare=false;desRenderFull();}
 function desPrintingSet(path,value,kind="string"){
   const printing=desSelectedPrinting();if(!printing)return;let parsed=value;
   if(kind==="number")parsed=value===""?null:Number(value);
@@ -3277,7 +3279,7 @@ function desCropSet(key,value){
 function desCropReset(){const printing=desSelectedPrinting();if(!printing)return;delete printing.art_crop;desRenderFull();}
 function desArtPreviewUrl(printing){
   if(!printing)return"";const staged=DES.pendingAssets?.[printing.art];if(staged)return staged.preview_url;
-  const value=printing.art_data||printing.art||printing.art_url||"";if(value.startsWith("assets/")&&typeof LIVE!=="undefined"&&LIVE)return`/api/games/${encodeURIComponent(DES.slug)}/assets/${value.slice(7).split("/").map(encodeURIComponent).join("/")}`;return value;
+  const value=printing.art_data||printing.art||printing.art_url||"";if(value.startsWith("assets/")&&typeof LIVE!=="undefined"&&LIVE)return`/api/games/${encodeURIComponent(DES.slug)}/assets/${value.slice(7).split("/").map(encodeURIComponent).join("/")}${DES.sourceRef?"?ref="+encodeURIComponent(DES.sourceRef):""}`;return value;
 }
 function desArtLibraryDirty(){return !!(DES?.artLibrary&&DES?.origArtLibrary&&JSON.stringify(DES.artLibrary)!==JSON.stringify(DES.origArtLibrary));}
 function desArtLibraryRecord(path){return(DES?.artLibrary?.assets||[]).find(record=>record.path===path)||null;}
@@ -3414,8 +3416,8 @@ function desSetupDirty(){return !!DES?.setup&&JSON.stringify(DES.setup)!==JSON.s
 function desAddedRegions(){return (DES?.layout?.regions||[]).filter(region=>!(DES.orig.regions||[]).some(original=>original.id===region.id));}
 function desFieldBindings(key){const path='card.attributes.'+key;return(DES.layout.regions||[]).filter(region=>region.src===path||String(region.src||'').includes('{'+path+'}'));}
 
-function desRightPanelHtml(){if(DES?.fieldDraft)return desFieldComposerHtml();if(DES?.rightTab==="colors")return desPaletteHtmlRules();return DES?.family&&DES.rightTab==="content"&&desFace()==="front"?desContentInspectorHtml():desInspectorHtml();}
-function desRightPanelTab(tab){if(DES.fieldDraft&&tab!=="content"){toast("Save or cancel this field to return to the full layout and color tools.");return;}if(tab==="content"&&desFace()==="back")return;DES.rightTab=tab;if(tab==="content"){DES.selRegion=null;DES.selRegions=[];}desRenderCanvasOnly();desRenderInspectorOnly();desUpdatePanelTabs();}
+function desRightPanelHtml(){if(DES?.rightTab==="artwork"&&desFace()==="front"&&!DES.fieldDraft)return desArtworkInspectorHtml();if(DES?.fieldDraft)return desFieldComposerHtml();if(DES?.rightTab==="colors")return desPaletteHtmlRules();return DES?.family&&DES.rightTab==="content"&&desFace()==="front"?desContentInspectorHtml():desInspectorHtml();}
+function desRightPanelTab(tab){if(DES.fieldDraft&&tab!=="content"){toast("Save or cancel this field to return to the full layout and color tools.");return;}if(["content","artwork"].includes(tab)&&desFace()==="back")return;if(DES._artLibraryOpen&&tab!=="artwork")desArtworkCancel(false);DES.rightTab=tab;if(["content","artwork"].includes(tab)){DES.selRegion=null;DES.selRegions=[];}desRenderCanvasOnly();desRenderInspectorOnly();desUpdatePanelTabs();}
 function desUpdatePanelTabs(){for(const button of document.querySelectorAll("[data-inspector-tab]")){const selected=button.dataset.inspectorTab===DES.rightTab;button.classList.toggle("on",selected);button.setAttribute("aria-pressed",String(selected));}if(DES.rightTab==="colors"){const label=document.getElementById("des-properties-selection");if(label)label.textContent="ALL CARD FAMILIES";}}
 function desRefreshStudioChrome(){
   const card=desCard(),status=document.querySelector(".forge-studio-status");
@@ -3540,7 +3542,7 @@ function desStartBlank(){
   desRenderFull();
 }
 function desReopenGallery(){
-  if(DES.family){if(desAnyDirty()&&!confirm("Discard the uncommitted card and layout draft?"))return;const g=G(DES.slug);if(desAnyDirty())void desDraftClearCurrent();DES=null;designCatalog(g);return;}
+  if(DES.family){if(desAnyDirty()&&!confirm("Discard the uncommitted card and layout draft?"))return;const g=G(DES.slug);if(desAnyDirty())void desDraftClearCurrent();if(DES._artLibraryOpen)desArtworkCancel(false);DES=null;designCatalog(g);return;}
   DES.showGallery=true; DES.selRegion=null; desRenderFull();
 }
 
@@ -3555,7 +3557,7 @@ function desPreviewBarHtml(g){
   <button class="btn" onclick="desWorstCase()" title="Preview the card with the longest rules text, so overflow shows up while you design">⚠ Worst case</button>`:`<span class="mut">One shared back ships with every printing.</span>`}
   ${DES.family?`<button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')" title="Render every card that uses this family with the current draft">▦ Proof all ${cards.length}</button>`:""}`;
 }
-function desSetPreviewCard(id){ DES.sel=id; DES.compare=false; desRenderFull(); }
+function desSetPreviewCard(id){ if(DES._artLibraryOpen)desArtworkCancel(false);DES.sel=id; DES.compare=false; desRenderFull(); }
 function desPrevCard(dir){
   const g=G(DES.slug), ids=desFamilyCards(g).map(c=>c.id);if(!ids.length)return;
   let i=ids.indexOf(DES.sel); if(i<0) i=0;
@@ -3880,6 +3882,7 @@ function desFamilySvgFile(){
 /* ---- save: LIVE -> PUT /api/games/:slug/layout (validated commit). STATIC ->
  * download layout.yaml + toast that a server is needed to save in place. ---- */
 async function desSave(){
+  if(DES?._artChoice){toast("Use artwork or cancel the preview before reviewing your draft.");return;}
   if(DES?.fieldDraft){await desFieldReview();return;}
   if(!DES.layout) return;
   if(DES.family){
@@ -3930,9 +3933,10 @@ function desStudioReviewPreview(card,layout,original=false){
   return layoutCard(g,card,printing,{w:205,sourceBacked:false});
 }
 function desStudioReviewHtml(data){
-  const cardCount=new Set((data.card_changes||[]).map(change=>change.card)).size,layoutCount=(data.layout_changes||[]).length,printingCount=[...(data.printing_changes?.added||[]),...(data.printing_changes?.changed||[]),...(data.printing_changes?.removed||[])].length,assetCount=(data.asset_changes||[]).length,artTagCount=(data.art_library_changes||[]).length;
+  const changedPrintingIds=new Set([...(data.printing_changes?.added||[]),...(data.printing_changes?.changed||[]),...(data.printing_changes?.removed||[])]);
+  const cardCount=new Set([...(data.card_changes||[]).map(change=>change.card),...[...DES.printings,...DES.origPrintings].filter(p=>changedPrintingIds.has(p.id)).map(p=>p.card_id)]).size,layoutCount=(data.layout_changes||[]).length,printingCount=[...(data.printing_changes?.added||[]),...(data.printing_changes?.changed||[]),...(data.printing_changes?.removed||[])].length,assetCount=(data.asset_changes||[]).length,artTagCount=(data.art_library_changes||[]).length;
   const first=(data.candidate_cards||[])[0],before=first?.before||desOriginalCard(),after=first?.candidate||desCard();
-  const preflight=desFamilyPreflight(),preflightErrors=preflight.filter(issue=>issue.level==="error").length;
+  const fitReport=desFieldPreflightReport(),preflight=desFamilyPreflight(),preflightErrors=fitReport.blocking.length;
   const issues=[...(data.conflicts||[]).map(item=>`Conflict · ${item.scope||"source"} · ${item.path||item.card||"change"}`),
     ...(!data.validation?.ok?(data.validation?.report||[]).filter(line=>/ERROR|invalid|conflict/i.test(line)).slice(0,5):[])];
   const blocked=issues.length>0||preflightErrors>0;
@@ -3943,13 +3947,13 @@ function desStudioReviewHtml(data){
     ...(data.asset_changes||[]).map(asset=>`<div><b>${esc(asset.path)}</b> · ${Math.round(asset.size/1024)} KB · ${esc(asset.rights.status)} · ${esc(asset.rights.license)}</div>`),
     ...(data.art_library_changes||[]).map(change=>`<div><b>${esc(change.path)}</b> · artwork tags ${esc(change.kind)} · ${esc((change.after?.tags||[]).join(", ")||"none")}</div>`),
     ...(data.layout_changes||[]).map(change=>`<div><b>Shared layout</b> · ${esc(change.path||"layout")}</div>`)];
-  return `<div style="display:flex;justify-content:space-between;gap:14px;align-items:start"><div><div class="badge">EXACT CANDIDATE</div><h2 style="margin:8px 0 4px">Review component content, artwork, and layout together</h2><div class="mut">${cardCount} changed card${cardCount===1?"":"s"} · ${printingCount} printing${printingCount===1?"":"s"} · ${assetCount} new art file${assetCount===1?"":"s"} · ${artTagCount} art tag record${artTagCount===1?"":"s"} · ${layoutCount} layout field${layoutCount===1?"":"s"} · ${(data.changed_files||[]).length} versioned file${data.changed_files?.length===1?"":"s"}</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div>
-    ${blocked?`<div class="warn" style="margin-top:14px;color:var(--red)"><b>This candidate cannot be committed yet.</b>${issues.map(issue=>`<div>${esc(issue)}</div>`).join("")}${preflightErrors?`<div>${preflightErrors} family text-fit error${preflightErrors===1?"":"s"} must be fixed below.</div>`:""}</div>`:`<div class="chg" style="margin-top:14px"><b>✓ Combined validation passed</b><br>Nothing has been written. The commit will contain the reviewed card rows and shared family source together.</div>`}
-    <div class="forge-studio-review" style="margin-top:16px"><div><h3 style="margin:0 0 8px">Before</h3><div class="forge-studio-review-card">${desStudioReviewPreview(before,DES.orig,true)}</div></div><div><h3 style="margin:0 0 8px">Draft</h3><div class="forge-studio-review-card">${desStudioReviewPreview(after,DES.layout)}</div></div></div>
-    <div class="forge-review-preflight ${preflightErrors?"bad":"ok"}"><b>${preflightErrors?"▲":"✓"} Family production preflight · ${desFamilyCards(G(DES.slug)).length} cards</b>${preflight.length?preflight.slice(0,10).map(issue=>`<div>${esc((DES.cards||[]).find(card=>card.id===issue.card)?.name||issue.card)} · ${esc(issue.message)}</div>`).join(""):`<div>All declared symbols resolve and estimated text regions fit at readable sizes.</div>`}${preflight.length>10?`<small>+ ${preflight.length-10} more · open Proof for the complete visual inspection.</small>`:""}</div>
-    <h3 style="margin:18px 0 8px">Versioned changes</h3><div class="forge-studio-review-list">${changes.join("")||"<div>No changed fields.</div>"}</div>
+  return `<div style="display:flex;justify-content:space-between;gap:14px;align-items:start"><div><div class="badge">EXACT CANDIDATE</div><h2 style="margin:8px 0 4px">Review changes</h2><div class="mut">Saving to ${esc(gameRoute(G(DES.slug)).replace(/^g\//,""))}${data.propose?" → your edition + proposal":""}</div><div class="mut">${cardCount} card${cardCount===1?"":"s"} with data or artwork changes${layoutCount?` · shared layout changes affect ${desFamilyCards(G(DES.slug)).length} cards`:""}</div></div><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">× Close</button></div>
+    ${blocked?`<div class="warn" style="margin-top:14px;color:var(--red)"><b>This candidate cannot be committed yet.</b>${issues.map(issue=>`<div>${esc(issue)}</div>`).join("")}${preflightErrors?`<div>${preflightErrors} family text-fit error${preflightErrors===1?"":"s"} must be fixed below.</div>`:""}</div>`:`<div class="chg" style="margin-top:14px"><b>✓ Combined validation passed</b><br>Nothing has been saved yet. Saving records this reviewed version in the game’s history.</div>`}
+    ${desFace()==="front"?desArtworkReviewHtml(data):`<div class="forge-studio-review"><div>${desStudioReviewPreview(before,DES.orig,true)}</div><div>${desStudioReviewPreview(after,DES.layout)}</div></div>`}
+    <details style="margin-top:14px"><summary>Production checks & detailed changes</summary><div class="forge-review-preflight ${preflightErrors?"bad":"ok"}"><b>${preflightErrors?"▲":"✓"} Family production preflight · ${desFamilyCards(G(DES.slug)).length} cards</b>${preflight.length?preflight.slice(0,10).map(issue=>`<div>${esc((DES.cards||[]).find(card=>card.id===issue.card)?.name||issue.card)} · ${esc(issue.message)}</div>`).join(""):`<div>All declared symbols resolve and estimated text regions fit at readable sizes.</div>`}${preflight.length>10?`<small>+ ${preflight.length-10} more · open Proof for the complete visual inspection.</small>`:""}</div>
+    ${fitReport.inherited.length?`<p class="mut">${fitReport.inherited.length} existing text-fit issue(s) are unchanged by this edit. Check the production proof before printing.</p>`:""}<h3 style="margin:18px 0 8px">Changes in this save</h3><div class="forge-studio-review-list">${changes.join("")||"<div>No changed fields.</div>"}</div>
     ${(data.warnings||[]).length?`<details style="margin-top:12px"><summary>${data.warnings.length} adapter warning${data.warnings.length===1?"":"s"}</summary>${data.warnings.map(warning=>`<div class="mut" style="margin-top:5px">${esc(warning)}</div>`).join("")}</details>`:""}
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">Keep editing</button><button class="btn primary" id="des-studio-commit" ${data.ok&&!preflightErrors?"":"disabled"} onclick="desStudioCommit()">${data.propose?"Commit to my edition + open PR":"Commit reviewed candidate"}</button></div>`;
+    </details><div id="des-studio-save-error" role="alert"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">Keep editing</button><button class="btn primary" id="des-studio-commit" ${data.ok&&!preflightErrors?"":"disabled"} onclick="desStudioCommit()">${data.propose?"Commit to my edition + open PR":"Save changes"}</button></div>`;
 }
 async function desStudioDryRun(inline=false){
   const state=DES,payload=structuredClone(desStudioPayload()),fingerprint=JSON.stringify(payload),response=await fetch(`/api/games/${encodeURIComponent(DES.slug)}/design/studio`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(payload)}),data=await response.json().catch(()=>({}));
@@ -3957,7 +3961,7 @@ async function desStudioDryRun(inline=false){
   if(DES!==state||JSON.stringify(desStudioPayload())!==fingerprint)throw new Error("The draft changed while review was loading. Review again to include your latest edits.");
   DES_REVIEW={slug:DES.slug,payload:{...payload,review_token:data.review_token},data};
   if(inline&&DES.fieldDraft){DES.fieldDraft.review=true;desRenderInspectorOnly();return;}
-  $("#mbody").style.maxWidth="960px";$("#mbody").style.display="block";$("#mbody").innerHTML=desStudioReviewHtml(data);$("#modal").classList.add("on");
+  $("#mbody").style.maxWidth="960px";$("#mbody").style.display="block";$("#mbody").innerHTML=desStudioReviewHtml(data);$("#modal").classList.add("on");desArtworkReviewPaint();
 }
 function desCopyFallback(text,done){
   const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
@@ -4196,7 +4200,7 @@ function desStudioHtml(g){
         ${desStudioImpactHtml(g)}
       </main>
       <aside class="forge-studio-right">
-        <div class="forge-studio-panel-head"><div class="forge-studio-panel-tabs" role="group" aria-label="Inspector panel"><button data-inspector-tab="content" aria-pressed="${DES.rightTab==="content"&&desFace()==="front"}" class="${DES.rightTab==="content"&&desFace()==="front"?"on":""}" ${desFace()==="back"?"disabled":""} onclick="desRightPanelTab('content')">Content</button><button data-inspector-tab="design" aria-pressed="${DES.rightTab==="design"}" class="${DES.rightTab==="design"?"on":""}" onclick="desRightPanelTab('design')">Layout</button><button data-inspector-tab="colors" aria-pressed="${DES.rightTab==="colors"}" class="${DES.rightTab==="colors"?"on":""}" onclick="desRightPanelTab('colors')">Colors</button></div><span id="des-properties-selection" style="font-size:9px;color:#737a86">${DES.rightTab==="content"&&desFace()==="front"?esc(c?.name||"SELECT A CARD"):(DES.selRegion?esc(desFriendlyRegionName(desRegion(DES.selRegion))):"SELECT AN ELEMENT")}</span></div>
+        <div class="forge-studio-panel-head"><div class="forge-studio-panel-tabs" role="group" aria-label="Inspector panel"><button data-inspector-tab="content" aria-pressed="${DES.rightTab==="content"&&desFace()==="front"}" class="${DES.rightTab==="content"&&desFace()==="front"?"on":""}" ${desFace()==="back"?"disabled":""} onclick="desRightPanelTab('content')">Content</button><button data-inspector-tab="artwork" aria-pressed="${DES.rightTab==="artwork"}" class="${DES.rightTab==="artwork"?"on":""}" ${desFace()==="back"?"disabled":""} onclick="desRightPanelTab('artwork')">Artwork</button><button data-inspector-tab="design" aria-pressed="${DES.rightTab==="design"}" class="${DES.rightTab==="design"?"on":""}" onclick="desRightPanelTab('design')">Layout</button><button data-inspector-tab="colors" aria-pressed="${DES.rightTab==="colors"}" class="${DES.rightTab==="colors"?"on":""}" onclick="desRightPanelTab('colors')">Colors</button></div><span id="des-properties-selection" style="font-size:9px;color:#737a86">${["content","artwork"].includes(DES.rightTab)&&desFace()==="front"?esc(c?.name||"SELECT A CARD"):(DES.selRegion?esc(desFriendlyRegionName(desRegion(DES.selRegion))):"SELECT AN ELEMENT")}</span></div>
         <div class="box des-col-inspector"><div class="bb" id="des-inspector">${desRightPanelHtml()}</div></div>
       </aside>
     </div>
@@ -4248,7 +4252,7 @@ function desRenderFull(){
   desQueuePreflight();
   desDraftQueue();
   desQueueFitToViewport();
-  void cardPaintReady(document.querySelector("#des-stage-inner .des-cardhost"));
+  void (typeof desArtworkPaint==="function"?desArtworkPaint:cardPaintReady)(document.querySelector("#des-stage-inner .des-cardhost"));
   desUpdatePanelTabs();
 }
 
@@ -4318,6 +4322,7 @@ async function designFamilyEdit(slug,familyId,previewCardId=null){
     const stableFamily={...family,...(source.family_definition||{}),layout:source.layout,origins:source.origins||source.family_definition?.origins||family.origins||{}},exactGame={...g,cards:source.cards,printings:source.printings};
     const specimen=designSpecimen(exactGame,stableFamily),layout=JSON.parse(JSON.stringify(stableFamily.layout));
     const requested=previewCardId&&source.cards.find(card=>card.id===previewCardId&&cardDesignMatch(card,stableFamily.match));
+    if(DES?._artLibraryOpen)desArtworkCancel(false);
     DES={slug,_draftActor:desDraftActor(),layout,orig:JSON.parse(JSON.stringify(layout)),cards:JSON.parse(JSON.stringify(source.cards)),origCards:JSON.parse(JSON.stringify(source.cards)),printings:JSON.parse(JSON.stringify(source.printings)),origPrintings:JSON.parse(JSON.stringify(source.printings)),sel:requested?.id||specimen?.id||source.cards.find(card=>cardDesignMatch(card,family.match))?.id||null,
       selRegion:null,selRegions:[],undo:[],access,view:"fit",face:"front",rawOpen:false,showGallery:false,_addFontOpen:false,leftTab:"cards",rightTab:"content",compare:false,
       setup:structuredClone(source.setup),origSetup:structuredClone(source.setup),fieldDraft:null,family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null,_draftReady:false};
@@ -6912,6 +6917,7 @@ async function edCommit(){
 }
 function closeEditorForce(){ED=null;}
 
+async function openCardArtwork(slug,id){const route=location.hash;try{await desLoadFieldTools();if(location.hash===route)await desOpenCardArtwork(slug,id);}catch(error){if(location.hash===route)toast(esc(error.message),7000);}}
 function cardModal(slug,cid){
   const g=G(slug), c=g.cards.find(x=>x.id===cid);
   $("#mbody").style.maxWidth="";$("#mbody").style.display="";
@@ -6922,6 +6928,7 @@ function cardModal(slug,cid){
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex:none">
       ${layoutCard(g,c,cfPrinting(g,c),{w:230})}
       <button class="btn primary" style="width:100%;justify-content:center" onclick="document.getElementById('modal').classList.remove('on');openEditor('${slug}','${cid}')">✎ Edit this card</button>
+      ${g.card_design?.families?.length?`<button class="btn" style="width:100%;justify-content:center" onclick="openCardArtwork('${slug}','${cid}')">Edit artwork</button>`:""}
       ${g.scans&&g.scans[cid]?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><img src="${g.scans[cid]}" loading="lazy" style="width:110px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25)"><span style="font-size:10px;color:var(--mut);text-align:center">original print — reference</span></div>`:""}
     </div>
     <div style="flex:1">

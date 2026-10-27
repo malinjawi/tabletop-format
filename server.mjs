@@ -794,7 +794,7 @@ function normalizePrSnapshot(value, fallbackRef = "HEAD") {
 gw.route("GET", "/", async (ctx) => ctx.send(200, await hubHtml(), "text/html; charset=utf-8"), "hub UI");
 gw.route("GET", "/studio-fields.js", ctx => {
   ctx.setHeader("cache-control", "no-cache");
-  ctx.send(200, readFileSync(join(ROOT,"tools/studio-fields-ui.js"),"utf8"), "text/javascript; charset=utf-8");
+  ctx.send(200, readFileSync(join(ROOT,"tools/studio-fields-ui.js"),"utf8")+"\n"+readFileSync(join(ROOT,"tools/studio-artwork-ui.js"),"utf8"), "text/javascript; charset=utf-8");
 }, "lazy-loaded integrated field workspace controls");
 gw.route("GET", "/card-setup.js", async (ctx) => {
   ctx.setHeader("cache-control", "no-cache");
