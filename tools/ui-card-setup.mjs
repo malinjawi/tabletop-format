@@ -143,6 +143,34 @@ try {
   const bound=page.waitForResponse(r=>r.url().endsWith('/design/studio?commit=1'));await page.locator('#des-studio-commit').click();assert.equal((await bound).status(),200);
   assert.equal(yaml.load(readFileSync(join(ember,'templates/card-design/families/card.yaml'),'utf8')).regions.find(r=>r.id==='title').src,'card.attributes.health');
   await page.reload();await page.getByRole('button',{name:'Open Forge Studio',exact:true}).click();await page.getByRole('button',{name:'Layers',exact:true}).first().click();await page.locator('[data-design-region="title"]').click();assert.equal(await page.getByLabel('Show value from',{exact:true}).inputValue(),'card.attributes.health');
+  // Integrated field creation uses the existing live card and exact save path.
+  await page.getByRole('button',{name:'Content',exact:true}).click();
+  const fieldCard=await page.evaluate(()=>({id:DES.sel,name:desCard().name}));
+  const beforeField=JSON.parse(readFileSync(join(ember,'components/cards.json'),'utf8'));
+  const beforeFieldLayout=yaml.load(readFileSync(join(ember,'templates/card-design/families/card.yaml'),'utf8'));
+  await page.getByRole('button',{name:'+ Add field',exact:true}).click();
+  await page.getByLabel('Field name',{exact:true}).fill('3D Armor');
+  await page.getByLabel('Value for '+fieldCard.name,{exact:true}).fill('0');
+  await page.getByRole('button',{name:'Left',exact:true}).click();
+  const beforeFieldRef=git('rev-parse','HEAD');
+  await page.getByRole('button',{name:'Review field',exact:true}).click();
+  await page.getByRole('heading',{name:'Review 3D Armor',exact:true}).waitFor();
+  assert.equal(git('rev-parse','HEAD'),beforeFieldRef,'Integrated review never writes');
+  assert.equal(await page.getByRole('button',{name:'Save changes',exact:true}).isEnabled(),true);
+  const fieldResponse=page.waitForResponse(r=>r.url().endsWith('/design/studio?commit=1'));
+  await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  const fieldSaved=await fieldResponse;assert.equal(fieldSaved.status(),200);
+  const fieldResult=await fieldSaved.json();
+  await page.waitForFunction(commit=>DES?.sourceRef===commit,fieldResult.commit);
+  assert.equal(await page.getByRole('spinbutton',{name:'3D Armor',exact:true}).inputValue(),'0');
+  assert.equal(await page.evaluate(()=>DES.sel),fieldCard.id,'Save keeps the selected card');
+  const afterField=JSON.parse(readFileSync(join(ember,'components/cards.json'),'utf8'));
+  assert.deepEqual(afterField,beforeField.map(card=>card.id===fieldCard.id?{...card,attributes:{...card.attributes,field_3d_armor:0}}:card),'Only the selected card value changes');
+  const afterFieldLayout=yaml.load(readFileSync(join(ember,'templates/card-design/families/card.yaml'),'utf8'));
+  assert.deepEqual(afterFieldLayout.regions.slice(0,-1),beforeFieldLayout.regions,'Existing layout elements stay intact');
+  assert.match(afterFieldLayout.regions.at(-1).src,/card\.attributes\.field_3d_armor/);
+  assert.match(await page.locator('.forge-studio-status').innerText(),/Repository version/);
+  console.log('INTEGRATED FIELD BROWSER GREEN — numeric name, zero value, placement, exact review, save in place, preserved cards and layout');
   // Independently exercise access, review binding and stale writes through the real endpoint.
   const api=async(path,body)=>page.evaluate(async({path,body})=>{const r=await fetch(path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});return {status:r.status,body:await r.json()};},{path,body});
   const opening=await api('/api/games/ember/card-setup');assert.equal(opening.status,200);

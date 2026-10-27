@@ -191,7 +191,10 @@ wait_s3(){
 }
 start_s3(){
   local container="$1" volume="$2" port="$3"
-  docker run --detach --name "$container" --network "$network" \
+  # Only disposable drill volumes: provision the non-root S3 server's ownership
+  # on both fresh and restored stores, independent of the image's default user.
+  docker run --rm --volume "$volume:/data" "$utility_image" chown -R 65532:65532 /data
+  docker run --detach --user 65532:65532 --name "$container" --network "$network" \
     --publish "127.0.0.1:$port:9000" \
     --env MINIO_ROOT_USER="$s3_access" --env MINIO_ROOT_PASSWORD="$s3_secret" \
     --volume "$volume:/data" "$s3_image" server /data --address :9000 >/dev/null

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { chromium } from "playwright-core";
@@ -12,8 +13,7 @@ const root = resolve(import.meta.dirname, "..");
 const temp = mkdtempSync(join(tmpdir(), "forge-pilot-invite-test-"));
 const dbPath = join(temp, "platform.db"), games = join(temp, "games");
 mkdirSync(games);
-const port = 46_000 + Math.floor(Math.random() * 1000);
-const origin = `http://127.0.0.1:${port}`;
+let origin;
 let server;
 let browser;
 const chrome = process.env.CHROME_PATH || [
@@ -52,6 +52,17 @@ try {
   assert.match(stored.token_hash, /^[a-f0-9]{64}$/);
   assert.notEqual(stored.token_hash, token, "database keeps only the token digest");
 
+  // Select an OS-assigned free port immediately before startup. Guessing from
+  // 46000..46999 collided with the runner's other sockets and failed main CI.
+  const port = await new Promise((resolvePort, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const assigned = probe.address().port;
+      probe.close(error => error ? reject(error) : resolvePort(assigned));
+    });
+  });
+  origin = `http://127.0.0.1:${port}`;
   server = spawn(process.execPath, ["server.mjs", "--port", String(port), "--games", games], {
     cwd: root,
     env: { ...process.env, DB_PATH: dbPath,

@@ -1810,7 +1810,7 @@ function desDraftSnapshot(){
   const identity=desDraftIdentity();if(!identity||!DES?.family)return null;
   const pendingAssets=Object.fromEntries(Object.entries(DES.pendingAssets||{}).map(([path,asset])=>{const copy={...asset};delete copy.preview_url;return[path,copy];}));
   return {key:desDraftKey(identity),version:DES_DRAFT_VERSION,...identity,source_hash:DES.sourceHash||"",saved_at:new Date().toISOString(),dirty:desAnyDirty(),state:structuredClone({
-    layout:DES.layout,cards:DES.cards,printings:DES.printings,pendingAssets,printingSel:DES.printingSel||{},artLibrary:DES.artLibrary,
+    layout:DES.layout,cards:DES.cards,setup:DES.setup,fieldDraft:DES.fieldDraft,printings:DES.printings,pendingAssets,printingSel:DES.printingSel||{},artLibrary:DES.artLibrary,
     sel:DES.sel,face:DES.face,leftTab:DES.leftTab,rightTab:DES.rightTab,gridSelection:DES.gridSelection||[],artTargetIds:DES.artTargetIds||[]
   })};
 }
@@ -1899,7 +1899,9 @@ async function desDraftHandleActorChange(){
 }
 function desDraftApply(record){
   const state=record?.state;if(!state||!Array.isArray(state.cards)||!Array.isArray(state.printings)||!state.layout)throw new Error("The local draft is incomplete");
+  DES.setup=structuredClone(state.setup||DES.origSetup);DES.fieldDraft=structuredClone(state.fieldDraft||null);if(DES.fieldDraft)DES.fieldDraft.review=false;
   DES.layout=structuredClone(state.layout);DES.cards=structuredClone(state.cards);DES.printings=structuredClone(state.printings);
+  if(DES.fieldDraft?.show){DES.selRegion=DES.fieldDraft.regionId;DES.selRegions=DES.selRegion?[DES.selRegion]:[];}
   DES.pendingAssets=Object.fromEntries(Object.entries(state.pendingAssets||{}).map(([path,asset])=>[path,{...structuredClone(asset),preview_url:asset.content_base64?`data:${desDraftAssetMime(path)};base64,${asset.content_base64}`:""}]));
   DES.printingSel=structuredClone(state.printingSel||{});DES.artLibrary=structuredClone(state.artLibrary||{format:"forge-art-library",version:1,assets:[]});
   DES.sel=DES.cards.some(card=>card.id===state.sel)?state.sel:(DES.cards[0]?.id||null);DES.face=state.face==="back"?"back":"front";DES.leftTab=state.leftTab==="layers"?"layers":"cards";DES.rightTab=state.rightTab==="design"?"design":"content";
@@ -2018,7 +2020,8 @@ const DES_CSS = `
 @media(max-width:390px){.forge-studio-workarea{padding:12px}.forge-studio-status{margin-left:0;width:100%}}
 @media(max-width:760px),(pointer:coarse){.forge-studio .des-h{width:44px;height:44px;background:transparent;border:0;border-radius:50%}.forge-studio .des-h:after{content:"";position:absolute;left:17px;top:17px;width:10px;height:10px;box-sizing:border-box;background:#fff;border:1.5px solid #8268ea;border-radius:2px}.forge-studio .des-h-nw{left:-22px;top:-22px}.forge-studio .des-h-n{left:50%;top:-22px;transform:translateX(-50%)}.forge-studio .des-h-ne{right:-22px;top:-22px}.forge-studio .des-h-e{right:-22px;top:50%;transform:translateY(-50%)}.forge-studio .des-h-se{right:-22px;bottom:-22px}.forge-studio .des-h-s{left:50%;bottom:-22px;transform:translateX(-50%)}.forge-studio .des-h-sw{left:-22px;bottom:-22px}.forge-studio .des-h-w{left:-22px;top:50%;transform:translateY(-50%)}}
 `;
-document.head.insertAdjacentHTML("beforeend", `<style>${DES_CSS}</style>`);
+document.head.insertAdjacentHTML("beforeend", `<style>${DES_CSS}
+</style>`);
 
 function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
 function round2(n){ return Math.round(n*100)/100; }
@@ -2051,7 +2054,7 @@ function desFields(g, c, p){
     push("card.text", c.text||"", "longstring");
     push("card.keywords", (c.keywords||[]).join(", "), "array");
     if(c.deck_limit!=null) push("card.deck_limit", c.deck_limit, "number");
-    const declared=g.schema||[];
+    const declared=desDefinitions(g);
     for(const d of declared){
       const v=(c.attributes||{})[d.key];
       push(`card.attributes.${d.key}`, v, (d.type==="integer"||d.type==="number")?"number":(d.type==="boolean"?"boolean":"string"));
@@ -2135,6 +2138,7 @@ function desPromoteBack(){
   const pre=desBeginChange();DES.layout.back=desBackSeed(DES.layout);desCommitChange(pre);DES.selRegion="back_title";DES.selRegions=["back_title"];DES.rightTab="design";desRenderFull();toast("Card back is now an editable, versioned production surface.",4000);
 }
 function desSetFace(face){
+  if(DES.fieldDraft&&face!=="front"){toast("Finish or cancel this field before editing the back.");return;}
   DES.face=face==="back"?"back":"front";DES.selRegion=null;DES.selRegions=[];DES.compare=false;DES.rightTab="design";DES.leftTab="layers";desRenderFull();
 }
 function desSelectedPrinting(card=desCard(),original=false){
@@ -2185,6 +2189,7 @@ function desSelectionIds(){const ids=(DES?.selRegions||[]).filter(id=>desRegion(
 function desGroupIds(group){return group?desRegions().filter(region=>region.group===group).map(region=>region.id):[];}
 function desGroupLabel(group){return String(group||"").replaceAll("_"," ").replaceAll("-"," ").replace(/\b\w/g,char=>char.toUpperCase());}
 function desRegionBoxHtml(r, geom, selId){
+  if(DES.fieldDraft&&r.id!==DES.fieldDraft.regionId)return "";
   const isBadge=r.type==="badge";
   const w=isBadge?(r.d??r.w??8):(r.w??10), h=isBadge?(r.d??r.h??8):(r.h??10);
   const x=r.x||0, y=r.y||0;
@@ -2201,7 +2206,7 @@ function desRegionBoxHtml(r, geom, selId){
     style="left:${left}px;top:${top}px;width:${ww}px;height:${hh}px"
     role="button" tabindex="0" aria-pressed="${sel}" aria-label="${desAttr(`${label}${group} layer. Drag to move; use arrow keys for precise movement.`)}"
     aria-describedby="des-canvas-instructions" onfocus="desBoxFocus('${esc(r.id)}')" onkeydown="desBoxKeyActivate(event,'${esc(r.id)}')" onpointerdown="desBoxPointerDown(event,'${esc(r.id)}')">
-    <span class="des-tag">${r.group?`${esc(desGroupLabel(r.group))} · `:""}${esc(r.id)}${visible?'':' (hidden for this card)'}</span>
+    <span class="des-tag">${r.group?`${esc(desGroupLabel(r.group))} · `:""}${esc(label)}${visible?'':' (hidden for this card)'}</span>
     ${handles}
   </div>`;
 }
@@ -2220,7 +2225,7 @@ function desStageInnerHtml(){
   const original=DES.compare?'<div class="forge-studio-original">ORIGINAL · READ ONLY</div>':"";
   return `${original}<div class="des-cardhost">${cardHtml}</div><div class="des-overlay">${boxes}</div>${readout}`;
 }
-function desRenderCanvasOnly(){ const stage=document.getElementById("des-stage"),geom=desGeom();if(stage){stage.style.width=`${Math.round(geom.pxW)}px`;stage.style.height=`${Math.round(geom.pxH)}px`;}const host=document.getElementById("des-stage-inner"); if(host){host.innerHTML=desStageInnerHtml();void cardPaintReady(host.querySelector(".des-cardhost"));} desQueuePreflight(); desDraftQueue(); }
+function desRenderCanvasOnly(){ for(const button of document.querySelectorAll("[data-field-undo]"))button.disabled=!DES.undo.length;if(DES?.fieldDraft?.review){DES.fieldDraft.review=false;DES_REVIEW=null;desRenderInspectorOnly();}const stage=document.getElementById("des-stage"),geom=desGeom();if(stage){stage.style.width=`${Math.round(geom.pxW)}px`;stage.style.height=`${Math.round(geom.pxH)}px`;}const host=document.getElementById("des-stage-inner"); if(host){host.innerHTML=desStageInnerHtml();void cardPaintReady(host.querySelector(".des-cardhost"));} desQueuePreflight(); desDraftQueue(); }
 function desRenderInspectorOnly(){ const host=document.getElementById("des-inspector"); if(host) host.innerHTML=desRightPanelHtml(); const label=document.getElementById("des-properties-selection"),count=desSelectionIds().length;if(label)label.textContent=DES.rightTab==="content"&&desFace()==="front"?(desCard()?.name||"SELECT A CARD"):(count>1?`${count} ELEMENTS`:DES.selRegion?desFriendlyRegionName(desRegion(DES.selRegion)):"SELECT AN ELEMENT");if(DES.family)desUpdatePanelTabs(); }
 function desRefreshToolbar(){
   const g=G(DES.slug); if(!g) return;
@@ -2232,10 +2237,11 @@ function desRefreshToolbar(){
 function desDirty(){ return !!(DES.layout && JSON.stringify(DES.layout)!==JSON.stringify(DES.orig)); }
 function desCardsDirty(){return !!(DES?.cards&&DES?.origCards&&(JSON.stringify(DES.cards)!==JSON.stringify(DES.origCards)||JSON.stringify(DES.printings||[])!==JSON.stringify(DES.origPrintings||[])));}
 function desCardDirty(id){const current=(DES?.cards||[]).find(card=>card.id===id),original=(DES?.origCards||[]).find(card=>card.id===id),currentPrintings=(DES?.printings||[]).filter(printing=>printing.card_id===id),originalPrintings=(DES?.origPrintings||[]).filter(printing=>printing.card_id===id);return JSON.stringify(current)!==JSON.stringify(original)||JSON.stringify(currentPrintings)!==JSON.stringify(originalPrintings);}
-function desAnyDirty(){return desDirty()||desCardsDirty()||desArtLibraryDirty()||Object.keys(DES?.pendingAssets||{}).length>0;}
-function desDirtyLabel(){const ids=new Set([...(DES?.cards||[]).map(card=>card.id),...(DES?.origCards||[]).map(card=>card.id)]),cards=[...ids].filter(desCardDirty).length,assets=Object.keys(DES?.pendingAssets||{}).length,parts=[];if(cards)parts.push(`${cards} card${cards===1?"":"s"}`);if(assets)parts.push(`${assets} art file${assets===1?"":"s"}`);if(desArtLibraryDirty())parts.push("art tags");if(desDirty())parts.push("shared layout");return parts.length?`● ${parts.join(" + ")} draft`:"✓ Repository version";}
+function desAnyDirty(){return desSetupDirty()||desDirty()||desCardsDirty()||desArtLibraryDirty()||Object.keys(DES?.pendingAssets||{}).length>0;}
+function desDirtyLabel(){const ids=new Set([...(DES?.cards||[]).map(card=>card.id),...(DES?.origCards||[]).map(card=>card.id)]),cards=[...ids].filter(desCardDirty).length,assets=Object.keys(DES?.pendingAssets||{}).length,parts=[];if(cards)parts.push(`${cards} card${cards===1?"":"s"}`);if(assets)parts.push(`${assets} art file${assets===1?"":"s"}`);if(desArtLibraryDirty())parts.push("art tags");if(desSetupDirty())parts.push("new fields");if(desDirty())parts.push("shared layout");return parts.length?`● ${parts.join(" + ")} draft`:"✓ Repository version";}
 
 function desSelectRegion(id,options={}){
+  if(DES.fieldDraft){id=DES.fieldDraft.show?DES.fieldDraft.regionId:null;options={...options,individual:true};}
   let selected=desSelectionIds();
   if(!id){selected=[];DES.selRegion=null;}
   else{
@@ -2243,7 +2249,7 @@ function desSelectRegion(id,options={}){
     if(options.toggle){const remove=members.every(member=>selected.includes(member));selected=remove?selected.filter(value=>!members.includes(value)):[...new Set([...selected,...members])];DES.selRegion=remove?(selected.at(-1)||null):id;}
     else{selected=members;DES.selRegion=id;}
   }
-  DES.selRegions=selected;DES.compare=false;DES.rightTab="design";DES._addFontOpen=false;DES._addTextStyleOpen=false;desRenderCanvasOnly();desRenderInspectorOnly();desRenderPaletteOnly();
+  DES.selRegions=selected;DES.compare=false;DES.rightTab=DES.fieldDraft?"content":"design";DES._addFontOpen=false;DES._addTextStyleOpen=false;desRenderCanvasOnly();desRenderInspectorOnly();desRenderPaletteOnly();
   if(options.focus&&DES.selRegion)desFocusRegion(DES.selRegion);
 }
 function desFocusRegion(id){const box=document.querySelector(`.des-box[data-rid="${CSS.escape(String(id||""))}"]`);if(box&&document.activeElement!==box)box.focus({preventScroll:true});return box;}
@@ -2254,6 +2260,13 @@ function desBoxKeyActivate(e,id){
   e.preventDefault();e.stopPropagation();desSelectRegion(id,{individual:e.altKey,focus:true});
 }
 function desCanvasBgPointerDown(e){
+  if(DES.fieldDraft?.show&&!e.target.closest('.des-box')){
+    if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;
+    const r=desRegion(DES.fieldDraft.regionId),stage=document.getElementById('des-stage'),geom=desGeom();
+    if(r&&stage){const rect=stage.getBoundingClientRect(),pre=desBeginChange(),w=r.d??r.w,h=r.d??r.h;
+      r.x=round2(clamp((e.clientX-rect.left)/geom.pxmm-w/2,0,geom.W-w));r.y=round2(clamp((e.clientY-rect.top)/geom.pxmm-h/2,0,geom.H-h));
+      desCommitChange(pre);desRenderCanvasOnly();desRenderInspectorOnly();desFocusRegion(r.id);e.preventDefault();return;}
+  }
   if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
   const t=e.target;
   if(t && (t.id==="des-stage"||t.id==="des-stage-inner"||t.classList.contains("des-overlay")||t.classList.contains("des-cardhost"))){desSelectRegion(null);desFocusStage();}
@@ -2580,7 +2593,7 @@ function desFieldCommit(){
 /* ---- inspector: binding dropdown (never a typed dot-path), region type, font,
  * size_pt, align, color+bg (color inputs or "palette"), show_if builder, z-order,
  * and x/y/w/h numeric inputs kept in sync with dragging in both directions. ---- */
-function desFieldLabel(path){const key=path.replace(/^card\.attributes\./,'');const def=(G(DES.slug).schema||[]).find(d=>d.key===key);return def?.name||({"card.name":"Name","card.type":"Card type","card.text":"Rules text","card.subtypes":"Subtypes","card.keywords":"Keywords","card.deck_limit":"Deck limit","printing.art":"Artwork","printing.artist":"Artist"})[path]||path;}
+function desFieldLabel(path){const key=path.replace(/^card\.attributes\./,'');const def=desDefinitions().find(d=>d.key===key);return def?.name||({"card.name":"Name","card.type":"Card type","card.text":"Rules text","card.subtypes":"Subtypes","card.keywords":"Keywords","card.deck_limit":"Deck limit","printing.art":"Artwork","printing.artist":"Artist"})[path]||path;}
 function desSrcBindingHtml(r, fields){
   let h=`<div class="fld"><label for="des-value-source">Show value from</label><select id="des-value-source" onchange="desBindSelect(this.value)">
     <option value="" ${!r.src?"selected":""}>— static text below —</option>
@@ -2740,7 +2753,7 @@ function desRowQuickAdd(){
   const r=desRegion(DES.selRegion); if(!r) return;
   const g=G(DES.slug);
   const used=new Set((r.of||[]).map(c=>c.key));
-  const cand=(g.schema||[]).find(d=>!used.has(`attributes.${d.key}`));
+  const cand=desDefinitions(g).find(d=>!used.has(`attributes.${d.key}`));
   const pre=desBeginChange();
   r.of=r.of||[];
   r.of.push(cand?{key:`attributes.${cand.key}`,label:cand.name||cand.key,show_if:`attributes.${cand.key}`}:{key:"attributes.value",label:"Value"});
@@ -2771,7 +2784,7 @@ function desEnsurePalette(){
 }
 function desPaletteFields(){
   const fields=new Map([["type","Card type"]]);
-  for(const field of G(DES.slug).schema||[])if(!["array","object"].includes(field.type))fields.set(`attributes.${field.key}`,field.label||field.key);
+  for(const field of desDefinitions())if(!["array","object"].includes(field.type))fields.set(`attributes.${field.key}`,field.label||field.key);
   for(const card of DES.cards||G(DES.slug).cards||[])for(const [key,value] of Object.entries(card.attributes||{}))if(value==null||["string","number","boolean"].includes(typeof value))fields.set(`attributes.${key}`,key);
   const by=DES.layout.palette?.by;if(by&&!fields.has(by))fields.set(by,by);
   return [...fields];
@@ -3161,7 +3174,7 @@ function desContentSet(path,value,kind="string"){
   const card=desCard();if(!card)return;
   let parsed=value;
   if(kind==="number")parsed=value===""?null:Number(value);
-  else if(kind==="boolean")parsed=value==="true";
+  else if(kind==="boolean")parsed=value===""?null:value==="true";
   else if(kind==="array")parsed=String(value).split(",").map(item=>item.trim()).filter(Boolean);
   if(path.startsWith("attributes.")){
     card.attributes??={};const key=path.slice(11);
@@ -3394,31 +3407,15 @@ function desBackArtUpload(){
 function desBackArtworkHtml(){
   const path=DES.layout?.back?.art||"",url=desBackArtPreviewUrl(),staged=DES.pendingAssets?.[path];return`<div class="forge-art-panel" style="margin-bottom:13px"><div class="forge-art-head"><b>Shared back artwork</b>${path?`<button class="btn" onclick="desBackClearArt()">Remove</button>`:""}</div><div class="forge-art-thumb">${url?assetImage(url,"Current shared back artwork","",true):"No back artwork assigned"}</div><div class="forge-art-actions"><button class="btn" onclick="desBackArtLibraryOpen()">Choose back artwork</button><button class="btn" onclick="desBackArtUpload()">Upload back art</button></div>${path?`<div class="forge-art-rights${staged?" ready":""}">${esc(path)}${staged?`<br>${esc(staged.creator)} · ${esc(staged.license)} · ${esc(staged.status)} · rights included in review`:" · existing repository asset"}</div>`:""}<div class="forge-effect-note">One versioned surface is reused by every family, print sheet, tabletop export, and release.</div></div>`;
 }
-function desPrintingInspectorHtml(g,card){
-  const list=(DES.printings||[]).filter(printing=>printing.card_id===card.id),printing=desSelectedPrinting(card);if(!printing)return`<div class="forge-art-panel"><div class="forge-art-head"><b>Production printing</b><button class="btn" onclick="desAddPrinting()">+ Add</button></div><div class="mut" style="font-size:10px">This card has no physical printing yet.</div></div>`;
-  const crop=printing.art_crop||{fit:"cover",focal_x:.5,focal_y:.5,zoom:1},artUrl=desArtPreviewUrl(printing),staged=DES.pendingAssets?.[printing.art],sets=(g.sets||[]).map(set=>({value:set.id,label:set.name||set.title||set.id}));
-  return `<div class="forge-art-panel"><div class="forge-art-head"><b>Production printing</b><button class="btn" onclick="desAddPrinting()">+ Variant</button></div>${list.length>1?`<div class="fld"><label>Printing<select onchange="desPrintingSelect(this.value)">${list.map(item=>`<option value="${desAttr(item.id)}" ${item.id===printing.id?"selected":""}>${esc(item.variant||item.collector_number||item.id)}</option>`).join("")}</select></label></div>`:""}<div class="mut mono" style="font-size:9px;margin-bottom:8px">${esc(printing.id)}</div>${sets.length?desPrintingControl("Set","set_id",printing.set_id,"string",sets):""}<div class="component-pair">${desPrintingControl("Card number","collector_number",printing.collector_number||"")}${desPrintingControl("Copies","quantity",printing.quantity||1,"number")}</div>${desPrintingControl("Artist / credit","artist",printing.artist||"")}${desPrintingControl("Flavor text","flavor_text",printing.flavor_text||"","longstring")}${desPrintingControl("Variant label","variant",printing.variant||"")}
-    <div class="forge-art-head" style="margin-top:12px"><b>Artwork & crop</b>${printing.art_crop?`<button class="btn" onclick="desCropReset()">Reset crop</button>`:""}</div>${staged?`<div class="forge-art-staged">● New file staged · ${(staged.size/1048576).toFixed(2)} MB · rights included in review</div>`:""}<div class="forge-art-thumb">${artUrl?assetImage(artUrl,"Current raw artwork","",true):"No raw artwork assigned"}</div><div class="forge-art-actions"><button class="btn" onclick="desArtLibraryOpen()">Choose library</button><button class="btn" onclick="desArtUpload()">Upload new</button></div>${printing.art?`<div class="forge-art-rights${staged?" ready":""}">${esc(printing.art)}${staged?`<br>${esc(staged.creator)} · ${esc(staged.license)} · ${esc(staged.status)}`:" · existing repository asset"}</div><div class="fld"><label>Fit<select onchange="desCropSet('fit',this.value)"><option value="cover" ${crop.fit!=="contain"?"selected":""}>Fill frame (cover)</option><option value="contain" ${crop.fit==="contain"?"selected":""}>Show whole art (contain)</option></select></label></div><div class="forge-art-crop"><label>Horizontal focus<input type="range" min="0" max="1" step="0.01" value="${crop.focal_x??.5}" oninput="desCropSet('focal_x',this.value)"></label><output id="des-crop-focal_x-out">${Math.round((crop.focal_x??.5)*100)}%</output><label>Vertical focus<input type="range" min="0" max="1" step="0.01" value="${crop.focal_y??.5}" oninput="desCropSet('focal_y',this.value)"></label><output id="des-crop-focal_y-out">${Math.round((crop.focal_y??.5)*100)}%</output><label>Zoom<input type="range" min="1" max="4" step="0.05" value="${crop.zoom??1}" oninput="desCropSet('zoom',this.value)"></label><output id="des-crop-zoom-out">${Number(crop.zoom??1).toFixed(2)}×</output></div><button class="btn" style="width:100%;margin-top:8px;color:#ffaaa4" onclick="desClearArt()">Remove raw-art assignment</button>`:""}</div>`;
-}
-function desContentInspectorHtml(){
-  const g=G(DES.slug),card=desCard();if(!card)return`<div class="forge-studio-empty"><b>No card selected</b>Choose a card from the project list.</div>`;
-  let h=`<div class="forge-studio-content-intro"><b>Edit the card, not the template</b>Values update this one card live. Switch to <b style="display:inline;color:#d8ccff">Layout</b> to change every card in the family. Both are reviewed together.</div>`;
-  h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:-3px 0 12px"><button class="btn" onclick="desDataTableOpen()">▦ Edit table</button><button class="btn" onclick="desDuplicateCard()">Duplicate</button><button class="btn" style="color:#ffaaa4" onclick="desRemoveCard()">Remove</button></div>`;
-  h+=`<div class="mut mono" style="font-size:10px;margin-bottom:10px">${esc(card.id)}${desCardDirty(card.id)?'<span class="forge-studio-dirty-dot" title="Uncommitted card changes"></span>':""}</div>`;
-  h+=desContentControl("Name","name",card.name);
-  h+=`<div class="fld"><label for="des-content-type">Type · controls this layout family</label><input id="des-content-type" value="${esc(card.type||"")}" disabled><div class="mut" style="font-size:10px;margin-top:4px">Move a card between types in the full Card Data editor so Forge can switch its family explicitly.</div></div>`;
-  h+=desContentControl("Subtypes (comma-separated)","subtypes",(card.subtypes||[]).join(", "),"array");
-  h+=desRichTextControl("Rules text","text",card.text||"");
-  h+=desContentControl("Keywords (comma-separated)","keywords",(card.keywords||[]).join(", "),"array");
-  if(card.deck_limit!==undefined)h+=desContentControl("Deck limit","deck_limit",card.deck_limit,"number");
-  h+=cardFieldsHtml(g.schema||[],card,'des-content-attributes-',def=>`desGameFieldSet.bind(null,'${def.key}')`);
-  h+=desPreflightPanelHtml();
-  h+=desPrintingInspectorHtml(g,card);
-  h+=`<details class="forge-studio-tech"><summary>Why the ID is locked</summary><code>${esc(card.id)}</code><div style="margin-top:7px">The stable ID anchors history, printings, decks, rulebook references, diffs, and external working copies.</div></details>`;
-  return h;
-}
-function desRightPanelHtml(){if(DES?.rightTab==="colors")return desPaletteHtmlRules();return DES?.family&&DES.rightTab==="content"&&desFace()==="front"?desContentInspectorHtml():desInspectorHtml();}
-function desRightPanelTab(tab){if(tab==="content"&&desFace()==="back")return;DES.rightTab=tab;if(tab==="content"){DES.selRegion=null;DES.selRegions=[];}desRenderCanvasOnly();desRenderInspectorOnly();desUpdatePanelTabs();}
+/* Integrated field authoring uses the same cards, renderer and reviewed save as
+ * Studio. A new definition and its family-owned element are one candidate. */
+function desDefinitions(g=G(DES.slug)){return DES?.setup?.attribute_definitions||g?.schema||[];}
+function desSetupDirty(){return !!DES?.setup&&JSON.stringify(DES.setup)!==JSON.stringify(DES.origSetup);}
+function desAddedRegions(){return (DES?.layout?.regions||[]).filter(region=>!(DES.orig.regions||[]).some(original=>original.id===region.id));}
+function desFieldBindings(key){const path='card.attributes.'+key;return(DES.layout.regions||[]).filter(region=>region.src===path||String(region.src||'').includes('{'+path+'}'));}
+
+function desRightPanelHtml(){if(DES?.fieldDraft)return desFieldComposerHtml();if(DES?.rightTab==="colors")return desPaletteHtmlRules();return DES?.family&&DES.rightTab==="content"&&desFace()==="front"?desContentInspectorHtml():desInspectorHtml();}
+function desRightPanelTab(tab){if(DES.fieldDraft&&tab!=="content"){toast("Save or cancel this field to return to the full layout and color tools.");return;}if(tab==="content"&&desFace()==="back")return;DES.rightTab=tab;if(tab==="content"){DES.selRegion=null;DES.selRegions=[];}desRenderCanvasOnly();desRenderInspectorOnly();desUpdatePanelTabs();}
 function desUpdatePanelTabs(){for(const button of document.querySelectorAll("[data-inspector-tab]")){const selected=button.dataset.inspectorTab===DES.rightTab;button.classList.toggle("on",selected);button.setAttribute("aria-pressed",String(selected));}if(DES.rightTab==="colors"){const label=document.getElementById("des-properties-selection");if(label)label.textContent="ALL CARD FAMILIES";}}
 function desRefreshStudioChrome(){
   const card=desCard(),status=document.querySelector(".forge-studio-status");
@@ -3883,6 +3880,7 @@ function desFamilySvgFile(){
 /* ---- save: LIVE -> PUT /api/games/:slug/layout (validated commit). STATIC ->
  * download layout.yaml + toast that a server is needed to save in place. ---- */
 async function desSave(){
+  if(DES?.fieldDraft){await desFieldReview();return;}
   if(!DES.layout) return;
   if(DES.family){
     if(!desAnyDirty()){toast("No card or family design changes to review.");return;}
@@ -3923,6 +3921,7 @@ async function desSave(){
 function desStudioPayload(){return{base_ref:DES.sourceRef,cards:DES.cards,printings:DES.printings,
   assets:Object.values(DES.pendingAssets||{}).map(({preview_url,...asset})=>asset),
   ...(desArtLibraryDirty()?{art_library:DES.artLibrary}:{}),
+  ...(desSetupDirty()||desAddedRegions().length?{workspace:{family:DES.family.id,setup:DES.setup,regions:desAddedRegions()}}:{}),
   ...(desDirty()?{svg:desFamilySvgText()}:{})};}
 function desStudioReviewPreview(card,layout,original=false){
   const g=Object.assign({},G(DES.slug),{layout,card_design:null,printings:original?(DES.origPrintings||[]):desPreviewPrintings(false)}),printing=card?cfPrinting(g,card):null;
@@ -3937,7 +3936,7 @@ function desStudioReviewHtml(data){
   const issues=[...(data.conflicts||[]).map(item=>`Conflict · ${item.scope||"source"} · ${item.path||item.card||"change"}`),
     ...(!data.validation?.ok?(data.validation?.report||[]).filter(line=>/ERROR|invalid|conflict/i.test(line)).slice(0,5):[])];
   const blocked=issues.length>0||preflightErrors>0;
-  const changes=[...(data.card_changes||[]).map(change=>`<div><b>${esc(change.name||change.card)}</b> · ${esc(change.field||change.kind||"card")}</div>`),
+  const changes=[...(data.setup_changes||[]).map(change=>`<div><b>${esc(change.label)}</b> · field ${esc(change.kind)}</div>`),...(data.card_changes||[]).map(change=>`<div><b>${esc(change.name||change.card)}</b> · ${esc(change.field||change.kind||"card")}</div>`),
     ...(data.printing_changes?.added||[]).map(id=>`<div><b>${esc(id)}</b> · printing added</div>`),
     ...(data.printing_changes?.changed||[]).map(id=>`<div><b>${esc(id)}</b> · printing changed</div>`),
     ...(data.printing_changes?.removed||[]).map(id=>`<div><b>${esc(id)}</b> · printing removed</div>`),
@@ -3952,20 +3951,13 @@ function desStudioReviewHtml(data){
     ${(data.warnings||[]).length?`<details style="margin-top:12px"><summary>${data.warnings.length} adapter warning${data.warnings.length===1?"":"s"}</summary>${data.warnings.map(warning=>`<div class="mut" style="margin-top:5px">${esc(warning)}</div>`).join("")}</details>`:""}
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">Keep editing</button><button class="btn primary" id="des-studio-commit" ${data.ok&&!preflightErrors?"":"disabled"} onclick="desStudioCommit()">${data.propose?"Commit to my edition + open PR":"Commit reviewed candidate"}</button></div>`;
 }
-async function desStudioDryRun(){
-  const payload=desStudioPayload(),response=await fetch(`/api/games/${encodeURIComponent(DES.slug)}/design/studio`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(payload)}),data=await response.json().catch(()=>({}));
+async function desStudioDryRun(inline=false){
+  const state=DES,payload=structuredClone(desStudioPayload()),fingerprint=JSON.stringify(payload),response=await fetch(`/api/games/${encodeURIComponent(DES.slug)}/design/studio`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(payload)}),data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||`Forge Studio review failed (${response.status})`);
-  DES_REVIEW={slug:DES.slug,payload,data};
+  if(DES!==state||JSON.stringify(desStudioPayload())!==fingerprint)throw new Error("The draft changed while review was loading. Review again to include your latest edits.");
+  DES_REVIEW={slug:DES.slug,payload:{...payload,review_token:data.review_token},data};
+  if(inline&&DES.fieldDraft){DES.fieldDraft.review=true;desRenderInspectorOnly();return;}
   $("#mbody").style.maxWidth="960px";$("#mbody").style.display="block";$("#mbody").innerHTML=desStudioReviewHtml(data);$("#modal").classList.add("on");
-}
-async function desStudioCommit(){
-  if(!DES_REVIEW)return;if(desFamilyPreflight().some(issue=>issue.level==="error")){toast("Fix the family text-fit errors before committing.",7000);return;}const button=document.getElementById("des-studio-commit");if(button){button.disabled=true;button.textContent="Validating and committing…";}
-  const response=await fetch(`/api/games/${encodeURIComponent(DES_REVIEW.slug)}/design/studio?commit=1`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(DES_REVIEW.payload)}),data=await response.json().catch(()=>({}));
-  if(!response.ok){if(button){button.disabled=false;button.textContent="Review again";}toast(`<b style="color:#ffa198">✗ ${esc(data.error||response.status)}</b>`,8000);return;}
-  DES._draftReady=false;
-  await desDraftClearCurrent().catch(()=>{});
-  $("#modal").classList.remove("on");toast(data.proposed?`<b>⇡ Pull request opened</b><br>${esc(data.message)} · commit ${esc(String(data.commit||"").slice(0,10))}`:`<b>✓ Committed</b><br>${esc(data.message)} · ${esc(String(data.commit||"").slice(0,10))}`,9000);
-  if(data.proposed)setTimeout(()=>openFocusedPr(DES_REVIEW.slug,data.pr),500);else setTimeout(()=>location.reload(),900);
 }
 function desCopyFallback(text,done){
   const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
@@ -4008,6 +4000,8 @@ function desToolbarHtml(g, galleryMode, dirty){
   </div>`;
 }
 function desFriendlyRegionName(region){
+  const binding=String(region?.src||'').match(/card\.attributes\.([a-z0-9_]+)/);
+  if(String(region?.id||'').startsWith('field_')&&binding){const def=desDefinitions().find(item=>item.key===binding[1]);if(def)return def.name||def.key;}
   const id=String(region?.id||"");
   const exact={shell:"Card frame",trim_edge:"Trim edge",art_frame:"Artwork border",standard_panel:"Rules panel",standard_panel_shadow:"Rules panel shadow",standard_panel_faction_motif:"Rules panel motif",standard_panel_trace:"Rules panel detail",standard_panel_watermark:"Faction watermark",standard_body:"Rules and flavor text",standard_body_trash:"Rules and flavor text",standard_type:"Card type",corp_standard_type:"Card type",corp_standard_type_solo:"Card type",standard_faction_glyph:"Faction symbol",standard_trash_icon:"Trash icon",standard_trash:"Trash cost",footer:"Footer",footer_artist:"Illustrator credit",footer_side:"Side label",footer_set_icon:"Set symbol",footer_collector:"Card number",runner_influence:"Influence pips",corp_influence:"Influence pips"};
   if(exact[id])return exact[id];
@@ -4078,7 +4072,7 @@ async function desRemoveCard(id=DES.sel){
 function desAttr(value){return String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function desGridPaths(g){
   const fields=[{path:"name",label:"Name",kind:"string"},{path:"subtypes",label:"Subtypes",kind:"array"},{path:"text",label:"Rules text",kind:"longstring"},{path:"keywords",label:"Keywords",kind:"array"},{path:"deck_limit",label:"Deck limit",kind:"number"}];
-  for(const def of (g.schema||[]).filter(d=>!d.archived))fields.push({path:`attributes.${def.key}`,label:def.name||def.key.replaceAll("_"," "),kind:def.type==="integer"||def.type==="number"?"number":def.type==="boolean"?"boolean":"string",choices:def.choices||def.enum||[]});
+  for(const def of desDefinitions(g).filter(d=>!d.archived))fields.push({path:`attributes.${def.key}`,label:def.name||def.key.replaceAll("_"," "),kind:def.type==="integer"||def.type==="number"?"number":def.type==="boolean"?"boolean":"string",choices:def.choices||def.enum||[]});
   return fields;
 }
 function desGridValue(card,path){if(path.startsWith("attributes."))return(card.attributes||{})[path.slice(11)]??"";if(path==="subtypes"||path==="keywords")return(card[path]||[]).join(", ");return card[path]??"";}
@@ -4186,11 +4180,6 @@ function desStudioImpactHtml(g){
   if(desFace()==="back")return `<div class="forge-studio-impact"><div class="forge-studio-impact-head"><span>SHARED DUPLEX BACK</span><span>1 versioned surface · ${g.cards?.length||cards.length} card identities · every exact-version output</span></div><div class="forge-studio-impact-strip"><div class="forge-studio-impact-card on"><div class="mini">${layoutBackCard(previewGame,desBackPreviewLayout(DES.layout),{w:46})}</div><span>All card families</span></div></div></div>`;
   return `<div class="forge-studio-impact"><div class="forge-studio-impact-head"><span>AFFECTED CARDS</span><span>${cards.length} use ${esc(DES.family.label||DES.family.id)} · click to inspect</span></div><div class="forge-studio-impact-strip">${cards.map(card=>`<button class="forge-studio-impact-card${DES.sel===card.id?" on":""}" onclick="desSetPreviewCard('${esc(card.id)}')" title="${esc(card.name||card.id)}"><div class="mini">${layoutCard(previewGame,card,cfPrinting(previewGame,card),{w:46,sourceBacked:false})}</div><span>${esc(card.name||card.id)}</span></button>`).join("")}</div></div>`;
 }
-function desStudioToolbarHtml(g){
-  const dirty=desAnyDirty(),source=String(DES.sourceRef||"").slice(0,8);
-  const pnpink=g.design_engines?.engines?.some(engine=>engine.type==="pnpink");
-  return `<div class="forge-studio-top"><button class="btn forge-studio-back" onclick="desReopenGallery()" aria-label="Back to all card families" title="Back to all card families">←</button><div class="forge-studio-title"><h2>${esc(g.title)} · ${esc(DES.family.label||DES.family.id)}</h2><span>${esc(desCard()?.name||"")} · base ${esc(source||"working tree")} · ${DES._draftError?"local recovery unavailable":"local recovery on"}</span></div><span class="forge-studio-status${dirty?" dirty":""}" role="status" aria-live="polite" aria-atomic="true">${esc(desDirtyLabel())}</span><div class="forge-studio-actions"><details class="forge-studio-menu"><summary class="btn">Other editors ▾</summary><div class="forge-studio-pop"><button onclick="designExportSquib('${esc(g.slug)}')"><b>Download Squib project</b><small>Runnable Ruby DSL + CSV + declarative layouts</small></button><button onclick="designImportSquib('${esc(g.slug)}')"><b>Return Squib project</b><small>Review CSV and YAML; Forge never runs Ruby</small></button>${pnpink?`<button onclick="designExportPnpink('${esc(g.slug)}')"><b>Download PnPInk projects</b><small>Production working copies for Inkscape</small></button><button onclick="designImportPnpink('${esc(g.slug)}')"><b>Return PnPInk project</b><small>Review card data and SVG source together</small></button>`:""}<button onclick="designExportSvg('${esc(g.slug)}')"><b>Download SVG geometry kit</b><small>Round-trip simple named regions</small></button><button onclick="designImportSvg('${esc(g.slug)}')"><b>Return edited SVG</b><small>Dry-run supported geometry before Git</small></button><button onclick="designExportNandeck('${esc(g.slug)}')"><b>Download nanDECK kit</b><small>Script and committed card data</small></button><button onclick="designImportNandeck('${esc(g.slug)}')"><b>Return nanDECK script</b><small>Review script changes against Forge</small></button><button onclick="designExportProject('${esc(g.slug)}')"><b>Download full Forge project</b><small>Every card, asset, template, and adapter</small></button></div></details><button class="btn" onclick="desDataTableOpen()">Table</button><button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')">Proof ${desFamilyCards(g).length}</button><button class="btn primary" id="des-save" onclick="desSave()">Review changes</button></div></div>`;
-}
 function desStudioHtml(g){
   const c=desCard(),geom=desGeom(),dirty=desDirty();
   return `<div class="forge-studio">
@@ -4294,12 +4283,18 @@ function designSpecimen(g,family){
   return ids.map(id=>g.cards.find(card=>card.id===id)).find(Boolean)
     || g.cards.find(card=>cardDesignMatch(card,family.match));
 }
+let DES_FIELDS_LOAD=null;
+async function desLoadFieldTools(){
+  if(!DES_FIELDS_LOAD)DES_FIELDS_LOAD=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/studio-fields.js';script.onload=resolve;script.onerror=()=>{script.remove();DES_FIELDS_LOAD=null;reject(new Error('Could not load the field tools. Check your connection and open Studio again.'));};document.head.append(script);});
+  return DES_FIELDS_LOAD;
+}
 async function designFamilyEdit(slug,familyId,previewCardId=null){
   const intent=Symbol(),route=location.hash;designFamilyEdit._intent=intent;
   const stillRequested=()=>designFamilyEdit._intent===intent&&location.hash===route;
   if(typeof LIVE!=="undefined"&&LIVE&&!ME){_afterAuth=()=>{if(stillRequested())void designFamilyEdit(slug,familyId,previewCardId);};authOpen();return;}
   const actor=desDraftActor(),current=()=>stillRequested()&&desDraftActor()===actor;
   try{
+    await desLoadFieldTools();if(!current())return;
     // Authentication refreshes the catalog before the selected project's full
     // design data arrives. Join that load before looking up its family.
     let g=G(slug);
@@ -4325,7 +4320,7 @@ async function designFamilyEdit(slug,familyId,previewCardId=null){
     const requested=previewCardId&&source.cards.find(card=>card.id===previewCardId&&cardDesignMatch(card,stableFamily.match));
     DES={slug,_draftActor:desDraftActor(),layout,orig:JSON.parse(JSON.stringify(layout)),cards:JSON.parse(JSON.stringify(source.cards)),origCards:JSON.parse(JSON.stringify(source.cards)),printings:JSON.parse(JSON.stringify(source.printings)),origPrintings:JSON.parse(JSON.stringify(source.printings)),sel:requested?.id||specimen?.id||source.cards.find(card=>cardDesignMatch(card,family.match))?.id||null,
       selRegion:null,selRegions:[],undo:[],access,view:"fit",face:"front",rawOpen:false,showGallery:false,_addFontOpen:false,leftTab:"cards",rightTab:"content",compare:false,
-      family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null,_draftReady:false};
+      setup:structuredClone(source.setup),origSetup:structuredClone(source.setup),fieldDraft:null,family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null,_draftReady:false};
     prNote(`${family.label||family.id} ready · changes stay local until review`);
     const opened=DES;
     await desDraftOfferRestore();

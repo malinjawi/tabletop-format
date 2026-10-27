@@ -48,6 +48,7 @@ import { csvToTable, tableToCsv } from "./tools/lib/interchange-table.mjs";
 import { analyzeNandeckImport, currentNandeckSources, parseNandeckScript } from "./tools/lib/nandeck-layout.mjs";
 import { analyzePnpinkImport, MAX_PNPINK_BYTES } from "./tools/lib/pnpink.mjs";
 import { analyzeSquibImport, inspectSquibArchive, MAX_SQUIB_BYTES } from "./tools/lib/squib.mjs";
+import { buildStudioFields, studioSetup } from "./tools/lib/studio-fields.mjs";
 import { analyzeSvgDesignImport, buildSvgDesignProject, inspectSvgCandidate, MAX_SVG_DESIGN_BYTES } from "./tools/lib/svg-design.mjs";
 import { loadRulebookPipeline, rulebookPipelineMetadata } from "./tools/lib/rulebook-pipeline.mjs";
 import { loadRulebookPublication, rulebookPublicationMetadata } from "./tools/lib/rulebook-publication.mjs";
@@ -791,6 +792,10 @@ function normalizePrSnapshot(value, fallbackRef = "HEAD") {
 
 /* ---------- routes: hub + live editor ---------- */
 gw.route("GET", "/", async (ctx) => ctx.send(200, await hubHtml(), "text/html; charset=utf-8"), "hub UI");
+gw.route("GET", "/studio-fields.js", ctx => {
+  ctx.setHeader("cache-control", "no-cache");
+  ctx.send(200, readFileSync(join(ROOT,"tools/studio-fields-ui.js"),"utf8"), "text/javascript; charset=utf-8");
+}, "lazy-loaded integrated field workspace controls");
 gw.route("GET", "/card-setup.js", async (ctx) => {
   ctx.setHeader("cache-control", "no-cache");
   ctx.send(200, readFileSync(join(ROOT,"tools/card-setup-ui.js"),"utf8"), "text/javascript; charset=utf-8");
@@ -4008,6 +4013,7 @@ gw.route("GET", "/api/games/:slug/design/svg/:family", async (ctx) => {
     ctx.setHeader("cache-control", await projectCacheControl(slug, PUBLIC_REVALIDATE_CACHE));
     ctx.send(200, { ok: true, ref: sha, family: family.family, source_hash: built.manifest.source_hash,
       file: family.file, family_definition: sourceFamily,
+      setup: studioSetup(yaml.load(readFileSync(join(materialized.dir, "game.yaml"), "utf8")), cards),
       layout: sourceFamily.layout, origins: sourceFamily.origins,
       cards, printings, art_library: artLibrary,
       svg: built.entries.get(family.file).toString("utf8") });
@@ -4082,6 +4088,9 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
     return ctx.send(413, { error: "SVG design is larger than 5 MB" });
 
   const direct = await canWrite(u, slug);
+  if (body.workspace != null && !direct) return denyWrite(ctx, u);
+  if (body.workspace != null && Buffer.byteLength(JSON.stringify(body.workspace)) > 256 * 1024)
+    return ctx.send(413, { error: "Workspace fields are larger than 256 KB" });
   let destination = slug, propose = false;
   if (commit && !direct) {
     try { destination = await ensureImportedFork(u, slug); propose = true; }
@@ -4096,6 +4105,8 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
   }
   catch (error) { return ctx.send(409, { error: `the Studio baseline is no longer available; reopen the family (${error.message})` }); }
   const currentHead = await store.headSha(destination);
+  if (body.workspace != null && currentHead !== baseRef)
+    return ctx.send(409, { error: "Someone saved a newer version. Reopen the workspace before adding fields.", written: false });
   const materialized = await store.materialize(destination, currentHead);
   try {
     const currentCards = JSON.parse(readFileSync(join(materialized.dir, "components/cards.json"), "utf8"));
@@ -4114,6 +4125,15 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
       ? { merged: currentArtLibrary, conflicts: [] }
       : mergeArtLibrary(baseArtLibrary, proposedArtLibrary, currentArtLibrary);
     const artLibraryChanges = diffArtLibrary(currentArtLibrary, artLibraryMerge.merged);
+    const originals = new Map();
+    const captureOriginal = path => { if (!originals.has(path)) originals.set(path, existsSync(join(materialized.dir,path)) ? readFileSync(join(materialized.dir,path)) : null); };
+    let fieldResult = { files: [], changes: [], setup_changes: [], family: null };
+    if (body.workspace != null) {
+      try { fieldResult = buildStudioFields(materialized.dir, cardMerge.merged, body.workspace); }
+      catch (error) { return ctx.send(422, { error: error.message, written: false }); }
+      // Make new declarations available to existing SVG binding validation.
+      for (const file of fieldResult.files) { captureOriginal(file.path); writeFileSync(join(materialized.dir,file.path),file.content); }
+    }
     let layoutResult = { files: [], changes: [], conflicts: [], warnings: [], unsupported: [], family: null };
     if (svg != null) {
       try { layoutResult = analyzeSvgDesignImport(materialized.dir, Buffer.from(svg)); }
@@ -4137,7 +4157,9 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
       rightsBytes = rightsReceiptBytes(right);
       asset.rights.license = asset.rights.license || game?.license || "unknown";
     }
-    const files = [...layoutResult.files, ...incomingAssets.map(asset => ({ path: asset.path, content: asset.bytes }))];
+    const files = [...new Map([...fieldResult.files, ...layoutResult.files].map(file => [file.path,file])).values(), ...incomingAssets.map(asset => ({ path: asset.path, content: asset.bytes }))];
+    layoutResult.changes.push(...fieldResult.changes);
+    layoutResult.family ||= fieldResult.family;
     if (incomingAssets.length) files.push({ path: RIGHTS_MANIFEST, content: rightsBytes });
     if (artLibraryChanges.length) files.unshift({ path: ART_LIBRARY_MANIFEST,
       content: artLibraryBytes(artLibraryMerge.merged) });
@@ -4146,6 +4168,7 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
         content: JSON.stringify(printingMerge.merged, null, 2) + "\n" });
     if (cardChanges.length) files.unshift({ path: "components/cards.json",
       content: JSON.stringify(cardMerge.merged, null, 2) + "\n" });
+    for (const file of files) captureOriginal(file.path);
     const affected = new Set(cardChanges.map(change => change.card));
     const beforeById = new Map(currentCards.map(card => [card.id, card]));
     const afterById = new Map(cardMerge.merged.map(card => [card.id, card]));
@@ -4172,16 +4195,20 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
       validation = { ok: checked.status === 0,
         report: `${checked.stdout || ""}\n${checked.stderr || ""}`.trim().split("\n").filter(Boolean) };
     }
-    const response = { ok: !conflicts.length && validation.ok, mode: commit ? "commit" : "dry-run",
+    const reviewToken = hashBuffer(Buffer.from(JSON.stringify({ ref:currentHead, files:files.map(file=>({path:file.path,hash:hashBuffer(Buffer.from(file.content||''))})) })));
+    const response = { review_token: reviewToken, setup_changes: fieldResult.setup_changes, ok: !conflicts.length && validation.ok, mode: commit ? "commit" : "dry-run",
       destination: commit ? destination : slug, propose: commit ? propose : !direct,
       base_ref: baseRef, current_ref: currentHead, family: layoutResult.family,
       card_changes: cardChanges, printing_changes: printingChanges, layout_changes: layoutResult.changes,
       art_library_changes: artLibraryChanges,
+      affected_families: [...new Set([...(layoutResult.affected_families || []), ...(fieldResult.changes.length ? [fieldResult.family] : [])])],
       asset_changes: incomingAssets.map(asset => ({ path: asset.path, size: asset.bytes.length, rights: asset.rights })),
       changed_files: files.map(file => file.path), conflicts, validation,
       warnings: layoutResult.warnings || [], unsupported: layoutResult.unsupported || [],
       candidate_cards: candidateCards };
     if (!commit) return ctx.send(200, response);
+    if (body.workspace != null && body.review_token !== reviewToken)
+      return ctx.send(409, { error: "Review this exact workspace before saving it.", written:false });
     if (conflicts.length) return ctx.send(409, { ...response, error: "Forge Studio conflicts with newer game changes; reopen before committing" });
     if (!validation.ok) return ctx.send(422, { ...response, error: "Forge Studio candidate failed game validation" });
     if (!files.length) return ctx.send(200, { ...response, saved: false, message: "no changes" });
@@ -4189,7 +4216,7 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
       return ctx.send(409, { ...response, error: "the game changed during review; reopen Forge Studio before committing" });
 
     const printingCount = printingChanges.changed.length + printingChanges.added.length + printingChanges.removed.length;
-    const scopes = [cardChanges.length ? `${new Set(cardChanges.map(change => change.card)).size} card${new Set(cardChanges.map(change => change.card)).size === 1 ? "" : "s"}` : null,
+    const scopes = [fieldResult.setup_changes.length ? `${fieldResult.setup_changes.length} field definition(s)` : null, cardChanges.length ? `${new Set(cardChanges.map(change => change.card)).size} card${new Set(cardChanges.map(change => change.card)).size === 1 ? "" : "s"}` : null,
       printingCount ? `${printingCount} printing${printingCount === 1 ? "" : "s"}` : null,
       incomingAssets.length ? `${incomingAssets.length} artwork file${incomingAssets.length === 1 ? "" : "s"}` : null,
       artLibraryChanges.length ? `${artLibraryChanges.length} artwork tag record${artLibraryChanges.length === 1 ? "" : "s"}` : null,
@@ -4202,7 +4229,14 @@ gw.route("POST", "/api/games/:slug/design/studio", async (ctx) => {
       artLibraryChanges.length ? `Artwork library\n${artLibraryChanges.map(change => `- ${change.kind} ${change.path}: ${(change.after?.tags || []).join(", ") || "no tags"}`).join("\n")}` : null,
       layoutResult.changes.length ? `Visual family: ${layoutResult.family}\n${layoutResult.changes.map(change => `- ${change.path}: ${JSON.stringify(change.before)} -> ${JSON.stringify(change.after)}`).join("\n")}` : null,
       `Forge Studio base: ${baseRef}`].filter(Boolean).join("\n\n");
-    const { sha } = await store.writeFiles(destination, files, `${message}\n\n${detail}`, `${u.handle} <${u.email}>`);
+    for (const [path,original] of originals) {
+      const working = await store.readFile(destination,path);
+      if (original === null ? working != null : !working || !Buffer.from(working).equals(original))
+        return ctx.send(409, { error: "There are source changes outside this review. Save them before committing Studio changes.", written:false });
+    }
+    let sha;
+    try { ({sha} = await store.writeFiles(destination, files, `${message}\n\n${detail}`, `${u.handle} <${u.email}>`, store.kind === "local" ? { expectedRef:currentHead } : undefined)); }
+    catch(error) { if(error.code === "STORE1_EXPECTED_REF_MISMATCH") return ctx.send(409,{error:"The game changed during save. Reopen the workspace.",written:false}); throw error; }
     if (incomingAssets.length) await reindexGames();
     if (!propose) return ctx.send(200, { ...response, saved: true, commit: sha, message });
     const pr = await openOrRefreshImportedPr({ u, slug, destination, message, scope: "studio",

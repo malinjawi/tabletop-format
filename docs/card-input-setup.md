@@ -40,3 +40,69 @@ No format-version bump or automatic rewriting of old games is required. Existing
 ## Verification
 
 `npm run test:card-fields` checks non-destructive migration, incompatible changes, typed defaults, conditional required fields, starter preservation, and JavaScript/Python validator agreement. `npm run test:ui-card-setup` exercises the real browser and server against a disposable original game: preview, default impact review, reload recovery, hidden values, sections/order, mobile layout, actual editing surfaces, review binding, stale writes, and authorization. The functional and launch gates include these checks.
+
+## Add and place a field in the integrated workspace
+
+Maintainers can now open **Design → Edit visually / Open Forge Studio → Add
+field**. The card list, exact card preview, value input and placement controls
+stay together. Name the field, enter a value for the selected card, then drag
+the new element or use Left, Center, Right and Bottom. Arrow keys move it by
+0.5 mm (Shift: 2 mm); Undo move and Cancel field are available before saving.
+
+Number is the initial value type. Field options also offer Text and availability
+on the selected card type or all card types. Show on card can be turned off for
+editor-only metadata. No default is applied to other cards. Empty, zero and false
+remain distinct. Choosing another card changes whose value is edited; it does
+not create a different position for that card.
+
+**Review field** stays next to the preview and lists changed values and files.
+Save changes commits the definition, explicit card values and placement
+atomically, then reopens the same family and card. The existing Table, artwork,
+printings, Layout, Colors, proofs, exports, history and contributor review paths
+remain available. Card setup is still the place for changing existing types,
+required rules, choices, defaults, sections and archival.
+
+New elements belong to the selected family source, with an explicit paint order.
+Field availability and placement scope remain separate: making a field available
+on all types does not place it on all templates. Use **Place on card** in another
+family when needed. **Edit on card** focuses an existing connection. Some old
+elements belong to shared components; the editor warns about that and the review
+lists the templates affected by moving them.
+
+### Save and compatibility contract
+
+The exact Studio source response includes `setup` from the same commit as its
+cards and SVG. The existing `/design/studio` candidate accepts an optional
+`workspace: { family, setup, regions }` extension. It is maintainer-only,
+additive, bounded, and requires an exact current `base_ref` and a `review_token`
+for the final candidate bytes. Older Studio requests continue to use their
+existing merge contract.
+
+Existing field definitions cannot be removed or rewritten through this
+extension. New region IDs cannot shadow existing regions, and placements must
+bind to an active declared field and remain inside the card. Candidate files are
+validated in a disposable materialization before writing. Stale references,
+changed review candidates and unrelated uncommitted source changes are rejected.
+Local stores additionally check the expected reference under the write lock.
+Hosted stores retain their existing head recheck limitation; this does not claim
+a new remote compare-and-swap guarantee.
+
+Recovery drafts include setup and the in-progress field, scoped to account,
+project, family and source version. Cancel removes that field's unsaved changes
+without reverting unrelated card or artwork edits. Existing committed projects
+need no migration: this uses the same attribute and layout format as before.
+
+Verification: `npm run test:studio-fields` checks the real Studio API against an
+isolated Netrunner fixture, including all-family layout preservation, zero values,
+atomic save, permissions, review tampering, dirty/stale source protection,
+reopening, legacy SVG round trips and metadata-only fields. The standing `e2e.sh`
+suite includes this check.
+
+Field review shows pre-existing text-fit or symbol issues separately when both the
+affected content and layout are unchanged. They remain visible for Proof review
+without blocking an unrelated new field. New issues, changed text, or changed
+affected regions still block saving. Canonical candidate validation always runs.
+
+Save completion is tied to the reviewed draft and route. Duplicate requests are
+blocked while a save is in flight. If edits or navigation continue during the
+request, completion preserves newer work and never reopens over another screen.

@@ -88,7 +88,8 @@
     "test:ui-print": "node tools/ui-home-print.mjs",
     "test:ui-card-colors": "node tools/ui-card-loading-colors.mjs",
     "test:card-fields": "node tools/test-card-fields.mjs",
-    "test:ui-card-setup": "node tools/ui-card-setup.mjs"
+    "test:ui-card-setup": "node tools/ui-card-setup.mjs",
+    "test:studio-fields": "node tools/test-studio-fields.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -107,5 +108,10 @@
   },
   "engines": {
     "node": ">=24.20.0 <25"
+  },
+  "overrides": {
+    "@google/clasp": {
+      "zod": "^4.6.7"
+    }
   }
 }
