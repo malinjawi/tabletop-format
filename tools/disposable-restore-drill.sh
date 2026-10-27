@@ -163,10 +163,7 @@ wait_postgres(){
 }
 start_postgres(){
   local container="$1" volume="$2" port="$3"
-  # Only disposable drill volumes: provision the non-root S3 server's ownership
-  # on both fresh and restored stores, independent of the image's default user.
-  docker run --rm --volume "$volume:/data" "$utility_image" chown -R 65532:65532 /data
-  docker run --detach --user 65532:65532 --name "$container" --network "$network" \
+  docker run --detach --name "$container" --network "$network" \
     --publish "127.0.0.1:$port:5432" \
     --env POSTGRES_PASSWORD="$postgres_password" \
     --volume "$volume:/var/lib/postgresql/data" "$postgres_image" >/dev/null
