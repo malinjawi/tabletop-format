@@ -1580,7 +1580,8 @@ w.save(p)
   });
   assert(draftsAfterCommit===0,"a successful Studio commit clears its browser recovery copy");
 
-  await page.goto(`${origin}/#/g/onboarding-smoke/wizard-ui-smoke/design`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"Back to all card families",exact:true}).click();
+  await page.getByRole("heading",{name:"Card design",exact:true}).waitFor();
   await page.getByRole("button",{name:"Open pieces",exact:true}).click();
   await page.getByRole("heading",{name:/Pieces — Wizard UI Smoke/}).waitFor();
   assert(await page.getByText("No playable table yet",{exact:true}).isVisible()
