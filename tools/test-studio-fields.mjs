@@ -18,6 +18,12 @@ let server,logs='';
 try{
   // Unrelated inherited fit errors stay visible; new or changed errors block.
   const ui=readFileSync(join(ROOT,'tools/studio-fields-ui.js'),'utf8');
+  const keySource=ui.slice(ui.indexOf('function desAvailableFieldKey('),ui.indexOf('function desNewField(){'));
+  const available=(name,keys=[])=>runInNewContext(keySource+'desAvailableFieldKey(name,keys)',{name,keys,desSlug:value=>value.toLowerCase().replace(/[^a-z0-9]+/g,'_')});
+  assert.equal(available('3D Armor'),'field_3d_armor');
+  assert.equal(available('Armor',['armor','armor_2']),'armor_3');
+  assert.equal(available('Constructor'),'constructor_2');
+  assert.equal(available('field_test',['field_test']),'field_test_2','temporary keys must not overwrite existing card attributes');
   const reportSource=ui.slice(ui.indexOf('function desFieldPreflightReport(){'),ui.indexOf('function desFieldComposerHtml(){'));
   const oldRegion={id:'body',src:'card.text',w:20,h:10};
   const state={slug:'test',origCards:[{id:'one',text:'Existing long text'}],cards:[{id:'one',text:'Existing long text',attributes:{armor:3}}],orig:{regions:[oldRegion]},layout:{regions:[structuredClone(oldRegion)]}};

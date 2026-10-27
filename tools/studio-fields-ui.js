@@ -1,9 +1,15 @@
 // Loaded only when Studio opens. Uses its existing renderer and reviewed save.
 {const style=document.createElement("style");style.textContent="/* Integrated workspace: neutral tools, unchanged card artwork. */\n.forge-studio .btn.primary{background:#e4e7eb;border-color:#c8cdd4;color:#20252c}.forge-studio .btn.primary:hover{background:#fff}\n.forge-studio .des-field.on,.forge-studio-impact-card.on{background:#353b43;border-color:#9ba6b4}\n.forge-studio .des-box.sel{border-color:#dde3ec;background:#cad4e61a;box-shadow:0 0 0 2px #bfcadb66}.forge-studio .des-tag{background:#303c49}.forge-studio .des-h{border-color:#8e9cad}\n.forge-studio-grid{grid-template-columns:190px minmax(320px,1fr) 330px}.forge-studio-workarea{background-image:none;background-color:#191c21}\n.forge-field-add{width:100%;margin-bottom:16px;min-height:40px}.forge-field-composer{font-size:13px;line-height:1.5}.forge-field-composer h3{font-size:19px;margin:0 0 8px}.forge-field-composer p{color:#bcc3cd;margin:8px 0 14px}.forge-field-composer .fld label{font-size:13px;color:#e0e4eb}.forge-field-composer small{display:block;color:#aeb7c5;margin-top:6px}.forge-field-composer input,.forge-field-composer select{min-height:42px;width:100%;box-sizing:border-box}\n.forge-field-composer details{padding:12px 0;border-top:1px solid #454b55;border-bottom:1px solid #454b55;margin:16px 0}.forge-field-composer details .fld{margin-top:14px}.forge-field-impact{padding:12px;background:#2c3037;border-radius:7px;margin:16px 0}.forge-field-impact p{margin:6px 0 0}.forge-field-check{display:flex;gap:10px;align-items:center}.forge-field-check input{width:18px;min-height:18px;height:18px}.forge-field-actions,.forge-field-positions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.forge-field-actions .btn{min-height:44px;flex:1}.forge-field-positions .btn{min-height:38px}.forge-workspace-field{padding:12px 0;border-top:1px solid #3e454f}.forge-workspace-field .card-field-group legend{display:none}.forge-workspace-field .card-field-group{border:0;padding:0;margin:0}.forge-workspace-field .btn{font-size:11px;min-height:32px}.forge-studio #des-inspector{height:670px}\n@media(max-width:1100px) and (min-width:761px){.forge-studio-grid{grid-template-columns:150px minmax(250px,1fr)}.forge-studio-right{grid-column:1/-1}.forge-studio #des-inspector{height:auto;max-height:none}}\n@media(max-width:760px){.forge-studio-grid{grid-template-columns:minmax(0,1fr)}.forge-studio #des-inspector{height:auto;max-height:none}.forge-field-composer{font-size:14px}.forge-field-composer .btn{min-height:44px}}\n";document.head.append(style);}
+function desAvailableFieldKey(name,keys){
+  const slug=desSlug(name).slice(0,26),base=/^[a-z]/.test(slug)?slug:'field_'+slug;
+  const used=new Set([...keys,'__proto__','prototype','constructor']);
+  let key=base,n=2;while(used.has(key))key=base+'_'+n++;
+  return key;
+}
 function desNewField(){
   if(!DES?.access?.canWrite||!DES.setup)return;
   if(DES.fieldDraft)return;
-  const key='field_'+Date.now().toString(36),card=desCard();
+  const key=desAvailableFieldKey('field_'+Date.now().toString(36),[...desDefinitions().map(def=>def.key),...DES.cards.flatMap(card=>Object.keys(card.attributes||{}))]),card=desCard();
   DES.fieldDraft={key,new:true,name:'',type:'number',cardType:card.type,scope:'type',show:true,regionId:null,
     before:structuredClone({layout:DES.layout,cards:DES.cards,setup:DES.setup,undo:DES.undo})};
   DES.setup.attribute_definitions.push({key,name:'New field',type:'number',applies_to:[card.type]});
@@ -78,8 +84,7 @@ function desFieldPrepare(){
   if(draft.new){
     const duplicate=desDefinitions().some(def=>def.key!==draft.key&&(def.name||def.key).toLowerCase()===name.toLowerCase());
     if(duplicate){toast('A field with that name already exists. Use its Place on card button.');return false;}
-    const base=desSlug(name).slice(0,26),used=new Set([...desDefinitions().filter(def=>def.key!==draft.key).map(def=>def.key),...DES.cards.flatMap(card=>Object.keys(card.attributes||{}).filter(key=>key!==draft.key)), '__proto__','prototype','constructor']);
-    let key=base,n=2;while(used.has(key))key=base+'_'+n++;
+    const key=desAvailableFieldKey(name,[...desDefinitions().filter(def=>def.key!==draft.key).map(def=>def.key),...DES.cards.flatMap(card=>Object.keys(card.attributes||{}).filter(key=>key!==draft.key))]);
     if(key!==draft.key){const old=draft.key,def=desDefinitions().find(item=>item.key===old);def.key=key;
       for(const card of DES.cards)if(Object.hasOwn(card.attributes||{},old)){card.attributes[key]=card.attributes[old];delete card.attributes[old];}
       const region=DES.layout.regions.find(item=>item.id===draft.regionId);if(region)region.src=region.src.replaceAll('card.attributes.'+old,'card.attributes.'+key);if(draft.hiddenRegion)draft.hiddenRegion.src=draft.hiddenRegion.src.replaceAll('card.attributes.'+old,'card.attributes.'+key);
