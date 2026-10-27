@@ -90,3 +90,9 @@ Full qualification is defined in [.github/workflows/quality.yml](../.github/work
 | Unexpected old interface | Check the printed build, restart this checkout's server, and reload the correct port. Edit `tools/hub_template.html`, never generated `hub.html`. |
 
 The repository already contains third-party fixtures with proprietary or unconfirmed metadata. Their presence in a developer clone does not grant publication or redistribution rights. Use Ember or your own rights-cleared content for demonstrations; see the [handoff limitations](DEVELOPER-HANDOFF.md).
+
+The Clasp development dependency currently pins Zod 3 upstream. Forge overrides
+only Clasp’s Zod to `^4.6.7` to address GHSA-mrhx-c7xc-m3w5; its MCP handshake
+and tool-schema listing were checked with the patched library. Remove this
+override when Clasp declares a patched version itself. Production and development
+dependencies must pass `npm audit`; do not use `--force` to downgrade Clasp.
