@@ -102,3 +102,7 @@ Field review shows pre-existing text-fit or symbol issues separately when both t
 affected content and layout are unchanged. They remain visible for Proof review
 without blocking an unrelated new field. New issues, changed text, or changed
 affected regions still block saving. Canonical candidate validation always runs.
+
+Save completion is tied to the reviewed draft and route. Duplicate requests are
+blocked while a save is in flight. If edits or navigation continue during the
+request, completion preserves newer work and never reopens over another screen.

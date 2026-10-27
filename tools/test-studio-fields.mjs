@@ -29,6 +29,28 @@ try{
   state.cards[0].text='Changed long text';assert.equal(fitReport().blocking.length,1,'changing affected text must block');state.cards[0].text='Existing long text';
   state.layout.regions[0].w=19;assert.equal(fitReport().blocking.length,1,'changing affected layout must block');state.layout.regions[0].w=20;
   issues=[...issues,{...oldIssue,region:'new_field'}];assert.equal(fitReport().blocking.length,1,'new field fit errors must block');
+  const saveSource=ui.slice(ui.indexOf('async function desStudioCommit(){'));
+  for(const scenario of ['unchanged','edit','navigate','cleanup-edit','network-error']){
+    const state={slug:'game',family:{id:'program'},sel:'one',_draftReady:true};
+    const candidate={base_ref:'base',cards:[{id:'one',name:'Reviewed'}]};
+    let finish,requests=0,clears=0,queued=0,reopens=0;
+    const context={DES:state,DES_REVIEW:{slug:'game',payload:{...structuredClone(candidate),review_token:'token'}},candidate,
+      location:{hash:'#game'},document:{getElementById:()=>null},desStudioPayload:()=>context.candidate,
+      desFamilyPreflight:()=>[],authHdr:()=>({}),toast:()=>{},esc:String,
+      fetch:()=>{requests++;return new Promise(resolve=>finish=resolve);},
+      desDraftClearCurrent:async()=>{clears++;if(scenario==='cleanup-edit')context.candidate.cards[0].name='Newer';},
+      desDraftQueue:()=>{queued++;},$:()=>({classList:{remove:()=>{}}}),
+      loadProjectView:async()=>{},designFamilyEdit:async()=>{reopens++;}};
+    const saving=runInNewContext(saveSource+'desStudioCommit()',context);
+    await runInNewContext('desStudioCommit()',context);assert.equal(requests,1,'duplicate saves suppressed');
+    if(scenario==='edit')context.candidate.cards[0].name='Newer';
+    if(scenario==='navigate'){context.DES={slug:'other'};context.location.hash='#other';}
+    finish({ok:scenario!=='network-error',status:503,json:async()=>({saved:true,commit:'next',message:'Saved',error:'Unavailable'})});
+    await saving;assert.equal(state._studioSaving,false,'save lock always released');
+    assert.equal(reopens,scenario==='unchanged'?1:0,'late saves must not reopen over newer work');
+    assert.equal(clears,['unchanged','cleanup-edit'].includes(scenario)?1:0,'only the reviewed draft may be cleared');
+    assert.equal(queued,['edit','cleanup-edit'].includes(scenario)?1:0,'newer edits are queued for recovery');
+  }
   mkdirSync(games);cpSync(fixture,dir,{recursive:true,filter:path=>!path.split('/').includes('exports')});
   const cards=JSON.parse(readFileSync(join(dir,'components/cards.json'),'utf8')),game=yaml.load(readFileSync(join(dir,'game.yaml'),'utf8')),original=currentNandeckSources(dir);
   const program=cards.filter(card=>card.type==='program'),target=program[0],second=program[1];

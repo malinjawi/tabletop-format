@@ -161,3 +161,30 @@ function desStudioToolbarHtml(g){
   const pnpink=g.design_engines?.engines?.some(engine=>engine.type==="pnpink");
   return `<div class="forge-studio-top"><button class="btn forge-studio-back" onclick="desReopenGallery()" aria-label="Back to all card families" title="Back to all card families">←</button><div class="forge-studio-title"><h2>${esc(g.title)} · ${esc(DES.family.label||DES.family.id)}</h2><span>${esc(desCard()?.name||"")} · base ${esc(source||"working tree")} · ${DES._draftError?"local recovery unavailable":"local recovery on"}</span></div><span class="forge-studio-status${dirty?" dirty":""}" role="status" aria-live="polite" aria-atomic="true">${esc(desDirtyLabel())}</span><div class="forge-studio-actions"><details class="forge-studio-menu"><summary class="btn">Other editors ▾</summary><div class="forge-studio-pop"><button onclick="designExportSquib('${esc(g.slug)}')"><b>Download Squib project</b><small>Runnable Ruby DSL + CSV + declarative layouts</small></button><button onclick="designImportSquib('${esc(g.slug)}')"><b>Return Squib project</b><small>Review CSV and YAML; Forge never runs Ruby</small></button>${pnpink?`<button onclick="designExportPnpink('${esc(g.slug)}')"><b>Download PnPInk projects</b><small>Production working copies for Inkscape</small></button><button onclick="designImportPnpink('${esc(g.slug)}')"><b>Return PnPInk project</b><small>Review card data and SVG source together</small></button>`:""}<button onclick="designExportSvg('${esc(g.slug)}')"><b>Download SVG geometry kit</b><small>Round-trip simple named regions</small></button><button onclick="designImportSvg('${esc(g.slug)}')"><b>Return edited SVG</b><small>Dry-run supported geometry before Git</small></button><button onclick="designExportNandeck('${esc(g.slug)}')"><b>Download nanDECK kit</b><small>Script and committed card data</small></button><button onclick="designImportNandeck('${esc(g.slug)}')"><b>Return nanDECK script</b><small>Review script changes against Forge</small></button><button onclick="designExportProject('${esc(g.slug)}')"><b>Download full Forge project</b><small>Every card, asset, template, and adapter</small></button></div></details><button class="btn" onclick="desDataTableOpen()">Table</button><button class="btn" onclick="designProofOpen('${esc(g.slug)}','${esc(DES.family.id)}')">Proof ${desFamilyCards(g).length}</button><button class="btn primary" id="des-save" onclick="desSave()">Review changes</button></div></div>`;
 }
+
+// Keep the completion tied to the reviewed draft, even if editing/navigation
+// continues during the request or IndexedDB cleanup.
+async function desStudioCommit(){
+  if(!DES_REVIEW||DES?._studioSaving)return;
+  const review=DES_REVIEW,state=DES,route=location.hash;
+  const {review_token,...reviewed}=review.payload, fingerprint=JSON.stringify(reviewed);
+  const stillReviewed=()=>DES===state&&location.hash===route&&JSON.stringify(desStudioPayload())===fingerprint;
+  if(!stillReviewed()){toast("The draft changed. Review again before saving.");return;}
+  if((state.fieldDraft?desFieldPreflightReport().blocking:desFamilyPreflight().filter(issue=>issue.level==="error")).length){toast("Fix the family text-fit errors before committing.",7000);return;}
+  const button=document.getElementById("des-studio-commit");
+  if(button){button.disabled=true;button.textContent="Validating and committing…";}
+  state._studioSaving=true;
+  const keepNewerDraft=()=>{if(DES===state)desDraftQueue(0);toast("The reviewed version was saved. Your newer draft has been kept; reopen the saved version before reviewing further changes.",9000);};
+  try{
+    const response=await fetch(`/api/games/${encodeURIComponent(review.slug)}/design/studio?commit=1`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(review.payload)}),data=await response.json().catch(()=>({}));
+    if(!response.ok){toast(`<b style="color:#ffa198">✗ ${esc(data.error||response.status)}</b>`,8000);return;}
+    if(!stillReviewed()){keepNewerDraft();return;}
+    await desDraftClearCurrent().catch(()=>{});
+    if(!stillReviewed()){keepNewerDraft();return;}
+    state._draftReady=false;
+    $("#modal").classList.remove("on");toast(data.proposed?`<b>⇡ Pull request opened</b><br>${esc(data.message)} · commit ${esc(String(data.commit||"").slice(0,10))}`:`<b>✓ Committed</b><br>${esc(data.message)} · commit ${esc(String(data.commit||"").slice(0,10))}`,9000);
+    if(data.proposed){setTimeout(()=>{if(DES===state&&location.hash===route)openFocusedPr(review.slug,data.pr);},500);}
+    else{const saved={slug:state.slug,family:state.family.id,card:state.sel};DES=null;DES_REVIEW=null;await loadProjectView(saved.slug);if(DES===null&&location.hash===route)await designFamilyEdit(saved.slug,saved.family,saved.card);}
+  }catch(error){toast(esc(error.message||"Could not save. Your draft is still here."),7000);}
+  finally{state._studioSaving=false;if(button){button.disabled=false;button.textContent="Save changes";}}
+}
