@@ -22,6 +22,10 @@ assert.equal(run('desArtworkPreviewPrinting(DES.printings[0]).art'),'assets/art/
 run('desArtworkUse()');assert.equal(JSON.stringify(state.printings),snapshot,'incomplete preview cannot be used');
 run("desArtworkCrop('zoom','1.5')");assert.equal(state._artChoice.value.art_crop.zoom,1.5);assert.equal(state.printings[0].art_crop.zoom,1.25);
 run('desArtworkCancel(false)');assert.equal(JSON.stringify(state.printings),snapshot,'cancel preserves previous draft');
+state.assetItems.push({path:old.art,name:'Current',rights:null});
+run("desArtworkChoose('assets%2Fart%2Foriginal.png')");
+assert.deepEqual(state._artChoice.value,old,'reselecting current artwork preserves existing credit, provenance, and crop even without library rights');
+run('desArtworkCancel(false)');
 run("desArtworkChoose('assets%2Fart%2Fnew.png')");
 const first=state._artChoice,host1={isConnected:true,dataset:{}},host2={isConnected:true,dataset:{}};
 context.host1=host1;context.host2=host2;activeHost=host1;
@@ -44,3 +48,23 @@ assert.equal(state.pendingAssets['assets/card-art/local.png'].preview_url,'blob:
 context.review={printing_changes:{changed:['p1-alt','p2']}};
 assert.deepEqual(JSON.parse(JSON.stringify(run('desArtworkReviewOptions(review)'))),[{card:'one',printing:'p1-alt'},{card:'two',printing:'p2'}],'review includes exact alternate and cross-card printings');
 console.log('PASS artwork workspace: isolated selection/crop, complete preview gate, cancel, stale preview, metadata/other-printing preservation, upload lifetime, exact review targets');
+
+// An upload that is still reading must never supersede a later library choice.
+let input,finishRead,uploadedChoiceCount=0;
+context.document.createElement=()=>input={click(){}};
+context.desCard=()=>state.cards[0];context.ME={handle:'qa'};
+context.assetRightsForm=async()=>({creator:'Upload artist',license:'CC0-1.0',status:'original',redistribution:'allowed'});
+context.crypto={randomUUID:()=> 'fixture'};context.desBytesBase64=()=> 'bytes';
+context.URL.createObjectURL=()=>{uploadedChoiceCount++;return 'blob:late';};
+state.assetItems=[{path:'assets/art/new.png',name:'New',rights:{copyright:['New artist'],license:'CC-BY-4.0',status:'original'}}];
+state._artLibraryOpen=true;
+await run('desArtworkUpload()');
+input.files=[{name:'late.png',size:10,arrayBuffer:()=>new Promise(resolve=>{finishRead=resolve;})}];
+const uploading=input.onchange();await new Promise(resolve=>setImmediate(resolve));
+assert.equal(typeof finishRead,'function','upload is waiting for image bytes');
+run("desArtworkChoose('assets%2Fart%2Fnew.png')");
+const latestChoice=state._artChoice;
+finishRead(new ArrayBuffer(1));await uploading;
+assert.equal(state._artChoice,latestChoice,'late upload cannot replace a newer library choice');
+assert.equal(uploadedChoiceCount,0,'superseded upload never allocates a preview or stages bytes');
+console.log('PASS artwork review fixes: current-image credit preserved; later library choice wins over pending upload');

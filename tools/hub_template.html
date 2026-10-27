@@ -1887,6 +1887,7 @@ async function desDraftFlush(){
   const snapshot=desDraftSnapshot();try{await desDraftPersist(snapshot);}catch(error){desDraftFailure(error,snapshot);throw error;}
 }
 function desDraftResetMemory(){
+  if(DES?._artLibraryOpen&&typeof desArtworkCancel==="function")desArtworkCancel(false);
   clearTimeout(DES_DRAFT_TIMER);DES_DRAFT_TIMER=null;desDragDetachListeners();DES_DRAFT_OFFER=null;DES_REVIEW=null;DES_DRAG=null;DES_FIELD_DRAG=null;DES=null;
   document.getElementById("modal")?.classList.remove("on");
 }
@@ -3541,7 +3542,7 @@ function desStartBlank(){
   desRenderFull();
 }
 function desReopenGallery(){
-  if(DES.family){if(desAnyDirty()&&!confirm("Discard the uncommitted card and layout draft?"))return;const g=G(DES.slug);if(desAnyDirty())void desDraftClearCurrent();DES=null;designCatalog(g);return;}
+  if(DES.family){if(desAnyDirty()&&!confirm("Discard the uncommitted card and layout draft?"))return;const g=G(DES.slug);if(desAnyDirty())void desDraftClearCurrent();if(DES._artLibraryOpen)desArtworkCancel(false);DES=null;designCatalog(g);return;}
   DES.showGallery=true; DES.selRegion=null; desRenderFull();
 }
 
@@ -4321,6 +4322,7 @@ async function designFamilyEdit(slug,familyId,previewCardId=null){
     const stableFamily={...family,...(source.family_definition||{}),layout:source.layout,origins:source.origins||source.family_definition?.origins||family.origins||{}},exactGame={...g,cards:source.cards,printings:source.printings};
     const specimen=designSpecimen(exactGame,stableFamily),layout=JSON.parse(JSON.stringify(stableFamily.layout));
     const requested=previewCardId&&source.cards.find(card=>card.id===previewCardId&&cardDesignMatch(card,stableFamily.match));
+    if(DES?._artLibraryOpen)desArtworkCancel(false);
     DES={slug,_draftActor:desDraftActor(),layout,orig:JSON.parse(JSON.stringify(layout)),cards:JSON.parse(JSON.stringify(source.cards)),origCards:JSON.parse(JSON.stringify(source.cards)),printings:JSON.parse(JSON.stringify(source.printings)),origPrintings:JSON.parse(JSON.stringify(source.printings)),sel:requested?.id||specimen?.id||source.cards.find(card=>cardDesignMatch(card,family.match))?.id||null,
       selRegion:null,selRegions:[],undo:[],access,view:"fit",face:"front",rawOpen:false,showGallery:false,_addFontOpen:false,leftTab:"cards",rightTab:"content",compare:false,
       setup:structuredClone(source.setup),origSetup:structuredClone(source.setup),fieldDraft:null,family:stableFamily,svgSource:source.svg,sourceHash:source.source_hash,sourceRef:source.ref,pendingAssets:{},printingSel:{},assetItems:null,artLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),origArtLibrary:JSON.parse(JSON.stringify(source.art_library||{format:"forge-art-library",version:1,assets:[]})),artTargetIds:[],artQuery:"",gridSelection:[],gridActive:null,gridAnchor:null,_draftReady:false};

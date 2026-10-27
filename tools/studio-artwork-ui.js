@@ -24,11 +24,15 @@ function desArtworkChoose(encoded){
   const path=decodeURIComponent(encoded),item=DES.assetItems?.find(item=>item.path===path),printing=desSelectedPrinting();
   if(!item||!printing)return;
   const credits=item.rights?.copyright,creator=item.creator||(Array.isArray(credits)?credits.join(', '):credits)||'';
-  const candidate={...printing,art:path,artist:creator};delete candidate.provenance;
-  if(creator&&item.rights?.license)candidate.provenance={source:item.rights.status==='generated'?'ai':'human',creator,license:item.rights.license};
+  const candidate={...printing};
+  if(printing.art!==path){
+    candidate.art=path;candidate.artist=creator;delete candidate.provenance;
+    if(creator&&item.rights?.license)candidate.provenance={source:item.rights.status==='generated'?'ai':'human',creator,license:item.rights.license};
+  }
   desArtworkSetChoice(candidate,null);
 }
 function desArtworkSetChoice(printing,asset){
+  DES._artUploadIntent=null;
   const old=DES._artChoice;if(old?.asset&&old.asset!==asset)URL.revokeObjectURL(old.asset.preview_url);
   DES._artChoice={card:DES.sel,printing:printing.id,value:structuredClone(printing),asset,status:'loading'};
   DES.compare=false;DES_REVIEW=null;desRenderCanvasOnly();desRenderInspectorOnly();
