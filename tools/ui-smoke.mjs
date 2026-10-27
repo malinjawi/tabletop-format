@@ -460,7 +460,7 @@ w.save(p)
   assert(exactStudioAdvance.status===200&&exactStudioAdvance.body.saved,
     "card data can advance after the broad Design page was cached",JSON.stringify(exactStudioAdvance));
   await page.getByRole("button", { name:"Open Forge Studio" }).first().click();
-  await page.getByText("Edit the card, not the template", { exact:true }).waitFor();
+  await page.getByText("Values belong to this card. Positions are shared by its template.", { exact:true }).waitFor();
   const exactStudioSource=await page.evaluate(id=>({ref:DES.sourceRef,text:DES.cards.find(card=>card.id===id)?.text}),exactStudioAdvance.card);
   assert(exactStudioSource.ref===exactStudioAdvance.body.commit&&exactStudioSource.text.includes(exactStudioAdvance.marker),
     "Studio opens cards, printings, family layout, and Git base from one exact source bundle",JSON.stringify(exactStudioSource));
@@ -1567,10 +1567,14 @@ w.save(p)
   await page.getByRole("heading",{name:"Review component content, artwork, and layout together",exact:true}).waitFor();
   const recoveredCommitResponse=page.waitForResponse(response=>response.request().method()==="POST"
     &&new URL(response.url()).pathname.endsWith("/design/studio")&&new URL(response.url()).searchParams.get("commit")==="1");
-  const recoveredCommitNavigation=page.waitForNavigation({waitUntil:"domcontentloaded"});
+  const savedWorkspace=await page.evaluate(()=>({slug:DES.slug,family:DES.family.id,card:DES.sel}));
   await page.getByRole("button",{name:"Commit reviewed candidate",exact:true}).click();
-  assert((await recoveredCommitResponse).ok(),"the restored workflow still commits through the normal exact candidate review");
-  await recoveredCommitNavigation;
+  const recoveredResponse=await recoveredCommitResponse;
+  assert(recoveredResponse.ok(),"the restored workflow still commits through the normal exact candidate review");
+  const recoveredResult=await recoveredResponse.json();
+  await page.waitForFunction(({commit,workspace})=>DES?.sourceRef===commit&&DES.slug===workspace.slug&&DES.family?.id===workspace.family&&DES.sel===workspace.card,{commit:recoveredResult.commit,workspace:savedWorkspace});
+  assert(await page.locator('#des-content-text').inputValue()==="Committed after local recovery was verified.",
+    "saving reopens the exact saved card and family in place with the committed values");
   const draftsAfterCommit=await page.evaluate(async()=>{
     return (await desDraftAll()).filter(record=>record.slug==="wizard-ui-smoke"&&record.family==="card").length;
   });
