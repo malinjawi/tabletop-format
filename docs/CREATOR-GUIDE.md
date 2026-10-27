@@ -26,6 +26,16 @@ For a first spreadsheet, useful columns are `id`, `name`, `type`, and `text`, fo
 
 Projects with different card types can use several families. Start with one family unless the cards need different layouts. Non-card components have their own **Piece Studio** for quantities, dimensions, shared styling, and cut sheets.
 
+## Add a field and put it on the card
+
+In **Design → Forge Studio**, select a card and choose **Add field**. Give the field a name and a value. It appears in the live preview; drag it into place, use the position buttons, or nudge it with the arrow keys. Select another card to enter a different value.
+
+Open **Field options** to choose Number or Text and which card types can use the field. Turn off **Show on card** for notes or other data you do not want printed. These choices do not fill values on other cards.
+
+Choose **Review field** to see the changed values beside the card, then **Save changes**. The field, values and position save together. **Cancel field** removes the unsaved field changes. Existing fields have **Place on card** or **Edit on card** controls in Content.
+
+A field can be available across the game while its position belongs to one template. Place it separately on other templates when needed. Moving an existing shared element can affect several templates; check the scope shown in review.
+
 ## Set up your team's card editor
 
 Open **Cards → Card setup**. Define card types, then add fields with names, input types, dropdown choices, and help text. Use **Show on** to choose which card types need a field. Choose sections and move fields into order. The live form preview shows what your team will edit; its sample values do not change any cards.
