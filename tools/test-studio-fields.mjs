@@ -42,7 +42,7 @@ try{
     let finish,requests=0,clears=0,queued=0,reopens=0;
     const context={DES:state,DES_REVIEW:{slug:'game',payload:{...structuredClone(candidate),review_token:'token'}},candidate,
       location:{hash:'#game'},document:{getElementById:()=>null},desStudioPayload:()=>context.candidate,
-      desFamilyPreflight:()=>[],authHdr:()=>({}),toast:()=>{},esc:String,
+      desFieldPreflightReport:()=>({blocking:[]}),desFamilyPreflight:()=>[],desRenderFull:()=>{},authHdr:()=>({}),toast:()=>{},esc:String,
       fetch:()=>{requests++;return new Promise(resolve=>finish=resolve);},
       desDraftClearCurrent:async()=>{clears++;if(scenario==='cleanup-edit')context.candidate.cards[0].name='Newer';},
       desDraftQueue:()=>{queued++;},$:()=>({classList:{remove:()=>{}}}),

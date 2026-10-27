@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createContext,runInContext} from 'node:vm';
+
+const source=readFileSync(new URL('./studio-artwork-ui.js',import.meta.url),'utf8');
+const old={id:'p1',card_id:'one',art:'assets/art/original.png',artist:'Original artist',quantity:3,scan:'assets/faces/original.png',art_crop:{fit:'contain',zoom:1.25,focal_x:.2,focal_y:.7},provenance:{source:'human',creator:'Original artist',license:'CC0-1.0'}};
+let revocations=[],paints=[],activeHost=null;
+const state={sel:'one',slug:'game',family:{id:'program'},sourceRef:'old-ref',rightTab:'artwork',cards:[{id:'one',name:'One'},{id:'two',name:'Two'}],printings:[structuredClone(old),{...structuredClone(old),id:'p1-alt',variant:'alternate'},{id:'p2',card_id:'two',art:'assets/art/second.png'}],pendingAssets:{},layout:{regions:[]},assetItems:[{path:'assets/art/new.png',name:'New',rights:{copyright:['New artist'],license:'CC-BY-4.0',status:'original'}}]};
+state.origPrintings=structuredClone(state.printings);state.origCards=structuredClone(state.cards);
+const context=createContext({DES:state,DES_REVIEW:null,structuredClone,URL:{revokeObjectURL:url=>revocations.push(url)},document:{getElementById:()=>null,querySelector:()=>activeHost},location:{hash:'#game'},
+  desSelectedPrinting:()=>state.printings.find(p=>p.id==='p1'),desRenderCanvasOnly:()=>{},desRenderInspectorOnly:()=>{},desRenderFull:()=>{},desArtReleaseIfUnused:()=>{},toast:()=>{},desArtPreviewUrl:p=>'/assets/'+p.art+'?ref='+state.sourceRef,
+  cardPaintReady:host=>new Promise(resolve=>paints.push(()=>{host.dataset.cardState='ready';resolve();})),
+  desFamilyCards:()=>state.cards,G:()=>({}),desPreviewPrintings:()=>state.printings});
+runInContext(source.slice(source.indexOf('function desArtworkChoice()')),context);
+const run=code=>runInContext(code,context),snapshot=JSON.stringify(state.printings);
+run("desArtworkChoose('assets%2Fart%2Fnew.png')");
+assert.equal(JSON.stringify(state.printings),snapshot,'selection never changes printings');
+assert.equal(state._artChoice.value.artist,'New artist');
+assert.equal(state._artChoice.value.provenance.creator,'New artist');
+assert.deepEqual(state._artChoice.value.art_crop,old.art_crop,'existing crop preserved');
+assert.equal(run('desArtworkPreviewPrinting(DES.printings[0]).art'),'assets/art/new.png');
+run('desArtworkUse()');assert.equal(JSON.stringify(state.printings),snapshot,'incomplete preview cannot be used');
+run("desArtworkCrop('zoom','1.5')");assert.equal(state._artChoice.value.art_crop.zoom,1.5);assert.equal(state.printings[0].art_crop.zoom,1.25);
+run('desArtworkCancel(false)');assert.equal(JSON.stringify(state.printings),snapshot,'cancel preserves previous draft');
+run("desArtworkChoose('assets%2Fart%2Fnew.png')");
+const first=state._artChoice,host1={isConnected:true,dataset:{}},host2={isConnected:true,dataset:{}};
+context.host1=host1;context.host2=host2;activeHost=host1;
+const paint1=run('desArtworkPaint(host1)');
+run("desArtworkChoose('assets%2Fart%2Fnew.png')");activeHost=host2;const paint2=run('desArtworkPaint(host2)');
+paints[0]();await paint1;assert.equal(state._artChoice.status,'loading','late paint cannot enable a newer selection');
+paints[1]();await paint2;assert.equal(state._artChoice.status,'ready');
+run('desArtworkUse()');
+assert.equal(state.printings[0].art,'assets/art/new.png');assert.equal(state.printings[0].artist,'New artist');
+for(const key of ['id','card_id','quantity','scan','art_crop'])assert.deepEqual(state.printings[0][key],old[key]);
+assert.deepEqual(state.printings.slice(1),state.origPrintings.slice(1),'other printings and other cards unchanged');
+assert.deepEqual(state.cards,state.origCards,'card data unchanged');
+const savedDraft=JSON.stringify(state.printings);
+context.asset={path:'assets/card-art/local.png',preview_url:'blob:local',content_base64:'bytes'};
+run('desArtworkSetChoice({...DES.printings[0],art:asset.path},asset)');
+run('desArtworkCancel(false)');assert.deepEqual(revocations,['blob:local']);assert.equal(JSON.stringify(state.printings),savedDraft);assert.equal(Object.keys(state.pendingAssets).length,0);
+context.asset={...context.asset,preview_url:'blob:kept'};
+run('desArtworkSetChoice({...DES.printings[0],art:asset.path},asset)');state._artChoice.status='ready';run('desArtworkUse()');
+assert.equal(state.pendingAssets['assets/card-art/local.png'].preview_url,'blob:kept');assert.deepEqual(revocations,['blob:local'],'accepted upload remains available for recovery and save');
+context.review={printing_changes:{changed:['p1-alt','p2']}};
+assert.deepEqual(JSON.parse(JSON.stringify(run('desArtworkReviewOptions(review)'))),[{card:'one',printing:'p1-alt'},{card:'two',printing:'p2'}],'review includes exact alternate and cross-card printings');
+console.log('PASS artwork workspace: isolated selection/crop, complete preview gate, cancel, stale preview, metadata/other-printing preservation, upload lifetime, exact review targets');

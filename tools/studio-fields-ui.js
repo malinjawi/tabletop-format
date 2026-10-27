@@ -156,7 +156,7 @@ function desContentInspectorHtml(){
   if(card.deck_limit!==undefined)h+=desContentControl("Deck limit","deck_limit",card.deck_limit,"number");
   h+=desFieldListHtml(card);
   h+=desPreflightPanelHtml();
-  h+=desPrintingInspectorHtml(g,card);
+  h+=`<button class="btn" onclick="desRightPanelTab('artwork')">Artwork & printing details →</button>`;
   h+=`<details class="forge-studio-tech"><summary>Why the ID is locked</summary><code>${esc(card.id)}</code><div style="margin-top:7px">The stable ID anchors history, printings, decks, rulebook references, diffs, and external working copies.</div></details>`;
   return h;
 }
@@ -175,21 +175,22 @@ async function desStudioCommit(){
   const {review_token,...reviewed}=review.payload, fingerprint=JSON.stringify(reviewed);
   const stillReviewed=()=>DES===state&&location.hash===route&&JSON.stringify(desStudioPayload())===fingerprint;
   if(!stillReviewed()){toast("The draft changed. Review again before saving.");return;}
-  if((state.fieldDraft?desFieldPreflightReport().blocking:desFamilyPreflight().filter(issue=>issue.level==="error")).length){toast("Fix the family text-fit errors before committing.",7000);return;}
+  if(desFieldPreflightReport().blocking.length){toast("Fix the family text-fit errors before committing.",7000);return;}
   const button=document.getElementById("des-studio-commit");
   if(button){button.disabled=true;button.textContent="Validating and committing…";}
   state._studioSaving=true;
+  const showFailure=message=>{const host=document.getElementById("des-studio-save-error");if(host)host.textContent=message+" Your draft is kept. You can retry or keep editing.";};
   const keepNewerDraft=()=>{if(DES===state)desDraftQueue(0);toast("The reviewed version was saved. Your newer draft has been kept; reopen the saved version before reviewing further changes.",9000);};
   try{
     const response=await fetch(`/api/games/${encodeURIComponent(review.slug)}/design/studio?commit=1`,{method:"POST",headers:{"content-type":"application/json",...authHdr()},body:JSON.stringify(review.payload)}),data=await response.json().catch(()=>({}));
-    if(!response.ok){toast(`<b style="color:#ffa198">✗ ${esc(data.error||response.status)}</b>`,8000);return;}
+    if(!response.ok){showFailure(data.error||String(response.status));toast(`<b style="color:#ffa198">✗ ${esc(data.error||response.status)}</b>`,8000);return;}
     if(!stillReviewed()){keepNewerDraft();return;}
     await desDraftClearCurrent().catch(()=>{});
     if(!stillReviewed()){keepNewerDraft();return;}
     state._draftReady=false;
     $("#modal").classList.remove("on");toast(data.proposed?`<b>⇡ Pull request opened</b><br>${esc(data.message)} · commit ${esc(String(data.commit||"").slice(0,10))}`:`<b>✓ Committed</b><br>${esc(data.message)} · commit ${esc(String(data.commit||"").slice(0,10))}`,9000);
     if(data.proposed){setTimeout(()=>{if(DES===state&&location.hash===route)openFocusedPr(review.slug,data.pr);},500);}
-    else{const saved={slug:state.slug,family:state.family.id,card:state.sel};DES=null;DES_REVIEW=null;await loadProjectView(saved.slug);if(DES===null&&location.hash===route)await designFamilyEdit(saved.slug,saved.family,saved.card);}
-  }catch(error){toast(esc(error.message||"Could not save. Your draft is still here."),7000);}
+    else{const saved={slug:state.slug,family:state.family.id,card:state.sel,tab:state.rightTab};DES=null;DES_REVIEW=null;await loadProjectView(saved.slug);if(DES===null&&location.hash===route){await designFamilyEdit(saved.slug,saved.family,saved.card);if(location.hash===route&&DES?.slug===saved.slug&&DES.family?.id===saved.family&&DES.sel===saved.card){DES.rightTab=saved.tab;desRenderFull();}}}
+  }catch(error){showFailure(error.message||"Could not save.");toast(esc(error.message||"Could not save. Your draft is still here."),7000);}
   finally{state._studioSaving=false;if(button){button.disabled=false;button.textContent="Save changes";}}
 }

@@ -515,6 +515,8 @@ w.save(p)
     && (await page.locator("#des-grid-status").textContent()).includes("1 card draft"),
     "one action duplicates the selected card and its production printing as an uncommitted component draft");
   await page.getByRole("button", { name:"× Close", exact:true }).click();
+  await page.getByRole("button",{name:"Artwork",exact:true}).click();
+  await page.getByText("Printing details & advanced artwork",{exact:true}).click();
   assert(await page.getByText("Production printing", { exact:true }).isVisible()
     && await page.getByRole("button", { name:"Choose library", exact:true }).isVisible()
     && await page.getByRole("button", { name:"Upload new", exact:true }).isVisible(),
@@ -743,19 +745,19 @@ w.save(p)
   assert(studioDraft.status?.includes("2 cards")&&studioDraft.status?.includes("draft")&&studioDraft.canvas===`${originalStudioName} Studio UI Draft`,
     "card content edits re-render the selected production face and expose the local draft boundary",JSON.stringify(studioDraft));
   await page.getByRole("button", { name:"Review changes", exact:true }).click();
-  await page.getByRole("heading", { name:"Review component content, artwork, and layout together" }).waitFor();
+  await page.getByRole("heading", { name:"Review changes" }).waitFor();
   const studioReview=await page.evaluate(()=>({text:document.getElementById("mbody")?.textContent,
     commitDisabled:document.getElementById("des-studio-commit")?.disabled}));
   assert(await page.getByText("Combined validation passed", { exact:false }).isVisible()
-    && studioReview.text?.includes("1 new art file")
-    && studioReview.text?.includes("1 art tag record")
+    && await page.evaluate(()=>DES_REVIEW.data.asset_changes.length===1)
+    && await page.evaluate(()=>DES_REVIEW.data.art_library_changes.length===1)
     && await page.evaluate(()=>DES_REVIEW.data.layout_changes.some(change=>change.path==="group")
       &&DES_REVIEW.data.layout_changes.some(change=>change.path==="border")
       &&DES_REVIEW.data.layout_changes.some(change=>change.path==="shadow_spec")
       &&DES_REVIEW.data.layout_changes.some(change=>change.path==="text_styles")
       &&DES_REVIEW.data.layout_changes.some(change=>change.id==="$back"&&change.path==="back")
       &&DES_REVIEW.data.layout_changes.filter(change=>change.path==="text_style").length===2)
-    && await page.getByRole("button", { name:"Commit reviewed candidate" }).isEnabled(),
+    && await page.getByRole("button", { name:"Save changes" }).isEnabled(),
     "Studio dry-runs the combined component candidate before enabling its atomic commit",JSON.stringify(studioReview));
   await page.getByRole("button", { name:"Keep editing", exact:true }).click();
   page.once("dialog", dialog=>dialog.accept());
@@ -1564,11 +1566,11 @@ w.save(p)
   assert((await page.evaluate(async()=>{const identity=desDraftIdentity();return (await desDraftAll()).some(record=>record.key===desDraftKey(identity));})),
     "a new exact-base draft is present before its reviewed commit");
   await page.getByRole("button",{name:"Review changes",exact:true}).click();
-  await page.getByRole("heading",{name:"Review component content, artwork, and layout together",exact:true}).waitFor();
+  await page.getByRole("heading",{name:"Review changes",exact:true}).waitFor();
   const recoveredCommitResponse=page.waitForResponse(response=>response.request().method()==="POST"
     &&new URL(response.url()).pathname.endsWith("/design/studio")&&new URL(response.url()).searchParams.get("commit")==="1");
   const savedWorkspace=await page.evaluate(()=>({slug:DES.slug,family:DES.family.id,card:DES.sel}));
-  await page.getByRole("button",{name:"Commit reviewed candidate",exact:true}).click();
+  await page.getByRole("button",{name:"Save changes",exact:true}).click();
   const recoveredResponse=await recoveredCommitResponse;
   assert(recoveredResponse.ok(),"the restored workflow still commits through the normal exact candidate review");
   const recoveredResult=await recoveredResponse.json();

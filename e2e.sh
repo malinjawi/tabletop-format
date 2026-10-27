@@ -145,6 +145,8 @@ check "release-vault backup and restore preserve exact bytes" node tools/test-re
 check "production backups lock outages and recover partial stops" node tools/test-backup-guards.mjs
 check "card setup interface syntax" node --check tools/card-setup-ui.js
 check "integrated workspace interface syntax" node --check tools/studio-fields-ui.js
+check "artwork workspace interface syntax" node --check tools/studio-artwork-ui.js
+check "artwork selection and exact printing preservation" node tools/test-studio-artwork.mjs
 check "portable card fields and conditional form contract" node tools/test-card-fields.mjs
 check "integrated field workspace preserves cards and templates" node tools/test-studio-fields.mjs "$REPO/examples/_fixtures/netrunner-sg"
 check "editor-neutral SVG family round trip" node tools/test-svg-design.mjs "$REPO/examples/_fixtures/netrunner-sg"

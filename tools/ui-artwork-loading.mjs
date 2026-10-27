@@ -165,6 +165,8 @@ try {
     await page.locator("#amHandle").fill("artwork-test");
     await page.locator("#amPass").fill("artwork-password-123");
     await page.locator("#amSubmit").click();
+    await page.getByRole("button", { name: "Artwork", exact: true }).click();
+    await page.getByText("Printing details & advanced artwork", { exact: true }).click();
     await page.getByRole("button", { name: "Choose library", exact: true }).waitFor();
   }
   const settleFrames = page => page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame))));

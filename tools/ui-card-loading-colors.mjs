@@ -169,7 +169,7 @@ try {
   assert.equal(await page.locator('.des-cardhost [data-lay-region="shell"]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(18, 52, 86)','Selected field value drives the actual preview color');
   assert.equal(git('rev-parse','HEAD'),ref,"Editing stays in the browser");
   await page.getByRole('button',{name:'Review changes',exact:true}).click();
-  await page.getByRole('button',{name:'Commit reviewed candidate',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Save changes',exact:true}).waitFor();
   assert.equal(git('rev-parse','HEAD'),ref,"Review writes nothing");
   if(!await page.locator('#des-studio-commit').isEnabled())console.log(await page.locator('#mbody').innerText());
   assert.equal(await page.locator('#des-studio-commit').isEnabled(),true);
